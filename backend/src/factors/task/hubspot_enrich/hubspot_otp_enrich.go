@@ -156,8 +156,11 @@ func syncWorkerForOTP(projectID int64, startTime, endTime int64, backfillEnabled
 		return
 	}
 
-	OtpEventName, _ := store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_OFFLINE_TOUCH_POINT, project.ID)
-
+	OtpEventName, err := store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_OFFLINE_TOUCH_POINT, project.ID)
+	if err != nil {
+		logCtx.WithField("error", err).Error("Otp event not exist")
+		return
+	}
 	if !backfillEnabled {
 		_startTime, errCode := store.GetStore().GetLatestEventTimeStampByEventNameId(project.ID, OtpEventName.ID, startTime, endTime)
 		if errCode == http.StatusFound {
@@ -187,7 +190,7 @@ func syncWorkerForOTP(projectID int64, startTime, endTime int64, backfillEnabled
 
 			eventDetails, err := store.GetStore().GetEventNameIDFromEventName(eventName, project.ID)
 			if err != nil {
-				logCtx.WithField("error", err).Error("Failed to get OTP Unique Keys for Project")
+				logCtx.WithField("error", err).Error("Failed to get event Name")
 				return
 			}
 
