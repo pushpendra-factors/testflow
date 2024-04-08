@@ -109,17 +109,17 @@ function EngagementConfig({
     [currentProjectSettings]
   );
 
-  const showSuccessMessage = (message, description) => {
+  const showSuccessMessage = ({ title, description }) => {
     notification.success({
-      message,
+      title,
       description,
       duration: 3
     });
   };
 
-  const showErrorMessage = (description) => {
+  const showErrorMessage = ({ description, title = 'Error' }) => {
     notification.error({
-      message: 'Error',
+      message: title,
       description,
       duration: 3,
       style: {
@@ -140,7 +140,7 @@ function EngagementConfig({
       );
 
       if (noChangesMade) {
-        showErrorMessage('No changes to save.');
+        showErrorMessage({ description: 'No changes to save.' });
         return;
       }
       const configExistsIndex = weightConf.findIndex(
@@ -152,7 +152,7 @@ function EngagementConfig({
       weightConf.splice(configExistsIndex, 1, newConfig);
     } else {
       if (!config.weight || config.weight === '' || config.weight === 0) {
-        showErrorMessage('Please add a score for this rule.');
+        showErrorMessage({ description: 'Please add a score for this rule.' });
         return;
       }
       const configExistsIndex = weightConf.findIndex(
@@ -169,7 +169,11 @@ function EngagementConfig({
           if (!newConfig.wid) delete newConfig.wid;
           weightConf.splice(configExistsIndex, 1, newConfig);
         } else {
-          showErrorMessage('Rule already exists.');
+          showErrorMessage({
+            description:
+              'Another signal with the same event condition already exists.',
+            title: 'Signal already exists'
+          });
           return;
         }
       } else {
@@ -183,16 +187,22 @@ function EngagementConfig({
     })
       .then(() => fetchProjectSettings(activeProject.id))
       .then(() =>
-        showSuccessMessage(
-          `Rule ${editMode ? 'Updated' : 'Added'} successfully`,
-          `The ${editMode ? '' : 'new'} rule has been ${
-            editMode ? 'updated' : 'added'
-          }. This will start reflecting in Accounts shortly.`
-        )
+        showSuccessMessage({
+          title: `${
+            editMode ? 'Signal updated' : 'New signal added'
+          } successfully`,
+          description: `${
+            editMode
+              ? 'Signal has been saved with changes. Updates will reflect across accounts within 24 hours.'
+              : 'Signal saved. Monitoring for this signal has now begun across accounts.'
+          }`
+        })
       )
       .catch((err) => {
         console.log(err);
-        showErrorMessage(`Error ${editMode ? 'updating' : 'adding'} score.`);
+        showErrorMessage({
+          description: `Error ${editMode ? 'updating' : 'adding'} score.`
+        });
       });
     setShowModal(false);
     const timeoutHandle = setTimeout(() => {
@@ -222,7 +232,14 @@ function EngagementConfig({
     updateAccountScores(activeProject.id, {
       WeightConfig: [...weightsConfig],
       salewindow: parseInt(value)
-    }).then(() => fetchProjectSettings(activeProject.id));
+    }).then(() => {
+      fetchProjectSettings(activeProject.id);
+      showSuccessMessage({
+        title: 'Engagement window updated',
+        description:
+          'The engagement window time has been updated and changes will reflect within 24 hours.'
+      });
+    });
   };
 
   const onDelete = (event, index) => {
@@ -235,10 +252,16 @@ function EngagementConfig({
       salewindow: parseInt(saleWindowValue)
     })
       .then(() => fetchProjectSettings(activeProject.id))
-      .then(() => showSuccessMessage(`Score removed successfully`))
+      .then(() =>
+        showSuccessMessage({
+          title: `Signal removed successfully`,
+          description:
+            'Signal removed from monitoring. Changes will reflect across accounts within 24 hours.'
+        })
+      )
       .catch((err) => {
         console.log(err);
-        showErrorMessage(`Error removing score.`);
+        showErrorMessage({ description: `Error removing score.` });
       });
   };
 

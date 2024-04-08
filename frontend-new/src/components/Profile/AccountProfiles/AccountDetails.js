@@ -707,11 +707,13 @@ function AccountDetails({
     }
     return events;
   };
-
   const renderOverview = () => (
     <AccountOverview
       overview={accountOverview?.data || {}}
       loading={accountOverview?.isLoading}
+      top_engagement_signals={
+        accountDetails?.data?.leftpane_props?.['$top_enagagement_signals']
+      }
     />
   );
 
