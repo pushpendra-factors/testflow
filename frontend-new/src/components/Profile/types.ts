@@ -36,6 +36,7 @@ export type Overview = {
 export interface AccountOverviewProps {
   overview: Overview;
   loading: boolean;
+  top_engagement_signals: string;
 }
 
 export interface EventIconProps {
