@@ -415,6 +415,8 @@ func checkCategoricalTypeProperty(projectId int64, segmentRule model.QueryProper
 		propertyValue = fmt.Sprintf("%v", floatVal)
 	} else if intVal, ok := (*properties)[segmentRule.Property].(int64); ok {
 		propertyValue = fmt.Sprintf("%d", intVal)
+	} else if boolVal, ok := (*properties)[segmentRule.Property].(bool); ok {
+		propertyValue = strconv.FormatBool(boolVal)
 	}
 	switch segmentRule.Operator {
 	case model.ContainsOpStr:
