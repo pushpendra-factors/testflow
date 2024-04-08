@@ -23,8 +23,10 @@ import (
 	"strings"
 	"time"
 
+	cacheRedis "factors/cache/redis"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/gomodule/redigo/redis"
 	"github.com/rs/xid"
 	log "github.com/sirupsen/logrus"
 )
@@ -1122,6 +1124,75 @@ func FeatureMiddleware(features []string) gin.HandlerFunc {
 		}
 		c.AbortWithStatusJSON(http.StatusMethodNotAllowed, gin.H{"error": "Feature not available for this project "})
 	}
+}
+
+func RequestRateLimiterMiddleware(key string, numberOfRequestsALlowed int64, timeWindowInSeconds int) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		projectId := U.GetScopeByKeyAsInt64(c, SCOPE_PROJECT_ID)
+
+		logCtx := log.WithFields(log.Fields{
+			"project_id": projectId,
+		})
+
+		key, err := cacheRedis.NewKey(projectId, "", key)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get cache key for rate limiter middleware")
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+		countString, err := cacheRedis.GetPersistent(key)
+		if err != nil && err != redis.ErrNil {
+			log.WithError(err).Error("Failed to fetch rate limiter count from key")
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+
+		var count int64
+		if err != redis.ErrNil {
+			count, err = strconv.ParseInt(countString, 10, 64)
+			if err != nil {
+				logCtx.WithError(err).Error("Failed to parse rate limiter count from count string")
+				c.AbortWithStatus(http.StatusInternalServerError)
+				return
+			}
+		}
+
+		if count > numberOfRequestsALlowed {
+			logCtx.Warn("Rate limit exceeded")
+			c.AbortWithStatusJSON(http.StatusTooManyRequests, "Rate limit exceeded. Please try again later.")
+		}
+
+		_ = createOrIncreamentRequestCount(projectId, key, timeWindowInSeconds)
+		
+		c.Next()
+
+	}
+}
+
+func createOrIncreamentRequestCount(ProjectID int64, key *cacheRedis.Key, expiryInSeconds int) error {
+	// create new redis key or increase the counter
+	logCtx := log.WithFields(log.Fields{
+		"project_id": ProjectID,
+	})
+
+	newKey := cacheRedis.KeyCountTuple{
+		Key:   key,
+		Count: 1,
+	}
+
+	err := cacheRedis.IncrKeyPersistent(newKey)
+	if err != nil {
+		logCtx.WithError(err).Error("failed to increment key for project level rate limit key")
+		return errors.New("failed to increment key for project level rate limit key")
+	}
+	expiry := expiryInSeconds
+
+	_, err = cacheRedis.SetExpiryPersistent(key, expiry)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to increment expiry for project level rate limit key")
+		return errors.New("failed to increment key for project level rate limit key")
+	}
+	return nil
 }
 
 // Check if a feature is available
