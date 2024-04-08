@@ -13,22 +13,26 @@ import (
 )
 
 const (
-	AccountsWidgetGroup            = "Account Analysis"
-	MarketingEngagementWidgetGroup = "Marketing Engagement Analysis"
-	SalesOppWidgetGroup            = "Sales Opportunity Analysis"
-	TotalAccountsWidget            = "Accounts currently in segment"
-	HighEngagementAccountsWidget   = "Accounts with High engagement"
-	OpportunityCreated             = "Opportunity Created"
-	PipelineCreated                = "Pipeline Created"
-	AverageDealSize                = "Average Deal Size"
-	RevenueBooked                  = "Revenue Booked"
-	CloseRate                      = "Close Rate (%)"
-	AvgSalesCycleLength            = "Avg Sales Cycle Length"
-	MarketingQualifiedLeads        = "Marketing qualified leads"
-	SalesQualifiedLeads            = "Sales qualified leads"
+	AccountsWidgetGroupInternal            = "account"
+	AccountsWidgetGroup                    = "Account Analysis"
+	MarketingEngagementWidgetGroupInternal = "marketing"
+	MarketingEngagementWidgetGroup         = "Marketing Engagement Analysis"
+	SalesOppWidgetGroupInternal            = "sales"
+	SalesOppWidgetGroup                    = "Sales Opportunity Analysis"
+	TotalAccountsWidget                    = "Accounts currently in segment"
+	HighEngagementAccountsWidget           = "Accounts with High engagement"
+	OpportunityCreated                     = "Opportunity Created"
+	PipelineCreated                        = "Pipeline Created"
+	AverageDealSize                        = "Average Deal Size"
+	RevenueBooked                          = "Revenue Booked"
+	CloseRate                              = "Close Rate (%)"
+	AvgSalesCycleLength                    = "Avg Sales Cycle Length"
+	MarketingQualifiedLeads                = "Marketing qualified leads"
+	SalesQualifiedLeads                    = "Sales qualified leads"
 )
 
 var integrationBasedWidgetGroupNames = []string{MarketingEngagementWidgetGroup, SalesOppWidgetGroup}
+var integrationBasedWidgetGroupNamesInternal = []string{MarketingEngagementWidgetGroupInternal, SalesOppWidgetGroupInternal}
 
 var marketingWidgetGroup = map[string][]model.Widget{
 	model.HUBSPOT: {
@@ -130,7 +134,7 @@ func (store *MemSQL) GetWidgetGroupAndWidgetsForConfig(projectID int64) ([]model
 	db := C.GetServices().Db
 
 	var widgetGroups []model.WidgetGroup
-	err := db.Where("project_id = ?", projectID).Find(&widgetGroups).Error
+	err := db.Order("display_name desc").Where("project_id = ?", projectID).Find(&widgetGroups).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			logCtx.WithError(err).WithField("projectID", projectID).Warn("Failed while retrieving widget groups.")
@@ -146,10 +150,11 @@ func (store *MemSQL) GetWidgetGroupAndWidgetsForConfig(projectID int64) ([]model
 func (store *MemSQL) CreateWidgetGroups(projectID int64) ([]model.WidgetGroup, int) {
 
 	resWidgetGroups := make([]model.WidgetGroup, 0)
-	for _, widgetGroupName := range integrationBasedWidgetGroupNames {
+	for index, widgetGroupName := range integrationBasedWidgetGroupNames {
 		widgetGroup := model.WidgetGroup{}
 		widgetGroup.ProjectID = projectID
 		widgetGroup.DisplayName = widgetGroupName
+		widgetGroup.Name = integrationBasedWidgetGroupNamesInternal[index]
 		widgetGroup.ID = uuid.New().String()
 		widgetGroup.CreatedAt = time.Now()
 		widgetGroup.UpdatedAt = time.Now()
@@ -169,7 +174,6 @@ func (store *MemSQL) CreateWidgetGroups(projectID int64) ([]model.WidgetGroup, i
 		QueryMetric:     model.TotalAccountsMetric,
 		QueryMetricType: "",
 		IsNonEditable:   true,
-		IsNonComparable: true,
 		QueryType:       model.QueryClassAccounts,
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
@@ -181,7 +185,6 @@ func (store *MemSQL) CreateWidgetGroups(projectID int64) ([]model.WidgetGroup, i
 		QueryMetric:     model.HighEngagedAccountsMetric,
 		QueryMetricType: "",
 		IsNonEditable:   true,
-		IsNonComparable: true,
 		QueryType:       model.QueryClassAccounts,
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
@@ -193,12 +196,14 @@ func (store *MemSQL) CreateWidgetGroups(projectID int64) ([]model.WidgetGroup, i
 	encodedAccountsWidgets, _ := U.EncodeStructTypeToPostgresJsonb(accountWidgets)
 
 	accountWidgetGroup := model.WidgetGroup{
-		ProjectID:   projectID,
-		DisplayName: AccountsWidgetGroup,
-		ID:          uuid.New().String(),
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-		Widgets:     encodedAccountsWidgets,
+		ProjectID:       projectID,
+		DisplayName:     AccountsWidgetGroup,
+		Name:            AccountsWidgetGroupInternal,
+		IsNonComparable: true,
+		ID:              uuid.New().String(),
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+		Widgets:         encodedAccountsWidgets,
 	}
 
 	widgetGroup, statusCode := store.CreateWidgetGroup(accountWidgetGroup)
