@@ -15,15 +15,16 @@ type RequestSegmentKPI struct {
 }
 
 type WidgetGroup struct {
-	ProjectID   int64  `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
-	ID          string `gorm:"primary_key:true;type:varchar(255)" json:"wid_g_id"`
-	DisplayName string `gorm:"display_name" json:"wid_g_d_name"`
-	// TypeOfQuery            string          `json:"q_ty"`
-	Widgets        *postgres.Jsonb `json:"wids"`
-	DecodedWidgets []Widget        `json:"-" gorm:"-"`
-	WidgetsAdded   bool            `json:"-" gorm:"-"`
-	CreatedAt      time.Time       `json:"created_at"`
-	UpdatedAt      time.Time       `json:"updated_at"`
+	ProjectID       int64           `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
+	ID              string          `gorm:"primary_key:true;type:varchar(255)" json:"wid_g_id"`
+	DisplayName     string          `gorm:"display_name" json:"wid_g_d_name"`
+	Name            string          `gorm:"name" json:"name"`
+	IsNonComparable bool            `json:"non_comp"`
+	Widgets         *postgres.Jsonb `json:"wids"`
+	DecodedWidgets  []Widget        `json:"de_wids" gorm:"-"`
+	WidgetsAdded    bool            `json:"-" gorm:"-"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
 func (widgetGroup *WidgetGroup) CreateWidgetJsonWithNoElements() {
@@ -73,7 +74,6 @@ type Widget struct {
 	QueryMetric     string    `json:"q_me"`
 	QueryMetricType string    `json:"q_me_ty"`
 	IsNonEditable   bool      `json:"non_edit"`
-	IsNonComparable bool      `json:"non_comp"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }
