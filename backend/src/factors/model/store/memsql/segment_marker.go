@@ -144,9 +144,8 @@ func CheckPropertyInAllUsers(projectId int64, p model.QueryProperty, decodedProp
 			continue
 		}
 
-		// group based filtering
-		if source, exists := model.GroupUserSource[p.GroupName]; exists &&
-			user.Source != nil && *user.Source != source {
+		// group based filtering for engagement properties
+		if p.GroupName == U.GROUP_NAME_DOMAINS && user.Source != nil && *user.Source != model.UserSourceDomains {
 			continue
 		}
 
