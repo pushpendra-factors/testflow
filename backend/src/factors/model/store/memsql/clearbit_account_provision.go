@@ -125,8 +125,12 @@ func (store *MemSQL) ProvisionClearbitAccountByAdminEmailAndDomain(projectId int
 			}
 
 		} else {
-			parsedDomain, _:=util.ParseURLStable(project.ClearbitDomain)
-			domain=parsedDomain.Host
+			parsedDomain, err := util.ParseURLStable(project.ClearbitDomain)
+			if err != nil {
+				domain = util.GetEmailDomain(adminMail)
+			} else {
+				domain = parsedDomain.Host
+			}
 
 		}
 
