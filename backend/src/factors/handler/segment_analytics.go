@@ -284,7 +284,10 @@ func ExecuteSegmentQueryHandler(c *gin.Context) {
 		shouldReturn, resCode, resMsg := GetSegmentResponseIfCachedQuery(c, projectID, segmentID, widgetGroupID, requestParams.From, requestParams.To)
 		if shouldReturn {
 			if resCode == http.StatusOK {
-				c.JSON(resCode, resMsg)
+				responseData := gin.H{
+					"result": resMsg,
+				}
+				c.JSON(resCode, responseData)
 				return
 			}
 		}
