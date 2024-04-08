@@ -72,6 +72,8 @@ type Widget struct {
 	QueryType       string    `json:"q_ty"`
 	QueryMetric     string    `json:"q_me"`
 	QueryMetricType string    `json:"q_me_ty"`
+	IsNonEditable   bool      `json:"non_edit"`
+	IsNonComparable bool      `json:"non_comp"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }

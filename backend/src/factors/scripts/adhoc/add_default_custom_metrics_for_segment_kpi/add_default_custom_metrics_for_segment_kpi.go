@@ -107,7 +107,10 @@ func createCustomKPIs(allProjects bool, projectIdsArray []int64) {
 	// Re evaluate - once projects are run what happens in the following state.
 	if allProjects {
 		for projectID := range allowedProjectIdsMap {
-			widgetGroupsPresent := CheckWidgetGroupsPresent(projectID)
+			widgetGroupsPresent, err := CheckWidgetGroupsPresent(projectID)
+			if err != "" {
+				log.WithField("err", err).WithField("projectID", projectID).Warn("Errored during CheckWidgetGroupsPresent")
+			}
 			if !widgetGroupsPresent {
 				_, errCode := store.GetStore().CreateWidgetGroups(projectID)
 				if errCode != http.StatusCreated {
@@ -182,11 +185,11 @@ func buildMissingCustomKPI(projectID int64, integrationString string) {
 }
 
 func CheckWidgetGroupsPresent(projectID int64) (bool, string) {
-	_, err, statusCode := store.GetStore().GetWidgetGroupAndWidgetsForConfig(projectID)
-	if statusCode == http.StatusNotFound {
+	widgetGroups, err, statusCode := store.GetStore().GetWidgetGroupAndWidgetsForConfig(projectID)
+	if statusCode == http.StatusNotFound || len(widgetGroups) == 0 {
 		return false, ""
 	}
-	if statusCode == http.StatusFound {
+	if statusCode != http.StatusFound {
 		return false, err
 	}
 	return true, ""
