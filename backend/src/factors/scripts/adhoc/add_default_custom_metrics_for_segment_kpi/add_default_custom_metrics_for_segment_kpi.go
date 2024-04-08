@@ -123,16 +123,12 @@ func createCustomKPIs(allProjects bool, projectIdsArray []int64) {
 			present2 := store.GetStore().IsSalesforceIntegrationAvailable(projectID)
 
 			if present && present2 {
-				log.WithField("projectID", projectID).Warn("Not Processing for this")
-				continue
-			}
-
-			if present {
+				buildMissingCustomKPI(projectID, DD.SalesforceIntegrationName)
+				buildWidgetGroup(projectID, DD.SalesforceIntegrationName)
+			} else if present {
 				buildMissingCustomKPI(projectID, DD.HubspotIntegrationName)
 				buildWidgetGroup(projectID, DD.HubspotIntegrationName)
-			}
-
-			if present2 {
+			} else if present2 {
 				buildMissingCustomKPI(projectID, DD.SalesforceIntegrationName)
 				buildWidgetGroup(projectID, DD.SalesforceIntegrationName)
 			}
@@ -156,16 +152,12 @@ func createCustomKPIs(allProjects bool, projectIdsArray []int64) {
 				present2 := store.GetStore().IsSalesforceIntegrationAvailable(projectID)
 
 				if present && present2 {
-					log.WithField("projectID", projectID).Warn("Not Processing for this")
-					continue
-				}
-
-				if present {
+					buildMissingCustomKPI(projectID, DD.SalesforceIntegrationName)
+					buildWidgetGroup(projectID, DD.SalesforceIntegrationName)
+				} else if present {
 					buildMissingCustomKPI(projectID, DD.HubspotIntegrationName)
 					buildWidgetGroup(projectID, DD.HubspotIntegrationName)
-				}
-
-				if present2 {
+				} else if present2 {
 					buildMissingCustomKPI(projectID, DD.SalesforceIntegrationName)
 					buildWidgetGroup(projectID, DD.SalesforceIntegrationName)
 				}
