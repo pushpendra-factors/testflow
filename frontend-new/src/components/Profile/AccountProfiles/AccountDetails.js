@@ -53,21 +53,12 @@ import AccountTimelineTableView from './AccountTimelineTableView';
 import { GranularityOptions } from '../constants';
 
 function AccountDetails({
-  accountDetails,
-  accountOverview,
-  activeProject,
-  groups,
   getGroups,
-  groupProperties,
   getGroupProperties,
-  currentProjectSettings,
   udpateProjectSettings,
   getProfileAccountDetails,
   getAccountOverview,
-  userPropertiesV2,
-  eventPropertiesV2,
   getEventPropertiesV2,
-  eventNamesMap,
   setActivePageviewEvent
 }) {
   const { TabPane } = Tabs;
@@ -97,7 +88,21 @@ function AccountDetails({
     FEATURES.FEATURE_ACCOUNT_SCORING
   );
 
-  const { groupPropNames } = useSelector((state) => state.coreQuery);
+  const { accountDetails, accountOverview } = useSelector(
+    (state) => state.timelines
+  );
+  const { active_project: activeProject, currentProjectSettings } = useSelector(
+    (state) => state.global
+  );
+  const {
+    groups,
+    groupProperties,
+    userPropertiesV2,
+    eventPropertiesV2,
+    groupPropNames,
+    eventNamesMap
+  } = useSelector((state) => state.coreQuery);
+
   const { plan } = useSelector((state) => state.featureConfig);
   const isFreePlan =
     plan?.name === PLANS.PLAN_FREE || plan?.name === PLANS_V0.PLAN_FREE;
@@ -106,15 +111,15 @@ function AccountDetails({
     const accountEvents = accountDetails.data?.events || [];
     const eventsArray = accountEvents
       .filter((event) => event.display_name !== 'Page View')
-      .map((event) => event.event_name);
+      .map((event) => event.name);
 
     const pageViewEvent = accountEvents.find(
       (event) => event.display_name === 'Page View'
     );
 
     if (pageViewEvent) {
-      eventsArray.push(pageViewEvent.event_name);
-      setActivePageviewEvent(pageViewEvent.event_name);
+      eventsArray.push(pageViewEvent.name);
+      setActivePageviewEvent(pageViewEvent.name);
     }
 
     return Array.from(new Set(eventsArray));
@@ -171,12 +176,10 @@ function AccountDetails({
   }, [location]);
 
   const activeId = useMemo(() => {
-    const urlSearchParams = new URLSearchParams(location.search);
-    // const params = Object.fromEntries(urlSearchParams.entries());
     const id = atob(location.pathname.split('/').pop());
     document.title = 'Accounts - FactorsAI';
     return id;
-  }, [location, timelineViewMode]);
+  }, [location]);
 
   useEffect(
     () => () => {
@@ -207,8 +210,7 @@ function AccountDetails({
     await getProfileAccountDetails(
       activeProject.id,
       activeId,
-      GROUP_NAME_DOMAINS,
-      currentProjectSettings.timelines_config
+      GROUP_NAME_DOMAINS
     );
   };
 
@@ -475,7 +477,8 @@ function AccountDetails({
   );
 
   const renderHeader = () => {
-    const accountName = accountDetails?.data?.domain;
+    const accountName =
+      accountDetails?.data?.name || accountDetails?.data?.domain;
     return (
       <div className='fa-timeline--header'>
         <div className='flex items-center'>
@@ -628,7 +631,7 @@ function AccountDetails({
               extraClass='m-0 mr-1 py-2'
               weight='bold'
             >
-              {accountDetails?.data?.domain}
+              {accountDetails?.data?.name || accountDetails?.data?.domain}
             </Text>
             <SVG name='ArrowUpRightSquare' />
           </a>
@@ -703,7 +706,7 @@ function AccountDetails({
 
   const getFilteredEvents = (events) => {
     if (isFreePlan) {
-      return events.filter((activity) => !activity.is_group_event);
+      return events.filter((activity) => !activity.is_group_user);
     }
     return events;
   };
@@ -724,9 +727,9 @@ function AccountDetails({
           ?.filter((activity) => activity.enabled === true)
           ?.slice(0, 1000) || []
       )}
-      timelineUsers={getTimelineUsers('timeline')}
       loading={accountDetails?.isLoading}
       eventPropsType={eventPropertiesType}
+      extraClass='mt-5'
     />
   );
 
@@ -878,19 +881,6 @@ function AccountDetails({
   );
 }
 
-const mapStateToProps = (state) => ({
-  activeProject: state.global.active_project,
-  currentProjectSettings: state.global.currentProjectSettings,
-  groups: state.coreQuery.groups,
-  accounts: state.timelines.accounts,
-  accountDetails: state.timelines.accountDetails,
-  accountOverview: state.timelines.accountOverview,
-  userPropertiesV2: state.coreQuery.userPropertiesV2,
-  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
-  groupProperties: state.coreQuery.groupProperties,
-  eventNamesMap: state.coreQuery.eventNamesMap
-});
-
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
@@ -905,4 +895,4 @@ const mapDispatchToProps = (dispatch) =>
     dispatch
   );
 
-export default connect(mapStateToProps, mapDispatchToProps)(AccountDetails);
+export default connect(null, mapDispatchToProps)(AccountDetails);

@@ -14,7 +14,10 @@ const initialState = {
   segmentCreateStatus: '',
   segmentUpdateStatus: '',
   segments: {},
-  activePageView: ''
+  activePageView: '',
+  accountPreview: {},
+  userConfigProperties: {},
+  eventConfigProperties: {}
 };
 
 export default function (state = initialState, action) {
@@ -80,6 +83,18 @@ export default function (state = initialState, action) {
       return { ...state, segmentUpdateStatus: action.payload };
     case 'SET_PAGEVIEW':
       return { ...state, activePageView: action.payload };
+    case 'FETCH_TOP100_EVENTS_FULFILLED':
+      const preview = { ...state.accountPreview };
+      preview[action.domainName] = action.payload;
+      return { ...state, accountPreview: preview };
+    case 'FETCH_USER_CONFIG_PROPERTIES_FULFILLED':
+      const userConfigProps = { ...state.userConfigProperties };
+      userConfigProps[action.userID] = action.payload;
+      return { ...state, userConfigProperties: userConfigProps };
+    case 'FETCH_EVENT_CONFIG_PROPERTIES_FULFILLED':
+      const eventConfigProps = { ...state.eventConfigProperties };
+      userConfigProps[action.eventID] = action.payload;
+      return { ...state, userConfigProperties: eventConfigProps };
     case SET_ACTIVE_PROJECT:
       return {
         ...initialState
@@ -191,4 +206,21 @@ export const getEngagementCategoryRanges = (projectID) => {
 export const updateEventPropertiesConfig = (projectID, eventName, payload) => {
   const url = `${host}projects/${projectID}/v1/profiles/events_config/${eventName}`;
   return put(null, url, payload);
+};
+
+export const getTop100EventsForDomain = (projectID, domainName) => {
+  const url = `${host}projects/${projectID}/v1/profiles/accounts/top_events/${btoa(
+    domainName
+  )}`;
+  return get(null, url);
+};
+
+export const getConfiguredUserProperties = (projectID, userID, isAnonymous) => {
+  const url = `${host}projects/${projectID}/v1/profiles/user_properties/${userID}?is_anonymous=${isAnonymous}`;
+  return get(null, url);
+};
+
+export const getConfiguredEventProperties = (projectID, eventID, eventName) => {
+  const url = `${host}projects/${projectID}/v1/profiles/event_properties/${eventID}/${eventName}`;
+  return get(null, url);
 };

@@ -11,7 +11,6 @@ import {
   iconColors
 } from 'Components/Profile/constants';
 import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
-import logger from 'Utils/logger';
 import { SVG, Text } from '../../../factorsComponents';
 import {
   eventsFormattedForGranularity,
@@ -45,11 +44,6 @@ function AccountTimelineBirdView({
     document.title = 'Accounts - FactorsAI';
     setFormattedData(data);
   }, [timelineEvents, granularity]);
-
-  // temp
-  useEffect(() => {
-    logger.log(formattedData);
-  }, [formattedData]);
 
   useEffect(() => {
     const data = Object.keys(formattedData).reduce((acc, key) => {
@@ -105,7 +99,7 @@ function AccountTimelineBirdView({
       event.alias_name ||
       (event.display_name !== 'Page View' &&
         PropTextFormat(event.display_name)) ||
-      event.event_name;
+      event.name;
     const isHoverable = Object.keys(event.properties || {}).length > 0;
     const category = getEventCategory(event, eventNamesMap);
     const icon = getIconForCategory(category);
@@ -113,10 +107,10 @@ function AccountTimelineBirdView({
     return (
       <div className='tag'>
         <InfoCard
-          eventType={event?.event_type}
+          eventType={event?.type}
           title={event?.alias_name}
           eventSource={event?.display_name}
-          eventName={event?.event_name}
+          eventName={event?.name}
           properties={event?.properties || {}}
           propertiesType={propertiesType}
           trigger={isHoverable ? 'hover' : []}
@@ -169,9 +163,9 @@ function AccountTimelineBirdView({
           <div className={`green-stripe ${showText ? '' : 'opaque'}`}>
             {showText ? (
               <div className='text'>
-                {groupPropNames[milestone.event_name]
-                  ? groupPropNames[milestone.event_name]
-                  : milestone.event_name}
+                {groupPropNames[milestone.name]
+                  ? groupPropNames[milestone.name]
+                  : milestone.name}
               </div>
             ) : null}
           </div>
@@ -245,7 +239,11 @@ function AccountTimelineBirdView({
             const milestones = allEvents?.milestone;
             return (
               <tr>
-                <td className={`pb-${(milestones?.events?.length || 0) * 8}`}>
+                <td
+                  style={{
+                    paddingBottom: `${(milestones?.events?.length || 0) * 32}px`
+                  }}
+                >
                   <div className='timestamp top-64'>{timestamp}</div>
                   {milestones && renderMilestoneStrip(milestones, true)}
                 </td>

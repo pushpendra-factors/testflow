@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	C "factors/config"
 	mid "factors/middleware"
@@ -358,7 +359,7 @@ func UpdateEventConfigHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-func GetUserPropertiesByIDHandler(c *gin.Context) {
+func GetConfiguredUserPropertiesWithValuesHandler(c *gin.Context) {
 
 	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	logCtx := log.WithFields(log.Fields{
@@ -394,7 +395,43 @@ func GetUserPropertiesByIDHandler(c *gin.Context) {
 		"isAnonymous": isAnonymous,
 	})
 
-	properties, status := store.GetStore().GetConfiguredPropertiesByUserID(projectID, userID, isAnonymous)
+	properties, status := store.GetStore().GetConfiguredUserPropertiesWithValues(projectID, userID, isAnonymous)
+	if status != http.StatusOK {
+		logCtx.Error("status error")
+		c.AbortWithStatusJSON(status, gin.H{"error": "could not fetch user properties"})
+		return
+	}
+
+	c.JSON(http.StatusOK, properties)
+}
+
+func GetConfiguredEventPropertiesWithValuesHandler(c *gin.Context) {
+
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectID,
+	})
+	if projectID == 0 {
+		logCtx.Error("invalid project id")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid project id"})
+		return
+	}
+
+	eventID := c.Params.ByName("id")
+	eventName := c.Params.ByName("name")
+	logCtx = log.WithFields(log.Fields{
+		"projectId": projectID,
+		"eventID":   eventID,
+		"eventName": eventName,
+	})
+
+	if eventID == "" {
+		logCtx.Error("invalid event id")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "failed processing user id"})
+		return
+	}
+
+	properties, status := store.GetStore().GetConfiguredEventPropertiesWithValues(projectID, eventID, eventName)
 	if status != http.StatusOK {
 		logCtx.Error("status error")
 		c.AbortWithStatusJSON(status, gin.H{"error": "could not fetch user properties"})
@@ -407,18 +444,28 @@ func GetUserPropertiesByIDHandler(c *gin.Context) {
 func GetTopEventsForADomainHandler(c *gin.Context) {
 
 	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
-	domainID := c.Params.ByName("id")
+	encodedDomainName := c.Params.ByName("domain_name")
 	logCtx := log.WithFields(log.Fields{
-		"projectId": projectID,
-		"userId":    domainID,
+		"projectId":     projectID,
+		"encodedDomain": encodedDomainName,
 	})
-	if projectID == 0 || domainID == "" {
+	if projectID == 0 || encodedDomainName == "" {
 		logCtx.Error("invalid request params")
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid request params"})
 		return
 	}
 
-	properties, status := store.GetStore().GetTopEventsForADomain(projectID, domainID)
+	decodedDomainName, err := base64.StdEncoding.DecodeString(encodedDomainName)
+	if err != nil {
+		logCtx.WithFields(log.Fields{
+			"decodedDomain": decodedDomainName,
+			log.ErrorKey:    err,
+		}).Error("Failed decoding domainName.")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	domainName := string(decodedDomainName)
+	properties, status := store.GetStore().GetTopEventsForADomain(projectID, domainName)
 	if status != http.StatusOK {
 		logCtx.Error("status error")
 		c.AbortWithStatusJSON(status, gin.H{"error": "could not fetch events for given domain"})
