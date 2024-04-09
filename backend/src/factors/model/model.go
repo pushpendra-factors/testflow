@@ -696,6 +696,7 @@ type Model interface {
 	OverwriteUserPropertiesByCustomerUserID(projectID int64, customerUserID string, properties *postgres.Jsonb, updateTimestamp int64) int
 	GetUserByPropertyKey(projectID int64, key string, value interface{}) (*model.User, int)
 	UpdateUserPropertiesForSession(projectID int64, sessionUserPropertiesRecordMap *map[string]model.SessionUserProperties) int
+	UpdateDomainProperties(projectID int64, domainUserID string) int
 	GetCustomerUserIDAndUserPropertiesFromFormSubmit(projectID int64, userID string, formSubmitProperties *U.PropertiesMap) (string, *U.PropertiesMap, int)
 	UpdateIdentifyOverwriteUserPropertiesMeta(projectID int64, customerUserID, userID, pageURL, source string, userProperties *postgres.Jsonb, timestamp int64, isNewUser bool) error
 	GetSelectedUsersByCustomerUserID(projectID int64, customerUserID string, limit uint64, numUsers uint64) ([]model.User, int)

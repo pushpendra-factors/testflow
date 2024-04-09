@@ -931,7 +931,7 @@ func TestMultipleEventsWithSingleAddSessionCallWithChannelGroup(t *testing.T) {
 	err = json.Unmarshal(user.Properties.RawMessage, &propertiesMap)
 	assert.Nil(t, err)
 	assert.Equal(t, propertiesMap[U.UP_INITIAL_CHANNEL], model.ChannelDirect)
-	assert.Equal(t, propertiesMap[U.UP_LATEST_CHANNEL], model.ChannelPaidSearch)
+	assert.Equal(t, propertiesMap[U.UP_LATEST_CHANNEL], model.ChannelGoogleAdsNetwork)
 
 	sessionEvent1 := assertAssociatedSession(t, project.ID, []string{eventId},
 		[]string{}, "Session 1")
@@ -949,7 +949,7 @@ func TestMultipleEventsWithSingleAddSessionCallWithChannelGroup(t *testing.T) {
 	lsUserProperties2, err := U.DecodePostgresJsonb(sessionEvent2.UserProperties)
 	assert.Nil(t, err)
 	assert.Equal(t, (*lsUserProperties2)[U.UP_INITIAL_CHANNEL], model.ChannelDirect)
-	assert.Equal(t, (*lsUserProperties2)[U.UP_LATEST_CHANNEL], model.ChannelPaidSearch)
+	assert.Equal(t, (*lsUserProperties2)[U.UP_LATEST_CHANNEL], model.ChannelGoogleAdsNetwork)
 }
 
 func TestAddSessionOnUserWithContinuousEvents(t *testing.T) {

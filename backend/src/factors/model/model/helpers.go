@@ -59,3 +59,13 @@ func LogOnSlowExecutionWithParams(starttime time.Time, params *log.Fields) {
 		logCtx.Info("Slow query or method execution.")
 	}
 }
+
+func GetFunctionCaller() string {
+	pc, _, _, _ := runtime.Caller(2)
+	if fn := runtime.FuncForPC(pc); fn != nil {
+		name := fn.Name()
+		nameOnlySplit := strings.Split(name, ".")
+		return nameOnlySplit[len(nameOnlySplit)-1]
+	}
+	return ""
+}
