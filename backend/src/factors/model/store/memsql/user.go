@@ -880,6 +880,64 @@ func (store *MemSQL) getUserListForMergingPropertiesByCustomerUserID(projectID i
 	return userIDs, http.StatusFound
 }
 
+func (store *MemSQL) getUserListForMergingPropertiesByDomain(projectID int64, domainUserID string, limit uint64, numUsers uint64) ([]string, int) {
+	logFields := log.Fields{"project_id": projectID, "domain_user_id": domainUserID}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || domainUserID == " " {
+		logCtx.Error("Invalid parameters.")
+		return nil, http.StatusBadRequest
+	}
+
+	domainGroup, status := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get domain group on getUserListForMergingPropertiesByDomain")
+		return nil, http.StatusInternalServerError
+	}
+
+	whereStmnt := fmt.Sprintf("project_id = ? AND group_%d_user_id = ? AND ( is_group_user = false OR is_group_user IS NULL ) AND (source = 1 OR source IS NULL)", domainGroup.ID)
+	whereParams := []interface{}{projectID, domainUserID}
+
+	var ids []model.User
+	// Fetches recently updated users to ensure relevance at present.
+	db := C.GetServices().Db
+	if err := db.Limit(limit).Order("updated_at DESC").
+		Where(whereStmnt, whereParams...).
+		Select("id").Find(&ids).Error; err != nil {
+		logCtx.WithError(err).Error("Failed to get selected users for domain user id")
+		return nil, http.StatusInternalServerError
+	}
+
+	if len(ids) == 0 {
+		return nil, http.StatusNotFound
+	}
+
+	pulledUsersCount := len(ids)
+	if pulledUsersCount > 10 {
+		logCtx.WithField("UsersCount", pulledUsersCount).
+			Info("No.of users with same domain user id has exceeded 10.")
+	}
+
+	var userIDs []string
+	if len(ids) >= int(numUsers) {
+		for i := 0; i < int(numUsers/2); i++ {
+			userIDs = append(userIDs, ids[i].ID)
+		}
+
+		for i := len(ids) - 1; i >= len(ids)-int(numUsers/2); i-- {
+			userIDs = append(userIDs, ids[i].ID)
+		}
+	} else {
+		for i := 0; i < len(ids); i++ {
+			userIDs = append(userIDs, ids[i].ID)
+		}
+	}
+
+	return userIDs, http.StatusFound
+}
+
 // GetSelectedUsersByCustomerUserID gets selected (top 50 & bottom 50) users identified by given customer_user_id in increasing order of updated_at.
 func (store *MemSQL) GetSelectedUsersByCustomerUserID(projectID int64, customerUserID string, limit uint64, numUsers uint64) ([]model.User, int) {
 	logFields := log.Fields{
@@ -2201,6 +2259,20 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID int64, id string,
 			return nil, http.StatusInternalServerError
 		}
 
+		if !C.EnableDomainWebsitePropertiesByProjectID(projectID) {
+			return newPropertiesMergedJSON, http.StatusAccepted
+		}
+
+		changed, err := model.IsUserPropertyChangedForDomains(&user.Properties, newPropertiesMergedJSON)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to check for IsUserPropertyChangedForDomains")
+		} else if changed {
+			status := store.UpdateDomainPropertiesByUser(projectID, id)
+			if status != http.StatusOK && status != http.StatusNotModified {
+				logCtx.WithFields(log.Fields{"project_id": projectID, "err_code": status}).Error("Failed to UpdateDomainPropertiesByUser")
+			}
+		}
+
 		return newPropertiesMergedJSON, http.StatusAccepted
 	}
 
@@ -2215,6 +2287,20 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID int64, id string,
 		errCode = store.OverwriteUserPropertiesByID(projectID, id, &user.Properties, newPropertiesMergedJSON, true, newUpdateTimestamp, sourceValue)
 		if errCode == http.StatusInternalServerError || errCode == http.StatusBadRequest {
 			return nil, http.StatusInternalServerError
+		}
+
+		if !C.EnableDomainWebsitePropertiesByProjectID(projectID) {
+			return newPropertiesMergedJSON, http.StatusAccepted
+		}
+
+		changed, err := model.IsUserPropertyChangedForDomains(&user.Properties, newPropertiesMergedJSON)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to check for IsUserPropertyChangedForDomains")
+		} else if changed {
+			status := store.UpdateDomainPropertiesByUser(projectID, id)
+			if status != http.StatusOK && status != http.StatusNotModified {
+				logCtx.WithFields(log.Fields{"project_id": projectID, "err_code": status}).Error("Failed to UpdateDomainPropertiesByUser")
+			}
 		}
 
 		return newPropertiesMergedJSON, http.StatusAccepted
@@ -2295,6 +2381,20 @@ func (store *MemSQL) UpdateUserPropertiesV2(projectID int64, id string,
 
 	if hasFailure {
 		return nil, http.StatusInternalServerError
+	}
+
+	if !C.EnableDomainWebsitePropertiesByProjectID(projectID) {
+		return mergedPropertiesOfUserJSON, http.StatusAccepted
+	}
+
+	changed, err := model.IsUserPropertyChangedForDomains(&user.Properties, newPropertiesMergedJSON)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to check for IsUserPropertyChangedForDomains")
+	} else if changed {
+		status := store.UpdateDomainPropertiesByUser(projectID, id)
+		if status != http.StatusOK && status != http.StatusNotModified {
+			logCtx.WithFields(log.Fields{"project_id": projectID, "err_code": status}).Error("Failed to UpdateDomainPropertiesByUser")
+		}
 	}
 
 	return mergedPropertiesOfUserJSON, http.StatusAccepted
@@ -2423,7 +2523,7 @@ func (store *MemSQL) overwriteUserPropertiesByIDWithTransaction(projectID int64,
 	newProperties.RawMessage = U.CleanupUnsupportedCharOnStringBytes(newProperties.RawMessage)
 
 	var propertiesUpdateTimestamp int64
-	if updateTimestamp > 0 && updateTimestamp > currentPropertiesUpdatedTimestamp {
+	if withUpdateTimestamp && updateTimestamp > 0 && updateTimestamp > currentPropertiesUpdatedTimestamp {
 		if C.UseSourcePropertyOverwriteByProjectIDs(projectID) {
 			if !model.BlacklistUserPropertiesUpdateTimestampBySource[source] {
 				propertiesUpdateTimestamp = updateTimestamp
@@ -2444,7 +2544,7 @@ func (store *MemSQL) overwriteUserPropertiesByIDWithTransaction(projectID int64,
 	}
 
 	update := map[string]interface{}{"properties": newProperties}
-	if propertiesUpdateTimestamp > 0 {
+	if withUpdateTimestamp && propertiesUpdateTimestamp > 0 {
 		update["properties_updated_timestamp"] = propertiesUpdateTimestamp
 	}
 
@@ -3890,6 +3990,37 @@ func (store *MemSQL) AssociateUserDomainsGroup(projectID int64, requestUserID st
 		}
 	}
 
+	if C.EnableDomainWebsitePropertiesByProjectID(projectID) {
+		updateDomainList := map[string]bool{}
+		for i := range updateUsers {
+			existingDomainUserID, err := model.GetUserGroupUserID(&updateUsers[i], groupIDMap[model.GROUP_NAME_DOMAINS])
+			if err != nil {
+				logCtx.WithFields(log.Fields{"user": updateUsers[i]}).WithError(err).Error("Failed to get domain user id from user in AssociateUserDomainsGroup.")
+			}
+
+			if existingDomainUserID != domainUserID {
+				if existingDomainUserID != "" {
+					updateDomainList[existingDomainUserID] = true
+				}
+
+				updateDomainList[domainUserID] = true
+			}
+		}
+
+		if len(updateDomainList) > 0 {
+			if len(updateDomainList) > 3 {
+				logCtx.WithFields(log.Fields{"domain_user_ids": updateDomainList}).Info("Number of domain user update exceeds 3.")
+			}
+
+			for domainUserID := range updateDomainList {
+				status = store.UpdateDomainProperties(projectID, domainUserID)
+				if status != http.StatusOK && status != http.StatusNotModified {
+					logCtx.WithFields(log.Fields{"project_id": projectID, "err_code": status}).Error("Failed to UpdateDomainProperties on AssociateUserDomainsGroup.")
+				}
+			}
+		}
+	}
+
 	return http.StatusOK
 }
 
@@ -4137,6 +4268,170 @@ func (store *MemSQL) UpdateSessionProperties(projectID int64, customerUserID, us
 	err := db.Exec(stmnt, append(whereParams, whereParams...)...).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to update user total session properties.")
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusOK
+}
+
+func GetPropertyIncludeListForDomainProperties() (string, error) {
+	userToDomainProperties := map[string]int{}
+	for key := range U.USER_INITIAL_PROPERTIES_TO_DOMAIN_INITIAL_PROPERTIES {
+		userToDomainProperties[key] = 1
+	}
+	for key := range U.USER_LATEST_PROPERTIES_TO_DOMAIN_LATEST_PROPERTIES {
+		userToDomainProperties[key] = 1
+	}
+
+	for key := range U.USER_ADD_TYPE_PROPERTIES_TO_DOMAIN_ADD_TYPE_PROPERTIES {
+		userToDomainProperties[key] = 1
+	}
+
+	fieldsInclude, err := json.Marshal(userToDomainProperties)
+	if err != nil {
+		return "", err
+	}
+
+	return string(fieldsInclude), nil
+}
+
+func (store *MemSQL) UpdateDomainPropertiesByUser(projectID int64, userID string) int {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "user_id": userID})
+	domainGroup, status := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get domain group")
+		return http.StatusInternalServerError
+	}
+
+	logCtx.WithFields(log.Fields{"caller_func": model.GetFunctionCaller()}).Info("Updating update domain properties by user id.")
+
+	user, status := store.GetUserWithoutJSONColumns(projectID, userID)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get user for domain properties update")
+		return http.StatusInternalServerError
+	}
+
+	// TODO(Maisa): group users creation also uses Updateuserproperties internaly, should move to separate flow.
+	if user.IsGroupUser != nil && *user.IsGroupUser {
+		return http.StatusOK
+	}
+
+	domainUserID, err := model.GetUserGroupUserID(user, domainGroup.ID)
+	if err != nil {
+		logCtx.Error("Failed get domain id for update domain user properties")
+		return http.StatusInternalServerError
+	}
+
+	if domainUserID == "" {
+		return http.StatusOK
+	}
+
+	return store.UpdateDomainProperties(projectID, domainUserID)
+}
+
+func (store *MemSQL) UpdateDomainProperties(projectID int64, domainUserID string) int {
+	logFields := log.Fields{"project_id": projectID, "domain_user_id": domainUserID}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 || domainUserID == "" {
+		logCtx.Error("Invalid paramenters.")
+		return http.StatusBadRequest
+	}
+
+	logCtx.WithFields(log.Fields{"caller_func": model.GetFunctionCaller()}).Info("Updating update domain properties by domain user id.")
+	group, status := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get domain group on update domain properties.")
+		return http.StatusInternalServerError
+	}
+
+	userIDs, status := store.getUserListForMergingPropertiesByDomain(projectID, domainUserID,
+		model.USER_MERGE_RECENT_UPDATED_LIMIT, model.USER_MERGE_LIMIT)
+	if status != http.StatusFound {
+		if status == http.StatusNotFound {
+			return http.StatusOK
+		}
+
+		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to getUserListForMergingPropertiesByDomain.")
+		return http.StatusInternalServerError
+	}
+
+	propertyIncludeList, err := GetPropertyIncludeListForDomainProperties()
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get GetPropertyIncludeListForDomainProperties")
+		return http.StatusInternalServerError
+	}
+
+	// JSON_INCLUDE_MASK will only pull subset for properties required for domain properties
+	selectStmnt := fmt.Sprintf("id, JSON_INCLUDE_MASK(properties, '%s' ) as properties, join_timestamp, properties_updated_timestamp", string(propertyIncludeList))
+
+	whereStmnt := fmt.Sprintf("project_id = ? AND group_%d_user_id = ? AND (source = 1 OR source is NULL) AND ( is_group_user = false OR is_group_user IS NULL ) AND id IN ( ? )", group.ID)
+	whereParams := []interface{}{projectID, domainUserID, userIDs}
+
+	users := []model.User{}
+	db := C.GetServices().Db
+
+	err = db.Select(selectStmnt).
+		Where(whereStmnt, whereParams...).Find(&users).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get users for updating domain properties")
+		return http.StatusInternalServerError
+	}
+
+	mergedProperties, err := model.GetMergedPropertiesForDomain(projectID, users)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to GetMergedPropertiesForDomain.")
+		return http.StatusInternalServerError
+	}
+
+	return store.updateDomainPropertiesIfChanged(projectID, domainUserID, mergedProperties)
+}
+
+func (store *MemSQL) updateDomainPropertiesIfChanged(projectID int64, domainUserID string, updatedProperties map[string]interface{}) int {
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "domain_user_id": domainUserID})
+
+	properties, status := store.GetUserPropertiesByUserID(projectID, domainUserID)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get domain user properties.")
+		return http.StatusInternalServerError
+	}
+
+	newUpdatedProperties, err := U.DecodePostgresJsonb(properties)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to decode domain user properties")
+		return http.StatusInternalServerError
+	}
+
+	isChanged := false
+	for key := range updatedProperties {
+		if updatedProperties[key] != (*newUpdatedProperties)[key] {
+			isChanged = true
+			break
+		}
+	}
+
+	if !isChanged {
+		return http.StatusNotModified
+	}
+
+	for key := range updatedProperties {
+		(*newUpdatedProperties)[key] = updatedProperties[key]
+	}
+
+	newUpdatedPropertiesJsonB, err := U.EncodeToPostgresJsonb(newUpdatedProperties)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to encode domain user properties.")
+		return http.StatusInternalServerError
+	}
+
+	db := C.GetServices().Db
+	err = db.Model(&model.User{}).
+		Where("project_id = ? AND id = ? AND source = ?", projectID, domainUserID, model.UserSourceDomains).
+		Update(map[string]interface{}{"properties": newUpdatedPropertiesJsonB}).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to update domain user properties.")
 		return http.StatusInternalServerError
 	}
 
