@@ -1927,6 +1927,11 @@ func (store *MemSQL) GetLastSyncedHubspotDocumentByID(projectID int64, docID str
 
 func (store *MemSQL) CreateOrUpdateGroupPropertiesBySource(projectID int64, groupName string, groupID, groupUserID string,
 	enProperties *map[string]interface{}, createdTimestamp, updatedTimestamp int64, source string) (string, error) {
+	return store.CreateOrUpdateGroupPropertiesBySourceWithEmptyValues(projectID, groupName, groupID, groupUserID, enProperties, createdTimestamp, updatedTimestamp, source, false)
+}
+
+func (store *MemSQL) CreateOrUpdateGroupPropertiesBySourceWithEmptyValues(projectID int64, groupName string, groupID, groupUserID string,
+	enProperties *map[string]interface{}, createdTimestamp, updatedTimestamp int64, source string, allowEmptyProperties bool) (string, error) {
 	logFields := log.Fields{
 		"project_id":        projectID,
 		"group_name":        groupName,
@@ -1972,7 +1977,7 @@ func (store *MemSQL) CreateOrUpdateGroupPropertiesBySource(projectID int64, grou
 			return "", errors.New("user is not group user")
 		}
 
-		_, status = store.UpdateUserGroupProperties(projectID, groupUserID, pJSONProperties, updatedTimestamp)
+		_, status = store.updateUserGroupPropertiesWithEmptyValues(projectID, groupUserID, pJSONProperties, updatedTimestamp, allowEmptyProperties)
 		if status != http.StatusAccepted {
 			logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to update user group properties.")
 			return "", errors.New("failed to update company group properties")
@@ -2006,7 +2011,7 @@ func (store *MemSQL) CreateOrUpdateGroupPropertiesBySource(projectID int64, grou
 		return userID, errors.New("failed to create company group user")
 	}
 
-	_, status = store.UpdateUserGroupProperties(projectID, userID, pJSONProperties, updatedTimestamp)
+	_, status = store.updateUserGroupPropertiesWithEmptyValues(projectID, userID, pJSONProperties, updatedTimestamp, allowEmptyProperties)
 	if status != http.StatusAccepted {
 		return userID, errors.New("failed to update company group properties")
 	}
