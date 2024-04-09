@@ -1769,6 +1769,39 @@ var ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	DP_ENGAGEMENT_SIGNALS:     "Top Engagement Signals",
 }
 
+var ALL_ACCOUNT_PROPERTIES_DISPLAY_NAMES = map[string]string{
+	// initial properties
+	DP_INITIAL_PAGE_URL:            "Account First Page URL",
+	DP_JOIN_TIME:                   "Account First Seen Date",
+	DP_INITIAL_REFERRER_DOMAIN:     "Account First Referrer Domain",
+	DP_INITIAL_MEDIUM:              "Account First Medium",
+	DP_INITIAL_SOURCE:              "Account First Source",
+	DP_INITIAL_CAMPAIGN:            "Account First Campaign",
+	DP_INITIAL_CONTENT:             "Account First Content",
+	DP_INITIAL_TERM:                "Account First Term",
+	DP_INITIAL_CHANNEL:             "Account First Channel",
+	DP_INITIAL_PAGE_SPENT_TIME:     "Account First Page Spent Time",
+	DP_INITIAL_PAGE_SCROLL_PERCENT: "Account First Page Scroll Percent",
+	DP_INITIAL_KEYWORD:             "Account First Keyword",
+
+	// latest properties
+	DP_LATEST_PAGE_URL:            "Account Latest Page url",
+	DP_LATEST_REFERRER_DOMAIN:     "Account Latest Referrer domain",
+	DP_LATEST_MEDIUM:              "Account Latest Medium",
+	DP_LATEST_SOURCE:              "Account Latest Source",
+	DP_LATEST_CAMPAIGN:            "Account Latest Campaign",
+	DP_LATEST_CONTENT:             "Account Latest Content",
+	DP_LATEST_TERM:                "Account Latest Term",
+	DP_LATEST_CHANNEL:             "Account Latest Channel",
+	DP_LATEST_PAGE_SPENT_TIME:     "Account Latest Page Spent Time",
+	DP_LATEST_PAGE_SCROLL_PERCENT: "Account Latest Page Scroll Percent",
+	DP_LATEST_KEYWORD:             "Account Latest Keyword",
+
+	// session properties
+	DP_TOTAL_PAGE_COUNT:      "Account Total Page Count",
+	DP_TOTAL_PAGE_SPENT_TIME: "Account Total Page Spent Time",
+}
+
 var USER_PROPERTIES_WITH_COLUMN = []string{
 	IDENTIFIED_USER_ID,
 }
@@ -4805,4 +4838,17 @@ func ValidateAndFillEnrichmentPropsForIntegerValue(value int, propertyName strin
 			(*properties)[propertyName] = value
 		}
 	}
+}
+
+func GetAllAccountPropertiesDisplayNames() map[string]string {
+	displayNames := map[string]string{}
+	for key, label := range ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES {
+		displayNames[key] = label
+	}
+
+	for key, label := range ALL_ACCOUNT_PROPERTIES_DISPLAY_NAMES {
+		displayNames[key] = label
+	}
+
+	return displayNames
 }

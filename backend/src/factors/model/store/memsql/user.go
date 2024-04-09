@@ -3644,6 +3644,11 @@ func (store *MemSQL) updateUserDomainsGroup(projectID int64, userIDs []string, d
 
 func (store *MemSQL) UpdateUserGroupProperties(projectID int64, userID string,
 	newProperties *postgres.Jsonb, updateTimestamp int64) (*postgres.Jsonb, int) {
+	return store.updateUserGroupPropertiesWithEmptyValues(projectID, userID, newProperties, updateTimestamp, false)
+}
+
+func (store *MemSQL) updateUserGroupPropertiesWithEmptyValues(projectID int64, userID string,
+	newProperties *postgres.Jsonb, updateTimestamp int64, allowEmptyValues bool) (*postgres.Jsonb, int) {
 	logFields := log.Fields{
 		"project_id":       projectID,
 		"user_id":          userID,
@@ -3684,7 +3689,8 @@ func (store *MemSQL) UpdateUserGroupProperties(projectID int64, userID string,
 	}
 
 	for key, value := range *incomingProperties {
-		if value == nil {
+
+		if !allowEmptyValues && value == nil {
 			continue
 		}
 
@@ -4340,7 +4346,7 @@ func (store *MemSQL) UpdateDomainProperties(projectID int64, domainUserID string
 	}
 
 	logCtx.WithFields(log.Fields{"caller_func": model.GetFunctionCaller()}).Info("Updating update domain properties by domain user id.")
-	group, status := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
+	domainGroup, status := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
 	if status != http.StatusFound {
 		logCtx.Error("Failed to get domain group on update domain properties.")
 		return http.StatusInternalServerError
@@ -4366,7 +4372,7 @@ func (store *MemSQL) UpdateDomainProperties(projectID int64, domainUserID string
 	// JSON_INCLUDE_MASK will only pull subset for properties required for domain properties
 	selectStmnt := fmt.Sprintf("id, JSON_INCLUDE_MASK(properties, '%s' ) as properties, join_timestamp, properties_updated_timestamp", string(propertyIncludeList))
 
-	whereStmnt := fmt.Sprintf("project_id = ? AND group_%d_user_id = ? AND (source = 1 OR source is NULL) AND ( is_group_user = false OR is_group_user IS NULL ) AND id IN ( ? )", group.ID)
+	whereStmnt := fmt.Sprintf("project_id = ? AND group_%d_user_id = ? AND (source = 1 OR source is NULL) AND ( is_group_user = false OR is_group_user IS NULL ) AND id IN ( ? )", domainGroup.ID)
 	whereParams := []interface{}{projectID, domainUserID, userIDs}
 
 	users := []model.User{}
@@ -4385,12 +4391,29 @@ func (store *MemSQL) UpdateDomainProperties(projectID int64, domainUserID string
 		return http.StatusInternalServerError
 	}
 
-	return store.updateDomainPropertiesIfChanged(projectID, domainUserID, mergedProperties)
+	domainUser, status := store.GetUser(projectID, domainUserID)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get domain user.")
+		return http.StatusInternalServerError
+	}
+
+	domainName, err := model.GetGroupUserGroupID(domainUser, domainGroup.ID)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get domain name on update domain properties.")
+		return http.StatusInternalServerError
+	}
+
+	return store.updateDomainPropertiesIfChanged(projectID, domainName, domainUserID, mergedProperties)
 }
 
-func (store *MemSQL) updateDomainPropertiesIfChanged(projectID int64, domainUserID string, updatedProperties map[string]interface{}) int {
+func (store *MemSQL) updateDomainPropertiesIfChanged(projectID int64, domainName, domainUserID string, updatedProperties map[string]interface{}) int {
 
-	logCtx := log.WithFields(log.Fields{"project_id": projectID, "domain_user_id": domainUserID})
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "domain_user_id": domainUserID, "domain_name": domainName})
+
+	if projectID == 0 || domainName == "" || domainUserID == "" || len(updatedProperties) == 0 {
+		logCtx.Error("Invalid parameters")
+		return http.StatusBadRequest
+	}
 
 	properties, status := store.GetUserPropertiesByUserID(projectID, domainUserID)
 	if status != http.StatusFound {
@@ -4420,18 +4443,10 @@ func (store *MemSQL) updateDomainPropertiesIfChanged(projectID int64, domainUser
 		(*newUpdatedProperties)[key] = updatedProperties[key]
 	}
 
-	newUpdatedPropertiesJsonB, err := U.EncodeToPostgresJsonb(newUpdatedProperties)
+	_, err = store.CreateOrUpdateGroupPropertiesBySourceWithEmptyValues(projectID, model.GROUP_NAME_DOMAINS, domainName, domainUserID,
+		newUpdatedProperties, U.TimeNowUnix(), U.TimeNowUnix(), model.UserSourceDomainsString, true)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed to encode domain user properties.")
-		return http.StatusInternalServerError
-	}
-
-	db := C.GetServices().Db
-	err = db.Model(&model.User{}).
-		Where("project_id = ? AND id = ? AND source = ?", projectID, domainUserID, model.UserSourceDomains).
-		Update(map[string]interface{}{"properties": newUpdatedPropertiesJsonB}).Error
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to update domain user properties.")
+		logCtx.WithError(err).Error("Failed to update domain user website properties")
 		return http.StatusInternalServerError
 	}
 

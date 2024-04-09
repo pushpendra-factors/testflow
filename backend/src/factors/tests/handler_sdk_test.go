@@ -3,6 +3,7 @@ package tests
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -21,6 +22,7 @@ import (
 	"factors/model/store"
 	"factors/sdk"
 	SDK "factors/sdk"
+	"factors/task/event_user_cache"
 	TaskSession "factors/task/session"
 	"factors/util"
 	U "factors/util"
@@ -4426,9 +4428,10 @@ func TestSDKEmailUTMParameterForIdentification(t *testing.T) {
 func TestAllAccountWebsiteProperties(t *testing.T) {
 	r := gin.Default()
 	H.InitSDKServiceRoutes(r)
+	H.InitAppRoutes(r)
 	uri := "/sdk/event/track"
 
-	project, err := SetupProjectReturnDAO()
+	project, agent, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
 	_, status := store.GetStore().CreateOrGetDomainsGroup(project.ID)
@@ -4682,8 +4685,8 @@ func TestAllAccountWebsiteProperties(t *testing.T) {
 	status = SDK.TrackUserAccountGroup(project.ID, createdUserID4, model.GROUP_NAME_SIX_SIGNAL, &U.PropertiesMap{U.SIX_SIGNAL_DOMAIN: "www.example2.com"}, U.TimeNowUnix())
 	assert.Equal(t, http.StatusOK, status)
 
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"auto":true, "user_id": "%s", "event_name": "www.example.com/", 
-	"event_properties": {"$page_domain": "www.example.com", "$page_raw_url": "https://www.example.com/b", "$page_url": "www.example.com/b", 
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"auto":true, "user_id": "%s", "event_name": "www.example.com/",
+	"event_properties": {"$page_domain": "www.example.com", "$page_raw_url": "https://www.example.com/b", "$page_url": "www.example.com/b",
 	"$referrer": "", "$referrer_url": "","$referrer_domain":"gartner.com","$page_spent_time":30,"$qp_utm_campaign":"google2","$qp_utm_source":"google2",
 	"$qp_utm_medium":"email3","$qp_utm_keyword":"analytics3","$qp_utm_term":"term3","$qp_utm_content":"content3"}}`, createdUserID3)),
 		map[string]string{
@@ -4691,8 +4694,8 @@ func TestAllAccountWebsiteProperties(t *testing.T) {
 		})
 	assert.Equal(t, http.StatusOK, w.Code)
 
-	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"auto":true, "user_id": "%s", "event_name": "www.example2.com/", 
-	"event_properties": {"$page_domain": "www.example2.com", "$page_raw_url": "https://www.example2.com/b", "$page_url": "www.example2.com/b", 
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"auto":true, "user_id": "%s", "event_name": "www.example2.com/",
+	"event_properties": {"$page_domain": "www.example2.com", "$page_raw_url": "https://www.example2.com/b", "$page_url": "www.example2.com/b",
 	"$referrer": "", "$referrer_url": "","$referrer_domain":"gartner.com","$page_spent_time":30,"$qp_utm_campaign":"google2","$qp_utm_source":"google2",
 	"$qp_utm_medium":"email3","$qp_utm_keyword":"analytics3","$qp_utm_term":"term3","$qp_utm_content":"content3"}}`, createdUserID4)),
 		map[string]string{
@@ -4834,4 +4837,37 @@ func TestAllAccountWebsiteProperties(t *testing.T) {
 	expectedMap[U.DP_LATEST_CHANNEL] = "Paid Social"
 	propertiesMap2, _ = U.DecodePostgresJsonb(&domainUser1.Properties)
 	assert.Equal(t, expectedMap, *propertiesMap2)
+
+	// execute DoRollUpSortedSet
+	configs := make(map[string]interface{})
+	configs["rollupLookback"] = 1
+	configs["deleteRollupAfterAddingToAggregate"] = 1
+	event_user_cache.DoRollUpSortedSet(configs)
+
+	w, err = sendGetGroupProperties(project.ID, model.GROUP_NAME_DOMAINS, agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ := io.ReadAll(w.Body)
+	var propertiesResponse struct {
+		DisplayNames map[string]string   `json:"display_names"`
+		Properties   map[string][]string `json:"properties"`
+	}
+	err = util.DecodeJSONStringToStructType(string(jsonResponse), &propertiesResponse)
+	assert.Nil(t, err)
+	for property, label := range util.ALL_ACCOUNT_PROPERTIES_DISPLAY_NAMES {
+		assert.Equal(t, propertiesResponse.DisplayNames[property], label)
+	}
+
+	resultPropertyKeys := map[string]bool{}
+	for category := range propertiesResponse.Properties {
+		for _, key := range propertiesResponse.Properties[category] {
+			resultPropertyKeys[key] = true
+		}
+	}
+	allKeys := util.GetAllMapKeys(util.USER_INITIAL_PROPERTIES_TO_DOMAIN_INITIAL_PROPERTIES,
+		util.USER_LATEST_PROPERTIES_TO_DOMAIN_LATEST_PROPERTIES,
+		map[string]bool{util.DP_TOTAL_PAGE_SPENT_TIME: true, util.DP_TOTAL_PAGE_COUNT: true})
+	delete(allKeys, util.UP_LATEST_PAGE_SCROLL_PERCENT)
+	for key := range allKeys {
+		assert.Contains(t, resultPropertyKeys, key)
+	}
 }
