@@ -364,7 +364,7 @@ func GetSlackMsgBlock(msg EventTriggerAlertMessage, slackMentions string, isAcco
 		},`, sfAccUrl)
 		hasAttachements = true
 	}
-
+	
 	attachements := ""
 	if hasAttachements && isAccountAlert {
 		attachements = fmt.Sprintf(`{
@@ -373,6 +373,14 @@ func GetSlackMsgBlock(msg EventTriggerAlertMessage, slackMentions string, isAcco
 				%s %s
 			]
 		}`, hsUrlAttachement, sfUrlAttachement)
+		
+		if isAccountAlert && sfUrlAttachement != "" {
+			log.WithFields(log.Fields{
+				"sf_attachment": sfUrlAttachement,
+				"hs_attachment": hsUrlAttachement,
+				"attachment": attachements,
+			}).Info("SF URL ATTACHMENTS.")
+		}
 	}
 
 	// added next two lines to support double quotes(") and backslash(\) in slack templates
