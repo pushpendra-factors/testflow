@@ -864,11 +864,6 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
 			} else {
 				blockMessage = model.GetSlackMsgBlockWithoutHyperlinks(alert.Message, slackMentionStr)
 			}
-
-			if projectID == 1125899936000037 {
-				logCtx.WithField("cached_alert", *alert).Info("SF CACHED PROPERTIES.")
-				logCtx.WithField("template", blockMessage).Info("SF URL TEMPLATE CHECK.")
-			}
 			
 			response, status, err := slack.SendSlackAlert(projectID, blockMessage, agentUUID, channel)
 			partialSuccess = partialSuccess || status
