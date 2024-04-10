@@ -188,6 +188,8 @@ const (
 	QueryCacheResponseCacheTimeZone         string = "TimeZone"
 	QueryCacheRedisKeyPrefix                string = "query:cache"
 	QueryCacheKeyForSegmentAnalytics        string = "segment:cache"
+
+	WidgetGroupMarker string = "widget_marker"
 )
 
 const (

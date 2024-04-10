@@ -19,6 +19,7 @@ import (
 )
 
 const FifteenMinutesTime = 15 * 60
+const TwentyMinutesTime = 15 * 60
 
 // GetSegmentAnalyticsConfigHandler godoc
 // @Summary To get config for the segment analytics.
@@ -122,6 +123,11 @@ func AddNewWidgetToWidgetGroupHandler(c *gin.Context) (interface{}, int, string,
 		return nil, http.StatusConflict, v1.DUPLICATE_RECORD, errmsg, true
 	}
 
+	markerError := setWidgetGroupMarker(projectID, widgetGroupID)
+	if markerError != nil {
+		log.WithField("projectID", projectID).WithField("widgetGroupID", widgetGroupID).Error("Failed in adding new Widget group" + markerError.Error())
+	}
+
 	request, errMsg, statusCode = store.GetStore().AddWidgetToWidgetGroup(widgetGroup, request)
 	if statusCode != http.StatusCreated {
 		return nil, statusCode, v1.PROCESSING_FAILED, errMsg, true
@@ -201,6 +207,13 @@ func EditSegmentAnalyticsWidgetHandler(c *gin.Context) (interface{}, int, string
 		return nil, http.StatusConflict, v1.DUPLICATE_RECORD, errmsg, true
 	}
 
+	if queryMetricChanged {
+		markerError := setWidgetGroupMarker(projectID, widgetGroupID)
+		if markerError != nil {
+			log.WithField("projectID", projectID).WithField("widgetGroupID", widgetGroupID).Error("Failed in Edit Widget group" + markerError.Error())
+		}
+	}
+
 	widget, errMsg, statusCode = store.GetStore().UpdateWidgetToWidgetGroup(widgetGroup, widget)
 	if statusCode != http.StatusOK {
 		logCtx.WithField("errMsg", errMsg).Warn("Failed in updating widget to widget group")
@@ -267,6 +280,12 @@ func ExecuteSegmentQueryHandler(c *gin.Context) {
 		return
 	}
 
+	markerExists, statusCode := getIfExistsWidgetGroupMarker(projectID, widgetGroupID)
+	if statusCode == http.StatusInternalServerError {
+		log.WithField("projectID", projectID).WithField("widgetGroupID", widgetGroupID).Warn("Failed in getting getIfExistsWidgetGroupMarker")
+		markerExists = true
+	}
+
 	requestParams := model.RequestSegmentKPI{}
 	if err := c.BindJSON(&requestParams); err != nil {
 		var requestAsMap map[string]interface{}
@@ -280,7 +299,7 @@ func ExecuteSegmentQueryHandler(c *gin.Context) {
 	log.WithField("reqID", reqID).WithField("widgetGroup", widgetGroup.ID).WithField("segmentID", segmentID).Warn("Kartheek Complete2")
 
 	// Keeping the cache expiry to 15 minutes. Not invalidating the cache.
-	if !hardRefresh {
+	if !hardRefresh && !markerExists {
 		shouldReturn, resCode, resMsg := GetSegmentResponseIfCachedQuery(c, projectID, segmentID, widgetGroupID, requestParams.From, requestParams.To)
 		if shouldReturn {
 			if resCode == http.StatusOK {
@@ -364,6 +383,31 @@ func getSegmentCacheResponse(c *gin.Context, result interface{}) (bool, int, int
 func SetSegmentCachePlaceholder(projectID int64, segmentID, widgetGroup string, from, to int64) {
 	cacheKey, _ := getSegmentWidgetGroupCacheKey(projectID, segmentID, widgetGroup, from, to)
 	cacheRedis.SetPersistent(cacheKey, model.QueryCacheInProgressPlaceholder, model.QueryCachePlaceholderExpirySeconds)
+}
+
+func getWidgetGroupMarkerKey(projectID int64, widgetGroup string) (*cacheRedis.Key, error) {
+	suffix := fmt.Sprintf("widgetGroup:%s", widgetGroup)
+	return cacheRedis.NewKey(projectID, model.WidgetGroupMarker, suffix)
+}
+
+// Set when edit of widget group query is changed.
+func setWidgetGroupMarker(projectID int64, widgetGroup string) error {
+	cacheKey, _ := getWidgetGroupMarkerKey(projectID, widgetGroup)
+	return cacheRedis.SetPersistent(cacheKey, string("1"), TwentyMinutesTime)
+}
+
+func getIfExistsWidgetGroupMarker(projectID int64, widgetGroup string) (bool, int) {
+	cacheKey, _ := getWidgetGroupMarkerKey(projectID, widgetGroup)
+	_, exists, err := cacheRedis.GetIfExistsPersistent(cacheKey)
+	if err != nil {
+		return true, http.StatusInternalServerError
+	}
+	if !exists {
+		return false, http.StatusNotFound
+	} else {
+		return true, http.StatusFound
+	}
+
 }
 
 // DeleteQueryCacheKey Delete a query cache key on error.
