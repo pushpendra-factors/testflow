@@ -19,13 +19,14 @@ type SegmentPayload struct {
 }
 
 type Segment struct {
-	ProjectID   int64           `gorm:"primary_key:true" json:"project_id"`
-	Id          string          `gorm:"primary_key:true" json:"id"`
-	Name        string          `json:"name"`
-	Description string          `json:"description"`
-	Query       *postgres.Jsonb `json:"query"`
-	Type        string          `json:"type"`
-	UpdatedAt   time.Time       `json:"updated_at"`
+	ProjectID         int64           `gorm:"primary_key:true" json:"project_id"`
+	Id                string          `gorm:"primary_key:true" json:"id"`
+	Name              string          `json:"name"`
+	Description       string          `json:"description"`
+	Query             *postgres.Jsonb `json:"query"`
+	Type              string          `json:"type"`
+	IsLongRunComplete bool            `json:"long_run_comp" gorm:"-"`
+	UpdatedAt         time.Time       `json:"updated_at"`
 }
 
 type AssociatedSegments struct {
