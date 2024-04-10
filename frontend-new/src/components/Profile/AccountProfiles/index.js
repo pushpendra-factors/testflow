@@ -23,7 +23,10 @@ import { bindActionCreators } from 'redux';
 import { useHistory, useLocation, useParams } from 'react-router-dom';
 import SearchCheckList from 'Components/SearchCheckList';
 import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
-import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
+import {
+  selectAccountPayload,
+  selectActiveTab
+} from 'Reducers/accountProfilesView/selectors';
 import {
   setAccountPayloadAction,
   setFiltersDirtyAction,
@@ -86,6 +89,8 @@ import {
 } from '../utils';
 import PropertyFilter from './PropertyFilter';
 import { Text, SVG } from '../../factorsComponents';
+import AccountsTabs from './AccountsTabs';
+import AccountsInsights from './AccountsInsights/AccountsInsights';
 import AccountDrawer from './AccountDrawer';
 
 function AccountProfiles({
@@ -142,6 +147,7 @@ function AccountProfiles({
   const { segment_id: segmentID } = useParams();
 
   const { projectDomainsList } = useSelector((state) => state.global);
+  const activeTab = useSelector((state) => selectActiveTab(state));
   const { groups, groupProperties, groupPropNames, eventNames } = useSelector(
     (state) => state.coreQuery
   );
@@ -1180,80 +1186,96 @@ function AccountProfiles({
         </div>
       </ControlledComponent>
 
-      <div className='flex justify-between items-center'>
-        <div className='flex gap-x-2  items-center'>
-          <div className='flex items-center rounded justify-center h-10 w-10'>
-            <SVG name={titleIcon} size={32} color={titleIconColor} />
+      <div className='flex flex-col gap-y-6'>
+        <div className='flex justify-between items-center'>
+          <div className='flex gap-x-2  items-center'>
+            <div className='flex items-center rounded justify-center h-10 w-10'>
+              <SVG name={titleIcon} size={32} color={titleIconColor} />
+            </div>
+            <Text
+              type='title'
+              level={3}
+              weight='bold'
+              extraClass='mb-0'
+              id='fa-at-text--page-title'
+            >
+              {pageTitle}
+            </Text>
           </div>
-          <Text
-            type='title'
-            level={3}
-            weight='bold'
-            extraClass='mb-0'
-            id='fa-at-text--page-title'
-          >
-            {pageTitle}
-          </Text>
         </div>
+        <ControlledComponent controller={Boolean(accountPayload?.segment?.id)}>
+          <AccountsTabs />
+        </ControlledComponent>
       </div>
 
-      <div className='flex justify-between items-center my-4'>
-        <div className='flex items-center gap-x-2 w-full'>
-          {renderPropertyFilter()}
-          {renderSaveSegmentButton()}
-        </div>
-        <div className='inline-flex gap-x-2'>
-          <ControlledComponent controller={!filtersExpanded && !newSegmentMode}>
-            {renderSearchSection()}
-            {renderDownloadSection()}
-            {renderTablePropsSelect()}
-            {renderMoreActions()}
-          </ControlledComponent>
-        </div>
-      </div>
-      <ControlledComponent controller={accounts.isLoading}>
-        <Spin size='large' className='fa-page-loader' />
-      </ControlledComponent>
-      <ControlledComponent
-        controller={
-          !accounts.isLoading &&
-          accounts.data?.[segmentID || 'default']?.length > 0 &&
-          (!newSegmentMode || areFiltersDirty)
-        }
-      >
-        <>
-          {renderTable()}
-          <div className='logo-attrib'>
-            <a
-              className='font-size--small'
-              href='https://clearbit.com'
-              target='_blank'
-              rel='noopener noreferrer'
-            >
-              Logos provided by Clearbit
-            </a>
+      <ControlledComponent controller={activeTab === 'accounts'}>
+        <div className='flex justify-between items-center my-4'>
+          <div className='flex items-center gap-x-2 w-full'>
+            {renderPropertyFilter()}
+            {renderSaveSegmentButton()}
           </div>
-        </>
-      </ControlledComponent>
-      <ControlledComponent
-        controller={
-          !accounts.isLoading &&
-          (!accounts.data[segmentID || 'default'] ||
-            accounts.data[segmentID || 'default'].length === 0) &&
-          (!newSegmentMode || areFiltersDirty)
-        }
-      >
-        <NoDataWithMessage
-          message={
-            isOnboarded(currentProjectSettings)
-              ? !accounts.data[segmentID || 'default'] ||
-                accounts.data[segmentID || 'default'].length === 0
-                ? 'No Accounts found'
-                : errMsg
-              : 'Onboarding not completed'
+          <div className='inline-flex gap-x-2'>
+            <ControlledComponent
+              controller={!filtersExpanded && !newSegmentMode}
+            >
+              {renderSearchSection()}
+              {renderDownloadSection()}
+              {renderTablePropsSelect()}
+              {renderMoreActions()}
+            </ControlledComponent>
+          </div>
+        </div>
+        <ControlledComponent controller={accounts.isLoading}>
+          <Spin size='large' className='fa-page-loader' />
+        </ControlledComponent>
+        <ControlledComponent
+          controller={
+            !accounts.isLoading &&
+            accounts.data?.[segmentID || 'default']?.length > 0 &&
+            (!newSegmentMode || areFiltersDirty)
           }
-        />
+        >
+          <>
+            {renderTable()}
+            <div className='logo-attrib'>
+              <a
+                className='font-size--small'
+                href='https://clearbit.com'
+                target='_blank'
+                rel='noopener noreferrer'
+              >
+                Logos provided by Clearbit
+              </a>
+            </div>
+          </>
+        </ControlledComponent>
+        <ControlledComponent
+          controller={
+            !accounts.isLoading &&
+            (!accounts.data[segmentID || 'default'] ||
+              accounts.data[segmentID || 'default'].length === 0) &&
+            (!newSegmentMode || areFiltersDirty)
+          }
+        >
+          <NoDataWithMessage
+            message={
+              isOnboarded(currentProjectSettings)
+                ? !accounts.data[segmentID || 'default'] ||
+                  accounts.data[segmentID || 'default'].length === 0
+                  ? 'No Accounts found'
+                  : errMsg
+                : 'Onboarding not completed'
+            }
+          />
+        </ControlledComponent>
       </ControlledComponent>
+
+      <ControlledComponent controller={activeTab === 'insights'}>
+        <div className='my-4'>
+          <AccountsInsights />
+        </div>
+      </ControlledComponent>
+
       <UpgradeModal
         visible={isUpgradeModalVisible}
         variant='account'
