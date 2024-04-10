@@ -26,6 +26,7 @@ const ROUTE_SDK_ADWORDS_ROOT = "/adwords_sdk_service"
 const ROUTE_VERSION_V1 = "/v1"
 const ROUTE_VERSION_V1_WITHOUT_SLASH = "v1"
 const ROUTE_COMMON_ROOT = "/common"
+const ROUTE_ACCOUNT_ROOT = "/sdk/account"
 
 func InitExternalAuth(r *gin.Engine, auth *Authenticator) {
 	routePrefix := C.GetRoutesURLPrefix() + "/oauth"
@@ -469,6 +470,17 @@ func InitAppRoutes(r *gin.Engine) {
 
 }
 
+func InitAccountRoutes(r *gin.Engine) {
+
+	// account event tracking
+	accountRouteGroup := r.Group(ROUTE_ACCOUNT_ROOT)
+	accountRouteGroup.Use(mid.SetScopeProjectIdByPrivateToken())
+	accountRouteGroup.POST("/create", CreateAccountHandler)
+	accountRouteGroup.POST("/update", UpdateAccountHandler)
+	accountRouteGroup.POST("/event/track", TrackAccountEventHandler)
+
+}
+
 func InitSDKServiceRoutes(r *gin.Engine) {
 	// Initialize swagger api docs only for development / staging.
 	if C.GetConfig().Env != C.PRODUCTION {
@@ -520,6 +532,7 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 
 	// Note: /segment is the old segment API Hook which was used directly.
 	intRouteGroup.POST("/segment", mid.SetScopeProjectPrivateToken(), IntSegmentHandler)
+
 }
 
 func InitIntRoutes(r *gin.Engine) {
