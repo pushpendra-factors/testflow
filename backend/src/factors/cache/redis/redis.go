@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gomodule/redigo/redis"
+	log "github.com/sirupsen/logrus"
 
 	C "factors/config"
 )
@@ -150,7 +151,21 @@ func KeyFromStringWithPid(key string) (*Key, error) {
 }
 
 func SetPersistent(key *Key, value string, expiryInSecs float64) error {
-	return set(key, value, expiryInSecs, true, false)
+	err := set(key, value, expiryInSecs, true, false)
+
+	// Log for measuring dashboard and query cache usage.
+	dashboardCache := strings.HasPrefix(key.Prefix, "dashboard:")
+	queryCache := strings.HasPrefix(key.Prefix, "query:")
+	if dashboardCache || queryCache {
+		log.WithField("key", key).
+			WithField("expiry_in_secs", expiryInSecs).
+			WithField("is_dashboard_cache", dashboardCache).
+			WithField("is_query_cache", queryCache).
+			WithField("error", err).
+			Info("Write dashboard/query cache.")
+	}
+
+	return err
 }
 
 func Set(key *Key, value string, expiryInSecs float64) error {
@@ -256,7 +271,21 @@ func GetIfExistsPersistent(key *Key) (string, bool, error) {
 }
 
 func GetPersistent(key *Key) (string, error) {
-	return get(key, true, false)
+	response, err := get(key, true, false)
+
+	// Log for measuring dashboard and query cache usage.
+	dashboardCache := strings.HasPrefix(key.Prefix, "dashboard:")
+	queryCache := strings.HasPrefix(key.Prefix, "query:")
+	if dashboardCache || queryCache {
+		log.WithField("key", key).
+			WithField("is_dashboard_cache", dashboardCache).
+			WithField("is_query_cache", queryCache).
+			WithField("is_cache_hit", err == nil).
+			WithField("error", err).
+			Info("Read dashboard/query cache.")
+	}
+
+	return response, err
 }
 
 func Get(key *Key) (string, error) {
