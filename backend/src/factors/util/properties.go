@@ -560,6 +560,7 @@ var EP_FORM_ACTION string = "$form_action"
 var UP_INITIAL_PAGE_EVENT_ID string = "$initial_page_event_id" // internal. id of initial page event.
 var UP_MERGE_TIMESTAMP string = "$merge_timestamp"             // Internal property used in user properties merge.
 
+var UP_IS_OFFLINE string = "$is_offline"
 var UP_PLATFORM string = "$platform"
 var UP_BROWSER string = "$browser"
 var UP_BROWSER_VERSION string = "$browser_version"

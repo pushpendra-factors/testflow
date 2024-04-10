@@ -164,5 +164,6 @@ func main() {
 		swaggerDocs.SwaggerInfo.Host = "staging-api.factors.ai"
 	}
 	H.InitSDKServiceRoutes(r)
+	H.InitAccountRoutes(r)
 	r.Run(":" + strconv.Itoa(C.GetConfig().Port))
 }
