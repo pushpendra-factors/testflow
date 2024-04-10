@@ -4,7 +4,10 @@ import {
   SET_ACCOUNT_SEGMENT_MODAL,
   ENABLE_NEW_SEGMENT_MODE,
   DISABLE_NEW_SEGMENT_MODE,
-  SET_FILTERS_DIRTY
+  SET_FILTERS_DIRTY,
+  TOGGLE_ACCOUNTS_TAB,
+  SET_INSIGHTS_DURATION,
+  SET_INSIGHTS_COMPARE_SEGMENT
 } from './types';
 
 export const setAccountPayloadAction = (payload) => ({
@@ -32,4 +35,19 @@ export const setNewSegmentModeAction = (payload) => {
 export const setFiltersDirtyAction = (payload) => ({
   type: SET_FILTERS_DIRTY,
   payload
+});
+
+export const toggleAccountsTab = (payload) => ({
+  type: TOGGLE_ACCOUNTS_TAB,
+  payload
+});
+
+export const setInsightsDuration = (payload) => ({
+  type: SET_INSIGHTS_DURATION,
+  payload
+});
+
+export const setInsightsCompareSegment = (segmentId, compareSegmentId) => ({
+  type: SET_INSIGHTS_COMPARE_SEGMENT,
+  payload: { segmentId, compareSegmentId }
 });
