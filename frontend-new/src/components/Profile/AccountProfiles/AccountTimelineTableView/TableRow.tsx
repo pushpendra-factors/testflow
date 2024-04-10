@@ -9,12 +9,7 @@ import { TableRowProps } from 'Components/Profile/types';
 import UsernameWithIcon from './UsernameWithIcon';
 import EventIcon from './EventIcon';
 
-function TableRow({
-  event,
-  eventPropsType = {},
-  user,
-  onEventClick
-}: TableRowProps) {
+function TableRow({ event, eventPropsType = {}, onEventClick }: TableRowProps) {
   const { eventPropNames } = useSelector((state: any) => state.coreQuery);
   const { projectDomainsList, currentProjectSettings } = useSelector(
     (state: any) => state.global
@@ -26,11 +21,11 @@ function TableRow({
 
   const hasEventProperties =
     currentProjectSettings?.timelines_config?.events_config?.[
-      event?.display_name === 'Page View' ? 'PageView' : event?.event_name
+      event?.display_name === 'Page View' ? 'PageView' : event?.name
     ]?.length > 0;
   const propertyName =
     currentProjectSettings?.timelines_config?.events_config?.[
-      event?.display_name === 'Page View' ? 'PageView' : event?.event_name
+      event?.display_name === 'Page View' ? 'PageView' : event?.name
     ]?.[0];
 
   const renderPropertyName = () =>
@@ -56,13 +51,13 @@ function TableRow({
 
   const renderPropValTooltip = () =>
     event?.display_name === 'Page View'
-      ? event?.event_name
+      ? event?.name
       : Object.entries(event?.properties || {})?.[0]?.[1];
 
   return (
     <tr
       className={`table-row ${
-        event.is_group_event && !hasEventProperties
+        event.is_group_user && !hasEventProperties
           ? 'pointer-events-none'
           : 'clickable'
       } cursor-pointer`}
@@ -72,7 +67,7 @@ function TableRow({
       <td className='event-cell'>
         <EventIcon icon={event.icon} size={24} />
         <TextWithOverflowTooltip
-          text={event.display_name || event.event_name}
+          text={event.display_name || event.name}
           extraClass='ml-2'
         />
       </td>
@@ -86,9 +81,9 @@ function TableRow({
       </td>
       <td className='user-cell'>
         <UsernameWithIcon
-          title={user.name}
+          title={event.username || event.user_id}
           userID={event.user_id}
-          isAnonymous={user.isAnonymous}
+          isAnonymous={event.username === 'new_user'}
         />
       </td>
     </tr>

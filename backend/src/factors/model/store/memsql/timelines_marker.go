@@ -252,7 +252,7 @@ func (store *MemSQL) GetDomainsListFromMarker(projectID int64, payload model.Tim
 	query := fmt.Sprintf(`WITH step_0 as (
 		SELECT 
 		  id as identity, 
-		  group_%d_id as host_name 
+		  group_%d_id as domain_name 
 		FROM 
 		  users 
 		WHERE 
@@ -268,7 +268,7 @@ func (store *MemSQL) GetDomainsListFromMarker(projectID int64, payload model.Tim
 	  ) 
 	  SELECT 
 		identity, 
-		host_name, 
+		domain_name, 
 		MAX(users.last_event_at) as last_activity 
 	  FROM 
 		step_0 
@@ -562,16 +562,16 @@ func profileValues(projectID int64, users []model.User, domID string, domainGrou
 	}
 
 	// set hostName
-	hostName, err := model.FindUserGroupByID(domUser, domainGroupID)
+	domainName, err := model.FindUserGroupByID(domUser, domainGroupID)
 	if err != nil {
-		hostName, err = model.ConvertDomainIdToHostName(domID)
-		if err != nil || hostName == "" {
+		domainName, err = model.ConvertDomainIdToHostName(domID)
+		if err != nil || domainName == "" {
 			log.WithFields(log.Fields{"project_id": projectID, "dom_id": domID}).
 				WithError(err).Error("Couldn't translate ID to Hostname")
 		}
 	}
 	profile.LastActivity = maxLastEventAt
-	profile.HostName = hostName
+	profile.DomainName = domainName
 
 	isLastEventAtFound := !maxLastEventAt.IsZero()
 

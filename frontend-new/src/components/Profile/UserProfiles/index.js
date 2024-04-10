@@ -1133,7 +1133,7 @@ function UserProfiles({
               );
             }
           })}
-          className={`fa-table--userlist  ${styles['user-profiles-table']}`}
+          className='fa-table--profileslist'
           dataSource={getTableData(contacts.data)}
           columns={mergeColumns}
           rowClassName='cursor-pointer'

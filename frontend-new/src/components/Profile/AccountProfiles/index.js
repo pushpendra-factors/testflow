@@ -48,6 +48,7 @@ import ResizableTitle from 'Components/Resizable';
 import logger from 'Utils/logger';
 import useAutoFocus from 'hooks/useAutoFocus';
 import { invalidBreakdownPropertiesList } from 'Constants/general.constants';
+import MomentTz from 'Components/MomentTz';
 import styles from './index.module.scss';
 import {
   getGroups,
@@ -75,7 +76,8 @@ import {
   createNewSegment,
   getSavedSegments,
   updateSegmentForId,
-  deleteSegment
+  deleteSegment,
+  getTop100Events
 } from '../../../reducers/timelines/middleware';
 import {
   formatReqPayload,
@@ -84,10 +86,12 @@ import {
 } from '../utils';
 import PropertyFilter from './PropertyFilter';
 import { Text, SVG } from '../../factorsComponents';
+import AccountDrawer from './AccountDrawer';
 
 function AccountProfiles({
   activeProject,
   accounts,
+  accountPreview,
   currentProjectSettings,
   createNewSegment,
   getSavedSegments,
@@ -97,7 +101,8 @@ function AccountProfiles({
   getProfileAccounts,
   getGroupProperties,
   updateSegmentForId,
-  deleteSegment
+  deleteSegment,
+  getTop100Events
 }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [currentPageSize, setCurrentPageSize] = useState(25);
@@ -120,6 +125,16 @@ function AccountProfiles({
   const [defaultSorterInfo, setDefaultSorterInfo] = useState({});
   const [showSegmentActions, setShowSegmentActions] = useState(false);
   const [errMsg, setErrMsg] = useState('');
+  const [newTableColumns, setNewTableColumns] = useState([]);
+  const [processedDomains, setProcessedDomains] = useState(new Set());
+  const [preview, setPreview] = useState({ drawerVisible: false, domain: {} });
+
+  const onDrawerClose = () =>
+    setPreview((prevState) => ({ ...prevState, drawerVisible: false }));
+
+  useEffect(() => {
+    if (filtersExpanded) onDrawerClose();
+  }, [filtersExpanded]);
 
   const dispatch = useDispatch();
   const history = useHistory();
@@ -162,9 +177,10 @@ function AccountProfiles({
     }
     return accountPayload;
   };
-  useEffect(()=>{
-    dispatch(setNewSegmentModeAction(false))
-  },[])
+
+  useEffect(() => {
+    dispatch(setNewSegmentModeAction(false));
+  }, []);
 
   useEffect(() => {
     if (activeProject?.id) {
@@ -438,7 +454,7 @@ function AccountProfiles({
     );
     return sortedData?.map((row) => ({
       ...row,
-      ...row?.tableProps
+      ...row?.table_props
     }));
   }, [accounts, segmentID]);
 
@@ -882,8 +898,34 @@ function AccountProfiles({
     setCurrentPage(pageParams.current);
     setCurrentPageSize(pageParams.pageSize);
     setDefaultSorterInfo({ key: sorter.columnKey, order: sorter.order });
+    onDrawerClose();
   };
-  const [newTableColumns, setNewTableColumns] = useState([]);
+
+  const onRowRender = (domainName) => {
+    if (!processedDomains.has(domainName)) {
+      setProcessedDomains(processedDomains.add(domainName));
+      getTop100Events(activeProject.id, domainName);
+    }
+  };
+
+  const onClickOpen = (domain) => {
+    const domID = domain.identity || domain.id;
+    const domName = domain.name;
+    history.push(`/profiles/accounts/${btoa(domID)}?view=birdview`, {
+      accountPayload,
+      currentPage,
+      currentPageSize,
+      activeSorter: defaultSorterInfo,
+      appliedFilters: areFiltersDirty ? appliedFilters : null,
+      accountsTableRow: domName,
+      path: location.pathname
+    });
+  };
+
+  const onClickOpenNewTab = (domain) => {
+    const domID = domain.identity || domain.id;
+    window.open(`/profiles/accounts/${btoa(domID)}?view=birdview`);
+  };
 
   useEffect(() => {
     setNewTableColumns(
@@ -893,7 +935,10 @@ function AccountProfiles({
         eventNames,
         listProperties,
         defaultSorterInfo,
-        projectDomainsList
+        projectDomainsList,
+        onRowRender,
+        onClickOpen,
+        onClickOpenNewTab
       })
     );
   }, [
@@ -929,7 +974,7 @@ function AccountProfiles({
   }, [newTableColumns, location.state]);
 
   const renderTable = useCallback(() => {
-    const mergeColumns = newTableColumns.map((col, index) => ({
+    const mergeColumns = newTableColumns.map((col) => ({
       ...col,
       onHeaderCell: (column) => ({
         width: column.width
@@ -945,22 +990,13 @@ function AccountProfiles({
             }
           }}
           onRow={(account) => ({
-            onClick: () => {
-              history.push(
-                `/profiles/accounts/${btoa(account.identity)}?view=birdview`,
-                {
-                  accountPayload,
-                  currentPage,
-                  currentPageSize,
-                  activeSorter: defaultSorterInfo,
-                  appliedFilters: areFiltersDirty ? appliedFilters : null,
-                  accountsTableRow: account.name,
-                  path: location.pathname
-                }
-              );
-            }
+            onClick: () =>
+              setPreview({
+                drawerVisible: true,
+                domain: { id: account.identity, name: account.domain_name }
+              })
           })}
-          className={`fa-table--userlist ${styles['account-profiles-table']}`}
+          className='fa-table--profileslist'
           dataSource={tableData}
           columns={mergeColumns}
           rowClassName='cursor-pointer'
@@ -1058,7 +1094,7 @@ function AccountProfiles({
       data.forEach((d) => {
         const values = selectedOptions.map((elem) =>
           elem === 'last_activity'
-            ? d.last_activity?.replace('T', ' ').replace('Z', '')
+            ? MomentTz(d.last_activity).format('DD MMM YYYY hh:mm A zz')
             : d.table_props[elem] != null
               ? `"${d.table_props[elem]}"`
               : '-'
@@ -1257,6 +1293,14 @@ function AccountProfiles({
         onSubmit={handleDownloadCSV}
         isLoading={csvDataLoading}
       />
+      <AccountDrawer
+        domain={preview.domain.name}
+        events={accountPreview[preview.domain.name]}
+        visible={preview.drawerVisible}
+        onClose={onDrawerClose}
+        onClickMore={() => onClickOpen(preview.domain)}
+        onClickOpenNewtab={() => onClickOpenNewTab(preview.domain)}
+      />
     </ProfilesWrapper>
   );
 }
@@ -1265,6 +1309,7 @@ const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   accounts: state.timelines.accounts,
   segments: state.timelines.segments,
+  accountPreview: state.timelines.accountPreview,
   currentProjectSettings: state.global.currentProjectSettings
 });
 
@@ -1279,7 +1324,8 @@ const mapDispatchToProps = (dispatch) =>
       fetchProjectSettings,
       udpateProjectSettings,
       updateSegmentForId,
-      deleteSegment
+      deleteSegment,
+      getTop100Events
     },
     dispatch
   );

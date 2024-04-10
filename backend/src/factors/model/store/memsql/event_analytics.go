@@ -1372,7 +1372,7 @@ func (store *MemSQL) selectStringForSegments(projectID int64, caller string, sco
 			return commonSelect, errors.New("group not found")
 		}
 		if scopeGroupID > 0 {
-			commonSelect = fmt.Sprintf("%%, domains.group_%d_id as host_name", scopeGroupID)
+			commonSelect = fmt.Sprintf("%%, domains.group_%d_id as domain_name", scopeGroupID)
 		}
 		commonSelect = strings.ReplaceAll(commonSelect, "%", "%s")
 	}
@@ -1641,7 +1641,7 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 		}
 	} else if model.IsAccountProfiles(query.Caller) {
 		if scopeGroupID > 0 && isScopeDomains {
-			aggregateSelect = fmt.Sprintf("SELECT coal_group_user_id as identity, last_activity, host_name FROM final_res GROUP BY identity ORDER BY last_activity DESC LIMIT %d", domLimit)
+			aggregateSelect = fmt.Sprintf("SELECT coal_group_user_id as identity, last_activity, domain_name FROM final_res GROUP BY identity ORDER BY last_activity DESC LIMIT %d", domLimit)
 		}
 	} else {
 		// Limit is applicable only on the following. Because attribution calls this.
@@ -2163,7 +2163,7 @@ func buildSegmentSelectString(caller string, scopeGroupID int, step string) stri
 	} else if model.IsAccountProfiles(caller) {
 		selectString = fmt.Sprintf("%s.identity, %s.last_activity, %s.properties", step, step, step)
 		if scopeGroupID > 0 {
-			selectString = fmt.Sprintf("%s.coal_group_user_id as coal_group_user_id, %s.host_name", step, step)
+			selectString = fmt.Sprintf("%s.coal_group_user_id as coal_group_user_id, %s.domain_name", step, step)
 		}
 	}
 	return selectString
@@ -2175,7 +2175,7 @@ func addLatestActivityJoinForAllAccounts(projectID int64, stepselect string, sco
 	if !model.IsAccountProfiles(caller) || scopeGroupID <= 0 || stepselect == "" {
 		return "", params
 	}
-	addJoinStmt := fmt.Sprintf(", final_res AS ( SELECT %s.coal_group_user_id as coal_group_user_id, %s.host_name, "+
+	addJoinStmt := fmt.Sprintf(", final_res AS ( SELECT %s.coal_group_user_id as coal_group_user_id, %s.domain_name, "+
 		"MAX(users.last_event_at) as last_activity FROM %s JOIN users ON %s.coal_group_user_id = users.group_%d_user_id "+
 		"WHERE users.project_id=? AND users.source != ? AND users.last_event_at IS NOT NULL GROUP BY coal_group_user_id)", stepselect, stepselect, stepselect, stepselect, scopeGroupID)
 
@@ -2206,7 +2206,7 @@ func addUserPropsJoinForAllAccounts(projectID int64, stepselect string, scopeGro
 
 	whereFilters = strings.ReplaceAll(whereFilters, "user_global_user_properties", "properties")
 
-	addJoinStmt := fmt.Sprintf(", user_fltr AS (SELECT %s.coal_group_user_id as coal_group_user_id, %s.host_name FROM %s "+
+	addJoinStmt := fmt.Sprintf(", user_fltr AS (SELECT %s.coal_group_user_id as coal_group_user_id, %s.domain_name FROM %s "+
 		"JOIN (SELECT group_%d_user_id FROM users WHERE project_id = ? AND source = ? AND %s) AS users ON %s.coal_group_user_id = users.group_%d_user_id "+
 		"GROUP BY coal_group_user_id)", stepselect, stepselect, stepselect, scopeGroupID, whereFilters, stepselect, scopeGroupID)
 

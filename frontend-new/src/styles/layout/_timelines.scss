@@ -713,6 +713,7 @@
   display: inline-flex;
   flex-wrap: nowrap;
   align-items: center;
+  max-width: 100%;
 
   &.gap--4 {
     gap: 4px;
@@ -749,10 +750,10 @@
   letter-spacing: 0.01em;
 }
 
-.fa-table--userlist {
+.fa-table--profileslist {
   margin-bottom: 64px;
+  padding: 0;
 
-  // table head
   .ant-table-thead {
     .ant-table-cell {
       font-weight: $font-weight--bold;
@@ -772,7 +773,6 @@
     }
   }
 
-  // table body
   .ant-table-tbody {
     .ant-table-row {
       .ant-table-cell {
@@ -798,6 +798,37 @@
     background: white;
     padding: 16px 0 24px;
     width: 100%;
+  }
+
+  & th {
+    padding: 0 !important;
+    height: 48px;
+
+    &>div {
+      padding: 0 16px;
+    }
+  }
+
+  & tr {
+    .preview-btn {
+      display: none;
+      transition: all 0.3s;
+    }
+  }
+
+  & tr:hover td {
+    background-color: #fafafa !important;
+
+    .preview-btn {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+    }
+  }
+
+  & tr {
+    max-height: 64px !important;
+    height: 48px;
   }
 }
 
@@ -982,6 +1013,7 @@
 }
 
 .fa-overview--top-table {
+
   // table head
   .ant-table-thead {
     .ant-table-cell {
@@ -1016,8 +1048,7 @@
 }
 
 .account-timeline-table-container {
-  max-height: calc(100vh - 252px);
-  margin-top: 20px;
+  max-height: calc(100vh - 236px);
   border-bottom: 1px solid #e7e9ed;
   overflow-y: scroll;
 
@@ -1055,6 +1086,7 @@
         width: 10%;
         overflow: hidden;
         color: #00000073;
+        white-space: nowrap;
       }
 
       .event-cell,
@@ -1219,7 +1251,7 @@
   }
 }
 
-.fa-drawer--right {
+.fa-event-drawer--right {
   &.ant-drawer {
     top: 56px;
   }
@@ -1250,4 +1282,18 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.fa-account-drawer--right {
+  &.ant-drawer {
+    top: 56px;
+  }
+
+  &.ant-drawer-right.ant-drawer-open {
+    width: 60% !important;
+  }
+
+  .ant-drawer-header {
+    padding: 12px 24px;
+  }
 }
