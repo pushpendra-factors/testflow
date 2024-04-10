@@ -529,7 +529,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		}
 
 		// salesforce object url
-		if salesforceUrlInProperties, doesSalesforceUrlExist := alert.Message.MessageProperty[model.ETA_ENRICHED_HUBSPOT_COMPANY_OBJECT_URL]; doesSalesforceUrlExist {
+		if salesforceUrlInProperties, doesSalesforceUrlExist := alert.Message.MessageProperty[model.ETA_ENRICHED_SALESFORCE_ACCOUNT_OBJECT_URL]; doesSalesforceUrlExist {
 			salesforceAccountUrl = salesforceUrlInProperties.(string)
 			delete(alert.Message.MessageProperty, model.ETA_ENRICHED_SALESFORCE_ACCOUNT_OBJECT_URL)
 		}
