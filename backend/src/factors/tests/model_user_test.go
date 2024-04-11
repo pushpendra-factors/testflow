@@ -1982,5 +1982,6 @@ func TestUserDomainsProperty(t *testing.T) {
 	assert.Len(t, propertyValues, 2)
 	assert.Contains(t, propertyValues, "abc.com")
 	assert.Contains(t, propertyValues, "abc2.com")
+	store.GetStore().UpdateDomainProperties(project.ID, "abc2.com")
 
 }

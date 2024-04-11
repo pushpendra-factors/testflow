@@ -1992,3 +1992,37 @@ func GetKeysFromMap[M ~map[K]V, K comparable, V any](m M) []K {
 	}
 	return r
 }
+
+func IsPropertyChanged(a, b map[string]interface{}, propertiesToCheck map[string]bool) bool {
+	for key := range propertiesToCheck {
+		aValue := a[key]
+		bValue := b[key]
+		if aValue != bValue {
+
+			return true
+		}
+	}
+	return false
+}
+
+func GetAllMapKeys(maps ...interface{}) map[string]bool {
+
+	keysMap := make(map[string]bool)
+	for i := range maps {
+		switch t := maps[i].(type) {
+
+		case map[string]string:
+			for key := range t {
+				keysMap[key] = true
+			}
+		case map[string]bool:
+			for key := range t {
+				keysMap[key] = true
+			}
+		default:
+			log.WithFields(log.Fields{"interface": maps[i]}).Error("Invalid input.")
+		}
+	}
+
+	return keysMap
+}

@@ -96,6 +96,7 @@ func main() {
 	chargebeeSiteName := flag.String("chargebee_site_name", "dummy", "Chargebee site name")
 	enableTotalSessionPropertiesV2ByProjectID := flag.String("enable_total_session_properties_v2", "", "")
 	emailUTMParameterAllowedProjects := flag.String("email_utm_parameter_allowed_projects", "", "")
+	enableDomainWebsitePropertiesByProjectID := flag.String("enable_domain_website_properties_by_project_id", "", "")
 
 	flag.Parse()
 
@@ -158,6 +159,7 @@ func main() {
 		ChargebeeSiteName:                                  *chargebeeSiteName,
 		EnableTotalSessionPropertiesV2ByProjectID:          *enableTotalSessionPropertiesV2ByProjectID,
 		EmailUTMParameterAllowedProjects:                   *emailUTMParameterAllowedProjects,
+		EnableDomainWebsitePropertiesByProjectID:           *enableDomainWebsitePropertiesByProjectID,
 	}
 	C.InitConf(config)
 

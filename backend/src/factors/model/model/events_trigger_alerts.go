@@ -364,7 +364,7 @@ func GetSlackMsgBlock(msg EventTriggerAlertMessage, slackMentions string, isAcco
 		},`, sfAccUrl)
 		hasAttachements = true
 	}
-
+	
 	attachements := ""
 	if hasAttachements && isAccountAlert {
 		attachements = fmt.Sprintf(`{

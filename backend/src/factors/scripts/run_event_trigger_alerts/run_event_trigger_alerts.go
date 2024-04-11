@@ -529,7 +529,7 @@ func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEven
 		}
 
 		// salesforce object url
-		if salesforceUrlInProperties, doesSalesforceUrlExist := alert.Message.MessageProperty[model.ETA_ENRICHED_HUBSPOT_COMPANY_OBJECT_URL]; doesSalesforceUrlExist {
+		if salesforceUrlInProperties, doesSalesforceUrlExist := alert.Message.MessageProperty[model.ETA_ENRICHED_SALESFORCE_ACCOUNT_OBJECT_URL]; doesSalesforceUrlExist {
 			salesforceAccountUrl = salesforceUrlInProperties.(string)
 			delete(alert.Message.MessageProperty, model.ETA_ENRICHED_SALESFORCE_ACCOUNT_OBJECT_URL)
 		}
@@ -864,10 +864,7 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
 			} else {
 				blockMessage = model.GetSlackMsgBlockWithoutHyperlinks(alert.Message, slackMentionStr)
 			}
-
-			if projectID == 1125899936000037 {
-				logCtx.WithField("template", blockMessage).Info("SF URL TEMPLATE CHECK.")
-			}
+			
 			response, status, err := slack.SendSlackAlert(projectID, blockMessage, agentUUID, channel)
 			partialSuccess = partialSuccess || status
 			if err != nil || !status {

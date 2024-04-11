@@ -1784,6 +1784,13 @@ func (store *MemSQL) addSessionForUser(projectId int64, userId string, userEvent
 
 	}
 
+	if C.EnableDomainWebsitePropertiesByProjectID(projectId) {
+		status := store.UpdateDomainPropertiesByUser(projectId, userId)
+		if status != http.StatusOK && status != http.StatusNotModified {
+			logCtx.WithFields(log.Fields{"project_id": projectId, "err_code": status}).Error("Failed to UpdateDomainPropertiesByUser on add session.")
+		}
+	}
+
 	return noOfFilteredEvents, noOfSessionsCreated, sessionContinuedFlag,
 		noOfUserPropertiesUpdated, isLastEventToBeProcessed, http.StatusOK
 }

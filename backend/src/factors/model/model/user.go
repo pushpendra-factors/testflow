@@ -1166,3 +1166,131 @@ func GetUsersForDomainUserAssociationUpdate(users []User) []User {
 
 	return updateUsers
 }
+
+func IsUserPropertyChangedForDomains(a, b *postgres.Jsonb) (bool, error) {
+	aMap, err := U.DecodePostgresJsonb(a)
+	if err != nil {
+		return false, err
+	}
+	bMap, err := U.DecodePostgresJsonb(b)
+	if err != nil {
+		return false, err
+	}
+
+	return U.IsPropertyChanged(*aMap, *bMap, U.GetAllMapKeys(U.USER_INITIAL_PROPERTIES_TO_DOMAIN_INITIAL_PROPERTIES,
+		U.USER_LATEST_PROPERTIES_TO_DOMAIN_LATEST_PROPERTIES, U.USER_ADD_TYPE_PROPERTIES_TO_DOMAIN_ADD_TYPE_PROPERTIES)), nil
+}
+
+func GetMergedPropertiesForDomain(projectID int64, users []User) (map[string]interface{}, error) {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+
+	if projectID == 0 || len(users) == 0 {
+		logCtx.Error("Invalid parameters.")
+		return nil, errors.New("invalid parameters")
+	}
+
+	updateProperties := map[string]interface{}{}
+
+	/*
+		Initial properties merge
+	*/
+	// Order the properties by jointime to maintain the initial properties
+	sort.Slice(users, func(i, j int) bool {
+		return users[i].JoinTimestamp < users[j].JoinTimestamp
+	})
+
+	for i := range users {
+		propertiesMap, err := U.DecodePostgresJsonb(&users[i].Properties)
+		if err != nil {
+			logCtx.WithFields(log.Fields{"user_id": users[i].ID}).WithError(err).
+				Error("Failed to decode user properties for domain initial properties merging.")
+			return nil, err
+		}
+
+		if pageURL := (*propertiesMap)[U.UP_INITIAL_PAGE_RAW_URL]; pageURL == "" {
+			continue
+		}
+		// picking first users with page url as all initial properties
+		for key := range U.USER_INITIAL_PROPERTIES_TO_DOMAIN_INITIAL_PROPERTIES {
+
+			updateProperties[key] = (*propertiesMap)[key]
+		}
+		break
+	}
+
+	// Initial channel property
+	for i := range users {
+
+		propertiesMap, _ := U.DecodePostgresJsonb(&users[i].Properties)
+		if U.GetPropertyValueAsString((*propertiesMap)[U.UP_INITIAL_CHANNEL]) == "" {
+			continue
+		}
+		updateProperties[U.UP_INITIAL_CHANNEL] = (*propertiesMap)[U.UP_INITIAL_CHANNEL]
+		break
+	}
+
+	/*
+		Latest properties merge
+	*/
+	// Order the properties by properties_updated_timestamp to maintain the latest properties
+	sort.Slice(users, func(i, j int) bool {
+		return users[i].PropertiesUpdatedTimestamp < users[j].PropertiesUpdatedTimestamp
+	})
+
+	for i := range users {
+		propertiesMap, err := U.DecodePostgresJsonb(&users[i].Properties)
+		if err != nil {
+			logCtx.WithFields(log.Fields{"user_id": users[i].ID}).WithError(err).
+				Error("Failed to decode user properties for domain properties merging.")
+			return nil, err
+		}
+
+		if pageURL := (*propertiesMap)[U.UP_LATEST_PAGE_RAW_URL]; pageURL == "" {
+			continue
+		}
+		// picking latest users with page url as all latest properties
+		for key := range U.USER_LATEST_PROPERTIES_TO_DOMAIN_LATEST_PROPERTIES {
+			updateProperties[key] = (*propertiesMap)[key]
+		}
+
+	}
+
+	/*
+		Add type properties
+	*/
+	for upKey, dpKey := range U.USER_ADD_TYPE_PROPERTIES_TO_DOMAIN_ADD_TYPE_PROPERTIES {
+		totalValue := float64(0)
+		for i := range users {
+			// ignoring error check, already check on latest properties
+			propertiesMap, _ := U.DecodePostgresJsonb(&users[i].Properties)
+			newValue, err := U.GetPropertyValueAsFloat64((*propertiesMap)[upKey])
+			if err != nil {
+				logCtx.WithFields(log.Fields{"user_properties_key": upKey, "new_value": newValue, "user_id": users[i].ID}).WithError(err).
+					Error("Failed to get new value on domain add type properties.")
+				continue
+			}
+
+			roundValue, err := U.FloatRoundOffWithPrecision(totalValue+newValue, 2)
+			if err != nil {
+				// If error in round off, use as is.
+				totalValue += newValue
+				continue
+			}
+
+			totalValue = roundValue
+		}
+		updateProperties[dpKey] = totalValue
+	}
+
+	// latest channel property
+	for i := range users {
+
+		propertiesMap, _ := U.DecodePostgresJsonb(&users[i].Properties)
+
+		if U.GetPropertyValueAsString((*propertiesMap)[U.UP_LATEST_CHANNEL]) != "" {
+			updateProperties[U.UP_LATEST_CHANNEL] = (*propertiesMap)[U.UP_LATEST_CHANNEL]
+		}
+	}
+
+	return updateProperties, nil
+}

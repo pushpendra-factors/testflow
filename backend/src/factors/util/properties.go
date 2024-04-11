@@ -787,6 +787,73 @@ const DP_ENGAGEMENT_LEVEL = "$engagement_level"
 const DP_TOTAL_ENGAGEMENT_SCORE = "$total_enagagement_score"
 const DP_ENGAGEMENT_SIGNALS = "$top_enagagement_signals"
 
+var (
+	// initial properties
+	DP_INITIAL_PAGE_URL            = "$initial_page_url"
+	DP_JOIN_TIME                   = "$joinTime"
+	DP_INITIAL_REFERRER_DOMAIN     = "$initial_referrer_domain"
+	DP_INITIAL_MEDIUM              = "$initial_medium"
+	DP_INITIAL_SOURCE              = "$initial_source"
+	DP_INITIAL_CAMPAIGN            = "$initial_campaign"
+	DP_INITIAL_CONTENT             = "$initial_content"
+	DP_INITIAL_TERM                = "$initial_term"
+	DP_INITIAL_CHANNEL             = "$initial_channel"
+	DP_INITIAL_PAGE_SPENT_TIME     = "$initial_page_spent_time"
+	DP_INITIAL_PAGE_SCROLL_PERCENT = "$initial_page_scroll_percent"
+	DP_INITIAL_KEYWORD             = "$initial_keyword"
+
+	// latest properties
+	DP_LATEST_PAGE_URL            = "$latest_page_url"
+	DP_LATEST_REFERRER_DOMAIN     = "$latest_referrer_domain"
+	DP_LATEST_MEDIUM              = "$latest_medium"
+	DP_LATEST_SOURCE              = "$latest_source"
+	DP_LATEST_CAMPAIGN            = "$latest_campaign"
+	DP_LATEST_CONTENT             = "$latest_content"
+	DP_LATEST_TERM                = "$latest_term"
+	DP_LATEST_CHANNEL             = "$latest_channel"
+	DP_LATEST_PAGE_SPENT_TIME     = "$latest_page_spent_time"
+	DP_LATEST_PAGE_SCROLL_PERCENT = "$latest_page_scroll_percent"
+	DP_LATEST_KEYWORD             = "$latest_keyword"
+
+	// session properties
+	DP_TOTAL_PAGE_COUNT      = "$page_count"
+	DP_TOTAL_PAGE_SPENT_TIME = "$session_spent_time"
+)
+
+var USER_INITIAL_PROPERTIES_TO_DOMAIN_INITIAL_PROPERTIES = map[string]string{
+	UP_INITIAL_PAGE_URL:            DP_INITIAL_PAGE_URL,
+	UP_JOIN_TIME:                   DP_JOIN_TIME,
+	UP_INITIAL_REFERRER_DOMAIN:     DP_INITIAL_REFERRER_DOMAIN,
+	UP_INITIAL_MEDIUM:              DP_INITIAL_MEDIUM,
+	UP_INITIAL_SOURCE:              DP_INITIAL_SOURCE,
+	UP_INITIAL_CAMPAIGN:            DP_INITIAL_CAMPAIGN,
+	UP_INITIAL_CONTENT:             DP_INITIAL_CONTENT,
+	UP_INITIAL_TERM:                DP_INITIAL_TERM,
+	UP_INITIAL_CHANNEL:             DP_INITIAL_CHANNEL,
+	UP_INITIAL_PAGE_SPENT_TIME:     DP_INITIAL_PAGE_SPENT_TIME,
+	UP_INITIAL_PAGE_SCROLL_PERCENT: DP_INITIAL_PAGE_SCROLL_PERCENT,
+	UP_INITIAL_KEYWORD:             DP_INITIAL_KEYWORD,
+}
+
+var USER_LATEST_PROPERTIES_TO_DOMAIN_LATEST_PROPERTIES = map[string]string{
+	UP_LATEST_PAGE_URL:            DP_LATEST_PAGE_URL,
+	UP_LATEST_REFERRER_DOMAIN:     DP_LATEST_REFERRER_DOMAIN,
+	UP_LATEST_MEDIUM:              DP_LATEST_MEDIUM,
+	UP_LATEST_SOURCE:              DP_LATEST_SOURCE,
+	UP_LATEST_CAMPAIGN:            DP_LATEST_CAMPAIGN,
+	UP_LATEST_CONTENT:             DP_LATEST_CONTENT,
+	UP_LATEST_TERM:                DP_LATEST_TERM,
+	UP_LATEST_CHANNEL:             DP_LATEST_CHANNEL,
+	UP_LATEST_PAGE_SPENT_TIME:     DP_LATEST_PAGE_SPENT_TIME,
+	UP_LATEST_PAGE_SCROLL_PERCENT: DP_LATEST_PAGE_SCROLL_PERCENT,
+	UP_LATEST_KEYWORD:             DP_LATEST_KEYWORD,
+}
+
+var USER_ADD_TYPE_PROPERTIES_TO_DOMAIN_ADD_TYPE_PROPERTIES = map[string]string{
+	UP_REAL_PAGE_COUNT:      DP_TOTAL_PAGE_COUNT,
+	UP_REAL_PAGE_SPENT_TIME: DP_TOTAL_PAGE_SPENT_TIME,
+}
+
 var SDK_ALLOWED_EVENT_PROPERTIES = [...]string{
 	EP_INTERNAL_IP,
 	EP_LOCATION_LATITUDE,
@@ -1665,6 +1732,31 @@ var ALL_ACCOUNTS_PROPERTIES = []string{
 	DP_TOTAL_ENGAGEMENT_SCORE,
 	DP_DOMAIN_NAME,
 	DP_ENGAGEMENT_SIGNALS,
+	DP_INITIAL_PAGE_URL,
+	DP_JOIN_TIME,
+	DP_INITIAL_REFERRER_DOMAIN,
+	DP_INITIAL_MEDIUM,
+	DP_INITIAL_SOURCE,
+	DP_INITIAL_CAMPAIGN,
+	DP_INITIAL_CONTENT,
+	DP_INITIAL_TERM,
+	DP_INITIAL_CHANNEL,
+	DP_INITIAL_PAGE_SPENT_TIME,
+	DP_INITIAL_PAGE_SCROLL_PERCENT,
+	DP_INITIAL_KEYWORD,
+	DP_LATEST_PAGE_URL,
+	DP_LATEST_REFERRER_DOMAIN,
+	DP_LATEST_MEDIUM,
+	DP_LATEST_SOURCE,
+	DP_LATEST_CAMPAIGN,
+	DP_LATEST_CONTENT,
+	DP_LATEST_TERM,
+	DP_LATEST_CHANNEL,
+	DP_LATEST_PAGE_SPENT_TIME,
+	DP_LATEST_PAGE_SCROLL_PERCENT,
+	DP_LATEST_KEYWORD,
+	DP_TOTAL_PAGE_COUNT,
+	DP_TOTAL_PAGE_SPENT_TIME,
 }
 
 var ENGAGEMENT_PROPERTIES = []string{
@@ -1700,6 +1792,39 @@ var ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	DP_TOTAL_ENGAGEMENT_SCORE: "Total Engagement Score",
 	DP_DOMAIN_NAME:            "Company ID",
 	DP_ENGAGEMENT_SIGNALS:     "Top Engagement Signals",
+}
+
+var ALL_ACCOUNT_PROPERTIES_DISPLAY_NAMES = map[string]string{
+	// initial properties
+	DP_INITIAL_PAGE_URL:            "Account First Page URL",
+	DP_JOIN_TIME:                   "Account First Seen Date",
+	DP_INITIAL_REFERRER_DOMAIN:     "Account First Referrer Domain",
+	DP_INITIAL_MEDIUM:              "Account First Medium",
+	DP_INITIAL_SOURCE:              "Account First Source",
+	DP_INITIAL_CAMPAIGN:            "Account First Campaign",
+	DP_INITIAL_CONTENT:             "Account First Content",
+	DP_INITIAL_TERM:                "Account First Term",
+	DP_INITIAL_CHANNEL:             "Account First Channel",
+	DP_INITIAL_PAGE_SPENT_TIME:     "Account First Page Spent Time",
+	DP_INITIAL_PAGE_SCROLL_PERCENT: "Account First Page Scroll Percent",
+	DP_INITIAL_KEYWORD:             "Account First Keyword",
+
+	// latest properties
+	DP_LATEST_PAGE_URL:            "Account Latest Page url",
+	DP_LATEST_REFERRER_DOMAIN:     "Account Latest Referrer domain",
+	DP_LATEST_MEDIUM:              "Account Latest Medium",
+	DP_LATEST_SOURCE:              "Account Latest Source",
+	DP_LATEST_CAMPAIGN:            "Account Latest Campaign",
+	DP_LATEST_CONTENT:             "Account Latest Content",
+	DP_LATEST_TERM:                "Account Latest Term",
+	DP_LATEST_CHANNEL:             "Account Latest Channel",
+	DP_LATEST_PAGE_SPENT_TIME:     "Account Latest Page Spent Time",
+	DP_LATEST_PAGE_SCROLL_PERCENT: "Account Latest Page Scroll Percent",
+	DP_LATEST_KEYWORD:             "Account Latest Keyword",
+
+	// session properties
+	DP_TOTAL_PAGE_COUNT:      "Account Total Page Count",
+	DP_TOTAL_PAGE_SPENT_TIME: "Account Total Page Spent Time",
 }
 
 var USER_PROPERTIES_WITH_COLUMN = []string{
@@ -4738,4 +4863,17 @@ func ValidateAndFillEnrichmentPropsForIntegerValue(value int, propertyName strin
 			(*properties)[propertyName] = value
 		}
 	}
+}
+
+func GetAllAccountPropertiesDisplayNames() map[string]string {
+	displayNames := map[string]string{}
+	for key, label := range ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES {
+		displayNames[key] = label
+	}
+
+	for key, label := range ALL_ACCOUNT_PROPERTIES_DISPLAY_NAMES {
+		displayNames[key] = label
+	}
+
+	return displayNames
 }
