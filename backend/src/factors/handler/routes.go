@@ -26,6 +26,7 @@ const ROUTE_SDK_ADWORDS_ROOT = "/adwords_sdk_service"
 const ROUTE_VERSION_V1 = "/v1"
 const ROUTE_VERSION_V1_WITHOUT_SLASH = "v1"
 const ROUTE_COMMON_ROOT = "/common"
+const ROUTE_ACCOUNT_ROOT = "/sdk/account"
 
 func InitExternalAuth(r *gin.Engine, auth *Authenticator) {
 	routePrefix := C.GetRoutesURLPrefix() + "/oauth"
@@ -121,12 +122,12 @@ func InitAppRoutes(r *gin.Engine) {
 	shareRouteGroup.Use(mid.ValidateAccessToSharedEntity(M.ShareableURLEntityTypeQuery))
 	shareRouteGroup.Use(mid.LogAuditMid())
 
-	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/query", responseWrapper(EventsQueryHandler))
-	shareRouteGroup.POST("/:project_id/query", responseWrapper(QueryHandler))
-	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/attribution/query", responseWrapper(V1.AttributionHandlerV1))
-	shareRouteGroup.POST("/:project_id/attribution/query", responseWrapper(AttributionHandler))
-	shareRouteGroup.POST("/:project_id/profiles/query", responseWrapper(ProfilesQueryHandler))
-	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/query", responseWrapper(V1.ExecuteKPIQueryHandler))
+	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/query", mid.RequestRateLimiterMiddleware("QUERY_V1", 50, 60), responseWrapper(EventsQueryHandler))
+	shareRouteGroup.POST("/:project_id/query", mid.RequestRateLimiterMiddleware("QUERY", 50, 60), responseWrapper(QueryHandler))
+	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/attribution/query", mid.RequestRateLimiterMiddleware("ATTRIBUTION_QUERY_V1", 10, 60), responseWrapper(V1.AttributionHandlerV1))
+	shareRouteGroup.POST("/:project_id/attribution/query", mid.RequestRateLimiterMiddleware("ATTRIBUTION_QUERY", 50, 60), responseWrapper(AttributionHandler))
+	shareRouteGroup.POST("/:project_id/profiles/query", mid.RequestRateLimiterMiddleware("PROFILES_QUERY", 50, 60), responseWrapper(ProfilesQueryHandler))
+	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/query", mid.RequestRateLimiterMiddleware("KPI_QUERY", 50, 60), responseWrapper(V1.ExecuteKPIQueryHandler))
 
 	// Predefined dashboards and queries
 	// shareRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/predefined_dashboards", )
@@ -308,8 +309,9 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/v1/profiles/accounts/:group/:id", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_PROFILES}), responseWrapper(V1.GetProfileAccountDetailsHandler))
 	authRouteGroup.GET("/:project_id/v1/profiles/accounts/overview/:group/:id", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_PROFILES}), responseWrapper(V1.GetProfileAccountOverviewHandler))
 	authRouteGroup.PUT("/:project_id/v1/profiles/events_config/:event_name", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES, M.FEATURE_ACCOUNT_PROFILES}), V1.UpdateEventConfigHandler)
-	authRouteGroup.GET("/:project_id/v1/profiles/user_properties/:id", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES, M.FEATURE_ACCOUNT_PROFILES}), V1.GetUserPropertiesByIDHandler)
-	authRouteGroup.GET("/:project_id/v1/profiles/accounts/top_events/:id", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_PROFILES}), V1.GetTopEventsForADomainHandler)
+	authRouteGroup.GET("/:project_id/v1/profiles/accounts/top_events/:domain_name", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_PROFILES}), V1.GetTopEventsForADomainHandler)
+	authRouteGroup.GET("/:project_id/v1/profiles/user_properties/:id", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES, M.FEATURE_ACCOUNT_PROFILES}), V1.GetConfiguredUserPropertiesWithValuesHandler)
+	authRouteGroup.GET("/:project_id/v1/profiles/event_properties/:id/:name", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES, M.FEATURE_ACCOUNT_PROFILES}), V1.GetConfiguredEventPropertiesWithValuesHandler)
 
 	// Segments
 	authRouteGroup.POST("/:project_id/segments", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), CreateSegmentHandler)
@@ -468,6 +470,17 @@ func InitAppRoutes(r *gin.Engine) {
 
 }
 
+func InitAccountRoutes(r *gin.Engine) {
+
+	// account event tracking
+	accountRouteGroup := r.Group(ROUTE_ACCOUNT_ROOT)
+	accountRouteGroup.Use(mid.SetScopeProjectIdByPrivateToken())
+	accountRouteGroup.POST("/create", CreateAccountHandler)
+	accountRouteGroup.POST("/update", UpdateAccountHandler)
+	accountRouteGroup.POST("/event/track", TrackAccountEventHandler)
+
+}
+
 func InitSDKServiceRoutes(r *gin.Engine) {
 	// Initialize swagger api docs only for development / staging.
 	if C.GetConfig().Env != C.PRODUCTION {
@@ -519,6 +532,7 @@ func InitSDKServiceRoutes(r *gin.Engine) {
 
 	// Note: /segment is the old segment API Hook which was used directly.
 	intRouteGroup.POST("/segment", mid.SetScopeProjectPrivateToken(), IntSegmentHandler)
+
 }
 
 func InitIntRoutes(r *gin.Engine) {

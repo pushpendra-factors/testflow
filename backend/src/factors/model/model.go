@@ -977,8 +977,9 @@ type Model interface {
 	GetGroupNameIDMap(projectID int64) (map[string]int, int)
 	UpdateConfigForEvent(projectID int64, eventName string, updatedConfig []string) (int, error)
 	GetDomainPropertiesByID(projectID int64, domainIDs []string) ([]model.User, int)
-	GetConfiguredPropertiesByUserID(projectID int64, id string, isAnonymous bool) (map[string]interface{}, int)
 	GetTopEventsForADomain(projectID int64, domainID string) ([]model.TimelineEvent, int)
+	GetConfiguredUserPropertiesWithValues(projectID int64, id string, isAnonymous bool) (map[string]interface{}, int)
+	GetConfiguredEventPropertiesWithValues(projectID int64, eventID string, eventName string) (map[string]interface{}, int)
 
 	// Timeline consuming segment_marker
 	GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload, downloadLimitGiven bool) ([]model.Profile, int, string)
@@ -1096,6 +1097,7 @@ type Model interface {
 	GetFeatureLimitForProject(projectID int64, featureName string) (int64, error)
 	GetProjectsArrayWithFeatureEnabledFromProjectIdFlag(stringProjectsIDs, featureName string) ([]int64, error)
 	UpdateProjectPlanMapping(projectID int64, planMapping *model.ProjectPlanMapping) int
+	GetAllProjectIdsUsingPaidPlan() ([]int64, int, string, error)
 
 	// Property Mapping
 	CreatePropertyMapping(propertyMapping model.PropertyMapping) (*model.PropertyMapping, string, int)

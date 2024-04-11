@@ -10,29 +10,6 @@
     }
   }
 }
-.account-profiles-table {
-  padding: 0;
-  & th {
-    padding: 0 !important;
-    height: 48px;
-
-    & > div {
-      padding: 0 16px;
-    }
-  }
-
-  & td[class] {
-    padding: 6px 12px !important;
-  }
-  & tr:hover td {
-    background-color: #fafafa !important;
-  }
-
-  & tr {
-    max-height: 64px !important;
-    height: 64px;
-  }
-}
 
 .input {
   color: $fa-color--mono-5;
@@ -205,5 +182,14 @@
   & > .tag-seperator {
     color: $fa-color-neutral-grey-5;
     margin: 0 2px;
+  }
+}
+
+.accountsTabs {
+  :global(.ant-tabs-nav) {
+    margin: 0;
+    &::before {
+      border-bottom: 0;
+    }
   }
 }

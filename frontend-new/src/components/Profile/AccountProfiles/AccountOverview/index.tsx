@@ -1,4 +1,4 @@
-import { Spin } from 'antd';
+import { Badge, Popover, Spin, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { Text } from 'Components/factorsComponents';
 import { EngagementTag } from 'Components/Profile/constants';
@@ -9,10 +9,11 @@ import {
   TopUser
 } from 'Components/Profile/types';
 import React from 'react';
-import { formatDuration } from 'Utils/dataFormatter';
+import { PropTextFormat, formatDuration } from 'Utils/dataFormatter';
 import TableWithHeading from './TableWithHeading';
 import TrendsChart from './TrendsChart';
-
+import { CheckCircleFilled } from '@ant-design/icons';
+import { useSelector } from 'react-redux';
 const topPageColumns: ColumnsType<TopPage> = [
   {
     title: 'Page URL',
@@ -91,12 +92,71 @@ const topUserColumns: ColumnsType<TopUser> = [
 
 function AccountOverview({
   overview,
-  loading
+  loading,
+  top_engagement_signals
 }: AccountOverviewProps): JSX.Element {
+  const { eventNames } = useSelector((state: any) => state.coreQuery);
   const styles: CustomStyles = {
     '--bg-color': EngagementTag[overview?.engagement]?.bgColor || '#FFF1F0'
   };
 
+  function renderEngagementTag(eventName: string, score: string) {
+    return (
+      <div className='flex py-1'>
+        <Text
+          type='title'
+          level={7}
+          extraClass='m-0 truncate px-2'
+          truncate
+          size='h2'
+        >
+          {eventNames[eventName] || PropTextFormat(eventName)}
+        </Text>
+        <Badge
+          count={parseInt(score) > 99 ? '99+' : parseInt(score)}
+          showZero
+          style={{ backgroundColor: '#F5F5F5', color: '#000000A6' }}
+        />
+      </div>
+    );
+  }
+  function renderTopEngagementSignals() {
+    let signals = top_engagement_signals.trim().split(' , ');
+
+    return (
+      <Popover
+        overlayInnerStyle={{ borderRadius: '5px' }}
+        placement='bottom'
+        content={
+          <div>
+            <Text type='title' level={7} extraClass='m-0 p-2' color='grey'>
+              All Engagement Signals
+            </Text>
+            <div>
+              {signals.map((eachSignal) => {
+                const splitItem = eachSignal.trim().split(' ');
+                const eventName = splitItem.slice(0, -1).join(' ');
+                const score = splitItem.slice(-1).join('');
+                return renderEngagementTag(eventName, score);
+              })}
+            </div>
+          </div>
+        }
+      >
+        <Tag
+          color='default'
+          icon={<CheckCircleFilled />}
+          style={{
+            height: '80%',
+            display: 'inline-flex',
+            alignItems: 'center'
+          }}
+        >
+          <span> {signals.length}</span>
+        </Tag>
+      </Popover>
+    );
+  }
   return loading ? (
     <Spin size='large' className='fa-page-loader' />
   ) : (
@@ -142,17 +202,20 @@ function AccountOverview({
           >
             Engagement Score
           </Text>
-          <Text
-            type='title'
-            level={4}
-            extraClass='m-0'
-            color='red'
-            weight='bold'
-          >
-            {overview?.temperature
-              ? parseInt(overview?.temperature?.toFixed())
-              : 'NA'}
-          </Text>
+          <div className='flex items-center'>
+            <Text
+              type='title'
+              level={4}
+              extraClass='m-0 px-1'
+              color='red'
+              weight='bold'
+            >
+              {overview?.temperature
+                ? parseInt(overview?.temperature?.toFixed())
+                : 'NA'}
+            </Text>
+            {top_engagement_signals && renderTopEngagementSignals()}
+          </div>
         </div>
         <div className='metric'>
           <Text type='title' level={7} extraClass='m-0' color='grey'>

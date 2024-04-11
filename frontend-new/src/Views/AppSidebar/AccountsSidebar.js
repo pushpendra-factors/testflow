@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import cx from 'classnames';
 import { Button } from 'antd';
 import noop from 'lodash/noop';
-import { SVG, Text } from 'Components/factorsComponents';
+import { SVG as Svg, Text } from 'Components/factorsComponents';
 import {
   setAccountPayloadAction,
   setNewSegmentModeAction
@@ -14,12 +14,12 @@ import ControlledComponent from 'Components/ControlledComponent/ControlledCompon
 import { useHistory } from 'react-router-dom';
 import { reorderDefaultDomainSegmentsToTop } from 'Components/Profile/AccountProfiles/accountProfiles.helpers';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
+import { PathUrls } from 'Routes/pathUrls';
 import styles from './index.module.scss';
 import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSearch from './SidebarSearch';
 import { defaultSegmentIconsMapping } from './appSidebar.constants';
 import { getSegmentColorCode } from './appSidebar.helpers';
-import { PathUrls } from 'Routes/pathUrls';
 
 function NewSegmentItem() {
   return <SidebarMenuItem text='Untitled Segment 1' isActive onClick={noop} />;
@@ -124,7 +124,7 @@ function AccountsSidebar() {
             dispatch(setAccountPayloadAction({}));
           }}
         >
-          <SVG
+          <Svg
             name='plus'
             size={16}
             extraClass={styles.sidebar_action_button__content}

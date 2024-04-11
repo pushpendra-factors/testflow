@@ -23,7 +23,10 @@ import { bindActionCreators } from 'redux';
 import { useHistory, useLocation, useParams } from 'react-router-dom';
 import SearchCheckList from 'Components/SearchCheckList';
 import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
-import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
+import {
+  selectAccountPayload,
+  selectActiveTab
+} from 'Reducers/accountProfilesView/selectors';
 import {
   setAccountPayloadAction,
   setFiltersDirtyAction,
@@ -48,6 +51,7 @@ import ResizableTitle from 'Components/Resizable';
 import logger from 'Utils/logger';
 import useAutoFocus from 'hooks/useAutoFocus';
 import { invalidBreakdownPropertiesList } from 'Constants/general.constants';
+import MomentTz from 'Components/MomentTz';
 import styles from './index.module.scss';
 import {
   getGroups,
@@ -75,7 +79,8 @@ import {
   createNewSegment,
   getSavedSegments,
   updateSegmentForId,
-  deleteSegment
+  deleteSegment,
+  getTop100Events
 } from '../../../reducers/timelines/middleware';
 import {
   formatReqPayload,
@@ -84,10 +89,14 @@ import {
 } from '../utils';
 import PropertyFilter from './PropertyFilter';
 import { Text, SVG } from '../../factorsComponents';
+import AccountsTabs from './AccountsTabs';
+import AccountsInsights from './AccountsInsights/AccountsInsights';
+import AccountDrawer from './AccountDrawer';
 
 function AccountProfiles({
   activeProject,
   accounts,
+  accountPreview,
   currentProjectSettings,
   createNewSegment,
   getSavedSegments,
@@ -97,7 +106,8 @@ function AccountProfiles({
   getProfileAccounts,
   getGroupProperties,
   updateSegmentForId,
-  deleteSegment
+  deleteSegment,
+  getTop100Events
 }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [currentPageSize, setCurrentPageSize] = useState(25);
@@ -120,6 +130,16 @@ function AccountProfiles({
   const [defaultSorterInfo, setDefaultSorterInfo] = useState({});
   const [showSegmentActions, setShowSegmentActions] = useState(false);
   const [errMsg, setErrMsg] = useState('');
+  const [newTableColumns, setNewTableColumns] = useState([]);
+  const [processedDomains, setProcessedDomains] = useState(new Set());
+  const [preview, setPreview] = useState({ drawerVisible: false, domain: {} });
+
+  const onDrawerClose = () =>
+    setPreview((prevState) => ({ ...prevState, drawerVisible: false }));
+
+  useEffect(() => {
+    if (filtersExpanded) onDrawerClose();
+  }, [filtersExpanded]);
 
   const dispatch = useDispatch();
   const history = useHistory();
@@ -127,6 +147,7 @@ function AccountProfiles({
   const { segment_id: segmentID } = useParams();
 
   const { projectDomainsList } = useSelector((state) => state.global);
+  const activeTab = useSelector((state) => selectActiveTab(state));
   const { groups, groupProperties, groupPropNames, eventNames } = useSelector(
     (state) => state.coreQuery
   );
@@ -162,6 +183,10 @@ function AccountProfiles({
     }
     return accountPayload;
   };
+
+  useEffect(() => {
+    dispatch(setNewSegmentModeAction(false));
+  }, []);
 
   useEffect(() => {
     if (activeProject?.id) {
@@ -435,7 +460,7 @@ function AccountProfiles({
     );
     return sortedData?.map((row) => ({
       ...row,
-      ...row?.tableProps
+      ...row?.table_props
     }));
   }, [accounts, segmentID]);
 
@@ -879,8 +904,34 @@ function AccountProfiles({
     setCurrentPage(pageParams.current);
     setCurrentPageSize(pageParams.pageSize);
     setDefaultSorterInfo({ key: sorter.columnKey, order: sorter.order });
+    onDrawerClose();
   };
-  const [newTableColumns, setNewTableColumns] = useState([]);
+
+  const onRowRender = (domainName) => {
+    if (!processedDomains.has(domainName)) {
+      setProcessedDomains(processedDomains.add(domainName));
+      getTop100Events(activeProject.id, domainName);
+    }
+  };
+
+  const onClickOpen = (domain) => {
+    const domID = domain.identity || domain.id;
+    const domName = domain.name;
+    history.push(`/profiles/accounts/${btoa(domID)}?view=birdview`, {
+      accountPayload,
+      currentPage,
+      currentPageSize,
+      activeSorter: defaultSorterInfo,
+      appliedFilters: areFiltersDirty ? appliedFilters : null,
+      accountsTableRow: domName,
+      path: location.pathname
+    });
+  };
+
+  const onClickOpenNewTab = (domain) => {
+    const domID = domain.identity || domain.id;
+    window.open(`/profiles/accounts/${btoa(domID)}?view=birdview`);
+  };
 
   useEffect(() => {
     setNewTableColumns(
@@ -890,7 +941,10 @@ function AccountProfiles({
         eventNames,
         listProperties,
         defaultSorterInfo,
-        projectDomainsList
+        projectDomainsList,
+        onRowRender,
+        onClickOpen,
+        onClickOpenNewTab
       })
     );
   }, [
@@ -926,7 +980,7 @@ function AccountProfiles({
   }, [newTableColumns, location.state]);
 
   const renderTable = useCallback(() => {
-    const mergeColumns = newTableColumns.map((col, index) => ({
+    const mergeColumns = newTableColumns.map((col) => ({
       ...col,
       onHeaderCell: (column) => ({
         width: column.width
@@ -942,22 +996,13 @@ function AccountProfiles({
             }
           }}
           onRow={(account) => ({
-            onClick: () => {
-              history.push(
-                `/profiles/accounts/${btoa(account.identity)}?view=birdview`,
-                {
-                  accountPayload,
-                  currentPage,
-                  currentPageSize,
-                  activeSorter: defaultSorterInfo,
-                  appliedFilters: areFiltersDirty ? appliedFilters : null,
-                  accountsTableRow: account.name,
-                  path: location.pathname
-                }
-              );
-            }
+            onClick: () =>
+              setPreview({
+                drawerVisible: true,
+                domain: { id: account.identity, name: account.domain_name }
+              })
           })}
-          className={`fa-table--userlist ${styles['account-profiles-table']}`}
+          className='fa-table--profileslist'
           dataSource={tableData}
           columns={mergeColumns}
           rowClassName='cursor-pointer'
@@ -1055,7 +1100,7 @@ function AccountProfiles({
       data.forEach((d) => {
         const values = selectedOptions.map((elem) =>
           elem === 'last_activity'
-            ? d.last_activity?.replace('T', ' ').replace('Z', '')
+            ? MomentTz(d.last_activity).format('DD MMM YYYY hh:mm A zz')
             : d.table_props[elem] != null
               ? `"${d.table_props[elem]}"`
               : '-'
@@ -1141,80 +1186,96 @@ function AccountProfiles({
         </div>
       </ControlledComponent>
 
-      <div className='flex justify-between items-center'>
-        <div className='flex gap-x-2  items-center'>
-          <div className='flex items-center rounded justify-center h-10 w-10'>
-            <SVG name={titleIcon} size={32} color={titleIconColor} />
+      <div className='flex flex-col gap-y-6'>
+        <div className='flex justify-between items-center'>
+          <div className='flex gap-x-2  items-center'>
+            <div className='flex items-center rounded justify-center h-10 w-10'>
+              <SVG name={titleIcon} size={32} color={titleIconColor} />
+            </div>
+            <Text
+              type='title'
+              level={3}
+              weight='bold'
+              extraClass='mb-0'
+              id='fa-at-text--page-title'
+            >
+              {pageTitle}
+            </Text>
           </div>
-          <Text
-            type='title'
-            level={3}
-            weight='bold'
-            extraClass='mb-0'
-            id='fa-at-text--page-title'
-          >
-            {pageTitle}
-          </Text>
         </div>
+        <ControlledComponent controller={Boolean(accountPayload?.segment?.id)}>
+          <AccountsTabs />
+        </ControlledComponent>
       </div>
 
-      <div className='flex justify-between items-center my-4'>
-        <div className='flex items-center gap-x-2 w-full'>
-          {renderPropertyFilter()}
-          {renderSaveSegmentButton()}
-        </div>
-        <div className='inline-flex gap-x-2'>
-          <ControlledComponent controller={!filtersExpanded && !newSegmentMode}>
-            {renderSearchSection()}
-            {renderDownloadSection()}
-            {renderTablePropsSelect()}
-            {renderMoreActions()}
-          </ControlledComponent>
-        </div>
-      </div>
-      <ControlledComponent controller={accounts.isLoading}>
-        <Spin size='large' className='fa-page-loader' />
-      </ControlledComponent>
-      <ControlledComponent
-        controller={
-          !accounts.isLoading &&
-          accounts.data?.[segmentID || 'default']?.length > 0 &&
-          (!newSegmentMode || areFiltersDirty)
-        }
-      >
-        <>
-          {renderTable()}
-          <div className='logo-attrib'>
-            <a
-              className='font-size--small'
-              href='https://clearbit.com'
-              target='_blank'
-              rel='noopener noreferrer'
-            >
-              Logos provided by Clearbit
-            </a>
+      <ControlledComponent controller={activeTab === 'accounts'}>
+        <div className='flex justify-between items-center my-4'>
+          <div className='flex items-center gap-x-2 w-full'>
+            {renderPropertyFilter()}
+            {renderSaveSegmentButton()}
           </div>
-        </>
-      </ControlledComponent>
-      <ControlledComponent
-        controller={
-          !accounts.isLoading &&
-          (!accounts.data[segmentID || 'default'] ||
-            accounts.data[segmentID || 'default'].length === 0) &&
-          (!newSegmentMode || areFiltersDirty)
-        }
-      >
-        <NoDataWithMessage
-          message={
-            isOnboarded(currentProjectSettings)
-              ? !accounts.data[segmentID || 'default'] ||
-                accounts.data[segmentID || 'default'].length === 0
-                ? 'No Accounts found'
-                : errMsg
-              : 'Onboarding not completed'
+          <div className='inline-flex gap-x-2'>
+            <ControlledComponent
+              controller={!filtersExpanded && !newSegmentMode}
+            >
+              {renderSearchSection()}
+              {renderDownloadSection()}
+              {renderTablePropsSelect()}
+              {renderMoreActions()}
+            </ControlledComponent>
+          </div>
+        </div>
+        <ControlledComponent controller={accounts.isLoading}>
+          <Spin size='large' className='fa-page-loader' />
+        </ControlledComponent>
+        <ControlledComponent
+          controller={
+            !accounts.isLoading &&
+            accounts.data?.[segmentID || 'default']?.length > 0 &&
+            (!newSegmentMode || areFiltersDirty)
           }
-        />
+        >
+          <>
+            {renderTable()}
+            <div className='logo-attrib'>
+              <a
+                className='font-size--small'
+                href='https://clearbit.com'
+                target='_blank'
+                rel='noopener noreferrer'
+              >
+                Logos provided by Clearbit
+              </a>
+            </div>
+          </>
+        </ControlledComponent>
+        <ControlledComponent
+          controller={
+            !accounts.isLoading &&
+            (!accounts.data[segmentID || 'default'] ||
+              accounts.data[segmentID || 'default'].length === 0) &&
+            (!newSegmentMode || areFiltersDirty)
+          }
+        >
+          <NoDataWithMessage
+            message={
+              isOnboarded(currentProjectSettings)
+                ? !accounts.data[segmentID || 'default'] ||
+                  accounts.data[segmentID || 'default'].length === 0
+                  ? 'No Accounts found'
+                  : errMsg
+                : 'Onboarding not completed'
+            }
+          />
+        </ControlledComponent>
       </ControlledComponent>
+
+      <ControlledComponent controller={activeTab === 'insights'}>
+        <div className='my-4'>
+          <AccountsInsights />
+        </div>
+      </ControlledComponent>
+
       <UpgradeModal
         visible={isUpgradeModalVisible}
         variant='account'
@@ -1254,6 +1315,14 @@ function AccountProfiles({
         onSubmit={handleDownloadCSV}
         isLoading={csvDataLoading}
       />
+      <AccountDrawer
+        domain={preview.domain.name}
+        events={accountPreview[preview.domain.name]}
+        visible={preview.drawerVisible}
+        onClose={onDrawerClose}
+        onClickMore={() => onClickOpen(preview.domain)}
+        onClickOpenNewtab={() => onClickOpenNewTab(preview.domain)}
+      />
     </ProfilesWrapper>
   );
 }
@@ -1262,6 +1331,7 @@ const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   accounts: state.timelines.accounts,
   segments: state.timelines.segments,
+  accountPreview: state.timelines.accountPreview,
   currentProjectSettings: state.global.currentProjectSettings
 });
 
@@ -1276,7 +1346,8 @@ const mapDispatchToProps = (dispatch) =>
       fetchProjectSettings,
       udpateProjectSettings,
       updateSegmentForId,
-      deleteSegment
+      deleteSegment,
+      getTop100Events
     },
     dispatch
   );

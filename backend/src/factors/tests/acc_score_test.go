@@ -867,3 +867,53 @@ func TestRemoveDeletedEvents(t *testing.T) {
 	}
 	assert.LessOrEqual(t, len(r.WeightConfig), len(weights.WeightConfig))
 }
+
+func TestAccScoreFilterIsknownIsUnknown(t *testing.T) {
+
+	e1 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$pageview", "et": 165120963, "ecd": 1, "epr": {"$browser": "Chrome", "$channel": "Paid Search", "$city": "Queanbeyan","$country": "Australia"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
+	e2 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$pageview", "et": 165120963, "ecd": 1, "epr": {"$browser": "Chrome",  "$channel": "Paid Search", "$city": "Queanbeyan","$country": "Australia"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
+	e3 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$pageview", "et": 165120963, "ecd": 1, "epr": {"$browser": "Chrome", "$channel": "Paid Search", "$city": "Queanbeyan"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
+	e4 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$pageview", "et": 165120963, "ecd": 1, "epr": {"$browser": "Chrome",  "$channel": "Paid Search", "$city": "Queanbeyan"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
+
+	ev := []string{e1, e2, e3, e4}
+	var events []*P.CounterEventFormat = make([]*P.CounterEventFormat, 0)
+
+	for _, e := range ev {
+		var testev *P.CounterEventFormat
+		err := json.Unmarshal([]byte(e), &testev)
+		assert.Nil(t, err)
+		events = append(events, testev)
+	}
+
+	var finalWeights M.AccWeights
+
+	w0 := M.AccEventWeight{WeightId: "1", Weight_value: 1.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{}, Operator: M.IsKnown, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w1 := M.AccEventWeight{WeightId: "2", Weight_value: 1.0, Is_deleted: false, EventName: "$pageview", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{}, Operator: M.IsUnKnown, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+
+	weightRules := []M.AccEventWeight{w0, w1}
+	finalWeights.WeightConfig = weightRules
+	finalWeights.SaleWindow = 10
+
+	ev_r1 := []string{"1"}
+	ev_r2 := []string{"1"}
+	ev_r3 := []string{"2"}
+	ev_r4 := []string{"2"}
+
+	ev_rules := [][]string{ev_r1, ev_r2, ev_r3, ev_r4}
+	cr, err := T.DeduplicateWeights(finalWeights) //new ids will not be added, as weight id is already filled
+	assert.Nil(t, err)
+	for _, w := range cr.WeightConfig {
+		log.Debug(w)
+	}
+	weightmap, _ := T.CreateweightMap(&cr)
+	countsmap := make(map[string]int64)
+	log.Debug(weightmap)
+	for idx, ev := range events {
+		ids := T.FilterEvents(ev, weightmap)
+		log.Debug(ids)
+		for _, fids := range ids {
+			countsmap[fids] += 1
+		}
+		assert.ElementsMatch(t, ids, ev_rules[idx], fmt.Sprintf("events :%d", idx))
+	}
+}

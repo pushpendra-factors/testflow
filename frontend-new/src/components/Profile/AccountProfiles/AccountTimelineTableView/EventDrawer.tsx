@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Drawer, Button, message, Tabs } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
-import { EventDrawerProps } from 'Components/Profile/types';
+import { EventDrawerProps, TimelineUser } from 'Components/Profile/types';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import { connect, ConnectedProps, useSelector } from 'react-redux';
 import { processProperties, PropTextFormat } from 'Utils/dataFormatter';
@@ -18,7 +18,6 @@ function EventDrawer({
   visible,
   onClose,
   event,
-  user,
   eventPropsType,
   fetchProjectSettings,
   udpateProjectSettings
@@ -36,20 +35,27 @@ function EventDrawer({
   const [userProperties, setUserProperties] = useState([]);
   const [propSelectOpen, setPropSelectOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('user');
+  const [activeUser, setActiveUser] = useState<TimelineUser>();
 
   useEffect(() => {
     if (!event) return;
-    if (event?.is_group_event) {
+    if (event?.is_group_user) {
       setActiveTab('event');
     } else {
       setActiveTab('user');
     }
+    setActiveUser({
+      name: event.username,
+      id: event.user_id,
+      isAnonymous: event.is_anonymous_user,
+      properties: event.user_properties
+    });
   }, [event]);
 
   const handleUpdateEventProperties = (newList: string[]) => {
     updateEventPropertiesConfig(
       activeProject?.id,
-      event?.display_name === 'Page View' ? 'PageView' : event.event_name,
+      event?.display_name === 'Page View' ? 'PageView' : event.name,
       newList
     )
       .then(() => {
@@ -79,7 +85,7 @@ function EventDrawer({
   const addNewEventProp = (option: any, group: any) => {
     const eventPropetiesList =
       currentProjectSettings?.timelines_config?.events_config?.[
-        event?.display_name === 'Page View' ? 'PageView' : event.event_name
+        event?.display_name === 'Page View' ? 'PageView' : event.name
       ] || [];
 
     const userPropertiesList =
@@ -116,7 +122,7 @@ function EventDrawer({
     let eventProps;
 
     if (event && event?.display_name !== 'Page View') {
-      eventProps = mapProperties(eventPropertiesV2[event.event_name] || {});
+      eventProps = mapProperties(eventPropertiesV2[event.name] || {});
     } else {
       eventProps = mapProperties(eventPropertiesV2[activePageView] || {});
     }
@@ -180,7 +186,7 @@ function EventDrawer({
       mask
       maskClosable
       visible={visible}
-      className='fa-drawer--right'
+      className='fa-event-drawer--right'
       onClose={onClose}
     >
       <Tabs
@@ -190,7 +196,7 @@ function EventDrawer({
         activeKey={activeTab}
         onChange={handleTabChange}
       >
-        {!event?.is_group_event && (
+        {!event?.is_group_user && (
           <Tabs.TabPane
             tab={
               <span className='fa-activity-filter--tabname'>
@@ -199,11 +205,14 @@ function EventDrawer({
             }
             key='user'
           >
-            <UserDetails user={user} onUpdate={handleUpdateUserProperties} />
+            <UserDetails
+              user={activeUser}
+              onUpdate={handleUpdateUserProperties}
+            />
           </Tabs.TabPane>
         )}
         {currentProjectSettings?.timelines_config?.events_config?.[
-          event?.display_name === 'Page View' ? 'PageView' : event?.event_name
+          event?.display_name === 'Page View' ? 'PageView' : event?.name
         ]?.length > 0 && (
           <Tabs.TabPane
             tab={

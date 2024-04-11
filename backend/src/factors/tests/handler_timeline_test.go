@@ -164,7 +164,7 @@ func TestAPIGetProfileUserHandler(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, len(resp), count)
 		for i, user := range resp {
-			if model.IsDomainGroup(source) {
+			if model.IsSourceAllUsers(source) {
 				if i < 10 {
 					assert.Equal(t, user.IsAnonymous, false)
 				} else {
@@ -446,7 +446,8 @@ func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
 	assert.NotNil(t, agent)
 	assert.Nil(t, err)
 
-	var timelinesConfig model.TimelinesConfig
+	timelinesConfig, err := store.GetStore().GetTimelinesConfig(project.ID)
+	assert.Nil(t, err)
 
 	timelinesConfig.UserConfig.LeftpaneProps = []string{"$email", "$page_count", "$user_id", "$name", "$session_spent_time"}
 	timelinesConfig.UserConfig.Milestones = []string{"$milesone_1", "$milesone_2", "$milesone_3"}
@@ -1224,8 +1225,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	assert.Equal(t, len(resp), 3)
 	assert.Condition(t, func() bool {
 		for i, user := range resp {
-			assert.Equal(t, user.Name, propertiesMap[7-i][U.GP_HUBSPOT_COMPANY_NAME])
-			assert.Equal(t, user.HostName, propertiesMap[7-i][U.GP_HUBSPOT_COMPANY_DOMAIN])
+			assert.Equal(t, user.DomainName, propertiesMap[7-i][U.GP_HUBSPOT_COMPANY_DOMAIN])
 			assert.NotNil(t, user.LastActivity)
 			if i > 0 {
 				assert.Condition(t, func() bool { return resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix() })
@@ -1269,20 +1269,16 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 		assert.Equal(t, len(resp), count)
 		for i, user := range resp {
 			if model.IsDomainGroup(source) {
-				assert.NotEmpty(t, user.Name)
-				assert.NotEmpty(t, user.HostName)
+				assert.NotEmpty(t, user.DomainName)
 			}
 			if source == U.GROUP_NAME_HUBSPOT_COMPANY {
-				assert.Equal(t, user.Name, propertiesMap[count+4-i]["$hubspot_company_name"])
-				assert.Equal(t, user.HostName, propertiesMap[count+4-i]["$hubspot_company_domain"])
+				assert.Equal(t, user.DomainName, propertiesMap[count+4-i]["$hubspot_company_domain"])
 			}
 			if source == U.GROUP_NAME_SALESFORCE_ACCOUNT {
-				assert.Equal(t, user.Name, propertiesMap[count-i-1]["$salesforce_account_name"])
-				assert.Equal(t, user.HostName, propertiesMap[count-i-1]["$salesforce_account_website"])
+				assert.Equal(t, user.DomainName, propertiesMap[count-i-1]["$salesforce_account_website"])
 			}
 			if source == U.GROUP_NAME_SIX_SIGNAL {
-				assert.Equal(t, user.Name, propertiesMap[count+9-i][U.SIX_SIGNAL_NAME])
-				assert.Equal(t, user.HostName, propertiesMap[count+9-i][U.SIX_SIGNAL_DOMAIN])
+				assert.Equal(t, user.DomainName, propertiesMap[count+9-i][U.SIX_SIGNAL_DOMAIN])
 			}
 			assert.NotNil(t, user.LastActivity)
 			for _, prop := range timelinesConfig.UserConfig.TableProps {
@@ -1357,7 +1353,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	assert.Equal(t, len(resp), 3)
 	filteredCompaniesNameHostNameMap := map[string]string{"Adapt.IO": "adapt.io", "Clientjoy Ads": "clientjoy.io", "AdPushup": "adpushup.com"}
 	for i, user := range resp {
-		assert.Contains(t, filteredCompaniesNameHostNameMap, user.Name, user.HostName)
+		assert.Contains(t, filteredCompaniesNameHostNameMap, user.DomainName)
 		assert.NotNil(t, user.LastActivity)
 		if i > 0 {
 			assert.True(t, resp[i].LastActivity.Unix() <= resp[i-1].LastActivity.Unix())
@@ -1533,8 +1529,7 @@ func TestAPIGetProfileAccountHandler(t *testing.T) {
 	assert.Equal(t, len(resp), 1)
 	assert.Equal(t, resp[0].Identity, domID)
 	assert.NotNil(t, resp[0].LastActivity)
-	assert.Contains(t, filteredCompaniesNameHostNameMap["Clientjoy Ads"], resp[0].Name)
-	assert.NotNil(t, resp[0].HostName)
+	assert.NotNil(t, resp[0].DomainName)
 	assert.Equal(t, resp[0].TableProps["$salesforce_account_city"], "New Delhi")
 	assert.Equal(t, resp[0].TableProps["$hubspot_company_is_public"], "true")
 }
@@ -1569,7 +1564,8 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 	assert.NotNil(t, agent)
 	assert.Nil(t, err)
 
-	var timelinesConfig model.TimelinesConfig
+	timelinesConfig, err := store.GetStore().GetTimelinesConfig(project.ID)
+	assert.Nil(t, err)
 
 	timelinesConfig.AccountConfig.TableProps = []string{U.GP_HUBSPOT_COMPANY_INDUSTRY, U.GP_HUBSPOT_COMPANY_COUNTRY,
 		U.DP_ENGAGEMENT_LEVEL, U.DP_ENGAGEMENT_SCORE, U.DP_TOTAL_ENGAGEMENT_SCORE, U.DP_DOMAIN_NAME}
@@ -2104,7 +2100,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		err := json.Unmarshal(jsonResponse, &resp)
 		assert.Nil(t, err)
 		assert.Contains(t, resp.Name, "Freshworks")
-		assert.Equal(t, resp.HostName, "google.com")
+		assert.Equal(t, resp.DomainName, "google.com")
 		assert.Equal(t, len(resp.AccountTimeline) > 0, true)
 		assert.Equal(t, len(resp.AccountTimeline), 10)
 		assert.NotNil(t, resp.LeftPaneProps)
@@ -2122,7 +2118,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		}
 		for _, userTimeline := range resp.AccountTimeline {
 			if userTimeline.UserName == model.GROUP_ACTIVITY_USERNAME {
-				assert.Equal(t, userTimeline.AdditionalProp, "All")
+				assert.Equal(t, userTimeline.ExtraProp, "All")
 				assert.Equal(t, userTimeline.IsAnonymous, false)
 				assert.Equal(t, len(userTimeline.UserActivities), 2)
 			}
@@ -2170,7 +2166,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		err := json.Unmarshal(jsonResponse, &resp)
 		assert.Nil(t, err)
 		assert.Contains(t, resp.Name, "chargebee")
-		assert.Equal(t, resp.HostName, "chargebee.com")
+		assert.Equal(t, resp.DomainName, "chargebee.com")
 		assert.Equal(t, len(resp.AccountTimeline) > 0, true)
 		assert.Equal(t, len(resp.AccountTimeline), 4)
 		assert.Equal(t, len(domProps[1]), len(resp.LeftPaneProps))
@@ -2194,7 +2190,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 		err := json.Unmarshal(jsonResponse, &resp)
 		assert.Nil(t, err)
 		assert.Contains(t, resp.Name, "Freshworks")
-		assert.Equal(t, resp.HostName, "google.com")
+		assert.Equal(t, resp.DomainName, "google.com")
 		assert.Equal(t, len(resp.AccountTimeline), 10)
 		assert.NotNil(t, resp.LeftPaneProps)
 		for i, property := range resp.LeftPaneProps {
@@ -2214,7 +2210,7 @@ func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
 			// Separate check the 10th element (Intent Activity)
 			if index == 9 {
 				assert.Equal(t, userTimeline.UserName, model.GROUP_ACTIVITY_USERNAME)
-				assert.Equal(t, userTimeline.AdditionalProp, U.STANDARD_GROUP_DISPLAY_NAMES[model.GROUP_NAME_HUBSPOT_COMPANY])
+				assert.Equal(t, userTimeline.ExtraProp, U.STANDARD_GROUP_DISPLAY_NAMES[model.GROUP_NAME_HUBSPOT_COMPANY])
 				assert.Equal(t, userTimeline.IsAnonymous, false)
 				assert.Equal(t, len(userTimeline.UserActivities), 1)
 				continue
@@ -3155,8 +3151,7 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 		assert.Equal(t, "US", profile.TableProps[U.UP_COUNTRY])
 		assert.NotNil(t, profile.Identity)
 		assert.NotNil(t, profile.LastActivity)
-		assert.NotNil(t, profile.Name)
-		assert.NotNil(t, profile.HostName)
+		assert.NotNil(t, profile.DomainName)
 	}
 }
 
@@ -3550,7 +3545,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 	for _, profile := range resp {
 		assert.NotNil(t, profile.Identity)
 		assert.NotNil(t, profile.LastActivity)
-		assert.Equal(t, "Heyflow@domainid.com", profile.HostName)
+		assert.Equal(t, "Heyflow@domainid.com", profile.DomainName)
 	}
 
 	// 2. user performed event
@@ -3632,7 +3627,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 	for _, profile := range resp {
 		assert.NotNil(t, profile.Identity)
 		assert.NotNil(t, profile.LastActivity)
-		assert.Contains(t, hostNames, profile.HostName)
+		assert.Contains(t, hostNames, profile.DomainName)
 	}
 
 	// 3. group and user events with props
@@ -3714,7 +3709,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 		assert.NotNil(t, profile.TableProps["$hubspot_company_created"])
 		assert.NotNil(t, profile.Identity)
 		assert.NotNil(t, profile.LastActivity)
-		assert.Contains(t, hostNames, profile.HostName)
+		assert.Contains(t, hostNames, profile.DomainName)
 	}
 }
 
@@ -4608,8 +4603,7 @@ func TestAllAccounts(t *testing.T) {
 	err = json.Unmarshal(jsonResponse, &resp)
 	assert.Nil(t, err)
 	assert.Equal(t, len(resp), 1)
-	assert.Contains(t, resp[0].HostName, "hey")
-	assert.Contains(t, resp[0].Name, "heyflow")
+	assert.Contains(t, resp[0].DomainName, "hey")
 
 	// Search a Domain
 	payload = model.TimelinePayload{
@@ -4628,10 +4622,8 @@ func TestAllAccounts(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, len(resp), 2)
 	searchNames := []string{"heyflow.app", "adapt.io"}
-	assert.Contains(t, searchNames, resp[0].HostName)
-	assert.Contains(t, searchNames, resp[1].HostName)
-	assert.Contains(t, searchNames, resp[0].Name)
-	assert.Contains(t, searchNames, resp[1].Name)
+	assert.Contains(t, searchNames, resp[0].DomainName)
+	assert.Contains(t, searchNames, resp[1].DomainName)
 	for i := range resp {
 		assert.Equal(t, "Hot", resp[i].TableProps["$engagement_level"])
 		assert.Equal(t, 125.3, resp[i].TableProps["$engagement_score"])
@@ -4690,7 +4682,7 @@ func TestAllAccounts(t *testing.T) {
 	err = json.Unmarshal(jsonResponse, &resp)
 	assert.Nil(t, err)
 	assert.Equal(t, len(resp), 1)
-	assert.Contains(t, resp[0].HostName, "adapt")
+	assert.Contains(t, resp[0].DomainName, "adapt")
 	assert.Greater(t, resp[0].LastActivity, U.TimeNowZ().AddDate(0, 0, -1))
 	assert.NotEmpty(t, resp[0].TableProps[U.SIX_SIGNAL_NAME])
 	assert.NotEmpty(t, resp[0].TableProps["$hubspot_company_name"])
@@ -4848,7 +4840,7 @@ func TestAllAccounts(t *testing.T) {
 		CreateUser:    false,
 		IsNewUser:     false,
 		Name:          U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_UPDATED,
-		Timestamp:     time.Now().Unix(),
+		Timestamp:     time.Now().Unix() + 100,
 		ProjectId:     project.ID,
 		Auto:          false,
 		RequestSource: model.UserSourceHubspot,
@@ -4857,7 +4849,7 @@ func TestAllAccounts(t *testing.T) {
 	assert.NotEmpty(t, response)
 	assert.Equal(t, http.StatusOK, status)
 
-	w = sendGetTopEventsForADomainRequest(r, project.ID, agent, domainUsers[0].ID)
+	w = sendGetTopEventsForADomainRequest(r, project.ID, agent, domainUsers[0].Group1ID)
 	assert.Equal(t, http.StatusOK, w.Code)
 	jsonResponse, _ = io.ReadAll(w.Body)
 	newResp := make([]model.TimelineEvent, 0)
@@ -4958,7 +4950,7 @@ func TestAccountsConsumingMarker(t *testing.T) {
 	domNames := []string{"domain0id.com", "domain1id.com", "domain2id.com"}
 
 	for _, profile := range resp {
-		assert.Contains(t, domNames, profile.HostName)
+		assert.Contains(t, domNames, profile.DomainName)
 		assert.NotEmpty(t, profile.Identity)
 		assert.Greater(t, profile.LastActivity, U.TimeNowZ().AddDate(0, 0, -1))
 		assert.NotEmpty(t, profile.TableProps[U.SIX_SIGNAL_NAME])
@@ -5003,7 +4995,7 @@ func TestAccountsConsumingMarker(t *testing.T) {
 	assert.Equal(t, len(resp), 2)
 
 	for _, profile := range resp {
-		assert.Contains(t, domNames, profile.HostName)
+		assert.Contains(t, domNames, profile.DomainName)
 		assert.NotEmpty(t, profile.Identity)
 		assert.Greater(t, profile.LastActivity, U.TimeNowZ().AddDate(0, 0, -1))
 		assert.NotEmpty(t, profile.TableProps[U.SIX_SIGNAL_NAME])
@@ -5113,7 +5105,7 @@ func TestUpdateEventsConfig(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 }
 
-func TestGetUserPropertiesByIDHandler(t *testing.T) {
+func TestGetConfiguredUserPropertiesWithValuesHandler(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 	project, agent, err := SetupProjectWithAgentDAO()
@@ -5200,12 +5192,12 @@ func sendGetProfileUserPropertiesRequest(r *gin.Engine, projectId int64, agent *
 	return w
 }
 
-func sendGetTopEventsForADomainRequest(r *gin.Engine, projectID int64, agent *model.Agent, domainID string) *httptest.ResponseRecorder {
+func sendGetTopEventsForADomainRequest(r *gin.Engine, projectID int64, agent *model.Agent, domainName string) *httptest.ResponseRecorder {
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
 		log.WithError(err).Error("Error Creating cookieData")
 	}
-	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/v1/profiles/accounts/top_events/%s", projectID, domainID)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/v1/profiles/accounts/top_events/%s", projectID, base64.StdEncoding.EncodeToString([]byte(domainName)))).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
 			Value:  cookieData,

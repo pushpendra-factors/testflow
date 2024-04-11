@@ -23,7 +23,7 @@ function EventDetails({ event, eventPropsType, onUpdate }: EventDetailsProps) {
 
   const renderAliasName = () => (
     <TextWithOverflowTooltip
-      text={event.event_type === 'FE' ? event.event_name : event.alias_name}
+      text={event.type === 'FE' ? event.name : event.alias_name}
       extraClass='main'
     />
   );
@@ -31,7 +31,7 @@ function EventDetails({ event, eventPropsType, onUpdate }: EventDetailsProps) {
   useEffect(() => {
     if (event && currentProjectSettings?.timelines_config?.events_config) {
       const eventName =
-        event.display_name === 'Page View' ? 'PageView' : event.event_name;
+        event.display_name === 'Page View' ? 'PageView' : event.name;
       setSortableItems(
         currentProjectSettings.timelines_config.events_config[eventName]
       );
@@ -41,7 +41,7 @@ function EventDetails({ event, eventPropsType, onUpdate }: EventDetailsProps) {
   const compareOrder = (newOrder: string[]) => {
     const existingOrder =
       currentProjectSettings?.timelines_config?.events_config?.[
-        event.display_name === 'Page View' ? 'PageView' : event.event_name
+        event.display_name === 'Page View' ? 'PageView' : event.name
       ];
     if (_.isEqual(existingOrder, newOrder)) return;
     onUpdate(newOrder);
@@ -80,58 +80,56 @@ function EventDetails({ event, eventPropsType, onUpdate }: EventDetailsProps) {
           )}
         </div>
       </div>
-      <div>
-        {sortableItems && (
-          <ReactSortable list={sortableItems} setList={handleSortableItems}>
-            {sortableItems.map((property, index) => {
-              const propType = eventPropsType[property];
-              return (
-                <div className='leftpane-prop justify-between'>
-                  <div className='flex items-center justify-start'>
-                    <div className='del-button mr-4' style={{ cursor: 'grab' }}>
-                      <HolderOutlined />
-                    </div>
-                    <div className='flex flex-col items-start truncate'>
-                      <Text
-                        type='title'
-                        level={8}
-                        color='grey'
-                        truncate
-                        charLimit={44}
-                        extraClass='m-0'
-                      >
-                        {eventPropNames[property] || PropTextFormat(property)}
-                      </Text>
-                      <Text
-                        type='title'
-                        level={7}
-                        truncate
-                        charLimit={44}
-                        extraClass='m-0'
-                      >
-                        {propValueFormat(
-                          property,
-                          event.properties?.[property],
-                          propType
-                        ) || '-'}
-                      </Text>
-                    </div>
+      {sortableItems && (
+        <ReactSortable list={sortableItems} setList={handleSortableItems}>
+          {sortableItems.map((property, index) => {
+            const propType = eventPropsType[property];
+            return (
+              <div className='leftpane-prop justify-between'>
+                <div className='flex items-center justify-start'>
+                  <div className='del-button mr-4' style={{ cursor: 'grab' }}>
+                    <HolderOutlined />
                   </div>
-
-                  {sortableItems.length > 1 && (
-                    <Button
-                      type='text'
-                      className='del-button'
-                      onClick={() => handleDelete(index)}
-                      icon={<SVG name='delete' />}
-                    />
-                  )}
+                  <div className='flex flex-col items-start'>
+                    <Text
+                      type='title'
+                      level={8}
+                      color='grey'
+                      truncate
+                      charLimit={40}
+                      extraClass='m-0'
+                    >
+                      {eventPropNames[property] || PropTextFormat(property)}
+                    </Text>
+                    <Text
+                      type='title'
+                      level={7}
+                      truncate
+                      charLimit={36}
+                      extraClass='m-0'
+                    >
+                      {propValueFormat(
+                        property,
+                        event.properties?.[property],
+                        propType
+                      ) || '-'}
+                    </Text>
+                  </div>
                 </div>
-              );
-            })}
-          </ReactSortable>
-        )}
-      </div>
+
+                {sortableItems.length > 1 && (
+                  <Button
+                    type='text'
+                    className='del-button'
+                    onClick={() => handleDelete(index)}
+                    icon={<SVG name='delete' />}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </ReactSortable>
+      )}
     </div>
   );
 }

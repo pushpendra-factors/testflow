@@ -8,7 +8,10 @@ import {
   fetchSegments,
   updateSegment,
   deleteSegmentByID,
-  fetchAccountOverview
+  fetchAccountOverview,
+  getTop100EventsForDomain,
+  getConfiguredUserProperties,
+  getConfiguredEventProperties
 } from '.';
 import { formatAccountTimeline, formatUsersTimeline } from './utils';
 import { deleteSegmentAction } from './actions';
@@ -21,10 +24,7 @@ export const getProfileAccounts =
         .then((response) => {
           const data = response.data?.map((account) => ({
             ...account,
-            identity: account.identity,
-            account: { name: account.name, host: account?.host_name },
-            tableProps: account.table_props,
-            lastActivity: account.last_activity
+            domain: { id: account.identity, name: account?.domain_name }
           }));
           resolve(
             dispatch({
@@ -47,12 +47,12 @@ export const getProfileAccounts =
   };
 
 export const getProfileAccountDetails =
-  (projectId, id, source, config) => (dispatch) => {
+  (projectId, id, source) => (dispatch) => {
     dispatch({ type: 'FETCH_PROFILE_ACCOUNT_DETAILS_LOADING' });
     return new Promise((resolve) => {
       fetchProfileAccountDetails(projectId, id, source)
         .then((response) => {
-          const data = formatAccountTimeline(response.data, config);
+          const data = formatAccountTimeline(response.data);
           resolve(
             dispatch({
               type: 'FETCH_PROFILE_ACCOUNT_DETAILS_FULFILLED',
@@ -224,3 +224,61 @@ export const setActivePageviewEvent = (eventName) => ({
   type: 'SET_PAGEVIEW',
   payload: eventName
 });
+
+export const getTop100Events = (projectID, domainName) => (dispatch) =>
+  new Promise((resolve, reject) => {
+    getTop100EventsForDomain(projectID, domainName)
+      .then((response) => {
+        const events = response.data.map((event) => ({
+          ...event,
+          username: event.username || event.user_id,
+          enabled: true
+        }));
+        resolve(
+          dispatch({
+            type: 'FETCH_TOP100_EVENTS_FULFILLED',
+            payload: events || [],
+            domainName
+          })
+        );
+      })
+      .catch((err) => {
+        reject(err);
+      });
+  });
+
+export const getConfiguredUserPropertiesMid =
+  (projectID, userID, isAnonymous) => (dispatch) =>
+    new Promise((resolve, reject) => {
+      getConfiguredUserProperties(projectID, userID, isAnonymous)
+        .then((response) => {
+          resolve(
+            dispatch({
+              type: 'FETCH_USER_CONFIG_PROPERTIES_FULFILLED',
+              payload: response.data,
+              userID
+            })
+          );
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+
+export const getConfiguredEventPropertiesMid =
+  (projectID, eventID, eventName) => (dispatch) =>
+    new Promise((resolve, reject) => {
+      getConfiguredEventProperties(projectID, eventID, eventName)
+        .then((response) => {
+          resolve(
+            dispatch({
+              type: 'FETCH_EVENT_CONFIG_PROPERTIES_FULFILLED',
+              payload: response.data,
+              eventID
+            })
+          );
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });

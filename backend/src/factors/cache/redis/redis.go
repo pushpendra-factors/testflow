@@ -501,6 +501,32 @@ func incrBatch(persistent bool, queue bool, keys []*Key) ([]int64, error) {
 	return counts, nil
 }
 
+func IncrKeyPersistent(key KeyCountTuple) error {
+	return incrKey(true, false, key)
+}
+
+func incrKey(persistent bool, queue bool, tuple KeyCountTuple) error {
+	var redisConn redis.Conn
+	if queue {
+		redisConn = C.GetCacheQueueRedisConnection()
+	} else if persistent {
+		redisConn = C.GetCacheRedisPersistentConnection()
+	} else {
+		redisConn = C.GetCacheRedisConnection()
+	}
+	defer redisConn.Close()
+
+	cKey, err := tuple.Key.Key()
+	if err != nil {
+		return err
+	}
+	err = redisConn.Send("INCRBY", cKey, tuple.Count)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 type SortedSetKeyValueTuple struct {
 	Key   *Key
 	Value string

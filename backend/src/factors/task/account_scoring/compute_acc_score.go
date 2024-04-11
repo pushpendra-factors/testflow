@@ -536,6 +536,7 @@ func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore,
 	ordereddays := U.GenDateStringsForLastNdays(currentTS, saleWindow)
 	for currentUser := range userIdsmap {
 		var lastevent M.LatestScore
+		var lastEventDay string
 		lastevent.Properties = make(map[string]map[string]int64)
 		lastevent.EventsCount = make(map[string]float64)
 		lastevent.TopEvents = make(map[string]float64)
@@ -557,6 +558,9 @@ func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore,
 				}
 				decayval := model.ComputeDecayValue(dateOfCount, int64(saleWindow))
 				if decayval > 0 {
+					if len(counts.EventsCount) > 0 {
+						lastEventDay = dateOfCount
+					}
 					for eventKey, eventVal := range counts.EventsCount {
 						if _, eok := eventsCountWithDecay[eventKey]; !eok {
 							eventsCountWithDecay[eventKey] = 0
@@ -598,6 +602,7 @@ func UpdateLastEventsDay(prevCountsOfUser map[string]map[string]M.LatestScore,
 		lastevent.Properties = properties
 		lastevent.EventsCount = eventsCountWithDecay
 		lastevent.TopEvents = topEventsOnScore
+		lastevent.LastEventTimeStamp = lastEventDay
 
 		allEventsInrange.Date = currentDateTS
 		allEventsInrange.Properties = properties

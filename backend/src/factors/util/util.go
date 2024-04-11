@@ -1993,6 +1993,14 @@ func GetKeysFromMap[M ~map[K]V, K comparable, V any](m M) []K {
 	return r
 }
 
+func Sum(array []int) int {
+	result := 0
+	for _, v := range array {
+		result += v
+	}
+	return result
+}
+
 func IsPropertyChanged(a, b map[string]interface{}, propertiesToCheck map[string]bool) bool {
 	for key := range propertiesToCheck {
 		aValue := a[key]

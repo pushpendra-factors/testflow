@@ -1,0 +1,25 @@
+.container {
+  min-height: 400px;
+  margin-bottom: 40px;
+  padding: 24px;
+  padding-top: 16px;
+  border: 0.9px solid #f0f0f0;
+  border-radius: 12px;
+}
+
+.textEmptyBox {
+  display: flex;
+  justify-content: center;
+  text-wrap: pretty;
+  text-align: center;
+  width: 450px;
+}
+
+.dividerOR {
+  margin: -10px 0px !important;
+}
+
+.unplugImg {
+  width: 156px;
+  height: 156px;
+}

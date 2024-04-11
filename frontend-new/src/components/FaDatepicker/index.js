@@ -3,9 +3,9 @@ import { DatePicker, Menu, Dropdown, Button, Tooltip } from 'antd';
 import { isEqual } from 'lodash';
 import MomentTz from 'Components/MomentTz';
 // import { TimeZoneOffsetValues } from 'Utils/constants';
+import ControlledComponent from 'Components/ControlledComponent';
 import { getRangeByLabel } from './utils';
 import { SVG } from '../factorsComponents';
-import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
 
 const { RangePicker } = DatePicker;
 
@@ -16,18 +16,21 @@ const FaDatepicker = ({
   presetRange,
   weekPicker,
   monthPicker,
-  quarterPicker, 
+  quarterPicker,
   yearPicker,
   range,
   buttonSize,
   nowPicker,
   className,
   comparison_supported: comparisonSupported = false,
-  handleCompareWithClick,
   disabled = false,
   todayPicker = true,
   disabledDateRange = null,
-  withoutYesterday=false
+  withoutYesterday = false,
+  yesterdayPicker = true,
+  last7daysPicker = true,
+  last14daysPicker = true,
+  last28daysPicker = true
 }) => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerType, setDatePickerType] = useState('');
@@ -69,10 +72,10 @@ const FaDatepicker = ({
       const startDateMonth = MomentTz(startDate).startOf('month');
       const endDateMonth = MomentTz(startDate).endOf('month');
 
-      if(MomentTz(startDate).month() == MomentTz().month()){
+      if (MomentTz(startDate).month() == MomentTz().month()) {
         startDateMonth = MomentTz(startDate).startOf('month');
-      endDateMonth = MomentTz(today).subtract(1, 'days').endOf('day')
-     }
+        endDateMonth = MomentTz(today).subtract(1, 'days').endOf('day');
+      }
 
       const newDateDataMonth = {
         ...dateData,
@@ -86,9 +89,9 @@ const FaDatepicker = ({
       let startDateMonth = MomentTz(startDate).startOf('year');
       let endDateMonth = MomentTz(startDate).endOf('year');
 
-      if(MomentTz(startDate).year() == MomentTz().year()){
-         startDateMonth = MomentTz(startDate).startOf('year');
-       endDateMonth = MomentTz(today).subtract(1, 'days').endOf('day')
+      if (MomentTz(startDate).year() == MomentTz().year()) {
+        startDateMonth = MomentTz(startDate).startOf('year');
+        endDateMonth = MomentTz(today).subtract(1, 'days').endOf('day');
       }
       const newDateDataMonth = {
         ...dateData,
@@ -98,14 +101,13 @@ const FaDatepicker = ({
       };
       onSelect(newDateDataMonth);
       setDateString('Year');
-    }
-     else if (datePickerType === 'quarter') {
+    } else if (datePickerType === 'quarter') {
       let startDateMonth = MomentTz(startDate).startOf('quarter');
       let endDateMonth = MomentTz(startDate).endOf('quarter');
-      
-      if(MomentTz(startDate).quarter() == MomentTz().quarter()){
+
+      if (MomentTz(startDate).quarter() == MomentTz().quarter()) {
         startDateMonth = MomentTz(startDate).startOf('quarter');
-        endDateMonth = MomentTz(today).subtract(1, 'days').endOf('day')
+        endDateMonth = MomentTz(today).subtract(1, 'days').endOf('day');
       }
       const newDateDataQtr = {
         ...dateData,
@@ -140,7 +142,6 @@ const FaDatepicker = ({
       //   setQuarterDateStr(`${endDate.year()}, Q${startDate.quarter()}`);
       //   onSelect(newDateDataMonth);
       // }
-
     } else {
       onSelect(newDateData);
     }
@@ -229,7 +230,7 @@ const FaDatepicker = ({
       const dateRng = getRangeByLabel('This Week');
       const { startDate } = dateRng;
       let { endDate } = dateRng;
-      if(withoutYesterday) {
+      if (withoutYesterday) {
         endDate = endDate.subtract(1, 'days').endOf('day');
       }
       const newDateData = {
@@ -259,7 +260,7 @@ const FaDatepicker = ({
       const dateRng = getRangeByLabel('This Month');
       const { startDate } = dateRng;
       let { endDate } = dateRng;
-      if(withoutYesterday) {
+      if (withoutYesterday) {
         endDate = endDate.subtract(1, 'days').endOf('day');
       }
       const newDateData = {
@@ -289,7 +290,7 @@ const FaDatepicker = ({
       const dateRng = getRangeByLabel('This Quarter');
       const { startDate } = dateRng;
       let { endDate } = dateRng;
-      if(withoutYesterday) {
+      if (withoutYesterday) {
         endDate = endDate.subtract(1, 'days').endOf('day');
       }
       const newDateData = {
@@ -373,8 +374,8 @@ const FaDatepicker = ({
   const menu = (
     <Menu>
       {nowPicker && (
-        <Menu.Item key="now">
-          <a target="_blank" onClick={() => returnPreSetDate('now')}>
+        <Menu.Item key='now'>
+          <a target='_blank' onClick={() => returnPreSetDate('now')}>
             Now
           </a>
         </Menu.Item>
@@ -382,102 +383,118 @@ const FaDatepicker = ({
 
       {presetRange && (
         <>
-        {todayPicker &&
-          <Menu.Item key="today">
-            <a target="_blank" onClick={() => returnPreSetDate('today')}>
-              Today
-            </a>
-          </Menu.Item>
-          }
-          <Menu.Item key="yesterday">
-            <a target="_blank" onClick={() => returnPreSetDate('yesterday')}>
-              Yesterday
-            </a>
-          </Menu.Item>
-          <Menu.Item key="this_week">
-            <a target="_blank" onClick={() => returnPreSetDate('this_week')}>
+          {todayPicker && (
+            <Menu.Item key='today'>
+              <a target='_blank' onClick={() => returnPreSetDate('today')}>
+                Today
+              </a>
+            </Menu.Item>
+          )}
+          <ControlledComponent controller={yesterdayPicker}>
+            <Menu.Item key='yesterday'>
+              <a target='_blank' onClick={() => returnPreSetDate('yesterday')}>
+                Yesterday
+              </a>
+            </Menu.Item>
+          </ControlledComponent>
+          <Menu.Item key='this_week'>
+            <a target='_blank' onClick={() => returnPreSetDate('this_week')}>
               This Week
             </a>
           </Menu.Item>
-          <Menu.Item key="last_week">
-            <a target="_blank" onClick={() => returnPreSetDate('last_week')}>
+          <Menu.Item key='last_week'>
+            <a target='_blank' onClick={() => returnPreSetDate('last_week')}>
               Last Week
             </a>
-          </Menu.Item> 
-          <Menu.Item key="this_week">
-            <a target="_blank" onClick={() => returnPreSetDate('last_7days')}>
-              Last 7 days
-            </a>
           </Menu.Item>
-          <Menu.Item key="this_week">
-            <a target="_blank" onClick={() => returnPreSetDate('last_14days')}>
-              Last 14 days
-            </a>
-          </Menu.Item>
-          <Menu.Item key="this_week">
-            <a target="_blank" onClick={() => returnPreSetDate('last_28days')}>
-              Last 28 days
-            </a>
-          </Menu.Item> 
-          <Menu.Item key="this_month">
-            <a target="_blank" onClick={() => returnPreSetDate('this_month')}>
+          <ControlledComponent controller={last7daysPicker}>
+            <Menu.Item key='last_7_days'>
+              <a target='_blank' onClick={() => returnPreSetDate('last_7days')}>
+                Last 7 days
+              </a>
+            </Menu.Item>
+          </ControlledComponent>
+          <ControlledComponent controller={last14daysPicker}>
+            <Menu.Item key='last_14_days'>
+              <a
+                target='_blank'
+                onClick={() => returnPreSetDate('last_14days')}
+              >
+                Last 14 days
+              </a>
+            </Menu.Item>
+          </ControlledComponent>
+          <ControlledComponent controller={last28daysPicker}>
+            <Menu.Item key='last_28_days'>
+              <a
+                target='_blank'
+                onClick={() => returnPreSetDate('last_28days')}
+              >
+                Last 28 days
+              </a>
+            </Menu.Item>
+          </ControlledComponent>
+          <Menu.Item key='this_month'>
+            <a target='_blank' onClick={() => returnPreSetDate('this_month')}>
               This Month
             </a>
           </Menu.Item>
-          <Menu.Item key="last_month">
-            <a target="_blank" onClick={() => returnPreSetDate('last_month')}>
+          <Menu.Item key='last_month'>
+            <a target='_blank' onClick={() => returnPreSetDate('last_month')}>
               Last Month
             </a>
           </Menu.Item>
-          <Menu.Item key="this_quarter">
-            <a target="_blank" onClick={() => returnPreSetDate('this_quarter')}>
+          <Menu.Item key='this_quarter'>
+            <a target='_blank' onClick={() => returnPreSetDate('this_quarter')}>
               This Quarter
             </a>
           </Menu.Item>
-          <Menu.Item key="last_quarter">
-            <a target="_blank" onClick={() => returnPreSetDate('last_quarter')}>
+          <Menu.Item key='last_quarter'>
+            <a target='_blank' onClick={() => returnPreSetDate('last_quarter')}>
               Last Quarter
             </a>
           </Menu.Item>
-          <Menu.Divider />
         </>
       )}
 
+      {(weekPicker || monthPicker || quarterPicker || yearPicker) && (
+        <Menu.Divider />
+      )}
+
       {weekPicker && (
-        <Menu.Item key="week">
-          <a target="_blank" onClick={() => showDatePickerFn('week')}>
+        <Menu.Item key='week'>
+          <a target='_blank' onClick={() => showDatePickerFn('week')}>
             Select Week
           </a>
         </Menu.Item>
       )}
       {monthPicker && (
-        <Menu.Item key="month">
-          <a target="_blank" onClick={() => showDatePickerFn('month')}>
+        <Menu.Item key='month'>
+          <a target='_blank' onClick={() => showDatePickerFn('month')}>
             Select Month
           </a>
         </Menu.Item>
       )}
       {quarterPicker && (
-        <Menu.Item key="quarter">
-          <a target="_blank" onClick={() => showDatePickerFn('quarter')}>
+        <Menu.Item key='quarter'>
+          <a target='_blank' onClick={() => showDatePickerFn('quarter')}>
             Select Quarter
           </a>
         </Menu.Item>
       )}
       {yearPicker && (
-        <Menu.Item key="year">
-          <a target="_blank" onClick={() => showDatePickerFn('year')}>
+        <Menu.Item key='year'>
+          <a target='_blank' onClick={() => showDatePickerFn('year')}>
             Select Year
           </a>
         </Menu.Item>
       )}
-      {(weekPicker || monthPicker || quarterPicker || yearPicker) && (
-        <Menu.Divider />
-      )}
+
+      {customPicker && <Menu.Divider />}
 
       {customPicker && (
-        <Menu.Item key="custom">
-          <a target="_blank" onClick={() => showDatePickerFn('custom')}>
+        <Menu.Item key='custom'>
+          <a target='_blank' onClick={() => showDatePickerFn('custom')}>
             Select Custom Range
           </a>
         </Menu.Item>
@@ -516,7 +533,7 @@ const FaDatepicker = ({
   };
 
   const renderCustomPicker = () => (
-    <div className="fa-custom-datepicker">
+    <div className='fa-custom-datepicker'>
       {
         <Button
           disabled={disabled}
@@ -524,15 +541,15 @@ const FaDatepicker = ({
           size={buttonSize || null}
           onClick={() => setShowDatePicker(true)}
         >
-          <SVG name="calendar" size={16} extraClass="mr-1" />
+          <SVG name='calendar' size={16} extraClass='mr-1' />
           {!showDatePicker && range ? displayRange(range) : null}
           {!showDatePicker && !range ? 'Choose Date' : null}
           {showDatePicker && (
             <RangePicker
-              format="MMM DD YYYY"
+              format='MMM DD YYYY'
               // disabledDate={(d) => !d || d.isAfter(MomentTz())}
-              dropdownClassName="fa-custom-datepicker--datepicker"
-              size="small"
+              dropdownClassName='fa-custom-datepicker--datepicker'
+              size='small'
               suffixIcon={null}
               showToday={false}
               bordered={false}
@@ -547,7 +564,7 @@ const FaDatepicker = ({
           )}
           {showDatePicker && (
             <span onClick={() => setShowDatePicker(false)}>
-              <SVG name="Times" size={16} extraClass="mr-1" />
+              <SVG name='Times' size={16} extraClass='mr-1' />
             </span>
           )}
         </Button>
@@ -555,18 +572,21 @@ const FaDatepicker = ({
     </div>
   );
 
-  const disabledDateFn = (date) =>{
-    if(disabledDateRange){
-      return date.isBefore(disabledDateRange?.startDate) || date.isAfter(disabledDateRange?.endDate)
+  const disabledDateFn = (date) => {
+    if (disabledDateRange) {
+      return (
+        date.isBefore(disabledDateRange?.startDate) ||
+        date.isAfter(disabledDateRange?.endDate)
+      );
     }
-    return date.isAfter(MomentTz().subtract(1, 'days'))
-  }
+    return date.isAfter(MomentTz().subtract(1, 'days'));
+  };
 
   const renderFaDatePicker = () => (
-    <div className="fa-custom-datepicker">
+    <div className='fa-custom-datepicker'>
       <Dropdown
         disabled={disabled}
-        overlayClassName="fa-custom-datepicker--dropdown"
+        overlayClassName='fa-custom-datepicker--dropdown'
         overlay={menu}
         placement={placement}
         trigger={!showDatePicker ? ['click'] : []}
@@ -576,7 +596,7 @@ const FaDatepicker = ({
           className={className}
           size={buttonSize || null}
         >
-          <SVG name="calendar" size={16} extraClass="mr-1" />
+          <SVG name='calendar' size={16} extraClass='mr-1' />
           {!showDatePicker && range ? displayRange(range) : null}
           {!showDatePicker && !range ? 'Choose Date' : null}
           {showDatePicker && (
@@ -584,10 +604,13 @@ const FaDatepicker = ({
               {datePickerType === 'custom' ? (
                 <RangePicker
                   disabled={disabled}
-                  format="MMM DD YYYY"
-                  disabledDate={(d) => !d || (todayPicker ?  d.isAfter(MomentTz()) : disabledDateFn(d) )}
-                  dropdownClassName="fa-custom-datepicker--datepicker"
-                  size="small"
+                  format='MMM DD YYYY'
+                  disabledDate={(d) =>
+                    !d ||
+                    (todayPicker ? d.isAfter(MomentTz()) : disabledDateFn(d))
+                  }
+                  dropdownClassName='fa-custom-datepicker--datepicker'
+                  size='small'
                   suffixIcon={null}
                   showToday={false}
                   bordered={false}
@@ -605,7 +628,7 @@ const FaDatepicker = ({
                 <DatePicker
                   picker={datePickerType}
                   disabledDate={(d) => !d || d.isAfter(MomentTz())}
-                  dropdownClassName="fa-custom-datepicker--datepicker"
+                  dropdownClassName='fa-custom-datepicker--datepicker'
                   autoFocus
                   open
                   onOpenChange={(open) => {
@@ -613,7 +636,7 @@ const FaDatepicker = ({
                       setShowDatePicker(false);
                     }
                   }}
-                  size="small"
+                  size='small'
                   suffixIcon={null}
                   showToday={false}
                   bordered={false}
@@ -625,7 +648,7 @@ const FaDatepicker = ({
           )}
           {showDatePicker && (
             <span onClick={() => setShowDatePicker(false)}>
-              <SVG name="Times" size={16} extraClass="mr-1" />
+              <SVG name='Times' size={16} extraClass='mr-1' />
             </span>
           )}
         </Button>

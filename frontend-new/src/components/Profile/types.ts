@@ -36,6 +36,7 @@ export type Overview = {
 export interface AccountOverviewProps {
   overview: Overview;
   loading: boolean;
+  top_engagement_signals: string;
 }
 
 export interface EventIconProps {
@@ -69,37 +70,61 @@ export interface TimelineEvent {
   user_properties?: { [key: string]: unknown };
 }
 
+export interface NewEvent {
+  id: string;
+  name: string;
+  display_name: string;
+  alias_name?: string;
+  icon: string;
+  type: string;
+  timestamp: number;
+  username: string;
+  user_id: string;
+  is_group_user: boolean;
+  is_anonymous_user: boolean;
+  properties?: { [key: string]: unknown };
+  user_properties?: { [key: string]: unknown };
+  enabled: boolean;
+}
+
 export interface EventDrawerProps {
   visible: boolean;
-  event: TimelineEvent;
-  user: TimelineUser;
+  event: NewEvent;
   eventPropsType: { [key: string]: string };
   onClose: () => void;
+}
+
+export interface AccountDrawerProps {
+  domain: string;
+  visible: boolean;
+  events: NewEvent[];
+  onClose: () => void;
+  onClickMore: () => void;
+  onClickOpenNewtab: () => void;
 }
 
 export interface TimelineUser {
   name: string;
   id: string;
   isAnonymous: boolean;
-  extraProp: string;
+  extraProp?: string;
   properties?: { [key: string]: unknown };
 }
 
 export interface TableRowProps {
-  event: TimelineEvent;
+  event: NewEvent;
   eventPropsType: { [key: string]: string };
-  user: TimelineUser;
-  onEventClick: (event: TimelineEvent) => void;
+  onEventClick: (event: NewEvent) => void;
 }
 
 export interface AccountTimelineTableViewProps {
-  timelineEvents?: TimelineEvent[];
-  timelineUsers?: TimelineUser[];
+  timelineEvents?: NewEvent[];
   loading: boolean;
   eventPropsType: { [key: string]: string };
+  extraClass?: string;
 }
 export interface EventDetailsProps {
-  event: TimelineEvent;
+  event: NewEvent;
   eventPropsType: { [key: string]: string };
   onUpdate: (newOrder: string[]) => void;
 }
