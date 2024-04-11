@@ -1,4 +1,4 @@
-import { get, getHostUrl, post } from 'Utils/request';
+import { get, getHostUrl, put, post } from 'Utils/request';
 import { EMPTY_ARRAY } from 'Utils/global';
 import MomentTz from 'Components/MomentTz';
 import {
@@ -7,7 +7,10 @@ import {
   ACCOUNTS_INSIGHTS_CONFIG_ERROR,
   ACCOUNTS_INSIGHTS_LOADING,
   ACCOUNTS_INSIGHTS_SUCCESS,
-  ACCOUNTS_INSIGHTS_ERROR
+  ACCOUNTS_INSIGHTS_ERROR,
+  EDIT_INSIGHTS_METRIC_LOADING,
+  EDIT_INSIGHTS_METRIC_SUCCESS,
+  EDIT_INSIGHTS_METRIC_ERROR
 } from './types';
 
 const host = getHostUrl();
@@ -64,6 +67,34 @@ export const fetchInsights = ({
       dispatch({
         type: ACCOUNTS_INSIGHTS_ERROR,
         payload: { widgetGroupId, segmentId, dateFrom, dateTo }
+      });
+    }
+  };
+
+export const updateInsightsQueryMetric = ({
+  projectId,
+  widgetId,
+  widgetGroupId,
+  metric,
+  metricName
+}) =>
+  async function (dispatch) {
+    try {
+      const url = `${host}projects/${projectId}/segments/analytics/widget_group/${widgetGroupId}/widgets/${widgetId}`;
+      dispatch({
+        type: EDIT_INSIGHTS_METRIC_LOADING
+      });
+      await put(null, url, {
+        q_me: metric,
+        d_name: metricName
+      });
+      dispatch({
+        type: EDIT_INSIGHTS_METRIC_SUCCESS
+      });
+    } catch (err) {
+      console.log(err);
+      dispatch({
+        type: EDIT_INSIGHTS_METRIC_ERROR
       });
     }
   };

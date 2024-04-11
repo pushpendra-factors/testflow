@@ -6,36 +6,39 @@ import ControlledComponent from 'Components/ControlledComponent';
 import { SVG as Svg, Text } from 'Components/factorsComponents';
 import {
   selectAccountPayload,
+  selectEditInsightsMetricStatus,
   selectInsightsConfig
 } from 'Reducers/accountProfilesView/selectors';
-import { fetchInsightsConfig } from 'Reducers/accountProfilesView/services';
+import {
+  fetchInsightsConfig,
+  updateInsightsQueryMetric
+} from 'Reducers/accountProfilesView/services';
 import { setInsightsDuration } from 'Reducers/accountProfilesView/actions';
+import { EMPTY_OBJECT } from 'Utils/global';
 import InsightsWidget from './InsightsWidget';
 import SegmentKpisOverview from './SegmentKpisOverview';
 import { DEFAULT_DATE_RANGE } from './accountInsightsConstants';
 import SegmentCompareDropdown from './SegmentCompareDropdown';
+import EditMetricModal from './EditMetricModal';
 
 export default function AccountsInsights() {
   const dispatch = useDispatch();
-  const insightsConfig = useSelector((state) => selectInsightsConfig(state));
+  const insightsConfig = useSelector(selectInsightsConfig);
+  const accountPayload = useSelector(selectAccountPayload);
+  const editMetricStatus = useSelector(selectEditInsightsMetricStatus);
+  console.log(
+    'jklogs ~ AccountsInsights ~ editMetricStatus:',
+    editMetricStatus
+  );
   const activeProject = useSelector((state) => state.global.active_project);
   const [isFetchDone, setIsFetchDone] = useState(false);
-  const accountPayload = useSelector((state) => selectAccountPayload(state));
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editWidget, setEditWidget] = useState(EMPTY_OBJECT);
+  const [editWidgetGroupId, setEditWidgetGroupId] = useState(null);
 
-  useEffect(() => {
-    if (
-      insightsConfig.completed !== true &&
-      insightsConfig.loading !== true &&
-      isFetchDone === false
-    ) {
-      setIsFetchDone(true);
-      dispatch(fetchInsightsConfig(activeProject.id));
-    }
-  }, [insightsConfig.loading, activeProject.id, insightsConfig.completed]);
-
-  const isLoading =
-    insightsConfig.loading === true ||
-    (insightsConfig.completed !== true && insightsConfig.error !== true);
+  const handleEditModalClose = useCallback(() => {
+    setShowEditModal(false);
+  }, []);
 
   const nonAccountsWidgets = useMemo(
     () =>
@@ -64,6 +67,42 @@ export default function AccountsInsights() {
     },
     [accountPayload?.segment?.id]
   );
+
+  const handleEditMetric = useCallback((widget, widgetGroupId) => {
+    setEditWidgetGroupId(widgetGroupId);
+    setEditWidget(widget);
+    setShowEditModal(true);
+  }, []);
+
+  const handleSave = useCallback(
+    (selectedWidget, newName) => {
+      dispatch(
+        updateInsightsQueryMetric({
+          projectId: activeProject.id,
+          widgetGroupId: editWidgetGroupId,
+          widgetId: editWidget.id,
+          metric: selectedWidget.value,
+          metricName: newName
+        })
+      );
+    },
+    [editWidget, editWidgetGroupId]
+  );
+
+  useEffect(() => {
+    if (
+      insightsConfig.completed !== true &&
+      insightsConfig.loading !== true &&
+      isFetchDone === false
+    ) {
+      setIsFetchDone(true);
+      dispatch(fetchInsightsConfig(activeProject.id));
+    }
+  }, [insightsConfig.loading, activeProject.id, insightsConfig.completed]);
+
+  const isLoading =
+    insightsConfig.loading === true ||
+    (insightsConfig.completed !== true && insightsConfig.error !== true);
 
   if (isLoading) {
     return (
@@ -119,8 +158,17 @@ export default function AccountsInsights() {
             }
             key={widget.wid_g_id}
             widget={widget}
+            onEditMetricClick={handleEditMetric}
           />
         ))}
+        <EditMetricModal
+          visible={showEditModal}
+          onCancel={handleEditModalClose}
+          savedMetricName={editWidget.d_name}
+          savedMetric={editWidget.q_me}
+          onSave={handleSave}
+          isLoading={editMetricStatus.loading}
+        />
       </div>
     );
   }
