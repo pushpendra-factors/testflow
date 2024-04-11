@@ -31,14 +31,16 @@ import useQuery from 'hooks/useQuery';
 import { useHistory } from 'react-router-dom';
 import { PathUrls } from 'Routes/pathUrls';
 import { AdminLock } from 'Routes/feature';
-import { filterURLValue } from 'Utils/filterURLValue';
 import style from './index.module.scss';
 import {
   CommonStepsProps,
   OnboardingStepsConfig,
   PROJECT_CREATED
 } from '../../types';
-import { getCompanyDomainFromEmail } from '../../../utils';
+import {
+  extractDomainFromUrl,
+  getCompanyDomainFromEmail
+} from '../../../utils';
 
 const { Option } = Select;
 
@@ -92,8 +94,14 @@ function Step1({
         return;
       }
       const projectName = sanitizeInputString(values?.projectName);
-      // striping https:// and trailing slash away from domain name
-      const ClearbitDomain = filterURLValue(values?.domainName);
+      // extracting domain
+      const ClearbitDomain = extractDomainFromUrl(values?.domainName);
+      if (!ClearbitDomain) {
+        message.error('Please Enter a valid domain!');
+        setLoading(false);
+        return false;
+      }
+
       const projectData = {
         name: projectName,
         time_zone: values?.time_zone,
@@ -135,7 +143,7 @@ function Step1({
       history.replace(PathUrls.Onboarding);
     } catch (error) {
       setLoading(false);
-      message.error(error?.data?.error);
+      message.error(error?.data?.error || 'Something went wrong');
       logger.log('createProject Failed:', error);
     }
   };

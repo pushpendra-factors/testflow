@@ -70,11 +70,36 @@ func getExistingPropertyValue(domain string, timestamp int64, campaignGroupID st
 	return U.SafeConvertToFloat64(existingEventsWithCampaignData[timestamp][domain][campaignGroupID]["p_value"])
 }
 
+func getExistingPropertyValueV3(orgID string, timestamp int64, campaignGroupID string, existingEventsWithCampaignData map[int64]map[string]map[string]model.ValueForEventLookupMap) float64 {
+
+	return U.SafeConvertToFloat64(existingEventsWithCampaignData[timestamp][orgID][campaignGroupID].PropertyValue)
+}
+
 func getUserIDFromEventsForUpdatingGroupUser(currUserID string, domain string, timestamp int64, campaignGroupID string, existingEventsWithCampaignData map[int64]map[string]map[string]map[string]interface{}) string {
 	if _, exists := existingEventsWithCampaignData[timestamp][domain][campaignGroupID]; !exists {
 		return currUserID
 	}
 	return existingEventsWithCampaignData[timestamp][domain][campaignGroupID]["user_id"].(string)
+}
+
+/*
+ 1. Sometimes the group user that we have created currently would not be same as one created previously.
+    Reason: get domain for url might have a logic change
+ 2. We should update the account property of user to which the event is associated to not the newly created user.
+ 3. Here in this function we are just getting the existing user id from the prebuilt map
+
+Eg:
+ 1. timestamp 20240101 -> raw-domain-> a.b.gov -> sanitised domain -> b.gov
+ 2. timestamp 20240301 -> raw-domain-> a.b.gov -> sanitised domain -> a.b.gov
+    -- we added support for sub domain for gov domains
+
+Both 1 and 2 will create separate group users
+*/
+func getUserIDFromEventsForUpdatingGroupUserV3(currUserID string, orgID string, timestamp int64, campaignGroupID string, existingEventsWithCampaignData map[int64]map[string]map[string]model.ValueForEventLookupMap) string {
+	if _, exists := existingEventsWithCampaignData[timestamp][orgID][campaignGroupID]; !exists {
+		return currUserID
+	}
+	return existingEventsWithCampaignData[timestamp][orgID][campaignGroupID].UserID
 }
 
 type EventCount struct {
@@ -120,12 +145,12 @@ func checkIfIncomingDataHasCampaigns(domainDataSet []model.DomainDataResponse) b
 	return domainDataSet[0].CampaignID != ""
 }
 
-func checkIfEventCreationReqV3(propertyValue int64, domain string, timestamp int64, campaignID string, existingEventsWithCampaignData map[int64]map[string]map[string]map[string]interface{}) (bool, string, string) {
+func checkIfEventCreationReqV3(propertyValue int64, orgID string, timestamp int64, campaignID string, existingEventsWithCampaignData map[int64]map[string]map[string]model.ValueForEventLookupMap) (bool, string, string) {
 	if propertyValue <= 0 {
 		return false, "", ""
 	}
-	if value, exists := existingEventsWithCampaignData[timestamp][domain][campaignID]; exists {
-		return false, value["id"].(string), value["user_id"].(string)
+	if value, exists := existingEventsWithCampaignData[timestamp][orgID][campaignID]; exists {
+		return false, value.EventID, value.UserID
 	}
 
 	return true, "", ""

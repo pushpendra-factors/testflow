@@ -372,8 +372,9 @@ type Model interface {
 		imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]map[string]interface{},
 		map[int64]map[string]map[string]map[string]interface{}, error)
 	GetLinkedinEventFieldsBasedOnTimestampV3(projectID int64, timestamp int64,
-		imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]map[string]interface{},
-		map[int64]map[string]map[string]map[string]interface{}, error)
+		imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]model.ValueForEventLookupMap,
+		map[int64]map[string]map[string]model.ValueForEventLookupMap, error)
+	IsEventPresentAfterGivenTimestamp(projectId int64, timestamp int64) (int, string)
 
 	// clickable_elements
 	UpsertCountAndCheckEnabledClickableElement(projectID int64, payload *model.CaptureClickPayload) (isEnabled bool, status int, err error)
@@ -445,7 +446,7 @@ type Model interface {
 	GetHubspotFormDocuments(projectID int64) ([]model.HubspotDocument, int)
 	GetHubspotDocumentsByTypeForSync(projectID int64, typ int, maxCreatedAtSec int64) ([]model.HubspotDocument, int)
 	GetHubspotContactCreatedSyncIDAndUserID(projectID int64, docID string) ([]model.HubspotDocument, int)
-	GetHubspotDocumentsByTypeANDRangeForSync(projectID int64, docType int, from, to, maxCreatedAtSec int64, limit, offset int) ([]model.HubspotDocument, int)
+	GetHubspotDocumentsByTypeANDRangeForSync(projectID int64, docType int, from, to, maxCreatedAtSec int64, limit, offset int, pullActions []int) ([]model.HubspotDocument, int)
 	GetSyncedHubspotDealDocumentByIdAndStage(projectId int64, id string, stage string) (*model.HubspotDocument, int)
 	GetHubspotObjectPropertiesName(ProjectID int64, objectType string) ([]string, []string)
 	UpdateHubspotDocumentAsSynced(projectID int64, id string, docType int, syncId string, timestamp int64, action int, userID, groupUserID string) int
@@ -695,6 +696,7 @@ type Model interface {
 	OverwriteUserPropertiesByCustomerUserID(projectID int64, customerUserID string, properties *postgres.Jsonb, updateTimestamp int64) int
 	GetUserByPropertyKey(projectID int64, key string, value interface{}) (*model.User, int)
 	UpdateUserPropertiesForSession(projectID int64, sessionUserPropertiesRecordMap *map[string]model.SessionUserProperties) int
+	UpdateDomainProperties(projectID int64, domainUserID string) int
 	GetCustomerUserIDAndUserPropertiesFromFormSubmit(projectID int64, userID string, formSubmitProperties *U.PropertiesMap) (string, *U.PropertiesMap, int)
 	UpdateIdentifyOverwriteUserPropertiesMeta(projectID int64, customerUserID, userID, pageURL, source string, userProperties *postgres.Jsonb, timestamp int64, isNewUser bool) error
 	GetSelectedUsersByCustomerUserID(projectID int64, customerUserID string, limit uint64, numUsers uint64) ([]model.User, int)

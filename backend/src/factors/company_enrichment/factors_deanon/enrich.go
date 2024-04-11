@@ -142,13 +142,17 @@ func (fd *FactorsDeanon) HandleAccountLimitAlert(projectId int64, client HTTPCli
 
 	isEmailAllowed := model.IsReceipentAllowedMailmodo(email, EMAIL_TYPE_TRANSACTIONAL)
 	if !isEmailAllowed {
+		logCtx.Info("Email failed the check ", email)
 		return http.StatusForbidden, nil
 	}
 
-	timeZone, errCode := store.GetStore().GetTimezoneForProject(projectId)
+	project, errCode := store.GetStore().GetProject(projectId)
 	if errCode != http.StatusFound {
-		return errCode, errors.New("failed to get project timezone")
+		return errCode, errors.New("failed to get project")
 	}
+
+	timeZone := U.TimeZoneString(project.TimeZone)
+	pName := project.Name
 
 	count, limit, err := GetFactorsDeanonCountAndLimit(projectId)
 	if err != nil {
@@ -164,7 +168,7 @@ func (fd *FactorsDeanon) HandleAccountLimitAlert(projectId int64, client HTTPCli
 		Client: client,
 	}
 
-	payloadJSON, err := json.Marshal(model.MailmodoTriggerCampaignRequestPayload{ReceiverEmail: email, Data: map[string]interface{}{"limit_consumed": count}})
+	payloadJSON, err := json.Marshal(model.MailmodoTriggerCampaignRequestPayload{ReceiverEmail: email, Data: map[string]interface{}{"limit_consumed": count, "project_name": pName}})
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}

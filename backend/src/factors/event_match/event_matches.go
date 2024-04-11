@@ -70,10 +70,10 @@ func EventMatchesFilterCriterionList(projectId int64, userProperties, eventPrope
 		// Today we dont support OR across filters. So retaining it this way. Its always a AND
 		fc := filterCriterionList[i]
 		// Evaluation condition for last filter
-		if i == len(filterCriterionList) - 1 {
+		if i == len(filterCriterionList)-1 {
 			if fc.Values[0].LogicalOp == "AND" && !eventMatchesFilterCriterion(projectId, userProperties, eventProperties, fc) {
 				return false
-			} else if fc.Values[0].LogicalOp == "OR" && !soFar && !eventMatchesFilterCriterion(projectId, userProperties, eventProperties, fc){
+			} else if fc.Values[0].LogicalOp == "OR" && !soFar && !eventMatchesFilterCriterion(projectId, userProperties, eventProperties, fc) {
 				return false
 			} else {
 				continue
@@ -91,8 +91,8 @@ func EventMatchesFilterCriterionList(projectId int64, userProperties, eventPrope
 			}
 		} else if fcNext.Values[0].LogicalOp == "AND" && soFar {
 			// Assuming OR condition if AND is not present
-			// If the next filter has AND lop, and the result upto prev filter (soFar) is true, 
-			// then the current filter matching will not affect the logical equation. 
+			// If the next filter has AND lop, and the result upto prev filter (soFar) is true,
+			// then the current filter matching will not affect the logical equation.
 			// Logic example: true || false = true, true || true = true
 			// We reset the soFar variable.
 			soFar = false
@@ -279,6 +279,12 @@ func matchFitlerValuesForNumerical(eventPropValue interface{}, isPresentEventPro
 	*/
 	// TODO What to do if there is a misclassification
 	results := make(map[int]bool)
+
+	// Setting property value to zero if there is no property found in the map
+	if !isPresentEventPropValue {
+		eventPropValue = 0
+	}
+
 	propertyValue := fmt.Sprintf("%v", eventPropValue)
 	eventPropertyValue, err := strconv.ParseFloat(propertyValue, 64)
 	if err != nil {

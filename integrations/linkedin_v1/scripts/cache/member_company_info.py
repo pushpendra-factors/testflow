@@ -30,6 +30,6 @@ class MemberCompany:
     def fetch_and_update_non_present_org_data_to_cache(self, access_token, non_present_ids, metrics_aggregator_obj):
         map_of_new_company_data = {}
         
-        map_of_new_company_data = LinkedinApiService().get_company_data_from_linkedin_with_retries(
+        map_of_new_company_data = LinkedinApiService.get_instance().get_company_data_from_linkedin_with_retries(
                                                                 non_present_ids, access_token)
         self.update_member_company_data(map_of_new_company_data)

@@ -144,6 +144,11 @@ func CheckPropertyInAllUsers(projectId int64, p model.QueryProperty, decodedProp
 			continue
 		}
 
+		// group based filtering for engagement properties
+		if p.GroupName == U.GROUP_NAME_DOMAINS && user.Source != nil && *user.Source != model.UserSourceDomains {
+			continue
+		}
+
 		isValueFound = CheckPropertyOfGivenType(projectId, p, &decodedProperties[index], fileValuesMap)
 
 		// check for negative filters
@@ -409,6 +414,8 @@ func checkCategoricalTypeProperty(projectId int64, segmentRule model.QueryProper
 		propertyValue = fmt.Sprintf("%v", floatVal)
 	} else if intVal, ok := (*properties)[segmentRule.Property].(int64); ok {
 		propertyValue = fmt.Sprintf("%d", intVal)
+	} else if boolVal, ok := (*properties)[segmentRule.Property].(bool); ok {
+		propertyValue = strconv.FormatBool(boolVal)
 	}
 	switch segmentRule.Operator {
 	case model.ContainsOpStr:

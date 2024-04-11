@@ -323,8 +323,8 @@ func InitAppRoutes(r *gin.Engine) {
 	// Segment analysis
 	authRouteGroup.GET("/:project_id/segments/analytics/config", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), GetSegmentAnalyticsConfigHandler)
 	authRouteGroup.POST("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(AddNewWidgetToWidgetGroupHandler))
-	authRouteGroup.PATCH("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(EditSegmentAnalyticsWidgetHandler))
-	authRouteGroup.DELETE("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(DeleteSegmentAnalyticsWidgetHandler))
+	authRouteGroup.PATCH("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:widget_id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(EditSegmentAnalyticsWidgetHandler))
+	authRouteGroup.DELETE("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:widget_id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(DeleteSegmentAnalyticsWidgetHandler))
 	authRouteGroup.POST("/:project_id/segments/:segment_id/analytics/widget_group/:widget_group_id/query", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), ExecuteSegmentQueryHandler)
 
 	// path analysis

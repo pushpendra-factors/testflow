@@ -69,6 +69,10 @@ const (
 	SalesforceClosedWonDeals      = "Salesforce Closed won Deals"
 	SalesforceClosedRate          = "Salesforce Closed rate (%)"
 	SalesforceAvgSalesCycleLength = "Salesforce Avg Sales Cycle Length"
+
+	CurrencyBasedMetric   = "currency"
+	PercentageBasedMetric = "percentage"
+	DurationBasedMetric   = "duration"
 )
 
 var (

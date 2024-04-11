@@ -64,6 +64,7 @@ func main() {
 	recordProcessLimit := flag.Int("record_process_limit", 0, "Adding limit for processing records") // By default, pull all records
 	userPropertyUpdateOptProjects := flag.String("user_property_update_opt_projects", "", "")
 	enableTotalSessionPropertiesV2ByProjectID := flag.String("enable_total_session_properties_v2", "", "")
+	enableDomainWebsitePropertiesByProjectID := flag.String("enable_domain_website_properties_by_project_id", "", "")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -111,6 +112,7 @@ func main() {
 		RemoveDisabledEventUserPropertiesByProjectID: *removeDisabledEventUserPropertiesByProjectId,
 		UserPropertyUpdateOptProjects:                *userPropertyUpdateOptProjects,
 		EnableTotalSessionPropertiesV2ByProjectID:    *enableTotalSessionPropertiesV2ByProjectID,
+		EnableDomainWebsitePropertiesByProjectID:     *enableDomainWebsitePropertiesByProjectID,
 	}
 
 	C.InitConf(config)

@@ -10,6 +10,7 @@ export const linkedInScope_rw_ads = [
     '6000356',// Freshworks 
     '399', // Chargebee
     '2', // FactorsAI Solutions
+    '2000338', // Descope
   ]
 
   // Scope: rw_conversions

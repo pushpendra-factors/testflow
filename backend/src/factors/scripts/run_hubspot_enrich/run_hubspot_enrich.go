@@ -93,6 +93,8 @@ func main() {
 	addCRMObjectURLByProjectID := flag.String("add_crm_object_url_by_project_id", "", "")
 	firstTimeEnrich := flag.Bool("first_time_enrich", false, "")
 	enableTotalSessionPropertiesV2ByProjectID := flag.String("enable_total_session_properties_v2", "", "")
+	enableDomainWebsitePropertiesByProjectID := flag.String("enable_domain_website_properties_by_project_id", "", "")
+	skipContactUpdatesByProjectID := flag.String("skip_contact_updates_by_project_id", "", "")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -166,6 +168,8 @@ func main() {
 		EnableSyncTriesFlag:                                 *enableSyncTries,
 		AddCRMObjectURLPropertyByProjectID:                  *addCRMObjectURLByProjectID,
 		EnableTotalSessionPropertiesV2ByProjectID:           *enableTotalSessionPropertiesV2ByProjectID,
+		EnableDomainWebsitePropertiesByProjectID:            *enableDomainWebsitePropertiesByProjectID,
+		HubspotEnrichSkipContactUpdatesByProjectID:          *skipContactUpdatesByProjectID,
 	}
 
 	C.InitConf(config)

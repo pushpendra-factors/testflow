@@ -57,8 +57,11 @@ func WorkerForSfOtp(projectID, startTime, endTime int64, backfillEnabled bool, w
 		return
 	}
 
-	OtpEventName, _ := store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_OFFLINE_TOUCH_POINT, project.ID)
-
+	OtpEventName, err := store.GetStore().GetEventNameIDFromEventName(U.EVENT_NAME_OFFLINE_TOUCH_POINT, project.ID)
+	if err != nil {
+		logCtx.WithField("error", err).Warn("Otp event not exist")
+		return
+	}
 	if !backfillEnabled {
 		_startTime, errCode := store.GetStore().GetLatestEventTimeStampByEventNameId(project.ID, OtpEventName.ID, startTime, endTime)
 		if errCode == http.StatusFound {
@@ -88,7 +91,11 @@ func WorkerForSfOtp(projectID, startTime, endTime int64, backfillEnabled bool, w
 
 			logCtx.WithField("timeRange", timeRange).WithField("eventName", eventName).Info("processing with events for")
 
-			eventDetails, _ := store.GetStore().GetEventNameIDFromEventName(eventName, project.ID)
+			eventDetails, err := store.GetStore().GetEventNameIDFromEventName(eventName, project.ID)
+			if err != nil {
+				logCtx.WithField("error", err).Error("Failed to get event Name")
+				return
+			}
 
 			switch eventName {
 

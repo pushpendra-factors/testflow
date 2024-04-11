@@ -267,3 +267,103 @@ func TestAccountAnalyticsExecution(t *testing.T) {
 // 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 // 	}
 // }
+
+// -------------------------------------
+
+// store.GetStore().GetWidgetGroupAndWidgetsForConfig(project.ID)
+// // abc(project.ID, abc1, abc2, abc3)
+// factory := DD.GetDefaultDataCustomKPIFactory(DD.HubspotIntegrationName)
+// statusCode2 := factory.Build(project.ID)
+// if statusCode2 != http.StatusOK {
+// 	_, errMsg := fmt.Printf("Failed during prebuilt custom KPI creation for: %v, %v", project.ID, "Hubspot")
+// 	log.WithField("projectID", project.ID).WithField("integration", "hubspot").Warn(errMsg)
+// 	// return "", http.StatusInternalServerError, "", "", false
+// }
+
+// factory2 := DD.GetDefaultDataCustomKPIFactory(DD.SalesforceIntegrationName)
+// statusCode3 := factory2.Build(project.ID)
+// if statusCode3 != http.StatusOK {
+// 	_, errMsg := fmt.Printf("Failed during prebuilt custom KPI creation for: %v, %v", project.ID, "sa")
+// 	log.WithField("projectID", project.ID).WithField("integration", "sa").Warn(errMsg)
+// 	// return "", http.StatusInternalServerError, "", "", false
+// }
+
+// var abc1 = []model.CustomMetric{
+// 	{
+// 		Name:        model.HubspotContacts,
+// 		Description: "Hubspot Contacts timestamped at Contact Create Date",
+// 		TypeOfQuery: 1,
+// 		ObjectType:  model.HubspotContactsDisplayCategory,
+// 	},
+// }
+// var abc2 = []model.CustomMetricTransformation{
+// 	{
+// 		AggregateFunction:     model.UniqueAggregateFunction,
+// 		AggregateProperty:     "",
+// 		AggregatePropertyType: "categorical",
+// 		Filters:               []model.KPIFilter{},
+// 		DateField:             "$hubspot_contact_createdate",
+// 		EventName:             "",
+// 		Entity:                model.UserEntity,
+// 	},
+// }
+// var abc3 = []model.KPIQueryGroup{}
+
+// func abc(projectID int64, customMetrics []model.CustomMetric, customTransformations []model.CustomMetricTransformation,
+// 	derivedTransformations []model.KPIQueryGroup) int {
+// 	selectedStore := store.GetStore()
+// 	postgresTransformations, statusCode := buildJsonTransformationsForCustomKPIs(customMetrics, customTransformations, derivedTransformations)
+// 	if statusCode != http.StatusOK {
+// 		log.WithField("projectId", projectID).Warn("Failed in building Json Transformations for hubspot")
+// 		return http.StatusInternalServerError
+// 	}
+
+// 	for index := range customMetrics {
+// 		customMetrics[index].ProjectID = projectID
+// 		customMetrics[index].Transformations = &postgresTransformations[index]
+// 	}
+
+// 	for _, customMetric := range customMetrics {
+// 		_, _, statusCode := selectedStore.CreateCustomMetric(customMetric)
+// 		if statusCode == http.StatusConflict {
+// 			continue
+// 		}
+// 		if statusCode != http.StatusCreated {
+// 			return http.StatusInternalServerError
+// 		}
+// 	}
+
+// 	return http.StatusOK
+// }
+
+// // TODO add error for the methods which are calling.
+// func buildJsonTransformationsForCustomKPIs(customMetrics []model.CustomMetric, profileTransformations []model.CustomMetricTransformation, derivedTransformations []model.KPIQueryGroup) ([]postgres.Jsonb, int) {
+
+// 	resTransformations := make([]postgres.Jsonb, 0)
+// 	indexOfProfileBasedTransformation := 0
+// 	indexOfDerivedTransformation := 0
+// 	for _, customMetric := range customMetrics {
+// 		if customMetric.TypeOfQuery == 1 {
+// 			transformation := profileTransformations[indexOfProfileBasedTransformation]
+// 			jsonTransformation, err := json.Marshal(transformation)
+// 			if err != nil {
+// 				return make([]postgres.Jsonb, 0), http.StatusInternalServerError
+// 			}
+// 			postgresTransformation := postgres.Jsonb{json.RawMessage(jsonTransformation)}
+// 			resTransformations = append(resTransformations, postgresTransformation)
+
+// 			indexOfProfileBasedTransformation++
+// 		} else {
+// 			transformation := derivedTransformations[indexOfDerivedTransformation]
+// 			jsonTransformation, err := json.Marshal(transformation)
+// 			if err != nil {
+// 				return make([]postgres.Jsonb, 0), http.StatusInternalServerError
+// 			}
+// 			postgresTransformation := postgres.Jsonb{json.RawMessage(jsonTransformation)}
+// 			resTransformations = append(resTransformations, postgresTransformation)
+
+// 			indexOfDerivedTransformation++
+// 		}
+// 	}
+// 	return resTransformations, http.StatusOK
+// }

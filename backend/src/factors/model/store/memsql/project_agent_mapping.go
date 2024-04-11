@@ -300,6 +300,9 @@ func (store *MemSQL) GetProjectAgentLatestAdminEmailByProjectId(projectId int64)
 		return "", http.StatusInternalServerError
 	}
 
+	if len(pam) == 0 {
+		return "", http.StatusNotFound
+	}
 	var projectAgentAdmin model.ProjectAgentMapping
 
 	isSolution, errCode := store.IsSolutionAgent(pam[0].AgentUUID)

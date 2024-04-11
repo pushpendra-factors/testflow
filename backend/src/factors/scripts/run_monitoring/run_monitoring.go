@@ -208,6 +208,8 @@ func main() {
 	}
 
 	C.PingHealthcheckForSuccess(healthcheckPingID, monitoringPayload)
+	C.PingHealthcheckForSuccess(C.HealthcheckSDKHealthPingID, "sdk health check success")
+	
 }
 
 // GetHealth - This method returns response of the http get request at /health
