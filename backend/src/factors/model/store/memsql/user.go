@@ -488,10 +488,6 @@ func (store *MemSQL) GetUsersAssociatedToDomainList(projectID int64, domainGroup
 		return []model.User{}, http.StatusNotFound
 	}
 
-	if len(users) == 100 {
-		log.WithFields(logFields).Warn("No.of users at max threshold.")
-	}
-
 	return users, http.StatusFound
 }
 
