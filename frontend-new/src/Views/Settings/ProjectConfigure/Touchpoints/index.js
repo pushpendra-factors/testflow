@@ -30,6 +30,7 @@ import { OTPService } from '../../../../reducers/touchpoints/services';
 import useService from '../../../../hooks/useService';
 import { Otp } from '../../../../reducers/touchpoints/classes';
 import EmailClicks from './EmailClicks/index';
+import EmptyScreen from 'Components/EmptyScreen';
 
 const { TabPane } = Tabs;
 
@@ -398,29 +399,45 @@ const Touchpoints = ({
 
           <TabPane tab='Hubspot' key='3'>
             <div className='mb-10 pl-4 mt-10'>
-              <Table
-                className='fa-table--basic mt-4'
-                columns={columns}
-                dataSource={touchPointsData.filter(
-                  (obj) => obj.crm_type === getCRMType()
-                )}
-                pagination={false}
-                loading={touchPointState.loading}
-              />
+              {touchPointsData.filter((obj) => obj.crm_type === getCRMType())
+                .length > 0 || touchPointState.loading ? (
+                <Table
+                  className='fa-table--basic mt-4'
+                  columns={columns}
+                  dataSource={touchPointsData.filter(
+                    (obj) => obj.crm_type === getCRMType()
+                  )}
+                  pagination={false}
+                  loading={touchPointState.loading}
+                />
+              ) : (
+                <EmptyScreen
+                  learnMore={`https://help.factors.ai/`}
+                  title={`Record offline touchpoints from HubSpot to attribute them accurately to leads, opportunities, and pipeline stages. Apply custom rules to define your touchpoints accurately.`}
+                />
+              )}
             </div>
           </TabPane>
 
           <TabPane tab='Salesforce' key='4'>
             <div className='mb-10 pl-4 mt-10'>
-              <Table
-                className='fa-table--basic mt-4'
-                columns={columns}
-                dataSource={touchPointsData.filter(
-                  (obj) => obj.crm_type === getCRMType()
-                )}
-                pagination={false}
-                loading={touchPointState.loading}
-              />
+              {touchPointsData.filter((obj) => obj.crm_type === getCRMType())
+                .length > 0 || touchPointState.loading ? (
+                <Table
+                  className='fa-table--basic mt-4'
+                  columns={columns}
+                  dataSource={touchPointsData.filter(
+                    (obj) => obj.crm_type === getCRMType()
+                  )}
+                  pagination={false}
+                  loading={touchPointState.loading}
+                />
+              ) : (
+                <EmptyScreen
+                  learnMore={'https://help.factors.ai/'}
+                  title={`Record offline touchpoints from HubSpot to attribute them accurately to leads, opportunities, and pipeline stages. Apply custom rules to define your touchpoints accurately.`}
+                />
+              )}
             </div>
           </TabPane>
         </Tabs>

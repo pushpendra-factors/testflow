@@ -29,6 +29,7 @@ import PropetyValueModalDCG from './DCG/PropetyValueModalDCG';
 import ConfirmationModal from '../../../../components/ConfirmationModal';
 import SavedPropertyMapping from './PropertyMappingKPI/savedProperties';
 import PropertyMappingKPI from './PropertyMappingKPI';
+import EmptyScreen from 'Components/EmptyScreen';
 
 const { TabPane } = Tabs;
 
@@ -288,13 +289,20 @@ function Properties({
                 onChange={handleTabChange}
               >
                 <TabPane tab='Custom Dimensions' key='1'>
-                  <Table
-                    className='fa-table--basic mt-4'
-                    columns={columns}
-                    dataSource={smartPropData}
-                    pagination={false}
-                    loading={tableLoading}
-                  />
+                  {smartPropData && smartPropData.length > 0 ? (
+                    <Table
+                      className='fa-table--basic mt-4'
+                      columns={columns}
+                      dataSource={smartPropData}
+                      pagination={false}
+                      loading={tableLoading}
+                    />
+                  ) : (
+                    <EmptyScreen
+                      learnMore={'https://help.factors.ai/'}
+                      title={`Group ad campaigns by themes to understand how your investment in these advertising campaigns are paying off. Such as grouping campaigns containing ‘search’ in their name into 'Search Campaigns'.`}
+                    />
+                  )}
                 </TabPane>
                 <TabPane tab='Default Channel Group' key='2'>
                   <DCGTable
