@@ -321,11 +321,11 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.DELETE("/:project_id/segments/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), DeleteSegmentByIdHandler)
 
 	// Segment analysis
-	authRouteGroup.GET("/:project_id/segments/analytics/config", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), GetSegmentAnalyticsConfigHandler)
-	authRouteGroup.POST("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(AddNewWidgetToWidgetGroupHandler))
-	authRouteGroup.PATCH("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:widget_id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(EditSegmentAnalyticsWidgetHandler))
-	authRouteGroup.DELETE("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:widget_id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(DeleteSegmentAnalyticsWidgetHandler))
-	authRouteGroup.POST("/:project_id/segments/:segment_id/analytics/widget_group/:widget_group_id/query", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), ExecuteSegmentQueryHandler)
+	authRouteGroup.GET("/:project_id/segments/analytics/config", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT, M.FEATURE_CUSTOM_METRICS}), GetSegmentAnalyticsConfigHandler)
+	authRouteGroup.POST("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT, M.FEATURE_CUSTOM_METRICS}), responseWrapper(AddNewWidgetToWidgetGroupHandler))
+	authRouteGroup.PUT("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:widget_id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT, M.FEATURE_CUSTOM_METRICS}), responseWrapper(EditSegmentAnalyticsWidgetHandler))
+	authRouteGroup.DELETE("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:widget_id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT, M.FEATURE_CUSTOM_METRICS}), responseWrapper(DeleteSegmentAnalyticsWidgetHandler))
+	authRouteGroup.POST("/:project_id/segments/:segment_id/analytics/widget_group/:widget_group_id/query", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT, M.FEATURE_CUSTOM_METRICS}), ExecuteSegmentQueryHandler)
 
 	// path analysis
 	authRouteGroup.GET("/:project_id/v1/pathanalysis", mid.FeatureMiddleware([]string{M.FEATURE_PATH_ANALYSIS}), responseWrapper(V1.GetPathAnalysisEntityHandler))
