@@ -19,7 +19,10 @@ import {
   ACCOUNTS_INSIGHTS_ERROR,
   ACCOUNTS_INSIGHTS_SUCCESS,
   SET_INSIGHTS_DURATION,
-  SET_INSIGHTS_COMPARE_SEGMENT
+  SET_INSIGHTS_COMPARE_SEGMENT,
+  EDIT_INSIGHTS_METRIC_LOADING,
+  EDIT_INSIGHTS_METRIC_SUCCESS,
+  EDIT_INSIGHTS_METRIC_ERROR
 } from './types';
 
 export function generateInsightsKey({
@@ -49,7 +52,10 @@ const initialState = {
     dateRange: {}
   },
   insights: {},
-  insightsCompareConfig: {}
+  insightsCompareConfig: {},
+  editInsightsMetric: {
+    ...apiStates
+  }
 };
 
 export default function (state = initialState, action) {
@@ -217,6 +223,33 @@ export default function (state = initialState, action) {
         insightsCompareConfig: {
           ...state.insightsCompareConfig,
           [action.payload.segmentId]: action.payload.compareSegmentId
+        }
+      };
+    }
+    case EDIT_INSIGHTS_METRIC_LOADING: {
+      return {
+        ...state,
+        editInsightsMetric: {
+          ...apiStates,
+          loading: true
+        }
+      };
+    }
+    case EDIT_INSIGHTS_METRIC_SUCCESS: {
+      return {
+        ...state,
+        editInsightsMetric: {
+          ...apiStates,
+          completed: true
+        }
+      };
+    }
+    case EDIT_INSIGHTS_METRIC_ERROR: {
+      return {
+        ...state,
+        editInsightsMetric: {
+          ...apiStates,
+          error: true
         }
       };
     }

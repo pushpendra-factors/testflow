@@ -87,8 +87,8 @@ export const getFormattedMetricValue = (value, valueType) => {
   return value;
 };
 
-export const getComparedSegmentName = (segments, comparedSegmentId) => {
+export const getSegmentName = (segments, segmentId) => {
   const segmentsList =
     reorderDefaultDomainSegmentsToTop(segments[GROUP_NAME_DOMAINS]) || [];
-  return segmentsList.find((segment) => segment.id === comparedSegmentId)?.name;
+  return segmentsList.find((segment) => segment.id === segmentId)?.name;
 };

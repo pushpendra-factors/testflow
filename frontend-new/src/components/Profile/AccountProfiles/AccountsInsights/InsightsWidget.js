@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useMemo } from 'react';
+import React, { memo, useCallback, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import cx from 'classnames';
 import { Spin } from 'antd';
@@ -13,13 +13,13 @@ import ControlledComponent from 'Components/ControlledComponent';
 import { selectSegments } from 'Reducers/timelines/selectors';
 import {
   getCompareDate,
-  getComparedSegmentName,
+  getSegmentName,
   getInsightsDataByKey
 } from './accountsInsightsHelpers';
 import QueryMetric from './QueryMetric';
 import styles from './index.module.scss';
 
-function InsightsWidget({ widget, dateRange }) {
+function InsightsWidget({ widget, dateRange, onEditMetricClick }) {
   const dispatch = useDispatch();
   const activeProject = useSelector((state) => state.global.active_project);
   const accountPayload = useSelector((state) => selectAccountPayload(state));
@@ -57,6 +57,13 @@ function InsightsWidget({ widget, dateRange }) {
       dateRange.startDate,
       dateRange.endDate
     )
+  );
+
+  const handleEditMetric = useCallback(
+    (wid) => {
+      onEditMetricClick(wid, widget.wid_g_id);
+    },
+    [onEditMetricClick]
   );
 
   useEffect(() => {
@@ -133,7 +140,7 @@ function InsightsWidget({ widget, dateRange }) {
   ]);
 
   const comparedSegmentName = useMemo(
-    () => getComparedSegmentName(segments, comparedSegmentId),
+    () => getSegmentName(segments, comparedSegmentId),
     [segments, comparedSegmentId]
   );
 
@@ -184,6 +191,7 @@ function InsightsWidget({ widget, dateRange }) {
               comparedSegmentName={comparedSegmentName}
               totalWidgets={4}
               queryMetric={queryMetric}
+              onEditMetricClick={handleEditMetric}
             />
           ))}
         </ControlledComponent>
