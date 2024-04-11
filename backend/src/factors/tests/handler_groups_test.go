@@ -245,6 +245,29 @@ func sendGetGroupPropertyValues(projectId int64, groupName string, propertyName 
 	return w
 }
 
+func sendGetGroupProperties(projectID int64, groupName string, agent *model.Agent, r *gin.Engine) (*httptest.ResponseRecorder, error) {
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error creating cookie data.")
+	}
+
+	groupNameEncoded := b64.StdEncoding.EncodeToString([]byte(b64.StdEncoding.EncodeToString([]byte(groupName))))
+	rb := C.NewRequestBuilderWithPrefix(http.MethodGet, fmt.Sprintf("/projects/%d/groups/%s/properties", projectID, groupNameEncoded)).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+	req, err := rb.Build()
+	if err != nil {
+		return nil, err
+	}
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w, nil
+}
+
 func TestGroupPropertyValuesHandler(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)

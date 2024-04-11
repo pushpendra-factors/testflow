@@ -1410,7 +1410,7 @@ func (store *MemSQL) GetHubspotDocumentsSyncedCount(projectIDs []int64) ([]model
 
 // GetHubspotDocumentsByTypeANDRangeForSync return list of documents unsynced for given time range
 func (store *MemSQL) GetHubspotDocumentsByTypeANDRangeForSync(projectID int64,
-	docType int, from, to, maxCreatedAtSec int64, limit, offset int) ([]model.HubspotDocument, int) {
+	docType int, from, to, maxCreatedAtSec int64, limit, offset int, pullActions []int) ([]model.HubspotDocument, int) {
 
 	argFields := log.Fields{"project_id": projectID, "type": docType, "from": from, "to": to, "max_created_at_sec": maxCreatedAtSec}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &argFields)
@@ -1428,6 +1428,11 @@ func (store *MemSQL) GetHubspotDocumentsByTypeANDRangeForSync(projectID int64,
 
 	wheStmnt := "project_id=? AND type=? AND synced=false AND timestamp BETWEEN ? AND ? AND created_at < ? "
 	whereParams := []interface{}{projectID, docType, from, to, maxCreatedAtFmt}
+
+	if len(pullActions) > 0 {
+		wheStmnt = wheStmnt + "AND action IN ( ? ) "
+		whereParams = append(whereParams, pullActions)
+	}
 
 	if C.IsSyncTriesEnabled() {
 		wheStmnt = wheStmnt + "AND sync_tries < ? "
@@ -1922,6 +1927,11 @@ func (store *MemSQL) GetLastSyncedHubspotDocumentByID(projectID int64, docID str
 
 func (store *MemSQL) CreateOrUpdateGroupPropertiesBySource(projectID int64, groupName string, groupID, groupUserID string,
 	enProperties *map[string]interface{}, createdTimestamp, updatedTimestamp int64, source string) (string, error) {
+	return store.CreateOrUpdateGroupPropertiesBySourceWithEmptyValues(projectID, groupName, groupID, groupUserID, enProperties, createdTimestamp, updatedTimestamp, source, false)
+}
+
+func (store *MemSQL) CreateOrUpdateGroupPropertiesBySourceWithEmptyValues(projectID int64, groupName string, groupID, groupUserID string,
+	enProperties *map[string]interface{}, createdTimestamp, updatedTimestamp int64, source string, allowEmptyProperties bool) (string, error) {
 	logFields := log.Fields{
 		"project_id":        projectID,
 		"group_name":        groupName,
@@ -1967,7 +1977,7 @@ func (store *MemSQL) CreateOrUpdateGroupPropertiesBySource(projectID int64, grou
 			return "", errors.New("user is not group user")
 		}
 
-		_, status = store.UpdateUserGroupProperties(projectID, groupUserID, pJSONProperties, updatedTimestamp)
+		_, status = store.updateUserGroupPropertiesWithEmptyValues(projectID, groupUserID, pJSONProperties, updatedTimestamp, allowEmptyProperties)
 		if status != http.StatusAccepted {
 			logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to update user group properties.")
 			return "", errors.New("failed to update company group properties")
@@ -2001,7 +2011,7 @@ func (store *MemSQL) CreateOrUpdateGroupPropertiesBySource(projectID int64, grou
 		return userID, errors.New("failed to create company group user")
 	}
 
-	_, status = store.UpdateUserGroupProperties(projectID, userID, pJSONProperties, updatedTimestamp)
+	_, status = store.updateUserGroupPropertiesWithEmptyValues(projectID, userID, pJSONProperties, updatedTimestamp, allowEmptyProperties)
 	if status != http.StatusAccepted {
 		return userID, errors.New("failed to update company group properties")
 	}

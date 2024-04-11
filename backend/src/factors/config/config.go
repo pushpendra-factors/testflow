@@ -360,6 +360,8 @@ type Configuration struct {
 	AddCRMObjectURLPropertyByProjectID                   string
 	EnableTotalSessionPropertiesV2ByProjectID            string
 	SkipKpiResultValidation                              bool
+	EnableDomainWebsitePropertiesByProjectID             string
+	HubspotEnrichSkipContactUpdatesByProjectID           string
 }
 
 type Services struct {
@@ -3241,6 +3243,24 @@ func AddCRMObjectURLPropertyByProjectID(projectID int64) bool {
 
 func EnableTotalSessionPropertiesV2ByProjectID(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableTotalSessionPropertiesV2ByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
+}
+
+func EnableDomainWebsitePropertiesByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableDomainWebsitePropertiesByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
+}
+
+func HubspotEnrichSkipContactUpdatesByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().HubspotEnrichSkipContactUpdatesByProjectID, "")
 	if allProjects {
 		return true
 	}

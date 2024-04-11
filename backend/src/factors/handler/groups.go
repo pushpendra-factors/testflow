@@ -6,6 +6,7 @@ import (
 	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/util"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -134,10 +135,16 @@ func GetGroupPropertiesHandler(c *gin.Context) {
 	var status int
 
 	if model.IsDomainGroup(groupName) {
-		allAccountProperties := getDefaultAllAccountProperties(projectId)
+
+		allAccountProperties, status := getAllAccountProperties(projectId)
+		if status != http.StatusFound {
+			c.AbortWithStatus(status)
+			return
+		}
+
 		response := gin.H{
 			"properties":    allAccountProperties,
-			"display_names": U.ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES,
+			"display_names": U.GetAllAccountPropertiesDisplayNames(),
 		}
 		c.JSON(http.StatusOK, response)
 		return
@@ -196,6 +203,40 @@ func GetGroupPropertiesHandler(c *gin.Context) {
 	response["display_names"] = U.FilterDisplayNameEmptyKeysAndValues(projectId, displayNamesMap)
 
 	c.JSON(http.StatusOK, response)
+}
+
+func getAllAccountProperties(projectID int64) (map[string][]string, int) {
+
+	propertiesFromCache, status := store.GetStore().GetPropertiesByGroup(projectID, model.GROUP_NAME_DOMAINS, 2500,
+		C.GetLookbackWindowForEventUserCache())
+
+	if status != http.StatusFound {
+		return nil, http.StatusInternalServerError
+	}
+
+	allAccountProperties := getDefaultAllAccountProperties(projectID)
+
+	propertiesMap := map[string]map[string]bool{}
+	for _, properties := range []map[string][]string{allAccountProperties, propertiesFromCache} {
+		for category := range properties {
+			if _, exist := propertiesMap[category]; !exist {
+				propertiesMap[category] = map[string]bool{}
+			}
+
+			for _, property := range properties[category] {
+				propertiesMap[category][property] = true
+			}
+
+		}
+	}
+
+	properties := map[string][]string{}
+	for category := range propertiesMap {
+		properties[category] = util.GetKeysMapAsArray(propertiesMap[category])
+
+	}
+
+	return properties, http.StatusFound
 }
 
 func getDefaultAllAccountProperties(projectId int64) map[string][]string {

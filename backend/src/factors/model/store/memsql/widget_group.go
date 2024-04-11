@@ -13,22 +13,26 @@ import (
 )
 
 const (
-	AccountsWidgetGroup            = "Account Analysis"
-	MarketingEngagementWidgetGroup = "Marketing Engagement Analysis"
-	SalesOppWidgetGroup            = "Sales Opportunity Analysis"
-	TotalAccountsWidget            = "Accounts currently in segment"
-	HighEngagementAccountsWidget   = "Accounts with High engagement"
-	OpportunityCreated             = "Opportunity Created"
-	PipelineCreated                = "Pipeline Created"
-	AverageDealSize                = "Average Deal Size"
-	RevenueBooked                  = "Revenue Booked"
-	CloseRate                      = "Close Rate (%)"
-	AvgSalesCycleLength            = "Avg Sales Cycle Length"
-	MarketingQualifiedLeads        = "Marketing qualified leads"
-	SalesQualifiedLeads            = "Sales qualified leads"
+	AccountsWidgetGroupInternal            = "account"
+	AccountsWidgetGroup                    = "Account Analysis"
+	MarketingEngagementWidgetGroupInternal = "marketing"
+	MarketingEngagementWidgetGroup         = "Marketing Engagement Analysis"
+	SalesOppWidgetGroupInternal            = "sales"
+	SalesOppWidgetGroup                    = "Sales Opportunity Analysis"
+	TotalAccountsWidget                    = "Accounts currently in segment"
+	HighEngagementAccountsWidget           = "Accounts with High engagement"
+	OpportunityCreated                     = "Opportunity Created"
+	PipelineCreated                        = "Pipeline Created"
+	AverageDealSize                        = "Average Deal Size"
+	RevenueBooked                          = "Revenue Booked"
+	CloseRate                              = "Close Rate (%)"
+	AvgSalesCycleLength                    = "Avg Sales Cycle Length"
+	MarketingQualifiedLeads                = "Marketing qualified leads"
+	SalesQualifiedLeads                    = "Sales qualified leads"
 )
 
 var integrationBasedWidgetGroupNames = []string{MarketingEngagementWidgetGroup, SalesOppWidgetGroup}
+var integrationBasedWidgetGroupNamesInternal = []string{MarketingEngagementWidgetGroupInternal, SalesOppWidgetGroupInternal}
 
 var marketingWidgetGroup = map[string][]model.Widget{
 	model.HUBSPOT: {
@@ -37,16 +41,17 @@ var marketingWidgetGroup = map[string][]model.Widget{
 			DisplayName: MarketingQualifiedLeads,
 		},
 		{
-			QueryMetric: model.HubspotDeals,
+			QueryMetric: model.HubspotSQLDateEntered,
 			DisplayName: SalesQualifiedLeads,
 		},
 		{
-			QueryMetric: model.HubspotSQLDateEntered,
+			QueryMetric: model.HubspotDeals,
 			DisplayName: OpportunityCreated,
 		},
 		{
-			QueryMetric: model.HubspotPipeline,
-			DisplayName: PipelineCreated,
+			QueryMetric:     model.HubspotPipeline,
+			DisplayName:     PipelineCreated,
+			QueryMetricType: model.CurrencyBasedMetric,
 		},
 	},
 	model.SALESFORCE: {
@@ -63,8 +68,9 @@ var marketingWidgetGroup = map[string][]model.Widget{
 			DisplayName: OpportunityCreated,
 		},
 		{
-			QueryMetric: model.SalesforcePipeline,
-			DisplayName: PipelineCreated,
+			QueryMetric:     model.SalesforcePipeline,
+			DisplayName:     PipelineCreated,
+			QueryMetricType: model.CurrencyBasedMetric,
 		},
 	},
 }
@@ -72,38 +78,46 @@ var marketingWidgetGroup = map[string][]model.Widget{
 var salesOppWidgetGroup = map[string][]model.Widget{
 	model.HUBSPOT: {
 		{
-			QueryMetric: model.HubspotAvgDealSize,
-			DisplayName: AverageDealSize,
+			QueryMetric:     model.HubspotAvgDealSize,
+			DisplayName:     AverageDealSize,
+			QueryMetricType: model.CurrencyBasedMetric,
 		},
 		{
-			QueryMetric: model.HubspotRevenue,
-			DisplayName: RevenueBooked,
+			QueryMetric:     model.HubspotRevenue,
+			DisplayName:     RevenueBooked,
+			QueryMetricType: model.CurrencyBasedMetric,
 		},
 		{
-			QueryMetric: model.HubspotClosedRate,
-			DisplayName: CloseRate,
+			QueryMetric:     model.HubspotClosedRate,
+			DisplayName:     CloseRate,
+			QueryMetricType: model.PercentageBasedMetric,
 		},
 		{
-			QueryMetric: model.HubspotAvgSalesCycleLength,
-			DisplayName: AvgSalesCycleLength,
+			QueryMetric:     model.HubspotAvgSalesCycleLength,
+			DisplayName:     AvgSalesCycleLength,
+			QueryMetricType: model.DurationBasedMetric,
 		},
 	},
 	model.SALESFORCE: {
 		{
-			QueryMetric: model.SalesforceAvgDealSize,
-			DisplayName: AverageDealSize,
+			QueryMetric:     model.SalesforceAvgDealSize,
+			DisplayName:     AverageDealSize,
+			QueryMetricType: model.CurrencyBasedMetric,
 		},
 		{
-			QueryMetric: model.SalesforceRevenue,
-			DisplayName: RevenueBooked,
+			QueryMetric:     model.SalesforceRevenue,
+			DisplayName:     RevenueBooked,
+			QueryMetricType: model.CurrencyBasedMetric,
 		},
 		{
-			QueryMetric: model.SalesforceClosedRate,
-			DisplayName: CloseRate,
+			QueryMetric:     model.SalesforceClosedRate,
+			DisplayName:     CloseRate,
+			QueryMetricType: model.PercentageBasedMetric,
 		},
 		{
-			QueryMetric: model.SalesforceAvgSalesCycleLength,
-			DisplayName: AvgSalesCycleLength,
+			QueryMetric:     model.SalesforceAvgSalesCycleLength,
+			DisplayName:     AvgSalesCycleLength,
+			QueryMetricType: model.DurationBasedMetric,
 		},
 	},
 }
@@ -120,11 +134,11 @@ func (store *MemSQL) GetWidgetGroupAndWidgetsForConfig(projectID int64) ([]model
 	db := C.GetServices().Db
 
 	var widgetGroups []model.WidgetGroup
-	err := db.Where("project_id = ?", projectID).Find(&widgetGroups).Error
+	err := db.Order("display_name desc").Where("project_id = ?", projectID).Find(&widgetGroups).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			logCtx.WithError(err).WithField("projectID", projectID).Warn("Failed while retrieving widget groups.")
-			return make([]model.WidgetGroup, 0), "Invalid project ID for widget group", http.StatusInternalServerError
+			return make([]model.WidgetGroup, 0), "Invalid project ID for widget group", http.StatusNotFound
 		}
 		return make([]model.WidgetGroup, 0), "Error during get of widget groups", http.StatusInternalServerError
 	}
@@ -136,10 +150,11 @@ func (store *MemSQL) GetWidgetGroupAndWidgetsForConfig(projectID int64) ([]model
 func (store *MemSQL) CreateWidgetGroups(projectID int64) ([]model.WidgetGroup, int) {
 
 	resWidgetGroups := make([]model.WidgetGroup, 0)
-	for _, widgetGroupName := range integrationBasedWidgetGroupNames {
+	for index, widgetGroupName := range integrationBasedWidgetGroupNames {
 		widgetGroup := model.WidgetGroup{}
 		widgetGroup.ProjectID = projectID
 		widgetGroup.DisplayName = widgetGroupName
+		widgetGroup.Name = integrationBasedWidgetGroupNamesInternal[index]
 		widgetGroup.ID = uuid.New().String()
 		widgetGroup.CreatedAt = time.Now()
 		widgetGroup.UpdatedAt = time.Now()
@@ -154,21 +169,25 @@ func (store *MemSQL) CreateWidgetGroups(projectID int64) ([]model.WidgetGroup, i
 
 	// Creating account based widgetGroup
 	accountsTotalWidget := model.Widget{
-		ID:          uuid.New().String(),
-		DisplayName: TotalAccountsWidget,
-		QueryMetric: model.TotalAccountsMetric,
-		QueryType:   model.QueryClassAccounts,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		ID:              uuid.New().String(),
+		DisplayName:     TotalAccountsWidget,
+		QueryMetric:     model.TotalAccountsMetric,
+		QueryMetricType: "",
+		IsNonEditable:   true,
+		QueryType:       model.QueryClassAccounts,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
 	}
 
 	highEngagementAccountsWidget := model.Widget{
-		ID:          uuid.New().String(),
-		DisplayName: HighEngagementAccountsWidget,
-		QueryMetric: model.HighEngagedAccountsMetric,
-		QueryType:   model.QueryClassAccounts,
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
+		ID:              uuid.New().String(),
+		DisplayName:     HighEngagementAccountsWidget,
+		QueryMetric:     model.HighEngagedAccountsMetric,
+		QueryMetricType: "",
+		IsNonEditable:   true,
+		QueryType:       model.QueryClassAccounts,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
 	}
 
 	accountWidgets := []model.Widget{
@@ -177,12 +196,14 @@ func (store *MemSQL) CreateWidgetGroups(projectID int64) ([]model.WidgetGroup, i
 	encodedAccountsWidgets, _ := U.EncodeStructTypeToPostgresJsonb(accountWidgets)
 
 	accountWidgetGroup := model.WidgetGroup{
-		ProjectID:   projectID,
-		DisplayName: AccountsWidgetGroup,
-		ID:          uuid.New().String(),
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-		Widgets:     encodedAccountsWidgets,
+		ProjectID:       projectID,
+		DisplayName:     AccountsWidgetGroup,
+		Name:            AccountsWidgetGroupInternal,
+		IsNonComparable: true,
+		ID:              uuid.New().String(),
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+		Widgets:         encodedAccountsWidgets,
 	}
 
 	widgetGroup, statusCode := store.CreateWidgetGroup(accountWidgetGroup)
@@ -224,7 +245,7 @@ func (store *MemSQL) AddWidgetsToWidgetGroup(projectID int64, widgetGroupName, i
 
 	widgetGroup, errMsg, statusCode := store.GetWidgetGroupByName(projectID, widgetGroupName)
 	if statusCode != http.StatusFound {
-		errMsg = errMsg + "Adding multiple Widgets - Failed during widget group by name"
+		errMsg = errMsg + " Adding multiple Widgets - Failed during widget group by name: " + integrationName + " : "
 		return model.WidgetGroup{}, errMsg, statusCode
 	}
 	logFields := log.Fields{"project_id": projectID, "widget_group_id": widgetGroup.ID}
@@ -248,7 +269,7 @@ func (store *MemSQL) AddWidgetsToWidgetGroup(projectID int64, widgetGroupName, i
 
 	err := db.Save(&widgetGroup).Error
 	if err != nil {
-		logCtx.WithField("err", err).Warn("Failed during insert of widget group")
+		logCtx.WithField("err", err).Warn("Failed during insert of widget group" + integrationName + " ")
 		return widgetGroup, "Failed during insert of widget group", http.StatusInternalServerError
 	}
 	return widgetGroup, "", http.StatusCreated

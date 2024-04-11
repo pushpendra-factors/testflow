@@ -28,13 +28,15 @@ def get_query_templates():
             'timeful': ['What\'s the breakdown of %s by %s in %s']
         },
         'filter': {
-            'timeless': ['%s having %s as %s'],
-            'timeful': [
+            'timeless_equal': ['%s having %s as %s'],
+            'timeful_equal': [
                 'Number of %s having %s as %s in %s',
                 'How many %s with %s equals %s we had %s',
                 'Count of %s filter by %s equals %s %s'
 
-            ]
+            ],
+            'timeless_not_equal' :['%s with %s not equal %s'],
+            'timeful_not_equal': ['Number of %s having %s not equal %s in %s']
         },
         'funnel': {
             'timeless': ['Conversion rate from %s to %s'],
@@ -49,7 +51,7 @@ def get_query_templates():
 
 def get_json_templates():
     json_templates = {
-        'uni_metric': 
+        'uni_metric':
             '{"query_type": "kpi", "query_entity_1": "%s", \
               "query_filter_1":"none", "query_breakdown_1": "none", \
               "time_range": "%s", "start_time": "default", "end_time": "default"}',
@@ -63,17 +65,23 @@ def get_json_templates():
             '{"query_type": "kpi", "query_entity_1": "%s", \
               "query_filter_1":"none", "query_breakdown_1": "%s", \
               "time_range": "%s", "start_time": "default", "end_time": "default"}',
-        'filter':
-            '{"query_type": "kpi", "query_entity_1": "%s", \
-              "query_filter_1":[{"na": "%s", "val": "%s"}], "query_breakdown_1": "none", \
-              "time_range": "%s", "start_time": "default", "end_time": "default"}',
+        'filter': {
+            'equals': '{"query_type": "kpi", "query_entity_1": "%s", \
+                     "query_filter_1":[{"na": "%s", "val": "%s", "condition":"equals"}], "query_breakdown_1": "none", \
+                     "time_range": "%s", "start_time": "default", "end_time": "default"}',
+            'not_equals': '{"query_type": "kpi", "query_entity_1": "%s", \
+                         "query_filter_1":[{"na": "%s", "val": "%s", "condition":"notEqual"}], "query_breakdown_1": "none", \
+                         "time_range": "%s", "start_time": "default", "end_time": "default"}',
+
+        },
+
         'funnel':
             '{"query_type": "funnel", "query_entity_1": "%s", \
               "query_filter_1":"none", "query_breakdown_1": "none", \
               "query_entity_2": "%s", \
               "query_filter_2":"none", "query_breakdown_2": "none",\
               "time_range": "%s", "start_time": "default", "end_time": "default"}'
-        }
+    }
     return json_templates
 
 
@@ -95,6 +103,7 @@ def replace_two_by_one(x, key='qe'):
             x[key] = f"{v1}, {v2}"
         else:
             x[key] = v1
+
 
 def replace_one_by_two(x, key='qe'):
     k1 = f'{key}1'
@@ -122,7 +131,8 @@ def get_reduction_map():
                      'start_time': 'st',
                      'end_time': 'et',
                      'default': '',
-                     'none': ''}
+                     'none': '',
+                     'condition': 'co'}
     return reduction_map
 
 
@@ -212,17 +222,29 @@ def prepare_data(raw_data_path='data.json', abbreviate=True):
     # FILTER:
     for km, vm in tqdm(metrics_map.items()):
         for kd, vd in dimensions_map.items():
-            for qt in qts_map['filter']['timeless']:
+            for qt in qts_map['filter']['timeless_equal']:
                 query = qt % (km, kd, 'val_xyz')
-                _json = jts_map['filter'] % (vm, vd, 'val_xyz', 'default')
+                _json = jts_map['filter']['equals'] % (vm, vd, 'val_xyz', 'default')
                 qj = (query, _json)
                 qjs.append(qj)
-            for qt in qts_map['filter']['timeful']:
+            for qt in qts_map['filter']['timeful_equal']:
                 for t in times:
                     query = qt % (km, kd, 'val_xyz', t)
-                    _json = jts_map['filter'] % (vm, vd, 'val_xyz', t.replace(' ', '_'))
+                    _json = jts_map['filter']['equals'] % (vm, vd, 'val_xyz', t.replace(' ', '_'))
                     qj = (query, _json)
                     qjs.append(qj)
+            for qt in qts_map['filter']['timeless_not_equal']:
+                query = qt % (km, kd, 'val_xyz')
+                _json = jts_map['filter']['not_equals'] % (vm, vd, 'val_xyz', 'default')
+                qj = (query, _json)
+                qjs.append(qj)
+            for qt in qts_map['filter']['timeful_not_equal']:
+                for t in times:
+                    query = qt % (km, kd, 'val_xyz', t)
+                    _json = jts_map['filter']['not_equals'] % (vm, vd, 'val_xyz', t.replace(' ', '_'))
+                    qj = (query, _json)
+                    qjs.append(qj)
+
 
     # BI-METRIC:
     for k1, v1 in tqdm(metrics_map.items()):

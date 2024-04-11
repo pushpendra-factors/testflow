@@ -606,8 +606,10 @@ func (store *MemSQL) GetCompanyDataFromLinkedinDocsForTimestamp(projectID string
 			return make([]model.DomainDataResponse, 0), http.StatusInternalServerError
 		}
 		if domainData.Domain != "$none" {
+			domainData.RawDomain = domainData.Domain
 			domainData.Domain = U.GetDomainGroupDomainName(projectIDInt, domainData.Domain)
 		}
+		domainData.OrgID = domainData.ID // to avoid ID ambiguity
 		domainDataSet = append(domainDataSet, domainData)
 	}
 	return domainDataSet, http.StatusOK

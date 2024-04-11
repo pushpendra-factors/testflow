@@ -158,6 +158,7 @@ func TestMain(m *testing.M) {
 		NumberOfRunsForPreview:                              2,
 		AccountLimitPreviewListing:                          250,
 		AccountsToProcessForPreview:                         1000,
+		EnableDomainWebsitePropertiesByProjectID:            "*",
 	}
 	C.InitConf(config)
 

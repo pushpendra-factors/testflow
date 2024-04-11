@@ -189,6 +189,9 @@ const (
 	QueryCacheResponseCacheRefreshedAt      string = "Refreshedat"
 	QueryCacheResponseCacheTimeZone         string = "TimeZone"
 	QueryCacheRedisKeyPrefix                string = "query:cache"
+	QueryCacheKeyForSegmentAnalytics        string = "segment:cache"
+
+	WidgetGroupMarker string = "widget_marker"
 )
 
 const (
@@ -808,6 +811,7 @@ type NamedQueryUnit struct {
 
 // GetQueryResultFromCache To get value from cache for a particular query payload.
 // resultContainer to be passed by reference.
+// NOTE: Duplicate code in GetSegmentResultFromCache. Slightly different but verify.
 func GetQueryResultFromCache(projectID int64, query BaseQuery,
 	resultContainer interface{}) (QueryCacheResult, int) {
 

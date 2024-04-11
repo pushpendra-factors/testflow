@@ -377,7 +377,7 @@ const Webhook = ({
                     </Row>
 
                     <div className='border-top--thin-2 mt-4 p-4'>
-                        <Button disabled={!webhookUrl.length > 0} loading={WHTestMsgLoading} icon={WHTestMsgTxt ? <SVG name='Checkmark' size={16} color='grey' /> : <SVG name={'PaperPlane'} size={16} color='grey' />} ghost onClick={() => handleTestWebhook()}>{WHTestMsgLoading ? 'Sending...' : WHTestMsgTxt ? 'Message sent!' : 'Send test message'}</Button>
+                        <Button disabled={!webhookUrl.length > 0} loading={WHTestMsgLoading} icon={WHTestMsgTxt ? <SVG name='Checkmark' size={16} color='grey' /> : <SVG name={'PaperPlane'} size={16} color='grey' />} onClick={() => handleTestWebhook()}>{WHTestMsgLoading ? 'Sending...' : WHTestMsgTxt ? 'Message sent!' : 'Send test message'}</Button>
                     </div>
                 </div>
             )}

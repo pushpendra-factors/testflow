@@ -1512,7 +1512,9 @@ CREATE TABLE IF NOT EXISTS alert_templates (
 CREATE TABLE IF NOT EXISTS widget_groups (
     project_id BIGINT NOT NULL,
     id TEXT NOT NULL,
+    name TEXT NOT NULL,
     display_name TEXT NOT NULL,
+    is_non_comparable boolean DEFAULT false,
     widgets json,
     widgets_added boolean NOT NULL DEFAULT FALSE,
     created_at timestamp(6) DEFAULT '1970-01-01 00:00:00',

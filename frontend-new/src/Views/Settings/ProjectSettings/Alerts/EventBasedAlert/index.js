@@ -93,7 +93,11 @@ import ControlledComponent from 'Components/ControlledComponent/ControlledCompon
 import cx from 'classnames';
 import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 import { WhiteListedAccounts } from 'Routes/constants';
-import { getMsgPayloadMapping, dummyPayloadValue, convertObjectToKeyValuePairArray } from '../utils';
+import {
+  getMsgPayloadMapping,
+  dummyPayloadValue,
+  convertObjectToKeyValuePairArray
+} from '../utils';
 import Teams from './Teams';
 import Webhook from './Webhook';
 import SelectChannels from '../SelectChannels';
@@ -501,8 +505,8 @@ const EventBasedAlert = ({
       setQueries(queryData);
 
       if (
-        viewAlertDetails?.alert?.action_performed !== 'action_event' &&
-        viewAlertDetails?.alert?.action_performed !== undefined
+        viewAlertDetails?.alert?.action_performed === 'action_segment_entry' ||
+        viewAlertDetails?.alert?.action_performed === 'action_segment_exit'
       ) {
         setSegmentType(viewAlertDetails?.alert?.action_performed);
         setSelectedSegment(viewAlertDetails?.alert?.event);
@@ -832,6 +836,9 @@ const EventBasedAlert = ({
     resetGroupBy();
     setEventPropertyDetails({});
     setBreakdownOptions([]);
+    setSegmentType('action_event');
+    setSelectedSegment('');
+    setSegmentOptions([]);
   };
 
   const confirmDeleteAlert = (item) => {
@@ -882,9 +889,7 @@ const EventBasedAlert = ({
         segmentType === 'action_event' ? queries[0]?.label : selectedSegment,
       message: alertMessage,
       message_property: convertObjectToKeyValuePairArray(
-        updatepayloadDisplayNames(
-          getMsgPayloadMapping(groupBy)
-        )
+        updatepayloadDisplayNames(getMsgPayloadMapping(groupBy))
       ),
       slack: slackEnabled,
       slack_channels: saveSelectedChannel,
@@ -914,9 +919,7 @@ const EventBasedAlert = ({
         segmentType === 'action_event' ? queries[0]?.label : selectedSegment,
       message: alertMessage,
       message_property: convertObjectToKeyValuePairArray(
-          updatepayloadDisplayNames(
-          getMsgPayloadMapping(groupBy)
-        )
+        updatepayloadDisplayNames(getMsgPayloadMapping(groupBy))
       ),
       teams: teamsEnabled,
       teams: teamsEnabled,

@@ -171,6 +171,7 @@ func main() {
 	salesforceAllowOpportunityOverrideCreateCreatedEvent := flag.String("salesforce_allow_opportunity_override_create_created_event_by_project_id", "", "Allow creating created event when latest update processed first.")
 	addCRMObjectURLByProjectID := flag.String("add_crm_object_url_by_project_id", "", "")
 	enableTotalSessionPropertiesV2ByProjectID := flag.String("enable_total_session_properties_v2", "", "")
+	enableDomainWebsitePropertiesByProjectID := flag.String("enable_domain_website_properties_by_project_id", "", "")
 
 	flag.Parse()
 
@@ -256,6 +257,7 @@ func main() {
 		SalesforceAllowOpportunityOverrideCreateCreatedEvent: *salesforceAllowOpportunityOverrideCreateCreatedEvent,
 		AddCRMObjectURLPropertyByProjectID:                   *addCRMObjectURLByProjectID,
 		EnableTotalSessionPropertiesV2ByProjectID:            *enableTotalSessionPropertiesV2ByProjectID,
+		EnableDomainWebsitePropertiesByProjectID:             *enableDomainWebsitePropertiesByProjectID,
 	}
 
 	C.InitConf(config)

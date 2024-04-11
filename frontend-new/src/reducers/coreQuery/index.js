@@ -263,25 +263,12 @@ export default function (state = defaultState, action) {
         let whichEventIndex = 0; // we will always get this value from paylod
         let objectToBeReplaced = action.payload.map(
           (eachBreakdown, eachBreakdownIndex) => {
-            const {
-              prop_category,
-              eventName,
-              property,
-              prop_type,
-              eventIndex,
-              overAllIndex,
-              gbty
-            } = eachBreakdown;
+            const { eventIndex } = eachBreakdown;
             whichEventIndex = eventIndex;
             const res = {
-              prop_category,
-              eventName,
-              property,
-              prop_type,
-              eventIndex,
+              ...eachBreakdown,
               overAllIndex: eachBreakdownIndex
-            }
-            if(gbty) res.gbty = gbty
+            };
             return res;
           }
         );

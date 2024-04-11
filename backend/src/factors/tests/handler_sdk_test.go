@@ -3,6 +3,7 @@ package tests
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -21,7 +22,9 @@ import (
 	"factors/model/store"
 	"factors/sdk"
 	SDK "factors/sdk"
+	"factors/task/event_user_cache"
 	TaskSession "factors/task/session"
+	"factors/util"
 	U "factors/util"
 )
 
@@ -4420,4 +4423,451 @@ func TestSDKEmailUTMParameterForIdentification(t *testing.T) {
 
 	})
 
+}
+
+func TestAllAccountWebsiteProperties(t *testing.T) {
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	H.InitAppRoutes(r)
+	uri := "/sdk/event/track"
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	_, status := store.GetStore().CreateOrGetDomainsGroup(project.ID)
+	assert.Equal(t, http.StatusCreated, status)
+
+	joinTime := U.TimeNowZ().Add(-10*time.Minute).Unix() - 30
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: joinTime, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: joinTime, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	/*
+		Two domains example.com, example2.com and associated to createdUserID and createdUserID2
+	*/
+	status = SDK.TrackUserAccountGroup(project.ID, createdUserID, model.GROUP_NAME_SIX_SIGNAL, &U.PropertiesMap{U.SIX_SIGNAL_DOMAIN: "www.example.com"}, U.TimeNowUnix()-10)
+	assert.Equal(t, http.StatusOK, status)
+
+	status = SDK.TrackUserAccountGroup(project.ID, createdUserID2, model.GROUP_NAME_SIX_SIGNAL, &U.PropertiesMap{U.SIX_SIGNAL_DOMAIN: "www.example2.com"}, U.TimeNowUnix()-10)
+	assert.Equal(t, http.StatusOK, status)
+
+	w := ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"auto":true, "user_id": "%s", "event_name": "www.example.com/", 
+	"event_properties": {"$page_domain": "www.example.com", "$page_raw_url": "https://www.example.com/", "$page_url": "www.example.com/", 
+	"$referrer": "", "$referrer_url": "","$referrer_domain":"gartner.com","$page_spent_time":120,"$qp_utm_campaign":"google","$qp_utm_source":"google",
+	"$qp_utm_medium":"email","$qp_utm_keyword":"analytics","$qp_utm_term":"term1","$qp_utm_content":"content1"}}`, createdUserID)),
+		map[string]string{
+			"Authorization": project.Token,
+		})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"auto":true, "user_id": "%s", "event_name": "www.example2.com/", 
+	"event_properties": {"$page_domain": "www.example2.com", "$page_raw_url": "https://www.example2.com/", "$page_url": "www.example2.com/", 
+	"$referrer": "", "$referrer_url": "","$referrer_domain":"gartner.com","$page_spent_time":120,"$qp_utm_campaign":"google","$qp_utm_source":"google",
+	"$qp_utm_medium":"email","$qp_utm_keyword":"analytics","$qp_utm_term":"term1","$qp_utm_content":"content1"}}`, createdUserID2)),
+		map[string]string{
+			"Authorization": project.Token,
+		})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	domainUser1, status := store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_DOMAINS, "example.com")
+	assert.Equal(t, http.StatusFound, status)
+
+	propertiesMap1, err := U.DecodePostgresJsonb(&domainUser1.Properties)
+	assert.Nil(t, err)
+
+	compareDomainProperties := make(map[string]interface{})
+	/*
+		list of properties to be present in domain website properties
+	*/
+	{
+		for key := range U.USER_INITIAL_PROPERTIES_TO_DOMAIN_INITIAL_PROPERTIES {
+			compareDomainProperties[key] = nil
+		}
+
+		for key := range U.USER_LATEST_PROPERTIES_TO_DOMAIN_LATEST_PROPERTIES {
+			compareDomainProperties[key] = nil
+		}
+
+		for _, dpKey := range U.USER_ADD_TYPE_PROPERTIES_TO_DOMAIN_ADD_TYPE_PROPERTIES {
+			compareDomainProperties[dpKey] = nil
+		}
+	}
+
+	// properties value picked from user to domain
+	compareDomainProperties[U.DP_DOMAIN_NAME] = "example.com"
+	compareDomainProperties[U.DP_INITIAL_CAMPAIGN] = "google"
+	compareDomainProperties[U.DP_INITIAL_CHANNEL] = nil // update after add session job
+	compareDomainProperties[U.DP_INITIAL_CONTENT] = "content1"
+	compareDomainProperties[U.DP_INITIAL_KEYWORD] = "analytics"
+	compareDomainProperties[U.DP_INITIAL_MEDIUM] = "email"
+	compareDomainProperties[U.DP_INITIAL_PAGE_SCROLL_PERCENT] = float64(0)
+	compareDomainProperties[U.DP_INITIAL_PAGE_SPENT_TIME] = float64(120)
+	compareDomainProperties[U.DP_INITIAL_PAGE_URL] = "www.example.com"
+	compareDomainProperties[U.DP_INITIAL_REFERRER_DOMAIN] = "gartner.com"
+	compareDomainProperties[U.DP_INITIAL_SOURCE] = "google"
+	compareDomainProperties[U.DP_INITIAL_TERM] = "term1"
+	compareDomainProperties[U.DP_JOIN_TIME] = float64(joinTime)
+	compareDomainProperties[U.DP_LATEST_CAMPAIGN] = "google"
+	compareDomainProperties[U.DP_LATEST_CHANNEL] = nil
+	compareDomainProperties[U.DP_LATEST_CONTENT] = "content1"
+	compareDomainProperties[U.DP_LATEST_KEYWORD] = "analytics"
+	compareDomainProperties[U.DP_LATEST_MEDIUM] = "email"
+	compareDomainProperties[U.DP_LATEST_PAGE_SCROLL_PERCENT] = nil
+	compareDomainProperties[U.DP_LATEST_PAGE_SPENT_TIME] = float64(120)
+	compareDomainProperties[U.DP_LATEST_PAGE_URL] = "www.example.com"
+	compareDomainProperties[U.DP_LATEST_REFERRER_DOMAIN] = "gartner.com"
+	compareDomainProperties[U.DP_LATEST_SOURCE] = "google"
+	compareDomainProperties[U.DP_LATEST_TERM] = "term1"
+	compareDomainProperties[U.DP_TOTAL_PAGE_COUNT] = float64(0)
+	compareDomainProperties[U.DP_TOTAL_PAGE_SPENT_TIME] = float64(0)
+	assert.Equal(t, compareDomainProperties, *propertiesMap1)
+
+	// checking domain 2 properties, only page url is different
+	domainUser2, status := store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_DOMAINS, "example2.com")
+	assert.Equal(t, http.StatusFound, status)
+
+	propertiesMap2, err := U.DecodePostgresJsonb(&domainUser2.Properties)
+	assert.Nil(t, err)
+
+	compareDomainProperties2 := make(map[string]interface{})
+	for key := range compareDomainProperties {
+		compareDomainProperties2[key] = compareDomainProperties[key]
+	}
+
+	compareDomainProperties2[U.DP_DOMAIN_NAME] = "example2.com"
+	compareDomainProperties2[U.DP_INITIAL_PAGE_URL] = "www.example2.com"
+	compareDomainProperties2[U.DP_LATEST_PAGE_URL] = "www.example2.com"
+	assert.Equal(t, compareDomainProperties2, *propertiesMap2)
+
+	// running add session job fill channel, page count and page spent time
+	{
+		_, err = TaskSession.AddSession([]int64{project.ID}, 2*24*60*60, 0, 0, 0, 1, 1)
+		assert.Nil(t, err)
+
+		domainUser1, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_DOMAINS, "example.com")
+		assert.Equal(t, http.StatusFound, status)
+
+		propertiesMap1, err = U.DecodePostgresJsonb(&domainUser1.Properties)
+		assert.Nil(t, err)
+
+		compareDomainProperties[U.DP_INITIAL_CHANNEL] = "Product Reviews And Listings"
+		compareDomainProperties[U.DP_LATEST_CHANNEL] = "Product Reviews And Listings"
+		compareDomainProperties[U.DP_TOTAL_PAGE_COUNT] = float64(1)
+		compareDomainProperties[U.DP_TOTAL_PAGE_SPENT_TIME] = float64(120)
+		assert.Equal(t, compareDomainProperties, *propertiesMap1)
+
+		domainUser2, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_DOMAINS, "example2.com")
+		assert.Equal(t, http.StatusFound, status)
+
+		propertiesMap2, err = U.DecodePostgresJsonb(&domainUser2.Properties)
+		assert.Nil(t, err)
+
+		for key := range compareDomainProperties {
+			compareDomainProperties2[key] = compareDomainProperties[key]
+		}
+		compareDomainProperties2[U.DP_DOMAIN_NAME] = "example2.com"
+		compareDomainProperties2[U.DP_INITIAL_PAGE_URL] = "www.example2.com"
+		compareDomainProperties2[U.DP_LATEST_PAGE_URL] = "www.example2.com"
+		assert.Equal(t, compareDomainProperties2, *propertiesMap2)
+	}
+
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"auto":true, "user_id": "%s", "event_name": "www.example.com/a",
+	"event_properties": {"$page_domain": "www.example.com", "$page_raw_url": "https://www.example.com/a", "$page_url": "www.example.com/a",
+	"$referrer": "", "$referrer_url": "","$referrer_domain":"gartner.com","$page_spent_time":20,"$qp_utm_campaign":"google1","$qp_utm_source":"linkedinad",
+	"$qp_utm_medium":"email2","$qp_utm_keyword":"analytics2","$qp_utm_term":"term2","$qp_utm_content":"content2"}}`, createdUserID)),
+		map[string]string{
+			"Authorization": project.Token,
+		})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"auto":true, "user_id": "%s", "event_name": "www.example2.com/a",
+	"event_properties": {"$page_domain": "www.example2.com", "$page_raw_url": "https://www.example2.com/a", "$page_url": "www.example2.com/a",
+	"$referrer": "", "$referrer_url": "","$referrer_domain":"gartner.com","$page_spent_time":20,"$qp_utm_campaign":"google1","$qp_utm_source":"linkedinad",
+	"$qp_utm_medium":"email2","$qp_utm_keyword":"analytics2","$qp_utm_term":"term2","$qp_utm_content":"content2"}}`, createdUserID2)),
+		map[string]string{
+			"Authorization": project.Token,
+		})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	domainUser1, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_DOMAINS, "example.com")
+	assert.Equal(t, http.StatusFound, status)
+	propertiesMap1, err = U.DecodePostgresJsonb(&domainUser1.Properties)
+	assert.Nil(t, err)
+
+	// latest channel not updated to Paid Social, since add session havent updated.
+	compareDomainProperties[U.DP_DOMAIN_NAME] = "example.com"
+	compareDomainProperties[U.DP_INITIAL_CAMPAIGN] = "google"
+	compareDomainProperties[U.DP_INITIAL_CHANNEL] = "Product Reviews And Listings"
+	compareDomainProperties[U.DP_INITIAL_CONTENT] = "content1"
+	compareDomainProperties[U.DP_INITIAL_KEYWORD] = "analytics"
+	compareDomainProperties[U.DP_INITIAL_MEDIUM] = "email"
+	compareDomainProperties[U.DP_INITIAL_PAGE_SCROLL_PERCENT] = float64(0)
+	compareDomainProperties[U.DP_INITIAL_PAGE_SPENT_TIME] = float64(120)
+	compareDomainProperties[U.DP_INITIAL_PAGE_URL] = "www.example.com"
+	compareDomainProperties[U.DP_INITIAL_REFERRER_DOMAIN] = "gartner.com"
+	compareDomainProperties[U.DP_INITIAL_SOURCE] = "google"
+	compareDomainProperties[U.DP_INITIAL_TERM] = "term1"
+	compareDomainProperties[U.DP_JOIN_TIME] = float64(joinTime)
+	compareDomainProperties[U.DP_LATEST_CAMPAIGN] = "google1"
+	compareDomainProperties[U.DP_LATEST_CHANNEL] = "Product Reviews And Listings"
+	compareDomainProperties[U.DP_LATEST_CONTENT] = "content2"
+	compareDomainProperties[U.DP_LATEST_KEYWORD] = "analytics2"
+	compareDomainProperties[U.DP_LATEST_MEDIUM] = "email2"
+	compareDomainProperties[U.DP_LATEST_PAGE_SCROLL_PERCENT] = nil
+	compareDomainProperties[U.DP_LATEST_PAGE_SPENT_TIME] = float64(20)
+	compareDomainProperties[U.DP_LATEST_PAGE_URL] = "www.example.com/a"
+	compareDomainProperties[U.DP_LATEST_REFERRER_DOMAIN] = "gartner.com"
+	compareDomainProperties[U.DP_LATEST_SOURCE] = "linkedinad"
+	compareDomainProperties[U.DP_LATEST_TERM] = "term2"
+	compareDomainProperties[U.DP_TOTAL_PAGE_COUNT] = float64(1)
+	compareDomainProperties[U.DP_TOTAL_PAGE_SPENT_TIME] = float64(120)
+	assert.Equal(t, compareDomainProperties, *propertiesMap1)
+
+	domainUser2, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_DOMAINS, "example2.com")
+	assert.Equal(t, http.StatusFound, status)
+
+	propertiesMap2, err = U.DecodePostgresJsonb(&domainUser2.Properties)
+	assert.Nil(t, err)
+
+	for key := range compareDomainProperties {
+		compareDomainProperties2[key] = compareDomainProperties[key]
+	}
+	compareDomainProperties2[U.DP_DOMAIN_NAME] = "example2.com"
+	compareDomainProperties2[U.DP_INITIAL_PAGE_URL] = "www.example2.com"
+	compareDomainProperties2[U.DP_LATEST_PAGE_URL] = "www.example2.com/a"
+	assert.Equal(t, compareDomainProperties2, *propertiesMap2)
+
+	_, err = TaskSession.AddSession([]int64{project.ID}, 2*24*60*60, 0, 0, 0, 1, 1)
+	assert.Nil(t, err)
+
+	domainUser1, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_DOMAINS, "example.com")
+	assert.Equal(t, http.StatusFound, status)
+	propertiesMap1, err = U.DecodePostgresJsonb(&domainUser1.Properties)
+	assert.Nil(t, err)
+	compareDomainProperties[U.DP_INITIAL_CHANNEL] = "Product Reviews And Listings"
+	compareDomainProperties[U.DP_LATEST_CHANNEL] = "Paid Social" // updated to paid social after add session
+	compareDomainProperties[U.DP_TOTAL_PAGE_COUNT] = float64(2)
+	compareDomainProperties[U.DP_TOTAL_PAGE_SPENT_TIME] = float64(140)
+	assert.Equal(t, compareDomainProperties, *propertiesMap1)
+
+	domainUser2, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_DOMAINS, "example2.com")
+	assert.Equal(t, http.StatusFound, status)
+
+	propertiesMap2, err = U.DecodePostgresJsonb(&domainUser2.Properties)
+	assert.Nil(t, err)
+
+	for key := range compareDomainProperties {
+		compareDomainProperties2[key] = compareDomainProperties[key]
+	}
+	compareDomainProperties2[U.DP_DOMAIN_NAME] = "example2.com"
+	compareDomainProperties2[U.DP_INITIAL_PAGE_URL] = "www.example2.com"
+	compareDomainProperties2[U.DP_LATEST_PAGE_URL] = "www.example2.com/a"
+	assert.Equal(t, compareDomainProperties2, *propertiesMap2)
+
+	/*
+		2nd user with same accounts
+	*/
+	createdUserID3, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: joinTime + 1, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	status = SDK.TrackUserAccountGroup(project.ID, createdUserID3, model.GROUP_NAME_SIX_SIGNAL, &U.PropertiesMap{U.SIX_SIGNAL_DOMAIN: "www.example.com"}, U.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+
+	createdUserID4, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: joinTime + 1, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	status = SDK.TrackUserAccountGroup(project.ID, createdUserID4, model.GROUP_NAME_SIX_SIGNAL, &U.PropertiesMap{U.SIX_SIGNAL_DOMAIN: "www.example2.com"}, U.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"auto":true, "user_id": "%s", "event_name": "www.example.com/",
+	"event_properties": {"$page_domain": "www.example.com", "$page_raw_url": "https://www.example.com/b", "$page_url": "www.example.com/b",
+	"$referrer": "", "$referrer_url": "","$referrer_domain":"gartner.com","$page_spent_time":30,"$qp_utm_campaign":"google2","$qp_utm_source":"google2",
+	"$qp_utm_medium":"email3","$qp_utm_keyword":"analytics3","$qp_utm_term":"term3","$qp_utm_content":"content3"}}`, createdUserID3)),
+		map[string]string{
+			"Authorization": project.Token,
+		})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"auto":true, "user_id": "%s", "event_name": "www.example2.com/",
+	"event_properties": {"$page_domain": "www.example2.com", "$page_raw_url": "https://www.example2.com/b", "$page_url": "www.example2.com/b",
+	"$referrer": "", "$referrer_url": "","$referrer_domain":"gartner.com","$page_spent_time":30,"$qp_utm_campaign":"google2","$qp_utm_source":"google2",
+	"$qp_utm_medium":"email3","$qp_utm_keyword":"analytics3","$qp_utm_term":"term3","$qp_utm_content":"content3"}}`, createdUserID4)),
+		map[string]string{
+			"Authorization": project.Token,
+		})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	domainUser1, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_DOMAINS, "example.com")
+	assert.Equal(t, http.StatusFound, status)
+	propertiesMap1, err = U.DecodePostgresJsonb(&domainUser1.Properties)
+	assert.Nil(t, err)
+
+	compareDomainProperties[U.DP_LATEST_CAMPAIGN] = "google2"
+	compareDomainProperties[U.DP_LATEST_CHANNEL] = "Paid Social"
+	compareDomainProperties[U.DP_LATEST_CONTENT] = "content3"
+	compareDomainProperties[U.DP_LATEST_KEYWORD] = "analytics3"
+	compareDomainProperties[U.DP_LATEST_MEDIUM] = "email3"
+	compareDomainProperties[U.DP_LATEST_PAGE_SCROLL_PERCENT] = nil
+	compareDomainProperties[U.DP_LATEST_PAGE_SPENT_TIME] = float64(30)
+	compareDomainProperties[U.DP_LATEST_PAGE_URL] = "www.example.com/b"
+	compareDomainProperties[U.DP_LATEST_REFERRER_DOMAIN] = "gartner.com"
+	compareDomainProperties[U.DP_LATEST_SOURCE] = "google2"
+	compareDomainProperties[U.DP_LATEST_TERM] = "term3"
+	assert.Equal(t, compareDomainProperties, *propertiesMap1)
+
+	domainUser2, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_DOMAINS, "example2.com")
+	assert.Equal(t, http.StatusFound, status)
+
+	propertiesMap2, err = U.DecodePostgresJsonb(&domainUser2.Properties)
+	assert.Nil(t, err)
+
+	for key := range compareDomainProperties {
+		compareDomainProperties2[key] = compareDomainProperties[key]
+	}
+	compareDomainProperties2[U.DP_DOMAIN_NAME] = "example2.com"
+	compareDomainProperties2[U.DP_INITIAL_PAGE_URL] = "www.example2.com"
+	compareDomainProperties2[U.DP_LATEST_PAGE_URL] = "www.example2.com/b"
+	assert.Equal(t, compareDomainProperties2, *propertiesMap2)
+
+	_, err = TaskSession.AddSession([]int64{project.ID}, 2*24*60*60, 0, 0, 0, 1, 1)
+	assert.Nil(t, err)
+
+	domainUser1, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_DOMAINS, "example.com")
+	assert.Equal(t, http.StatusFound, status)
+	propertiesMap1, err = U.DecodePostgresJsonb(&domainUser1.Properties)
+	assert.Nil(t, err)
+	domainUser1UpdatedAt := domainUser1.UpdatedAt.UnixNano()
+
+	compareDomainProperties[U.DP_LATEST_CHANNEL] = "Product Reviews And Listings"
+	compareDomainProperties[U.DP_TOTAL_PAGE_COUNT] = float64(3)
+	compareDomainProperties[U.DP_TOTAL_PAGE_SPENT_TIME] = float64(170)
+	assert.Equal(t, compareDomainProperties, *propertiesMap1)
+
+	domainUser2, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_DOMAINS, "example2.com")
+	assert.Equal(t, http.StatusFound, status)
+
+	propertiesMap2, err = U.DecodePostgresJsonb(&domainUser2.Properties)
+	assert.Nil(t, err)
+
+	for key := range compareDomainProperties {
+		compareDomainProperties2[key] = compareDomainProperties[key]
+	}
+	compareDomainProperties2[U.DP_DOMAIN_NAME] = "example2.com"
+	compareDomainProperties2[U.DP_INITIAL_PAGE_URL] = "www.example2.com"
+	compareDomainProperties2[U.DP_LATEST_PAGE_URL] = "www.example2.com/b"
+	assert.Equal(t, compareDomainProperties2, *propertiesMap2)
+
+	/*
+		Check user update should not be trigger $domains properties update if no user dependent domain properties get updated
+	*/
+	updateProperties := postgres.Jsonb{[]byte(fmt.Sprintf(`{"%s":"%s"}`, "a", "google2"))}
+	store.GetStore().UpdateUserProperties(project.ID, createdUserID, &updateProperties, U.TimeNowUnix()+10)
+
+	domainUser1, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_DOMAINS, "example.com")
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, domainUser1UpdatedAt, domainUser1.UpdatedAt.UnixNano()) // time not updated
+
+	updateProperties = postgres.Jsonb{[]byte(fmt.Sprintf(`{"%s":"%s"}`, U.UP_LATEST_CAMPAIGN, "google3"))}
+	store.GetStore().UpdateUserProperties(project.ID, createdUserID, &updateProperties, U.TimeNowUnix()+10)
+
+	domainUser1, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_DOMAINS, "example.com")
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotEqual(t, domainUser1UpdatedAt, domainUser1.UpdatedAt.UnixNano())
+	domainUser1UpdatedAt = domainUser1.UpdatedAt.UnixNano()
+
+	status, _ = SDK.Identify(project.ID, &SDK.IdentifyPayload{
+		UserId:         createdUserID,
+		CustomerUserId: "abc@example.com",
+		JoinTimestamp:  U.TimeNowUnix(),
+		RequestSource:  model.UserSourceWeb,
+	}, true)
+	assert.Equal(t, http.StatusOK, status)
+
+	createdUserID5, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: joinTime + 1, Source: model.GetRequestSourcePointer(model.UserSourceWeb),
+		CustomerUserId: "abc@example.com", CustomerUserIdSource: model.GetRequestSourcePointer(model.UserSourceWeb),
+		Properties: postgres.Jsonb{[]byte(fmt.Sprintf(`{"%s":"%s"}`, "a", "a2"))}})
+	status = SDK.TrackUserAccountGroup(project.ID, createdUserID5, model.GROUP_NAME_SIX_SIGNAL, &U.PropertiesMap{U.SIX_SIGNAL_DOMAIN: "www.example.com"}, U.TimeNowUnix()-10)
+	assert.Equal(t, http.StatusOK, status)
+
+	assert.Equal(t, http.StatusCreated, errCode)
+	domainUser1, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_DOMAINS, "example.com")
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, domainUser1UpdatedAt, domainUser1.UpdatedAt.UnixNano())
+
+	updateProperties = postgres.Jsonb{[]byte(fmt.Sprintf(`{"%s":"%s"}`, U.UP_LATEST_CAMPAIGN, "google4"))}
+	store.GetStore().UpdateUserProperties(project.ID, createdUserID5, &updateProperties, U.TimeNowUnix()+12)
+	domainUser1, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_DOMAINS, "example.com")
+	assert.Equal(t, http.StatusFound, status)
+	assert.NotEqual(t, domainUser1UpdatedAt, domainUser1.UpdatedAt.UnixNano())
+
+	// Test user domain association update flow
+	createdUserID6, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: joinTime + 1000, Source: model.GetRequestSourcePointer(model.UserSourceWeb), Properties: postgres.Jsonb{[]byte(fmt.Sprintf(`{"%s":"www.example.com/c"}`, util.UP_LATEST_PAGE_URL))}})
+	assert.Equal(t, http.StatusCreated, errCode)
+	sixSignalUser1, status := store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_SIX_SIGNAL, "example.com")
+	assert.Equal(t, http.StatusFound, status)
+	status = store.GetStore().AssociateUserDomainsGroup(project.ID, createdUserID6, model.GROUP_NAME_SIX_SIGNAL, sixSignalUser1.ID)
+	assert.Equal(t, http.StatusOK, status)
+
+	domainUser1, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_DOMAINS, "example.com")
+	assert.Equal(t, http.StatusFound, status)
+
+	expectedMap := map[string]interface{}{}
+	for key := range U.USER_INITIAL_PROPERTIES_TO_DOMAIN_INITIAL_PROPERTIES {
+		expectedMap[key] = compareDomainProperties[key]
+	}
+
+	for key := range U.USER_LATEST_PROPERTIES_TO_DOMAIN_LATEST_PROPERTIES {
+		expectedMap[key] = nil
+	}
+
+	for _, dpKey := range U.USER_ADD_TYPE_PROPERTIES_TO_DOMAIN_ADD_TYPE_PROPERTIES {
+		expectedMap[dpKey] = compareDomainProperties[dpKey]
+	}
+
+	expectedMap[U.DP_DOMAIN_NAME] = "example.com"
+	expectedMap[util.DP_LATEST_PAGE_URL] = "www.example.com/c"
+	expectedMap[U.DP_LATEST_CHANNEL] = "Paid Social"
+	propertiesMap2, _ = U.DecodePostgresJsonb(&domainUser1.Properties)
+	assert.Equal(t, expectedMap, *propertiesMap2)
+
+	// execute DoRollUpSortedSet
+	configs := make(map[string]interface{})
+	configs["rollupLookback"] = 1
+	configs["deleteRollupAfterAddingToAggregate"] = 1
+	event_user_cache.DoRollUpSortedSet(configs)
+
+	w, err = sendGetGroupProperties(project.ID, model.GROUP_NAME_DOMAINS, agent, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ := io.ReadAll(w.Body)
+	var propertiesResponse struct {
+		DisplayNames map[string]string   `json:"display_names"`
+		Properties   map[string][]string `json:"properties"`
+	}
+	err = util.DecodeJSONStringToStructType(string(jsonResponse), &propertiesResponse)
+	assert.Nil(t, err)
+	for property, label := range util.ALL_ACCOUNT_PROPERTIES_DISPLAY_NAMES {
+		assert.Equal(t, propertiesResponse.DisplayNames[property], label)
+	}
+
+	resultPropertyKeys := map[string]bool{}
+	for category := range propertiesResponse.Properties {
+		for _, key := range propertiesResponse.Properties[category] {
+			resultPropertyKeys[key] = true
+		}
+	}
+	allKeys := util.GetAllMapKeys(util.USER_INITIAL_PROPERTIES_TO_DOMAIN_INITIAL_PROPERTIES,
+		util.USER_LATEST_PROPERTIES_TO_DOMAIN_LATEST_PROPERTIES,
+		map[string]bool{util.DP_TOTAL_PAGE_SPENT_TIME: true, util.DP_TOTAL_PAGE_COUNT: true})
+	delete(allKeys, util.UP_LATEST_PAGE_SCROLL_PERCENT)
+	for key := range allKeys {
+		assert.Contains(t, resultPropertyKeys, key)
+	}
 }

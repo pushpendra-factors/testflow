@@ -90,10 +90,10 @@ func (store *MemSQL) CreateGroup(projectID int64, groupName string, allowedGroup
 func (store *MemSQL) CreateDefaultSegment(projectID int64, entity string, isGroup bool) (int, error) {
 	var segmentName, segmentProperty string
 	if isGroup {
-		segmentName = U.ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES[U.GROUP_TO_DEFAULT_SEGMENT_MAP[entity]]
+		segmentName = U.GetAllAccountPropertiesDisplayNames()[U.GROUP_TO_DEFAULT_SEGMENT_MAP[entity]]
 		segmentProperty = U.GROUP_TO_DEFAULT_SEGMENT_MAP[entity]
 	} else {
-		segmentName = U.ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES[U.VISITED_WEBSITE]
+		segmentName = U.GetAllAccountPropertiesDisplayNames()[U.VISITED_WEBSITE]
 		segmentProperty = U.VISITED_WEBSITE
 	}
 	segmentPayload := model.SegmentPayload{

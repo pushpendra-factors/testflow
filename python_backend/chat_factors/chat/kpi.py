@@ -222,7 +222,7 @@ def add_filter_info_kpi(display_category, filters, kpi_config):
                 "prDaTy": filter_info["data_type"],
                 "isPrMa": False,
                 "en": filter_info["entity"],
-                "co": "equals",
+                "co": filter_property["co"],
                 "va": filter_info["filter_value"],
                 "lOp": "AND"
             }

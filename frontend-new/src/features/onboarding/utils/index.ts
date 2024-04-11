@@ -1,3 +1,4 @@
+import anchorme from 'anchorme';
 import {
   OnboardingStepsConfig,
   PROJECT_CREATED,
@@ -112,3 +113,14 @@ export const SDKDocumentation =
 
 export const ClearbitTermsOfUseLink =
   'https://www.factors.ai/customer-agreement';
+
+export function extractDomainFromUrl(url: string): string | null {
+  // validating url
+  if (!anchorme.validate.url(url)) {
+    return null;
+  }
+  const regex = /^(?:https?:\/\/)?(?:www\.)?([^\/\?]+)/i;
+  const match = url.match(regex);
+
+  return (match && match?.[1]) || null;
+}
