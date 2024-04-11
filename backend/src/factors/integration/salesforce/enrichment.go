@@ -2008,7 +2008,6 @@ func enrichEvent(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEve
 	activityUserID, err := GetActivitiesUserID(document)
 	if err != nil {
 		if err == errActivtiesNoWhoIdAssociated {
-			logCtx.WithError(err).Warning("Skipping processing for event record.")
 			return http.StatusNotModified
 		}
 		logCtx.WithError(err).Error("Failed to GetActivitiesUserID on enrich event")
@@ -2016,7 +2015,6 @@ func enrichEvent(project *model.Project, otpRules *[]model.OTPRule, uniqueOTPEve
 	}
 
 	if activityUserID == "" {
-		logCtx.Error("Lead or contact associated is not synced for processing event document.")
 		return http.StatusNotModified
 	}
 
