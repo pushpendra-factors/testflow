@@ -622,6 +622,10 @@ func Track(projectId int64, request *TrackPayload,
 				logCtx.WithField("event_name", U.EVENT_NAME_CLICKED_EMAIL).Warn("Tracking failed. Creating  ClickedEmail Name  failed.")
 			}
 		}
+		if projectId == int64(4000144) {
+			log.WithField("project_id", projectId).WithField("isClickedEmailEvent", isClickedEmailEvent).Info("625-parthg")
+
+		}
 	}
 
 	U.SanitizeProperties(eventProperties)
@@ -723,9 +727,14 @@ func Track(projectId int64, request *TrackPayload,
 	if C.IsFormFillIdentificationAllowedForProject(projectId) {
 		isFormEvent = request.Name == U.EVENT_NAME_FORM_SUBMITTED || request.Name == U.EVENT_NAME_FORM_FILL
 	}
-
+	if projectId == int64(4000144) {
+		log.WithField("project_id", projectId).WithField("isFormEvent", isFormEvent).Info("727-parthg")
+	}
 	if C.IsEmailUTMParameterAllowed(projectId) {
 		isFormEvent = isFormEvent || isClickedEmailEvent
+		if projectId == int64(4000144) {
+			log.WithField("project_id", projectId).WithField("isFormEvent", isFormEvent).Info("731-parthg")
+		}
 	}
 
 	if isFormEvent {
@@ -852,7 +861,9 @@ func Track(projectId int64, request *TrackPayload,
 		if errCode != http.StatusCreated {
 			logCtx.Warn("Tracking failed. Clicked email Event creation failed.")
 		}
-
+		if projectId == int64(4000144) {
+			log.WithField("project_id", projectId).WithField("clickedEmailevent", clickedEmailevent).Info("859-parthg")
+		}
 	}
 
 	// Success response.
