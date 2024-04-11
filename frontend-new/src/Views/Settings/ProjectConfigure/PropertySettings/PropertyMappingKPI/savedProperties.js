@@ -20,9 +20,10 @@ import {
   fetchPropertyMappings,
   removePropertyMapping
 } from 'Reducers/settings/middleware';
-import { getPropertyDisplayName} from './utils';
+import { getPropertyDisplayName } from './utils';
 import _ from 'lodash';
-import getGroupIcon from 'Utils/getGroupIcon'
+import getGroupIcon from 'Utils/getGroupIcon';
+import EmptyScreen from 'Components/EmptyScreen';
 
 const SavedProperties = ({
   activeProject,
@@ -31,7 +32,6 @@ const SavedProperties = ({
   removePropertyMapping,
   KPI_config
 }) => {
-
   const [mappedProperties, setMappedProperties] = useState([]);
 
   useEffect(() => {
@@ -40,7 +40,7 @@ const SavedProperties = ({
       propertyMaps.push({
         name: prop.display_name,
         properties: prop.properties,
-        actions: prop,
+        actions: prop
       });
     });
     setMappedProperties(propertyMaps);
@@ -53,23 +53,23 @@ const SavedProperties = ({
       okText: 'Yes',
       cancelText: 'Cancel',
       onOk: () => {
-        removePropertyMapping(activeProject?.id, item?.id).then(() => {
-          fetchPropertyMappings(activeProject?.id);
-          message.success('Property Map removed!')
-        }).catch((err) => {
-          message.error(err?.data?.error);
-          console.log('Property Map remove failed-->', err);
-        });
+        removePropertyMapping(activeProject?.id, item?.id)
+          .then(() => {
+            fetchPropertyMappings(activeProject?.id);
+            message.success('Property Map removed!');
+          })
+          .catch((err) => {
+            message.error(err?.data?.error);
+            console.log('Property Map remove failed-->', err);
+          });
       }
     });
-  }
+  };
 
   const menu = (item) => {
     return (
       <Menu>
-        <Menu.Item key='0'
-          onClick={() => removeProperty(item)}
-        >
+        <Menu.Item key='0' onClick={() => removeProperty(item)}>
           <a>Remove Property</a>
         </Menu.Item>
       </Menu>
@@ -82,7 +82,7 @@ const SavedProperties = ({
       dataIndex: 'name',
       key: 'name',
       width: '200px',
-      render: (text) => <span className={'capitalize'}>{text}</span>,
+      render: (text) => <span className={'capitalize'}>{text}</span>
     },
     {
       title: 'Mapped properties',
@@ -90,21 +90,33 @@ const SavedProperties = ({
       key: 'properties',
       render: (items) => (
         <div className='flex items-center flex-wrap'>
-      {  items.map((item,index) => { 
-          return (<div className='flex items-center'>
-            { index!=0 && <SVG name={'DoubeEndedArrow'} color={'grey'} size={24} extraClass={'mr-1 ml-1'} /> }
-            <div 
-                className={`flex items-center fa-div--truncate btn-total-round py-1 px-2 background-color--mono-color-1`} 
-              >
-                   <SVG name={getGroupIcon(item?.dc)} extraClass={'mr-1'} />
-                {`${getPropertyDisplayName(KPI_config,item?.dc,item?.name)}`}
+          {items.map((item, index) => {
+            return (
+              <div className='flex items-center'>
+                {index != 0 && (
+                  <SVG
+                    name={'DoubeEndedArrow'}
+                    color={'grey'}
+                    size={24}
+                    extraClass={'mr-1 ml-1'}
+                  />
+                )}
+                <div
+                  className={`flex items-center fa-div--truncate btn-total-round py-1 px-2 background-color--mono-color-1`}
+                >
+                  <SVG name={getGroupIcon(item?.dc)} extraClass={'mr-1'} />
+                  {`${getPropertyDisplayName(
+                    KPI_config,
+                    item?.dc,
+                    item?.name
+                  )}`}
+                </div>
               </div>
-          </div>
-          )
-        })}
+            );
+          })}
         </div>
         // <span className={'capitalize'}>{text ? text.replace('_', ' ') : ""}</span>
-      ),
+      )
     },
     {
       title: '',
@@ -112,33 +124,41 @@ const SavedProperties = ({
       key: 'actions',
       render: (obj) => (
         <div className={`flex justify-end`}>
-          <Dropdown
-            overlay={() => menu(obj)}
-            trigger={['click']}>
+          <Dropdown overlay={() => menu(obj)} trigger={['click']}>
             <Button size={'large'} type='text' icon={<MoreOutlined />} />
           </Dropdown>
         </div>
-      ),
-    },
+      )
+    }
   ];
 
   return (
     <>
-      <Table
-        className='fa-table--basic mt-4'
-        columns={columns}
-        dataSource={mappedProperties}
-        pagination={false}
-      // loading={tableLoading}
-      />
+      {mappedProperties.length > 0 ? (
+        <Table
+          className='fa-table--basic mt-4'
+          columns={columns}
+          dataSource={mappedProperties}
+          pagination={false}
+          // loading={tableLoading}
+        />
+      ) : (
+        <EmptyScreen
+          title={`Map metrics from different platforms, such as LinkedIn ads and Google ads together using a common property like 'Campaigns.' This allows you to analyze data seamlessly and gain comprehensive insights.`}
+          learnMore={'https://help.factors.ai/'}
+        />
+      )}
     </>
-  )
-}
+  );
+};
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   propertyMapping: state.settings.propertyMapping,
-  KPI_config: state.kpi?.config,
+  KPI_config: state.kpi?.config
 });
 
-export default connect(mapStateToProps, { fetchPropertyMappings, removePropertyMapping })(SavedProperties)
+export default connect(mapStateToProps, {
+  fetchPropertyMappings,
+  removePropertyMapping
+})(SavedProperties);

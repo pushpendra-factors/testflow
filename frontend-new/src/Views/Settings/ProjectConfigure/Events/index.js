@@ -21,6 +21,7 @@ import {
 } from 'Reducers/coreQuery/middleware';
 import { MoreOutlined } from '@ant-design/icons';
 import { removeSmartEvents, fetchSmartEvents } from 'Reducers/events';
+import EmptyScreen from 'Components/EmptyScreen';
 
 const { TabPane } = Tabs;
 
@@ -124,7 +125,10 @@ function Events({
       setsmartEvents(smartEventsArray);
     }
   }, [smart_events]);
-
+  const handleNewEvent = () => {
+    setSeletedEvent(null);
+    setShowSmartEventForm(true);
+  };
   return (
     <div className={'fa-container'}>
       <Row gutter={[24, 24]} justify='center'>
@@ -146,15 +150,11 @@ function Events({
                   </Col>
                   <Col span={12}>
                     <div className={'flex justify-end'}>
-                      <Button 
+                      <Button
                         type='primary'
-                        onClick={() => {
-                          setSeletedEvent(null);
-                          setShowSmartEventForm(true);
-                        }}
+                        onClick={handleNewEvent}
                         icon={<SVG name={'plus'} color={'white'} size={16} />}
                       >
-                        
                         New Event
                       </Button>
                     </div>
@@ -181,20 +181,30 @@ function Events({
                         Define and capture custom events that matter most to
                         your business, such as clicks, form submissions,
                         lifecycle stage changes, or other specific actions.{' '}
-                        <a href='https://help.factors.ai/en/articles/7284092-custom-events' target='_blank'>
+                        <a
+                          href='https://help.factors.ai/en/articles/7284092-custom-events'
+                          target='_blank'
+                        >
                           Learn more
                         </a>
                       </Text>
 
                       <Tabs defaultActiveKey='1'>
                         <TabPane tab='Custom Events' key='1'>
-                          <Table
-                            className='fa-table--basic mt-4'
-                            columns={columns}
-                            dataSource={smartEvents}
-                            pagination={false}
-                            loading={loading}
-                          />
+                          {smartEvents && smartEvents.length > 0 ? (
+                            <Table
+                              className='fa-table--basic mt-4'
+                              columns={columns}
+                              dataSource={smartEvents}
+                              pagination={false}
+                              loading={loading}
+                            />
+                          ) : (
+                            <EmptyScreen
+                              title={`Set up unique touch points on your website that track user interactions that go beyond what's automatically tracked by Factors. For example, you can track signups, form submissions, lifecycle stage changes, or other specific actions.`}
+                              learnMore={'https://help.factors.ai/'}
+                            />
+                          )}
                         </TabPane>
                       </Tabs>
                     </div>
