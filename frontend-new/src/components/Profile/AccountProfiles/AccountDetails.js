@@ -51,6 +51,8 @@ import { Text, SVG } from '../../factorsComponents';
 import styles from './index.module.scss';
 import AccountTimelineTableView from './AccountTimelineTableView';
 import { GranularityOptions } from '../constants';
+import EmptyScreen from 'Components/EmptyScreen';
+import AccountsOverviewUpgrade from './../../../assets/images/illustrations/AccountsOverviewUpgrade.png';
 
 function AccountDetails({
   getGroups,
@@ -231,7 +233,8 @@ function AccountDetails({
       timelineViewMode === 'overview' &&
       activeId !== accountOverview?.data?.id
     ) {
-      getAccountOverview(activeProject.id, GROUP_NAME_DOMAINS, activeId);
+      if (!isScoringLocked)
+        getAccountOverview(activeProject.id, GROUP_NAME_DOMAINS, activeId);
     }
   }, [timelineViewMode, activeId]);
 
@@ -830,7 +833,34 @@ function AccountDetails({
       tab={<span className='fa-activity-filter--tabname'>{tabName}</span>}
       key={key}
     >
-      {content}
+      {key === 'overview' && isScoringLocked ? (
+        <EmptyScreen
+          upgradeScreen
+          image={AccountsOverviewUpgrade}
+          imageStyle={{ width: '600px', height: '450px' }}
+          title={
+            <div>
+              <Text type='title' level={3} weight='bold' extraClass='m-0'>
+                Your plan doesn’t have this feature
+              </Text>
+              <Text type='title' level={7} extraClass='m-0'>
+                This feature is not included in your current plan. Please
+                upgrade to use this feature
+              </Text>
+            </div>
+          }
+          learnMore={'https://help.factors.ai'}
+          ActionButton={{
+            onClick: () => {
+              history.push('/settings/pricing?activeTab=upgrade');
+            },
+            text: 'Upgrade Now',
+            icon: null
+          }}
+        />
+      ) : (
+        content
+      )}
     </TabPane>
   );
 
@@ -843,12 +873,11 @@ function AccountDetails({
         activeKey={timelineViewMode}
         onChange={handleTabChange}
       >
-        {!isScoringLocked &&
-          renderTabPane({
-            key: 'overview',
-            tabName: 'Overview',
-            content: renderOverview()
-          })}
+        {renderTabPane({
+          key: 'overview',
+          tabName: 'Overview',
+          content: renderOverview()
+        })}
         {renderTabPane({
           key: 'timeline',
           tabName: 'Timeline',

@@ -11,21 +11,24 @@ type EmptyScreenProps = {
   learnMore?: null | string; // If we have any URL
   topTitle?: JSX.Element | null;
   showTop?: boolean;
+  imageStyle?: React.CSSProperties;
   ActionButton?: {
     icon?: JSX.Element;
     text?: string | JSX.Element;
     onClick?: () => void | null;
   } | null;
+  upgradeScreen?: boolean;
 };
 export default function ({
   image,
+  imageStyle = { width: 216, height: 216 },
   title,
   topTitle,
   ActionButton,
   showTop,
-  learnMore
+  learnMore,
+  upgradeScreen = false
 }: EmptyScreenProps) {
-  console.log(title);
   return (
     <div className={styles.parent}>
       {showTop && (
@@ -44,12 +47,15 @@ export default function ({
         </div>
       )}
       <Empty
-        imageStyle={{ width: 216, height: 216, margin: '0 auto' }}
+        imageStyle={{
+          margin: '0 auto',
+          ...imageStyle
+        }}
         image={image || EmptyScreenDefaultIllustration}
         style={{
-          width: '60%',
+          width: upgradeScreen ? '100%' : '60%',
           margin: '0 auto',
-          padding: 10,
+          padding: 5,
           textAlign: 'center'
         }}
         description={
@@ -78,7 +84,7 @@ export default function ({
           {!showTop && ActionButton && (
             <Button
               type='primary'
-              icon={ActionButton.icon || <PlusOutlined />}
+              icon={!upgradeScreen && <PlusOutlined />}
               onClick={ActionButton.onClick}
             >
               {ActionButton.text || 'Add New'}{' '}
