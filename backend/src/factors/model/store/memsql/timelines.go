@@ -2543,7 +2543,7 @@ func propsMapGroupingByName(tableProps []string) map[string][]string {
 }
 
 func domainPropertyExist(property string) bool {
-	for _, prop := range U.ALL_ACCOUNTS_PROPERTIES {
+	for _, prop := range U.ALL_ACCOUNTS_TOTAL_PROPERTIES {
 		if property == prop {
 			return true
 		}
