@@ -136,12 +136,14 @@ func main() {
 
 	conf := make(map[string]interface{})
 	finalStatus := make(map[string]interface{})
-	success := true
 	projectIDs, _ := store.GetStore().GetAllProjectIDs()
 
 	tt := U.TimeNowZ()
 	hour := tt.Hour()
 	min := tt.Minute()
+
+	successfulProjectsCount := 0 //Total number of projects with no failures
+	failedProjectsCount := 0 //Total number of projects with atleast one failure
 
 	for _, projectID := range projectIDs {
 		available := true
@@ -172,7 +174,11 @@ func main() {
 			log.WithFields(log.Fields{"project_id": projectID}).Error("Event Trigger Alert job failing")
 		}
 
-		success = success && projectSuccess
+		if projectSuccess {
+			successfulProjectsCount++
+		} else {
+			failedProjectsCount++
+		}
 
 		if sendReportForProject.SlackSuccess > 0 {
 			finalStatus[fmt.Sprintf("Success-SLACK-%v", projectID)] = sendReportForProject.SlackSuccess
@@ -248,7 +254,9 @@ func main() {
 			}
 		}
 	}
-	if !success {
+
+
+	if successfulProjectsCount/3 <= failedProjectsCount {
 		C.PingHealthcheckForFailure(healthcheckPingID, finalStatus)
 	} else {
 		C.PingHealthcheckForSuccess(healthcheckPingID, finalStatus)
