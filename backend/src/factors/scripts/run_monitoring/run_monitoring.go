@@ -183,6 +183,7 @@ func main() {
 		return
 	}
 
+	// Factors Deanon enrichment count metrics monitoring
 	RunFactorsDeanonEnrichmentCheck()
 
 	monitoringPayload := map[string]interface{}{
@@ -209,7 +210,7 @@ func main() {
 
 	C.PingHealthcheckForSuccess(healthcheckPingID, monitoringPayload)
 	C.PingHealthcheckForSuccess(C.HealthcheckSDKHealthPingID, "sdk health check success")
-	
+
 }
 
 // GetHealth - This method returns response of the http get request at /health
@@ -332,6 +333,7 @@ func MonitorSDKHealth(delayedTaskThreshold, sdkQueueThreshold, integrationQueueT
 
 }
 
+// RunFactorsDeanonEnrichmentCheck checks the last run and on the basis of that monitor the metrics related to factors deanon enrichment.
 func RunFactorsDeanonEnrichmentCheck() {
 
 	var factorsDeanonAlertMap map[int64]map[string]float64
@@ -351,6 +353,7 @@ func RunFactorsDeanonEnrichmentCheck() {
 	}
 }
 
+// MonitorFactorsDeanonDailyEnrichment fetches the project ids of the projects on paid plan and get the required metrics for each projects.
 func MonitorFactorsDeanonDailyEnrichment() (map[int64]map[string]float64, error) {
 
 	projectIds, errCode, errMsg, err := store.GetStore().GetAllProjectIdsUsingPaidPlan()
