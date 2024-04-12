@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Spin } from 'antd';
+import { Spin, notification } from 'antd';
 import FaDatepicker from 'Components/FaDatepicker';
 import ControlledComponent from 'Components/ControlledComponent';
 import { SVG as Svg, Text } from 'Components/factorsComponents';
@@ -15,6 +15,7 @@ import {
 } from 'Reducers/accountProfilesView/services';
 import { setInsightsDuration } from 'Reducers/accountProfilesView/actions';
 import { EMPTY_OBJECT } from 'Utils/global';
+import { selectSegmentBySegmentId } from 'Reducers/timelines/selectors';
 import InsightsWidget from './InsightsWidget';
 import SegmentKpisOverview from './SegmentKpisOverview';
 import { DEFAULT_DATE_RANGE } from './accountInsightsConstants';
@@ -25,11 +26,11 @@ export default function AccountsInsights() {
   const dispatch = useDispatch();
   const insightsConfig = useSelector(selectInsightsConfig);
   const accountPayload = useSelector(selectAccountPayload);
-  const editMetricStatus = useSelector(selectEditInsightsMetricStatus);
-  console.log(
-    'jklogs ~ AccountsInsights ~ editMetricStatus:',
-    editMetricStatus
+  const segment = useSelector((state) =>
+    selectSegmentBySegmentId(state, accountPayload?.segment.id)
   );
+  const areInsightsAvailable = segment.long_run_comp === true;
+  const editMetricStatus = useSelector(selectEditInsightsMetricStatus);
   const activeProject = useSelector((state) => state.global.active_project);
   const [isFetchDone, setIsFetchDone] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -76,21 +77,37 @@ export default function AccountsInsights() {
 
   const handleSave = useCallback(
     (selectedWidget, newName) => {
-      dispatch(
-        updateInsightsQueryMetric({
-          projectId: activeProject.id,
-          widgetGroupId: editWidgetGroupId,
-          widgetId: editWidget.id,
-          metric: selectedWidget.value,
-          metricName: newName
-        })
-      );
+      if (
+        editWidget.q_me !== selectedWidget.value ||
+        editWidget.d_name !== newName
+      ) {
+        dispatch(
+          updateInsightsQueryMetric({
+            projectId: activeProject.id,
+            widgetGroupId: editWidgetGroupId,
+            widgetId: editWidget.id,
+            metric:
+              selectedWidget.value !== editWidget.q_me
+                ? selectedWidget.value
+                : undefined,
+            metricName: newName !== editWidget.d_name ? newName : undefined
+          })
+        );
+      } else {
+        handleEditModalClose();
+        notification.success({
+          message: 'Success',
+          description: 'Metric updated successfully',
+          duration: 2
+        });
+      }
     },
-    [editWidget, editWidgetGroupId]
+    [editWidget, editWidgetGroupId, handleEditModalClose]
   );
 
   useEffect(() => {
     if (
+      areInsightsAvailable &&
       insightsConfig.completed !== true &&
       insightsConfig.loading !== true &&
       isFetchDone === false
@@ -100,13 +117,33 @@ export default function AccountsInsights() {
     }
   }, [insightsConfig.loading, activeProject.id, insightsConfig.completed]);
 
+  useEffect(() => {
+    if (editMetricStatus.completed === true) {
+      handleEditModalClose();
+    }
+  }, [editMetricStatus.completed, handleEditModalClose]);
+
   const isLoading =
     insightsConfig.loading === true ||
     (insightsConfig.completed !== true && insightsConfig.error !== true);
 
+  if (areInsightsAvailable === false) {
+    return (
+      <div className='flex justify-center items-center flex-col gap-y-1 flex-1'>
+        <img src='../../../../assets/icons/pana.svg' alt='loader-man' />
+        <Text type='title' level={8} extraClass='mb-0' color='character-title'>
+          Working hard to build your reports...
+        </Text>
+        <Text type='title' level={8} extraClass='mb-0' color='character-title'>
+          Check back in some time
+        </Text>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
-      <div className='w-full h-full flex items-center justify-center'>
+      <div className='w-full h-full flex items-center justify-center flex-1'>
         <Spin size='large' />
       </div>
     );

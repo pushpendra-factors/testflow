@@ -92,6 +92,7 @@ import { Text, SVG } from '../../factorsComponents';
 import AccountsTabs from './AccountsTabs';
 import AccountsInsights from './AccountsInsights/AccountsInsights';
 import AccountDrawer from './AccountDrawer';
+import InsightsWrapper from './InsightsWrapper';
 
 function AccountProfiles({
   activeProject,
@@ -1174,8 +1175,10 @@ function AccountProfiles({
     [accountPayload?.segment?.name]
   );
 
+  const Wrapper = activeTab === 'accounts' ? ProfilesWrapper : InsightsWrapper;
+
   return (
-    <ProfilesWrapper>
+    <Wrapper>
       <ControlledComponent controller={showRangeNudge}>
         <div className='mb-4'>
           <RangeNudge
@@ -1271,7 +1274,7 @@ function AccountProfiles({
       </ControlledComponent>
 
       <ControlledComponent controller={activeTab === 'insights'}>
-        <div className='my-4'>
+        <div className='my-4 flex-1 flex flex-col'>
           <AccountsInsights />
         </div>
       </ControlledComponent>
@@ -1323,7 +1326,7 @@ function AccountProfiles({
         onClickMore={() => onClickOpen(preview.domain)}
         onClickOpenNewtab={() => onClickOpenNewTab(preview.domain)}
       />
-    </ProfilesWrapper>
+    </Wrapper>
   );
 }
 
