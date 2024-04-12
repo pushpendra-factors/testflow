@@ -277,6 +277,12 @@ func main() {
 	db := C.GetServices().Db
 	defer db.Close()
 
+	featureProjectIDs, err := store.GetStore().GetAllProjectsWithFeatureEnabled(model.FEATURE_SALESFORCE, false)
+	if err != nil {
+		log.WithError(err).Error("Failed to get salesforce feature enabled projects.")
+		return
+	}
+
 	allProjects, allowedProjects, disabledProjects := C.GetProjectsFromListWithAllProjectSupport(
 		*projectIDList, *disabledProjectIDList)
 	if !allProjects {
@@ -298,6 +304,14 @@ func main() {
 	if status != http.StatusFound {
 		log.Panic("No projects enabled salesforce integration.")
 	}
+
+	featureEnabledProjectSettings := []model.SalesforceProjectSettings{}
+	for i := range salesforceEnabledProjects {
+		if U.ContainsInt64InArray(featureProjectIDs, salesforceEnabledProjects[i].ProjectID) {
+			featureEnabledProjectSettings = append(featureEnabledProjectSettings, salesforceEnabledProjects[i])
+		}
+	}
+	salesforceEnabledProjects = featureEnabledProjectSettings
 
 	allowedProjectIDs := make([]int64, 0)
 	allowedSalesforceProjectSettings := make(map[int64]*model.SalesforceProjectSettings)
