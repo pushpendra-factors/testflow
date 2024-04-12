@@ -27,8 +27,10 @@ function EditMetricModal({
   const kpiEvents = useMemo(
     () =>
       kpi?.config
-        ?.filter((item) =>
-          item.display_category.toLowerCase().includes('hubspot')
+        ?.filter(
+          (item) =>
+            item.display_category.toLowerCase().includes('hubspot') ||
+            item.display_category.toLowerCase().includes('salesforce')
         )
         ?.map((item) => getNormalizedKpi({ kpi: item }))
         ?.map((groupOpt) => ({

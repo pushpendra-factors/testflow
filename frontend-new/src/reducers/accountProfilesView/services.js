@@ -1,3 +1,4 @@
+import { notification } from 'antd';
 import { get, getHostUrl, put, post } from 'Utils/request';
 import { EMPTY_ARRAY } from 'Utils/global';
 import MomentTz from 'Components/MomentTz';
@@ -84,12 +85,25 @@ export const updateInsightsQueryMetric = ({
       dispatch({
         type: EDIT_INSIGHTS_METRIC_LOADING
       });
-      await put(null, url, {
-        q_me: metric,
-        d_name: metricName
-      });
+      const requestBody = {};
+      if (metric != null) {
+        requestBody.q_me = metric;
+      }
+      if (metricName != null) {
+        requestBody.d_name = metricName;
+      }
+      await put(null, url, requestBody);
       dispatch({
-        type: EDIT_INSIGHTS_METRIC_SUCCESS
+        type: EDIT_INSIGHTS_METRIC_SUCCESS,
+        payload: { widgetId, widgetGroupId, metric, metricName }
+      });
+      notification.success({
+        message: 'Success',
+        description:
+          metric != null
+            ? 'Metric updated successfully'
+            : 'Metric name updated successfully',
+        duration: 2
       });
     } catch (err) {
       console.log(err);

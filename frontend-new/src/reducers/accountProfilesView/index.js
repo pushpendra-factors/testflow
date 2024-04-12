@@ -236,12 +236,35 @@ export default function (state = initialState, action) {
       };
     }
     case EDIT_INSIGHTS_METRIC_SUCCESS: {
+      const { widgetGroupId, widgetId, metric, metricName } = action.payload;
+      const updatedConfig = {
+        ...state.insightsConfig,
+        config: state.insightsConfig.config.map((elem) => {
+          if (elem.wid_g_id !== widgetGroupId) {
+            return elem;
+          }
+          return {
+            ...elem,
+            wids: elem.wids.map((wid) => {
+              if (wid.id !== widgetId) {
+                return wid;
+              }
+              return {
+                ...wid,
+                d_name: metricName != null ? metricName : wid.d_name,
+                q_me: metric != null ? metric : wid.q_me
+              };
+            })
+          };
+        })
+      };
       return {
         ...state,
         editInsightsMetric: {
           ...apiStates,
           completed: true
-        }
+        },
+        insightsConfig: updatedConfig
       };
     }
     case EDIT_INSIGHTS_METRIC_ERROR: {
