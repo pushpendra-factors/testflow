@@ -187,6 +187,13 @@ func (store *MemSQL) GetSegmentById(projectId int64, segmentId string) (*model.S
 		return nil, http.StatusInternalServerError
 	}
 
+	lastRunTime, lastRunStatusCode := store.GetMarkerLastForAllAccounts(projectId)
+	if lastRunStatusCode != http.StatusFound || segment.UpdatedAt.After(lastRunTime) {
+		segment.IsLongRunComplete = false
+	} else {
+		segment.IsLongRunComplete = true
+	}
+
 	return &segment, http.StatusFound
 }
 
