@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Spin } from 'antd';
+import { Skeleton } from 'antd';
 import NoDataWithMessage from 'Components/Profile/MyComponents/NoDataWithMessage';
 import {
   AccountTimelineTableViewProps,
@@ -13,6 +13,7 @@ import TableRow from './TableRow';
 function AccountTimelineTableView({
   timelineEvents = [],
   eventPropsType,
+  userPropsType,
   loading,
   extraClass
 }: AccountTimelineTableViewProps) {
@@ -37,7 +38,7 @@ function AccountTimelineTableView({
   };
 
   return loading ? (
-    <Spin size='large' className='fa-page-loader' />
+    <Skeleton active paragraph={{ rows: 10 }} />
   ) : timelineEvents.length === 0 ? (
     <NoDataWithMessage message='No Events Enabled to Show' />
   ) : (
@@ -70,6 +71,7 @@ function AccountTimelineTableView({
         onClose={() => setDrawerVisible(false)}
         event={selectedEvent}
         eventPropsType={eventPropsType}
+        userPropsType={userPropsType}
       />
     </>
   );

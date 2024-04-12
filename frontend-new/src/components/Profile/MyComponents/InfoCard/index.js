@@ -1,6 +1,5 @@
 import React from 'react';
 import { Popover } from 'antd';
-import { Text } from 'Components/factorsComponents';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import { useSelector } from 'react-redux';
 import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
@@ -19,36 +18,24 @@ function InfoCard({
   children
 }) {
   const { eventPropNames } = useSelector((state) => state.coreQuery);
-  const { projectDomainsList } = useSelector((state) => state.global);
+  const { currentProjectSettings, projectDomainsList } = useSelector(
+    (state) => state.global
+  );
 
   const renderPropRow = (key, value) => {
-    const propType = propertiesType[key];
     if (key === '$is_page_view' && value === true) return null;
 
+    const propType = propertiesType[key];
     const propertyValue = propValueFormat(key, value, propType) || '-';
     const urlTruncatedValue = truncateURL(propertyValue, projectDomainsList);
+
     return (
-      <div className='flex justify-between py-2' key={key}>
-        <Text
-          mini
-          type='title'
-          color='grey'
-          extraClass='whitespace-nowrap mr-2'
-        >
-          {eventPropNames[key] || PropTextFormat(key)}
-        </Text>
-        <Text
-          mini
-          type='title'
-          color='grey-2'
-          weight='medium'
-          extraClass='break-all text-right'
-          truncate
-          charLimit={32}
-          toolTipTitle={propertyValue}
-        >
-          {urlTruncatedValue}
-        </Text>
+      <div className='event-infocard--row'>
+        <TextWithOverflowTooltip
+          text={eventPropNames[key] || PropTextFormat(key)}
+          extraClass='prop'
+        />
+        <div className='value'>{urlTruncatedValue}</div>
       </div>
     );
   };
@@ -73,9 +60,11 @@ function InfoCard({
         <div className='source-icon'>{icon}</div>
       </div>
 
-      {Object.entries(properties).map(([key, value]) =>
-        renderPropRow(key, value)
-      )}
+      {(
+        currentProjectSettings?.timelines_config?.events_config?.[
+          eventSource === 'Page View' ? 'PageView' : eventName
+        ] || []
+      ).map((key) => renderPropRow(key, properties[key]))}
     </div>
   );
 

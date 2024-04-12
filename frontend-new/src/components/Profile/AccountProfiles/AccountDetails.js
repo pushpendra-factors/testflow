@@ -22,7 +22,8 @@ import { FEATURES, PLANS, PLANS_V0 } from 'Constants/plans.constants';
 import {
   getGroupProperties,
   getEventPropertiesV2,
-  getGroups
+  getGroups,
+  getUserPropertiesV2
 } from 'Reducers/coreQuery/middleware';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
@@ -61,7 +62,8 @@ function AccountDetails({
   getProfileAccountDetails,
   getAccountOverview,
   getEventPropertiesV2,
-  setActivePageviewEvent
+  setActivePageviewEvent,
+  getUserPropertiesV2
 }) {
   const { TabPane } = Tabs;
 
@@ -81,6 +83,7 @@ function AccountDetails({
   const [openPopover, setOpenPopover] = useState(false);
   const [requestedEvents, setRequestedEvents] = useState({});
   const [eventPropertiesType, setEventPropertiesType] = useState({});
+  const [userPropertiesType, setUserPropertiesType] = useState({});
 
   const handleOpenPopoverChange = (value) => {
     setOpenPopover(value);
@@ -145,7 +148,7 @@ function AccountDetails({
     Object.values(eventPropertiesV2).forEach((propertyGroup) => {
       Object.values(propertyGroup || {}).forEach((arr) => {
         arr.forEach((property) => {
-          const [_, propName, category] = property;
+          const [, propName, category] = property;
           typeMap[propName] = category;
         });
       });
@@ -156,6 +159,20 @@ function AccountDetails({
   useEffect(() => {
     fetchEventPropertiesWithType();
   }, [uniqueEventNames, requestedEvents, activeProject?.id, eventPropertiesV2]);
+
+  useEffect(() => {
+    if (!userPropertiesV2) {
+      getUserPropertiesV2(activeProject?.id);
+    } else {
+      const typeMap = {};
+      Object.values(userPropertiesV2).forEach((arr) => {
+        arr.forEach(([, propName, category]) => {
+          typeMap[propName] = category;
+        });
+      });
+      setUserPropertiesType(typeMap);
+    }
+  }, [userPropertiesV2, activeProject?.id]);
 
   const titleIcon = useMemo(() => {
     if (location?.state?.accountPayload?.segment?.id) {
@@ -217,16 +234,11 @@ function AccountDetails({
   };
 
   useEffect(() => {
-    const shouldGetDetails =
-      activeProject?.id &&
-      activeId &&
-      activeId !== '' &&
-      currentProjectSettings?.timelines_config;
-
+    const shouldGetDetails = activeProject?.id && activeId && activeId !== '';
     if (shouldGetDetails) {
       getAccountDetails();
     }
-  }, [activeProject.id, activeId, currentProjectSettings?.timelines_config]);
+  }, [activeProject.id, activeId]);
 
   useEffect(() => {
     if (
@@ -732,6 +744,7 @@ function AccountDetails({
       )}
       loading={accountDetails?.isLoading}
       eventPropsType={eventPropertiesType}
+      userPropsType={userPropertiesType}
       extraClass='mt-5'
     />
   );
@@ -892,7 +905,8 @@ function AccountDetails({
     </div>
   );
 
-  useKey(['Escape'], handleOptionBackClick);
+  // Temporary disabling because of conflict with drawer
+  // useKey(['Escape'], handleOptionBackClick);
 
   return (
     <div>
@@ -917,6 +931,7 @@ const mapDispatchToProps = (dispatch) =>
       getGroupProperties,
       getAccountOverview,
       getEventPropertiesV2,
+      getUserPropertiesV2,
       getProfileAccountDetails,
       udpateProjectSettings,
       setActivePageviewEvent
