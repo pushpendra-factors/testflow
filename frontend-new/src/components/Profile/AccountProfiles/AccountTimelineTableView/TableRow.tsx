@@ -83,7 +83,7 @@ function TableRow({ event, eventPropsType = {}, onEventClick }: TableRowProps) {
         <UsernameWithIcon
           title={event.username || event.user_id}
           userID={event.user_id}
-          isAnonymous={event.username === 'new_user'}
+          isAnonymous={event.is_anonymous_user}
         />
       </td>
     </tr>

@@ -1714,7 +1714,7 @@ var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
 	GROUP_NAME_HUBSPOT_DEAL:           "Hubspot Deals",
 	GROUP_NAME_SALESFORCE_ACCOUNT:     "Salesforce Accounts",
 	GROUP_NAME_SALESFORCE_OPPORTUNITY: "Salesforce Opportunities",
-	GROUP_NAME_SIX_SIGNAL:             "Identified Companies",
+	GROUP_NAME_SIX_SIGNAL:             "Company Identification",
 	GROUP_NAME_LINKEDIN_COMPANY:       "Linkedin Company Engagements",
 	GROUP_NAME_G2:                     "G2 Engagements",
 }

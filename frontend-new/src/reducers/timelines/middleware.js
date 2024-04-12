@@ -9,9 +9,9 @@ import {
   updateSegment,
   deleteSegmentByID,
   fetchAccountOverview,
-  getTop100EventsForDomain,
-  getConfiguredUserProperties,
-  getConfiguredEventProperties
+  fetchTop100Events,
+  fetchConfiguredUserProperties,
+  fetchConfiguredEventProperties
 } from '.';
 import { formatAccountTimeline, formatUsersTimeline } from './utils';
 import { deleteSegmentAction } from './actions';
@@ -53,12 +53,23 @@ export const getProfileAccountDetails =
       fetchProfileAccountDetails(projectId, id, source)
         .then((response) => {
           const data = formatAccountTimeline(response.data);
-          resolve(
-            dispatch({
-              type: 'FETCH_PROFILE_ACCOUNT_DETAILS_FULFILLED',
-              payload: data
-            })
-          );
+          const userPropertiesMap = {};
+          const eventPropertiesMap = {};
+          data.events.forEach((event) => {
+            eventPropertiesMap[event.id] = event.properties;
+          });
+          dispatch({
+            type: 'FETCH_PROFILE_ACCOUNT_DETAILS_FULFILLED',
+            payload: data
+          });
+          dispatch({
+            type: 'FETCH_USER_CONFIG_PROPERTIES_MAP_FULFILLED',
+            payload: userPropertiesMap
+          });
+          dispatch({
+            type: 'FETCH_EVENT_CONFIG_PROPERTIES_MAP_FULFILLED',
+            payload: eventPropertiesMap
+          });
         })
         .catch((err) => {
           logger.error(err);
@@ -225,32 +236,38 @@ export const setActivePageviewEvent = (eventName) => ({
   payload: eventName
 });
 
-export const getTop100Events = (projectID, domainName) => (dispatch) =>
-  new Promise((resolve, reject) => {
-    getTop100EventsForDomain(projectID, domainName)
-      .then((response) => {
-        const events = response.data.map((event) => ({
-          ...event,
-          username: event.username || event.user_id,
-          enabled: true
-        }));
-        resolve(
-          dispatch({
-            type: 'FETCH_TOP100_EVENTS_FULFILLED',
-            payload: events || [],
-            domainName
-          })
-        );
-      })
-      .catch((err) => {
-        reject(err);
-      });
-  });
+export const getTop100Events = (projectID, domainName) => async (dispatch) => {
+  dispatch({ type: 'FETCH_TOP100_EVENTS_LOADING', domainName });
+  try {
+    const response = await fetchTop100Events(projectID, domainName);
+    const events = response.data.map((event) => ({
+      ...event,
+      username: event.username || event.user_id,
+      enabled: true
+    }));
+    const eventPropertiesMap = {};
+    events.forEach((event) => {
+      eventPropertiesMap[event.id] = event.properties;
+    });
+    dispatch({
+      type: 'FETCH_TOP100_EVENTS_FULFILLED',
+      payload: events || [],
+      domainName
+    });
+    dispatch({
+      type: 'FETCH_EVENT_CONFIG_PROPERTIES_MAP_FULFILLED',
+      payload: eventPropertiesMap
+    });
+  } catch (err) {
+    dispatch({ type: 'FETCH_TOP100_EVENTS_FAILED', domainName });
+    logger.error(err);
+  }
+};
 
-export const getConfiguredUserPropertiesMid =
+export const getConfiguredUserProperties =
   (projectID, userID, isAnonymous) => (dispatch) =>
     new Promise((resolve, reject) => {
-      getConfiguredUserProperties(projectID, userID, isAnonymous)
+      fetchConfiguredUserProperties(projectID, userID, isAnonymous)
         .then((response) => {
           resolve(
             dispatch({
@@ -265,11 +282,12 @@ export const getConfiguredUserPropertiesMid =
         });
     });
 
-export const getConfiguredEventPropertiesMid =
+export const getConfiguredEventProperties =
   (projectID, eventID, eventName) => (dispatch) =>
     new Promise((resolve, reject) => {
-      getConfiguredEventProperties(projectID, eventID, eventName)
+      fetchConfiguredEventProperties(projectID, eventID, eventName)
         .then((response) => {
+          console.log('response--->', response);
           resolve(
             dispatch({
               type: 'FETCH_EVENT_CONFIG_PROPERTIES_FULFILLED',

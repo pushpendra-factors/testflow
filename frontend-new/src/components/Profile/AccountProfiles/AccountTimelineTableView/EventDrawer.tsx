@@ -10,6 +10,10 @@ import { updateEventPropertiesConfig } from 'Reducers/timelines';
 import { fetchProjectSettings, udpateProjectSettings } from 'Reducers/global';
 import { bindActionCreators } from 'redux';
 import logger from 'Utils/logger';
+import {
+  getConfiguredEventProperties,
+  getConfiguredUserProperties
+} from 'Reducers/timelines/middleware';
 import styles from '../index.module.scss';
 import EventDetails from './EventDetails';
 import UserDetails from './UserDetails';
@@ -19,8 +23,11 @@ function EventDrawer({
   onClose,
   event,
   eventPropsType,
+  userPropsType,
   fetchProjectSettings,
-  udpateProjectSettings
+  udpateProjectSettings,
+  getConfiguredEventProperties,
+  getConfiguredUserProperties
 }: ComponentProps): JSX.Element {
   const { active_project: activeProject } = useSelector(
     (state: any) => state.global
@@ -47,19 +54,19 @@ function EventDrawer({
     setActiveUser({
       name: event.username,
       id: event.user_id,
-      isAnonymous: event.is_anonymous_user,
-      properties: event.user_properties
+      isAnonymous: event.is_anonymous_user
     });
   }, [event]);
 
   const handleUpdateEventProperties = (newList: string[]) => {
-    updateEventPropertiesConfig(
-      activeProject?.id,
-      event?.display_name === 'Page View' ? 'PageView' : event.name,
-      newList
-    )
+    const eventName =
+      event?.display_name === 'Page View' ? 'PageView' : event.name;
+    updateEventPropertiesConfig(activeProject?.id, eventName, newList)
       .then(() => {
         fetchProjectSettings(activeProject?.id);
+      })
+      .then(() => {
+        getConfiguredEventProperties(activeProject.id, event.id, eventName);
         message.success('Updated Event Properties Configuration');
       })
       .catch((err) => {
@@ -74,8 +81,14 @@ function EventDrawer({
     try {
       udpateProjectSettings(activeProject.id, {
         timelines_config: { ...timelinesConfig }
+      }).then(() => {
+        getConfiguredUserProperties(
+          activeProject.id,
+          activeUser?.id,
+          activeUser?.isAnonymous
+        );
+        message.success('Updated User Properties Configuration');
       });
-      message.success('Updated User Properties Configuration');
     } catch (err) {
       logger.error(err);
       message.error('Error Updating User Properties Configuration');
@@ -102,6 +115,7 @@ function EventDrawer({
       handleUpdateEventProperties([...currentList, option.value]);
     if (activeTab === 'user')
       handleUpdateUserProperties([...currentList, option.value]);
+    setPropSelectOpen(false);
   };
 
   const mapProperties = (properties: object) =>
@@ -207,6 +221,7 @@ function EventDrawer({
           >
             <UserDetails
               user={activeUser}
+              userPropsType={userPropsType}
               onUpdate={handleUpdateUserProperties}
             />
           </Tabs.TabPane>
@@ -239,7 +254,9 @@ const mapDispatchToProps = (dispatch: any) =>
   bindActionCreators(
     {
       fetchProjectSettings,
-      udpateProjectSettings
+      udpateProjectSettings,
+      getConfiguredEventProperties,
+      getConfiguredUserProperties
     },
     dispatch
   );

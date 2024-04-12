@@ -8,12 +8,13 @@ import { PropTextFormat } from 'Utils/dataFormatter';
 import { UserDetailsProps } from 'Components/Profile/types';
 import { Avatar, Button } from 'antd';
 import { bindActionCreators } from 'redux';
-import { getConfiguredUserPropertiesMid } from 'Reducers/timelines/middleware';
+import { getConfiguredUserProperties } from 'Reducers/timelines/middleware';
 
 function UserDetails({
   user,
+  userPropsType,
   onUpdate,
-  getConfiguredUserPropertiesMid
+  getConfiguredUserProperties
 }: ComponentProps) {
   const [sortableItems, setSortableItems] = useState<string[]>([]);
 
@@ -25,21 +26,13 @@ function UserDetails({
 
   const userProperties = useMemo(() => {
     if (!user) return {};
-    return user?.properties
-      ? user.properties
-      : userConfigProperties[user.id]
-        ? userConfigProperties[user.id]
-        : {};
+    return userConfigProperties[user.id] || {};
   }, [user, userConfigProperties]);
 
   useEffect(() => {
     if (!user) return;
     if (!userConfigProperties[user?.id])
-      getConfiguredUserPropertiesMid(
-        activeProject.id,
-        user.id,
-        user.isAnonymous
-      );
+      getConfiguredUserProperties(activeProject.id, user.id, user.isAnonymous);
   }, [activeProject, user, userConfigProperties]);
 
   const renderUsername = (userName: string, isAnon: boolean) => {
@@ -102,7 +95,7 @@ function UserDetails({
       </div>
       <div>
         {sortableItems.map((property, index) => {
-          const propType = 'categorical';
+          const propType = userPropsType[property] || 'categorical';
           return (
             <div className='leftpane-prop justify-between'>
               <div className='flex items-center justify-start'>
@@ -152,7 +145,7 @@ function UserDetails({
 const mapDispatchToProps = (dispatch: any) =>
   bindActionCreators(
     {
-      getConfiguredUserPropertiesMid
+      getConfiguredUserProperties
     },
     dispatch
   );

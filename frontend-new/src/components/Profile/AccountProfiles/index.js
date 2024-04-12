@@ -35,7 +35,6 @@ import {
 import useFeatureLock from 'hooks/useFeatureLock';
 import { FEATURES } from 'Constants/plans.constants';
 import RangeNudge from 'Components/GenericComponents/RangeNudge';
-import uniq from 'lodash/uniq';
 import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
 import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
 import { selectGroupsList } from 'Reducers/groups/selectors';
@@ -94,10 +93,6 @@ import AccountsInsights from './AccountsInsights/AccountsInsights';
 import AccountDrawer from './AccountDrawer';
 
 function AccountProfiles({
-  activeProject,
-  accounts,
-  accountPreview,
-  currentProjectSettings,
   createNewSegment,
   getSavedSegments,
   fetchProjectSettings,
@@ -109,28 +104,41 @@ function AccountProfiles({
   deleteSegment,
   getTop100Events
 }) {
+  // General
+  const [timelineConfig, setTimelineConfig] = useState({});
+  const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
+  const [errMsg, setErrMsg] = useState('');
+
+  // Ant Table
+  const [newTableColumns, setNewTableColumns] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [currentPageSize, setCurrentPageSize] = useState(25);
+  const [defaultSorterInfo, setDefaultSorterInfo] = useState({});
+
+  // Search Bar
   const [searchBarOpen, setSearchBarOpen] = useState(false);
-  const [listSearchItems, setListSearchItems] = useState([]);
-  const [listProperties, setListProperties] = useState([]);
-  const [showPopOver, setShowPopOver] = useState(false);
-  const [checkListAccountProps, setCheckListAccountProps] = useState([]);
-  const [tlConfig, setTLConfig] = useState({});
-  const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
-  const [downloadCSVOptions, setDownloadCSVOptions] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Column Selector
+  const [showTableColumnsDD, setShowTableColumnsDD] = useState(false);
+  const [tableColumnsList, setTableColumnsList] = useState([]);
+  const [selectedTableColumnsList, setSelectedTableColumnsList] = useState([]);
+
+  // Segment
   const [filtersExpanded, setFiltersExpanded] = useState(false);
-  const [saveSegmentModal, setSaveSegmentModal] = useState(false);
-  const [updateSegmentModal, setUpdateSegmentModal] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState(INITIAL_FILTERS_STATE);
   const [appliedFilters, setAppliedFilters] = useState(INITIAL_FILTERS_STATE);
   const [moreActionsModalMode, setMoreActionsModalMode] = useState(null); // DELETE | RENAME
+  const [showSegmentActions, setShowSegmentActions] = useState(false);
+  const [saveSegmentModal, setSaveSegmentModal] = useState(false);
+  const [updateSegmentModal, setUpdateSegmentModal] = useState(false);
+
+  // Download
   const [showDownloadCSVModal, setShowDownloadCSVModal] = useState(false);
   const [csvDataLoading, setCSVDataLoading] = useState(false);
-  const [defaultSorterInfo, setDefaultSorterInfo] = useState({});
-  const [showSegmentActions, setShowSegmentActions] = useState(false);
-  const [errMsg, setErrMsg] = useState('');
-  const [newTableColumns, setNewTableColumns] = useState([]);
+  const [downloadCSVOptions, setDownloadCSVOptions] = useState([]);
+
+  // Preview
   const [processedDomains, setProcessedDomains] = useState(new Set());
   const [preview, setPreview] = useState({ drawerVisible: false, domain: {} });
 
@@ -146,16 +154,26 @@ function AccountProfiles({
   const location = useLocation();
   const { segment_id: segmentID } = useParams();
 
-  const { projectDomainsList } = useSelector((state) => state.global);
   const activeTab = useSelector((state) => selectActiveTab(state));
+
+  const { accounts } = useSelector((state) => state.timelines);
+
+  const {
+    active_project: activeProject,
+    currentProjectSettings,
+    projectDomainsList
+  } = useSelector((state) => state.global);
+
   const { groups, groupProperties, groupPropNames, eventNames } = useSelector(
     (state) => state.coreQuery
   );
 
   const { sixSignalInfo } = useSelector((state) => state.featureConfig);
+
   const { newSegmentMode, filtersDirty: areFiltersDirty } = useSelector(
     (state) => state.accountProfilesView
   );
+
   const groupsList = useSelector((state) => selectGroupsList(state));
 
   const accountPayload = useSelector((state) => selectAccountPayload(state));
@@ -218,7 +236,7 @@ function AccountProfiles({
       []
     );
 
-    setListProperties([...filteredDomainProps, ...groupProps]);
+    setTableColumnsList([...filteredDomainProps, ...groupProps]);
   }, [groupProperties, groups]);
 
   useEffect(() => {
@@ -227,20 +245,20 @@ function AccountProfiles({
       : currentProjectSettings.timelines_config?.account_config?.table_props ||
         [];
     const accountPropsWithEnableKey = formatUserPropertiesToCheckList(
-      listProperties,
+      tableColumnsList,
       tableProps?.filter(
         (entry) => entry !== '' && entry !== undefined && entry !== null
       )
     );
     const csvPropsWithEnableKey = formatUserPropertiesToCheckList(
-      [...listProperties, ['Last Activity', 'last_activity', 'datetime']],
+      [...tableColumnsList, ['Last Activity', 'last_activity', 'datetime']],
       tableProps?.filter(
         (entry) => entry !== '' && entry !== undefined && entry !== null
       )
     );
     setDownloadCSVOptions(csvPropsWithEnableKey);
-    setCheckListAccountProps(accountPropsWithEnableKey);
-  }, [currentProjectSettings, listProperties, accountPayload]);
+    setSelectedTableColumnsList(accountPropsWithEnableKey);
+  }, [currentProjectSettings, tableColumnsList, accountPayload]);
 
   const getGroupPropsFromAPI = useCallback(
     async (groupId) => {
@@ -260,16 +278,16 @@ function AccountProfiles({
 
   useEffect(() => {
     if (!currentProjectSettings?.timelines_config) return;
-    setTLConfig(currentProjectSettings.timelines_config);
+    setTimelineConfig(currentProjectSettings.timelines_config);
   }, [currentProjectSettings?.timelines_config]);
 
   useEffect(() => {
-    if (!accountPayload.search_filter?.length) {
-      setListSearchItems([]);
+    if (!accountPayload?.search_filter?.length) {
+      setSearchTerm('');
       setSearchBarOpen(false);
     } else {
       const listValues = accountPayload.search_filter || [];
-      setListSearchItems(uniq(listValues));
+      setSearchTerm(listValues[0]);
       setSearchBarOpen(true);
     }
   }, [accountPayload?.search_filter]);
@@ -495,9 +513,9 @@ function AccountProfiles({
   const handlePropChange = (option) => {
     if (
       option.enabled ||
-      checkListAccountProps.filter((item) => item.enabled).length < 12
+      selectedTableColumnsList.filter((item) => item.enabled).length < 12
     ) {
-      setCheckListAccountProps((prev) => {
+      setSelectedTableColumnsList((prev) => {
         const checkListProps = [...prev];
         const optIndex = checkListProps.findIndex(
           (obj) => obj.prop_name === option.prop_name
@@ -519,7 +537,7 @@ function AccountProfiles({
   const applyTableProps = async () => {
     if (accountPayload?.segment?.id?.length) {
       const newTableProps =
-        checkListAccountProps
+        selectedTableColumnsList
           ?.filter(({ enabled }) => enabled)
           ?.map(({ prop_name }) => prop_name)
           ?.filter((entry) => entry !== '' && entry !== undefined) || [];
@@ -537,14 +555,14 @@ function AccountProfiles({
       setAccountPayload({ ...updatedPayload });
       await getSavedSegments(activeProject.id);
     } else {
-      const enabledProps = checkListAccountProps
+      const enabledProps = selectedTableColumnsList
         .filter(({ enabled }) => enabled)
         .map(({ prop_name }) => prop_name);
 
       const updatedConfig = {
-        ...tlConfig,
+        ...timelineConfig,
         account_config: {
-          ...tlConfig.account_config,
+          ...timelineConfig.account_config,
           table_props: enabledProps
         }
       };
@@ -554,12 +572,12 @@ function AccountProfiles({
       });
       setAccountPayload({ ...accountPayload });
     }
-    setShowPopOver(false);
+    setShowTableColumnsDD(false);
   };
 
   const handleDisableOptionClick = () => {
     setIsUpgradeModalVisible(true);
-    setShowPopOver(false);
+    setShowTableColumnsDD(false);
   };
 
   const popoverContent = () => (
@@ -572,9 +590,9 @@ function AccountProfiles({
       >
         <SearchCheckList
           placeholder='Search Properties'
-          mapArray={checkListAccountProps}
+          mapArray={selectedTableColumnsList}
           sortable
-          updateList={setCheckListAccountProps}
+          updateList={setSelectedTableColumnsList}
           titleKey='display_name'
           checkedKey='enabled'
           onChange={handlePropChange}
@@ -771,9 +789,8 @@ function AccountProfiles({
   const handleAccountSearch = (values) => {
     let valString;
     if (
-      (listSearchItems.length >= 1 &&
-        listSearchItems[0] === values?.accounts_search) ||
-      (listSearchItems.length === 0 && !values?.accounts_search)
+      (searchTerm !== '' && searchTerm === values?.accounts_search) ||
+      (searchTerm === '' && !values?.accounts_search)
     ) {
       return;
     }
@@ -813,12 +830,8 @@ function AccountProfiles({
               <Input
                 ref={searchAccountsInputRef}
                 size='large'
-                value={
-                  listSearchItems.length ? listSearchItems.join(', ') : null
-                }
-                defaultValue={
-                  listSearchItems.length ? listSearchItems.join(', ') : null
-                }
+                value={searchTerm}
+                defaultValue={searchTerm}
                 placeholder='Search Accounts'
                 style={{
                   width: '240px',
@@ -882,12 +895,12 @@ function AccountProfiles({
     <Popover
       overlayClassName='fa-activity--filter'
       placement='bottomLeft'
-      visible={showPopOver}
+      visible={showTableColumnsDD}
       onVisibleChange={(visible) => {
-        setShowPopOver(visible);
+        setShowTableColumnsDD(visible);
       }}
       onClick={() => {
-        setShowPopOver(true);
+        setShowTableColumnsDD(true);
       }}
       trigger='click'
       content={popoverContent}
@@ -905,13 +918,6 @@ function AccountProfiles({
     setCurrentPageSize(pageParams.pageSize);
     setDefaultSorterInfo({ key: sorter.columnKey, order: sorter.order });
     onDrawerClose();
-  };
-
-  const onRowRender = (domainName) => {
-    if (!processedDomains.has(domainName)) {
-      setProcessedDomains(processedDomains.add(domainName));
-      getTop100Events(activeProject.id, domainName);
-    }
   };
 
   const onClickOpen = (domain) => {
@@ -939,10 +945,9 @@ function AccountProfiles({
         displayTableProps,
         groupPropNames,
         eventNames,
-        listProperties,
+        tableColumnsList,
         defaultSorterInfo,
         projectDomainsList,
-        onRowRender,
         onClickOpen,
         onClickOpenNewTab
       })
@@ -950,7 +955,7 @@ function AccountProfiles({
   }, [
     displayTableProps,
     groupPropNames,
-    listProperties,
+    tableColumnsList,
     defaultSorterInfo,
     projectDomainsList
   ]);
@@ -979,6 +984,18 @@ function AccountProfiles({
     }
   }, [newTableColumns, location.state]);
 
+  const handleTableRowClick = (account) => {
+    setPreview({
+      drawerVisible: true,
+      domain: { id: account.identity, name: account.domain_name }
+    });
+
+    if (!processedDomains.has(account.domain_name)) {
+      setProcessedDomains(processedDomains.add(account.domain_name));
+      getTop100Events(activeProject.id, account.domain_name);
+    }
+  };
+
   const renderTable = useCallback(() => {
     const mergeColumns = newTableColumns.map((col) => ({
       ...col,
@@ -996,11 +1013,7 @@ function AccountProfiles({
             }
           }}
           onRow={(account) => ({
-            onClick: () =>
-              setPreview({
-                drawerVisible: true,
-                domain: { id: account.identity, name: account.domain_name }
-              })
+            onClick: () => handleTableRowClick(account)
           })}
           className='fa-table--profileslist'
           dataSource={tableData}
@@ -1112,7 +1125,7 @@ function AccountProfiles({
 
       return csvRows.join('\n');
     },
-    [checkListAccountProps]
+    [selectedTableColumnsList]
   );
 
   const handleDownloadCSV = useCallback(
@@ -1317,7 +1330,6 @@ function AccountProfiles({
       />
       <AccountDrawer
         domain={preview.domain.name}
-        events={accountPreview[preview.domain.name]}
         visible={preview.drawerVisible}
         onClose={onDrawerClose}
         onClickMore={() => onClickOpen(preview.domain)}
@@ -1326,14 +1338,6 @@ function AccountProfiles({
     </ProfilesWrapper>
   );
 }
-
-const mapStateToProps = (state) => ({
-  activeProject: state.global.active_project,
-  accounts: state.timelines.accounts,
-  segments: state.timelines.segments,
-  accountPreview: state.timelines.accountPreview,
-  currentProjectSettings: state.global.currentProjectSettings
-});
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
@@ -1352,4 +1356,4 @@ const mapDispatchToProps = (dispatch) =>
     dispatch
   );
 
-export default connect(mapStateToProps, mapDispatchToProps)(AccountProfiles);
+export default connect(null, mapDispatchToProps)(AccountProfiles);

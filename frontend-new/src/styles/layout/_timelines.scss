@@ -1297,3 +1297,26 @@
     padding: 12px 24px;
   }
 }
+
+.event-infocard--row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+
+  .prop {
+    color: $fa-color--mono-4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin: 0;
+    margin-right: 8px;
+    max-width: 60%;
+  }
+
+  .value {
+    color: $fa-color--mono-5;
+    word-break: break-all;
+    text-align: right;
+    max-width: 60%;
+  }
+}
