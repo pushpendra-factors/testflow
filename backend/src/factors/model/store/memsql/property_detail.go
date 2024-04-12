@@ -239,8 +239,6 @@ func (store *MemSQL) GetPropertyTypeByKeyValue(projectID int64, eventName string
 
 				if err != nil {
 					if err == model.ErrorUsingSalesforceDatetimeTemplate {
-						log.WithFields(log.Fields{"project_id": projectID, "event_name": eventName, "property_key": propertyKey, "property_value": propertyValue, "is_user_property": isUserProperty}).
-							Warn(err)
 						return pType
 					}
 
