@@ -4871,3 +4871,62 @@ func TestAllAccountWebsiteProperties(t *testing.T) {
 		assert.Contains(t, resultPropertyKeys, key)
 	}
 }
+
+func TestLatestPageProperties(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	joinTime := U.TimeNowZ().Add(-10 * time.Minute).Unix()
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: joinTime, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	status := SDK.TrackUserAccountGroup(project.ID, createdUserID, model.GROUP_NAME_SIX_SIGNAL, &U.PropertiesMap{U.SIX_SIGNAL_DOMAIN: "www.example.com"}, U.TimeNowUnix()-10)
+	assert.Equal(t, http.StatusOK, status)
+
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: joinTime, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	status = SDK.TrackUserAccountGroup(project.ID, createdUserID2, model.GROUP_NAME_SIX_SIGNAL, &U.PropertiesMap{U.SIX_SIGNAL_DOMAIN: "www.example.com"}, U.TimeNowUnix()-10)
+	assert.Equal(t, http.StatusOK, status)
+
+	w := ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"auto":true, "user_id": "%s", "event_name": "www.example.com/", 
+	"event_properties": {"$page_domain": "www.example.com", "$page_raw_url": "https://www.example.com/", "$page_url": "www.example.com/", 
+	"$referrer": "", "$referrer_url": "","$referrer_domain":"gartner.com","$page_spent_time":120,"$qp_utm_campaign":"google","$qp_utm_source":"google",
+	"$qp_utm_medium":"email","$qp_utm_keyword":"analytics","$qp_utm_term":"term1","$qp_utm_content":"content1"}}`, createdUserID)),
+		map[string]string{
+			"Authorization": project.Token,
+		})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"auto":true, "user_id": "%s", "event_name": "www.example.com/a", 
+	"event_properties": {"$page_domain": "www.example.com", "$page_raw_url": "https://www.example.com/a", "$page_url": "www.example.com/a", 
+	"$referrer": "", "$referrer_url": "","$referrer_domain":"","$page_spent_time":120,"$qp_utm_campaign":"google","$qp_utm_source":"google",
+	"$qp_utm_medium":"email","$qp_utm_keyword":"analytics","$qp_utm_term":"term1","$qp_utm_content":"content1"}}`, createdUserID2)),
+		map[string]string{
+			"Authorization": project.Token,
+		})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	domainUser, status := store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_DOMAINS, "example.com")
+	assert.Equal(t, http.StatusFound, status)
+	propertiesMap1, err := U.DecodePostgresJsonb(&domainUser.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, "www.example.com/a", (*propertiesMap1)[util.DP_LATEST_PAGE_URL])
+
+	time.Sleep(1 * time.Second)
+	_, status = store.GetStore().UpdateUserProperties(project.ID, createdUserID, &postgres.Jsonb{[]byte(`{"a":1}`)}, util.TimeNowUnix()+1000)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	domainUser, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_DOMAINS, "example.com")
+	assert.Equal(t, http.StatusFound, status)
+	propertiesMap1, err = U.DecodePostgresJsonb(&domainUser.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, "www.example.com/a", (*propertiesMap1)[util.DP_LATEST_PAGE_URL])
+
+}
