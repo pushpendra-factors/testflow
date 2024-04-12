@@ -1232,9 +1232,17 @@ func GetMergedPropertiesForDomain(projectID int64, users []User) (map[string]int
 	/*
 		Latest properties merge
 	*/
-	// Order the properties by properties_updated_timestamp to maintain the latest properties
+	// Order the properties by last event at, if it is not available then order by properties updated timestamp and move to beginning
 	sort.Slice(users, func(i, j int) bool {
-		return users[i].PropertiesUpdatedTimestamp < users[j].PropertiesUpdatedTimestamp
+		if users[i].LastEventAt == nil && users[j].LastEventAt == nil {
+			return users[i].PropertiesUpdatedTimestamp < users[j].PropertiesUpdatedTimestamp
+		} else if users[i].LastEventAt == nil {
+			return false
+		} else if users[j].LastEventAt == nil {
+			return true
+		}
+
+		return users[i].LastEventAt.Before(*users[j].LastEventAt)
 	})
 
 	for i := range users {
@@ -1252,7 +1260,6 @@ func GetMergedPropertiesForDomain(projectID int64, users []User) (map[string]int
 		for key := range U.USER_LATEST_PROPERTIES_TO_DOMAIN_LATEST_PROPERTIES {
 			updateProperties[key] = (*propertiesMap)[key]
 		}
-
 	}
 
 	/*
