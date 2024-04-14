@@ -574,6 +574,7 @@ type QueryEventWithProperties struct {
 	GroupAnalysis string          `json:"grpa"`
 	Properties    []QueryProperty `json:"pr"`
 	EventNameIDs  []interface{}   `json:"-"`
+	From          int64           `json:"fr"`
 }
 
 func (ewp *QueryEventWithProperties) TransformDateTypeFilters(timezoneString U.TimeZoneString) error {

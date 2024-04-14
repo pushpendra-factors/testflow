@@ -3464,6 +3464,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 							Entity:    "event",
 						},
 					},
+					From: U.TimeNowZ().AddDate(0, 0, -1).Unix(),
 				},
 			},
 			GlobalUserProperties: []model.QueryProperty{
@@ -3641,6 +3642,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 				{
 					Name:          U.EVENT_NAME_SESSION,
 					GroupAnalysis: "Page views",
+					From:          U.TimeNowZ().AddDate(0, 0, -2).Unix(),
 					Properties: []model.QueryProperty{
 						{
 							Type:      "categorical",
@@ -3656,6 +3658,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 				{
 					Name:          U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
 					GroupAnalysis: "Hubspot Companies",
+					From:          U.TimeNowZ().AddDate(0, 0, -1).Unix(),
 					Properties: []model.QueryProperty{
 						{
 							Type:      "categorical",
