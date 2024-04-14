@@ -48,6 +48,7 @@ func main() {
 	disableAllAccountsMarkerProjectIDs := flag.String("disable_all_accounts_marker_project_ids", "",
 		"Project Id to disable all accounts run for marker. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
 	runForAllAccountsInHours := flag.Int("run_for_all_accounts_in_hours", 24, "Run domains where marker_last_run_all_accounts is greater than given hours")
+	jobRunCount := flag.Int("job_run_count", 40, "Total number of runs per day")
 
 	memSQLUseExactConnectionsConfig := flag.Bool("memsql_use_exact_connection_config", false, "Use exact connection for open and idle as given.")
 	memSQLDBMaxOpenConnections := flag.Int("memsql_max_open_connections", 100, "Max no.of open connections allowed on connection pool of memsql")
@@ -98,6 +99,7 @@ func main() {
 		RunAllAccountsMarkerProjectIDs:     *runAllAccountsMarkerProjectIDs,
 		DisableAllAccountsMarkerProjectIDs: *disableAllAccountsMarkerProjectIDs,
 		RunForAllAccountsInHours:           *runForAllAccountsInHours,
+		JobRunCountPerDayMarker:            *jobRunCount,
 		BatchSizeDomains:                   *batchSizeDomains,
 		DomainsLimitAllRun:                 *domainsLimitAllRun,
 	}
@@ -135,7 +137,7 @@ func RunSegmentMarkerForProjects(projectIdFlag *string) {
 		return
 	}
 
-	numberOfRunsPerDay := 40
+	numberOfRunsPerDay := C.MarkerJobRunCountPerDay()
 
 	limit := int(projectCount / numberOfRunsPerDay)
 
