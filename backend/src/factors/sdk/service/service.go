@@ -89,6 +89,9 @@ func main() {
 	excludeBotIPV4AddressByRange := flag.String("exclude_bot_ip_by_range",
 		"", "CIDR ranges for excluding bot traffic.")
 
+	deviceServiceUrl := flag.String("device_service_url", "http://0.0.0.0:3000/device_service", "URL for the device detection service")
+	enableDeviceServiceByProjectID := flag.String("enable_device_service_by_project_id", "", "")
+
 	flag.Parse()
 
 	appName := "sdk_server"
@@ -125,11 +128,13 @@ func main() {
 		// List of tokens (public and private) to block SDK requests.
 		BlockedSDKRequestProjectTokens:                 C.GetTokensFromStringListAsString(*blockedSDKRequestProjectTokens),
 		EnableSDKAndIntegrationRequestQueueDuplication: *enableSDKAndIntegrationRequestQueueDuplication,
-		CacheSortedSet:          *cacheSortedSet,
-		DuplicateQueueRedisHost: *duplicateQueueRedisHost,
-		DuplicateQueueRedisPort: *duplicateQueueRedisPort,
-		SentryDSN:               *sentryDSN,
-		SentryRollupSyncInSecs:  *sentryRollupSyncInSecs,
+		CacheSortedSet:                              *cacheSortedSet,
+		DuplicateQueueRedisHost:                     *duplicateQueueRedisHost,
+		DuplicateQueueRedisPort:                     *duplicateQueueRedisPort,
+		SentryDSN:                                   *sentryDSN,
+		SentryRollupSyncInSecs:                      *sentryRollupSyncInSecs,
+		DeviceServiceURL:                            *deviceServiceUrl,
+		EnableDeviceServiceByProjectID:              *enableDeviceServiceByProjectID,
 		AllowSupportForUserPropertiesInIdentifyCall: *allowSupportForUserPropertiesInIdentifyCall,
 		EnableDebuggingForIP:                        *enableDebuggingForIP,
 		BlockedIPProjectTokens:                      *blockedIPProjectTokens,
