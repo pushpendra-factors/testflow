@@ -4299,10 +4299,21 @@ func GetPropertyIncludeListForDomainProperties() (string, error) {
 
 func (store *MemSQL) UpdateDomainPropertiesByUser(projectID int64, userID string) int {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "user_id": userID})
+
+	if projectID == 0 || userID == "" {
+		logCtx.Error("Invalid parameters")
+		return http.StatusBadRequest
+	}
+
 	domainGroup, status := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
 	if status != http.StatusFound {
-		logCtx.Error("Failed to get domain group")
-		return http.StatusInternalServerError
+		if status == http.StatusNotFound {
+			// if domains groups does not exist then domain enrichment haven't started
+			return http.StatusOK
+		}
+
+		logCtx.Error("Failed to get domain group on UpdateDomainPropertiesByUser.")
+		return status
 	}
 
 	logCtx.WithFields(log.Fields{"caller_func": model.GetFunctionCaller()}).Info("Updating update domain properties by user id.")
