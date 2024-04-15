@@ -498,7 +498,7 @@ func checkDateTypeProperty(segmentRule model.QueryProperty, properties *map[stri
 			propertyExists = true
 		}
 	case model.NotInBetweenStr, model.NotInPrevious, model.NotInLastStr:
-		if !(checkValue.From <= propertyValue) && !(propertyValue <= checkValue.To) {
+		if !(checkValue.From <= propertyValue && propertyValue <= checkValue.To) {
 			propertyExists = true
 		}
 	default:
