@@ -218,6 +218,7 @@ func (store *MemSQL) CreateWidgetGroups(projectID int64) ([]model.WidgetGroup, i
 func (store *MemSQL) CreateWidgetGroup(widgetGroup model.WidgetGroup) (model.WidgetGroup, int) {
 
 	logCtx := log.WithFields(log.Fields{"widget_group": widgetGroup})
+	logCtx.Warn("Widget Group created")
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
 	db := C.GetServices().Db
@@ -267,6 +268,7 @@ func (store *MemSQL) AddWidgetsToWidgetGroup(projectID int64, widgetGroupName, i
 	widgetGroup.WidgetsAdded = true
 	widgetGroup.UpdatedAt = time.Now()
 
+	log.WithField("widgetGroup", widgetGroup).Warn("Add widgets to widget group")
 	err := db.Save(&widgetGroup).Error
 	if err != nil {
 		logCtx.WithField("err", err).Warn("Failed during insert of widget group" + integrationName + " ")
