@@ -1,100 +1,135 @@
 package v1
 
 import (
+	"encoding/json"
+	mid "factors/middleware"
+	"factors/model/model"
+	"factors/model/store"
+	U "factors/util"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	log "github.com/sirupsen/logrus"
 )
 
-var jsonResponse string = `
-{
-	    templates: [
-	        {
-	            title: 'Add identified companies to HubSpot companies.',
-	            short_desc: 'Segment is a Customer Data Platform (CDP) that simplifies collecting and using data from the users of your digital properties and SaaS applications',
-	            long_desc: '<p>Segment is a Customer Data Platform (CDP) that simplifies collecting and using data from the users of your digital properties and SaaS applications<p>',
-	            image: 'factors.ai/../../image_URL.png',
-	            category: ['Hubspot'],
-	            tags: ['Website session', 'Company country','Company revenue range'],
-	            alert_config: {
-	                published: false,
-	                draft: true,
-	                title: 'saved title name',
-	                desr: 'saved desc',
-	                integrations: ['apollo', 'hubspot'],
-	                trigger: {
-	                        "event": "$session",
-	                        "event_level": "user",
-	                        "breakdown_properties": [
-	                            {
-	                                "en": "user",
-	                                "ena": "$session",
-	                                "pr": "$city",
-	                                "pty": "categorical"
-	                            }
-	                        ],
-	                        "filter": [
-	                            {
-	                                "en": "user",
-	                                "grpn": "user",
-	                                "lop": "AND",
-	                                "op": "equals",
+func GetAllWorkflowTemplatesHandler(c *gin.Context) {
+	workflowTemplates, errCode := store.GetStore().GetAllWorkflowTemplates()
+	if errCode != http.StatusOK {
+		c.AbortWithStatus(errCode)
+	}
 
-	                                "pr": "$hubspot_contact_hs_analytics_source_data_1",
-	                                "ty": "categorical",
-	                                "va": "API"
-	                            },
-	                            {
-	                                "en": "user",
-	                                "grpn": "user",
-	                                "lop": "OR",
-	                                "op": "equals",
-	                                "pr": "$hubspot_contact_hs_analytics_source_data_1",
-	                                "ty": "categorical",
-	                                "va": "Auto-tagged PPC"
-	                            },
-	                        ],
-	                },
-	                expected_payload: {
-	                    "mandatory_props_company": {
-	                      "company_name": "company_name_value",
-	                      "company_domain": "company_domain_value"
-	                    },
-	                    "additional_props_company": {
-	                      "hs_comp_field_1": "Fa_value_1",
-	                      "hs_comp_field_2": "Fa_value_2",
-	                      "hs_comp_field_3": "Fa_value_3",
-	                      "hs_comp_field_n": "Fa_value_n"
-	                    },
-	                    "apollo_config": {
-	                      "api_key": "user_api_key",
-	                      "job_titles": "array_of_job_titles",
-	                      "job_seniorities": "array_of_job_seniorities",
-	                      "max_contacts": "number_of_contacts_per_company"
-	                    },
-	                    "additional_props_contact_mapping": {
-	                      "first_name": "hs_first_name_field",
-	                      "last_name": "hs_last_name_field",
-	                      "full_name": "hs_full_name_field",
-	                      "job_title": "hs_job_title_field",
-	                      "job_seniority": "hs_job_seniority_field",
-	                      "country": "hs_country_field",
-	                      "state": "hs_state_field",
-	                      "city": "hs_city_field",
-	                      "linkedin_url": "hs_linkedin_url_field"
-	                    }
-	                  },
-
-	            }
-
-	        },
-	    ]
-	}`
-
-func GetAllWorkflowTemplates(c *gin.Context) {
-	c.JSON(http.StatusOK, jsonResponse)
+	c.JSON(errCode, workflowTemplates)
 }
 
-func GetAllSavedWorkflows(c *gin.Context) (interface{}, int, string, string, bool) {
-	return nil, http.StatusOK, "", "stub-api", false
+func GetAllSavedWorkflowsHandler(c *gin.Context) (interface{}, int, string, string, bool) {
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+
+	if projectID == 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid project."})
+		return nil, http.StatusBadRequest, INVALID_PROJECT, "Invalid project ID.", true
+	}
+
+	workflows, errCode, err := store.GetStore().GetAllWorklfowsByProject(projectID)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Failed to get saved workflows."})
+		return nil, errCode, PROCESSING_FAILED, "Failed to get saved workflows.", true
+	}
+
+	return workflows, http.StatusOK, "", "", false
+}
+
+func CreateWorkflowHandler(c *gin.Context) (interface{}, int, string, string, bool) {
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectID == 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid project."})
+		return nil, http.StatusBadRequest, INVALID_INPUT, ErrorMessages[INVALID_INPUT], true
+	}
+
+	agentID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	if agentID == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid agent."})
+		return nil, http.StatusBadRequest, INVALID_INPUT, ErrorMessages[INVALID_INPUT], true
+	}
+
+	var workflow model.Workflow
+	r := c.Request
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&workflow); err != nil {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Unable to decode the workflow body"})
+		return nil, http.StatusBadRequest, INVALID_INPUT, ErrorMessages[INVALID_INPUT], true
+	}
+
+	obj, errCode, err := store.GetStore().CreateWorkflow(projectID, agentID, workflow)
+	if err != nil {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": err.Error()})
+		return nil, errCode, PROCESSING_FAILED, err.Error(), true
+	}
+
+	return obj.AlertBody, http.StatusCreated, "", "", false
+}
+
+func DeleteWorkflowHandler(c *gin.Context) {
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectID == 0 {
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Delete workflow failed. Invalid project."})
+		return
+	}
+
+	id := c.Param("id")
+	if id == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Delete failed. Invalid id provided."})
+		return
+	}
+
+	agentID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	if agentID == "" {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid agent."})
+		return
+	}
+
+	errCode, err := store.GetStore().DeleteWorkflow(projectID, id, agentID)
+	if errCode != http.StatusAccepted {
+		c.AbortWithStatusJSON(errCode, err)
+		return
+	}
+
+	c.JSON(errCode, gin.H{"Status": "OK"})
+}
+
+func EditWorkflowHandler(c *gin.Context) (interface{}, int, string, string, bool) {
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectID == 0 {
+		return nil, http.StatusBadRequest, INVALID_PROJECT, ErrorMessages[INVALID_PROJECT], true
+	}
+
+	id := c.Param("id")
+	if id == "" {
+		return nil, http.StatusBadRequest, PROCESSING_FAILED, ErrorMessages[INVALID_INPUT], true
+	}
+
+	agentID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
+	if agentID == "" {
+		return nil, http.StatusBadRequest, PROCESSING_FAILED, ErrorMessages[INVALID_INPUT], true
+	}
+
+	var workflow model.Workflow
+	r := c.Request
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&workflow); err != nil {
+		return nil, http.StatusBadRequest, PROCESSING_FAILED, ErrorMessages[PROCESSING_FAILED], true
+	}
+
+	newWorkflow, errCode, err := store.GetStore().CreateWorkflow(projectID, agentID, workflow)
+	if err != nil {
+		log.WithError(err).Error("Failed to edit workflow.")
+		return nil, errCode, PROCESSING_FAILED, "Failed to edit workflow.", true
+	}
+
+	errCode, err = store.GetStore().DeleteWorkflow(projectID, id, agentID)
+	if err != nil{
+		return nil, errCode, PROCESSING_FAILED, "Failed to edit workflow.", true
+	}
+
+	return newWorkflow, http.StatusAccepted, "", "", false
 }
