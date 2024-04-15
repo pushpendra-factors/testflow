@@ -491,7 +491,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_name": "%s", "event_properties": {"mobile" : "true"}}`, U.RandomString(8))),
 		map[string]string{
 			"Authorization": project.Token,
-			"User-Agent":    "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.96 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+			"User-Agent":    "User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 6_0 like Mac OS X) AppleWebKit/536.26 (KHTML, like Gecko) Version/6.0 Mobile/10A5376e Safari/8536.25 (compatible; SiteAuditBot/0.97; +http://www.semrush.com/bot.html)",
 		})
 	assert.Equal(t, http.StatusNotModified, w.Code)
 
@@ -622,9 +622,9 @@ func TestSDKTrackHandler(t *testing.T) {
 	json.Unmarshal(userPropertiesBytes.([]byte), &userProperties)
 	assert.NotNil(t, userProperties["name"])
 	// OS and Browser Properties should be filled on backend using user agent.
-	assert.Equal(t, "Mac OS X", userProperties[U.UP_OS])
+	assert.Equal(t, "Mac", userProperties[U.UP_OS])
 	assert.Equal(t, "10.13.6", userProperties[U.UP_OS_VERSION])
-	assert.Equal(t, "Mac OS X-10.13.6", userProperties[U.UP_OS_WITH_VERSION])
+	assert.Equal(t, "Mac-10.13.6", userProperties[U.UP_OS_WITH_VERSION])
 	assert.Equal(t, "Chrome", userProperties[U.UP_BROWSER])
 	assert.Equal(t, "79.0.3945.130", userProperties[U.UP_BROWSER_VERSION])
 	assert.Equal(t, "Chrome-79.0.3945.130", userProperties[U.UP_BROWSER_WITH_VERSION])
