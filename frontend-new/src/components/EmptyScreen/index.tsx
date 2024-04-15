@@ -2,7 +2,7 @@ import React from 'react';
 import EmptyScreenDefaultIllustration from './../../assets/images/illustrations/EmptyScreenDefaultIllustration.png';
 import styles from './index.module.scss';
 import { Text } from 'Components/factorsComponents';
-import { Button, Empty } from 'antd';
+import { Button, Empty, Spin } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import SVG from 'Components/factorsComponents/SVG';
 type EmptyScreenProps = {
@@ -18,6 +18,7 @@ type EmptyScreenProps = {
     onClick?: () => void | null;
   } | null;
   upgradeScreen?: boolean;
+  loading?: boolean;
 };
 export default function ({
   image,
@@ -27,8 +28,16 @@ export default function ({
   ActionButton,
   showTop,
   learnMore,
-  upgradeScreen = false
+  upgradeScreen = false,
+  loading = false
 }: EmptyScreenProps) {
+  if (loading) {
+    return (
+      <div className={`${styles.parent} flex justify-center`}>
+        <Spin />
+      </div>
+    );
+  }
   return (
     <div className={styles.parent}>
       {showTop && (

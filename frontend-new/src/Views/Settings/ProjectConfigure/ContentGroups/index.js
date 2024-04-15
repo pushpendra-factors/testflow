@@ -222,6 +222,7 @@ function ContentGroups({
                         <EmptyScreen
                           title={`Create logical collections of related URLs, such as blog articles or product pages, to analyze their impact on leads, revenue, and pipeline stages.`}
                           learnMore={'https://help.factors.ai/'}
+                          loading={tableLoading}
                         />
                       )}
                     </div>
