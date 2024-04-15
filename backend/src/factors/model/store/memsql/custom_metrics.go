@@ -19,6 +19,8 @@ func (store *MemSQL) CreateCustomMetric(customMetric model.CustomMetric) (*model
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
 
+	logCtx.Warn("Create Custom Metric")
+
 	// objectType used as sectionDisplayCategory in db
 	if customMetric.SectionDisplayCategory != "" {
 		customMetric.ObjectType = customMetric.SectionDisplayCategory
