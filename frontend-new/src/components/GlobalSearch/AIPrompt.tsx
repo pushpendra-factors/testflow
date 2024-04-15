@@ -70,7 +70,7 @@ const AIPrompt = ({ searchkey }: AIPromptProps) => {
       }}
     >
       <Button type='text' size='large' loading={loading}>
-        Enter a meaningful text prompt to search with AI
+        Enter text query to search with AI
       </Button>
       <Tag color='processing'>Experimental</Tag>
     </div>
