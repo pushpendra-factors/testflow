@@ -230,7 +230,7 @@ func TestAccScoreCountingEvents(t *testing.T) {
 	var userGroupCount map[string]*T.AggEventsOnUserAndGroup = make(map[string]*T.AggEventsOnUserAndGroup)
 	weightmap, _ := T.CreateweightMap(&cr)
 
-	err = T.AggEventsOnUsers(fileEvents, userGroupCount, weightmap, config)
+	_, err = T.AggEventsOnUsers(fileEvents, userGroupCount, weightmap, config)
 	log.WithField("u", userGroupCount).Debugf("score")
 	// for _, v := range userGroupCount {
 	// 	// 	_, err := json.Marshal(v)

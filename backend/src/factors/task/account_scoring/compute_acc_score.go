@@ -25,6 +25,7 @@ import (
 )
 
 const TAKETOPK int = 5
+const DELAY_SLA int = 3
 
 type AggEventsOnUserAndGroup struct {
 	User_id     string                   `json:"uid"`
@@ -57,6 +58,7 @@ func BuildAccScoringDaily(projectId int64, configs map[string]interface{}) (map[
 	lookback := configs["lookback"].(int)
 	start_time := time.Unix(day_time, 0)
 	end_time := start_time.AddDate(0, 0, -1*lookback)
+	numLinesPerDayMap := make(map[string]int)
 
 	updatedUsers := make(map[string]map[string]M.LatestScore)
 	updatedGroups := make(map[string]map[string]M.LatestScore)
@@ -95,13 +97,14 @@ func BuildAccScoringDaily(projectId int64, configs map[string]interface{}) (map[
 	for tm.Unix() <= start_time.Unix() {
 		dateString := U.GetDateOnlyFromTimestamp(tm.Unix())
 		logCtx.Infof("Pulling daily events for :%s", dateString)
-		err = AggDailyUsersOnDate(projectId, archiveCloudManager, modelCloudManager,
+		numLinesPerDay, err := AggDailyUsersOnDate(projectId, archiveCloudManager, modelCloudManager,
 			diskManager, tm, db, mweights, updatedUsers, updatedGroups,
 			salewindow, DurationMap)
 		if err != nil {
 			logCtx.WithError(err).Errorf("Error in aggregating users : %d time: %v ", tm)
 		}
 		tm = tm.AddDate(0, 0, 1)
+		numLinesPerDayMap[dateString] = numLinesPerDay
 	}
 
 	// from prevusers pick groups which are avaialable
@@ -113,9 +116,16 @@ func BuildAccScoringDaily(projectId int64, configs map[string]interface{}) (map[
 
 	logCtx.Infof("Number of updated groups:%d", len(updatedGroups))
 
+	alldaysCehcked, err := CheckLinesReadPreviousDays(numLinesPerDayMap, lookback, start_time.Unix())
+
+	if !alldaysCehcked {
+		status["error"] = err
+	}
+
 	timeDiff := time.Since(now).Milliseconds()
 	DurationMap["updateDB"] += timeDiff
 	logCtx.WithField("stats:", DurationMap).Info("stats or time in millliseconds")
+
 	return status, true
 }
 
@@ -156,7 +166,7 @@ func CreateweightMap(w *M.AccWeights) (map[string][]M.AccEventWeight, int64) {
 // AggDailyUsersOnDate main entry function to aggregate users and group perday and write to file and DB
 func AggDailyUsersOnDate(projectId int64, archiveCloudManager, modelCloudManager *filestore.FileManager,
 	diskManager *serviceDisk.DiskDriver, date time.Time, db *gorm.DB, weights map[string][]M.AccEventWeight,
-	updatedUsers, updatedGroups map[string]map[string]M.LatestScore, salewindow int64, duration map[string]int64) error {
+	updatedUsers, updatedGroups map[string]map[string]M.LatestScore, salewindow int64, duration map[string]int64) (int, error) {
 
 	_, dok := duration["agg"]
 	if !dok {
@@ -167,7 +177,7 @@ func AggDailyUsersOnDate(projectId int64, archiveCloudManager, modelCloudManager
 	var userGroupCount map[string]*AggEventsOnUserAndGroup = make(map[string]*AggEventsOnUserAndGroup)
 	// aggregate users
 	startAgg := time.Now()
-	err := AggregateDailyEvents(projectId, archiveCloudManager, modelCloudManager, diskManager, date.Unix(),
+	numLinesPerDay, err := AggregateDailyEvents(projectId, archiveCloudManager, modelCloudManager, diskManager, date.Unix(),
 		userGroupCount, weights)
 	if err != nil {
 		log.WithError(err).Errorf("Error in aggregating users : %d time: %d ", date)
@@ -176,16 +186,17 @@ func AggDailyUsersOnDate(projectId int64, archiveCloudManager, modelCloudManager
 	duration["agg"] += endAgg
 	err = FilterAndUpdateAllEvents(userGroupCount, date.Unix(), updatedUsers, updatedGroups)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	return nil
+	return numLinesPerDay, nil
 
 }
 
 func AggregateDailyEvents(projectId int64, archiveCloudManager,
 	modelCloudManager *filestore.FileManager,
 	diskManager *serviceDisk.DiskDriver, startTime int64,
-	userEventGroupCount map[string]*AggEventsOnUserAndGroup, mweights map[string][]M.AccEventWeight) error {
+	userEventGroupCount map[string]*AggEventsOnUserAndGroup,
+	mweights map[string][]M.AccEventWeight) (int, error) {
 
 	configs := make(map[string]interface{})
 	partFilesDir, _ := (*archiveCloudManager).GetDailyEventArchiveFilePathAndName(projectId, startTime, 0, 0)
@@ -196,11 +207,11 @@ func AggregateDailyEvents(projectId int64, archiveCloudManager,
 	if status != http.StatusFound {
 		e := fmt.Errorf("failed to get existing groups (%s) for project (%d)", M.GROUP_NAME_DOMAINS, projectId)
 		log.WithField("err_code", status).Error(e)
-		return e
+		return 0, e
 	}
 	domain_group_id := fmt.Sprintf("%d", domain_group.ID)
 	configs["domain_group"] = domain_group_id
-
+	numLines := 0
 	for _, partFileFullName := range listFiles {
 		partFNamelist := strings.Split(partFileFullName, "/")
 		partFileName := partFNamelist[len(partFNamelist)-1]
@@ -212,26 +223,28 @@ func AggregateDailyEvents(projectId int64, archiveCloudManager,
 		file, err := (*archiveCloudManager).Get(partFilesDir, partFileName)
 		if err != nil {
 			log.WithField("project", projectId).WithError(err).Errorf("Unabel to pull file :%s,%s", partFilesDir, partFileName)
-			return err
+			return 0, err
 		}
 
-		err = AggEventsOnUsers(file, userEventGroupCount, mweights, configs)
+		numLinesPerFile, err := AggEventsOnUsers(file, userEventGroupCount, mweights, configs)
 		if err != nil {
-			return err
+			return 0, err
 		}
 		err = file.Close()
 		if err != nil {
-			return err
+			return 0, err
 		}
+		numLines += numLinesPerFile
 	}
 
 	log.Infof("Done aggregating")
 
-	return nil
+	return numLines, nil
 }
 
 // AggEventsOnUsers  agg count of each event performed by each user along with users group id.
-func AggEventsOnUsers(file io.ReadCloser, userGroupCount map[string]*AggEventsOnUserAndGroup, mweights map[string][]M.AccEventWeight, configs map[string]interface{}) error {
+func AggEventsOnUsers(file io.ReadCloser, userGroupCount map[string]*AggEventsOnUserAndGroup,
+	mweights map[string][]M.AccEventWeight, configs map[string]interface{}) (int, error) {
 	log.Infof("Aggregating users from file")
 	scanner := bufio.NewScanner(file)
 	const maxCapacity = 30 * 1024 * 1024
@@ -242,7 +255,7 @@ func AggEventsOnUsers(file io.ReadCloser, userGroupCount map[string]*AggEventsOn
 	userCounts := 0
 	groupCounts := 0
 	lineCount := 0
-
+	numLines := 0
 	domainGroup := configs["domain_group"].(string)
 	for scanner.Scan() {
 		var event *P.CounterEventFormat
@@ -251,7 +264,7 @@ func AggEventsOnUsers(file io.ReadCloser, userGroupCount map[string]*AggEventsOn
 		lineCount += 1
 		if err != nil {
 			log.WithError(err).Errorf("Error in line :%d", eventCount)
-			return err
+			return 0, err
 		}
 
 		if _, ok := userGroupCount[event.UserId]; !ok {
@@ -298,17 +311,17 @@ func AggEventsOnUsers(file io.ReadCloser, userGroupCount map[string]*AggEventsOn
 			}
 
 		}
-
+		numLines += 1
 	}
 	err := scanner.Err()
 	if err != nil {
 		log.WithError(err).Errorf("error in scanning events :%v", err)
-		return err
+		return 0, err
 	}
 
 	log.Infof(fmt.Sprintf("Total lines counted : %d , total users counted : %d, total groups counted : %d", lineCount, userCounts, groupCounts))
 
-	return nil
+	return numLines, nil
 
 }
 
@@ -880,4 +893,48 @@ func RemoveDeletedWeights(weights *M.AccWeights) M.AccWeights {
 	}
 
 	return mweights
+}
+
+func CheckLinesReadPreviousDays(numLinesPerDay map[string]int, lookback int,
+	startTime int64) (bool, error) {
+
+	slaMap := make(map[string]bool)
+	lookbackMap := make(map[string]bool)
+
+	dateStringSLA := U.GenDateStringsForLastNdays(startTime, int64(DELAY_SLA))
+	dateStringLookBack := U.GenDateStringsForLastNdays(startTime, int64(lookback))
+
+	for _, dt := range dateStringSLA {
+		slaMap[dt] = true
+	}
+
+	for _, dt := range dateStringLookBack {
+		lookbackMap[dt] = true
+		if _, ok := slaMap[dt]; ok {
+			lookbackMap[dt] = false
+		}
+	}
+
+	numDaysNoData := make([]string, 0)
+	for dtString, dtBool := range lookbackMap {
+		if dtBool {
+			dtInt, dtOk := numLinesPerDay[dtString]
+			if dtOk {
+				if dtInt == 0 {
+					numDaysNoData = append(numDaysNoData, dtString)
+				}
+			} else {
+				numDaysNoData = append(numDaysNoData, dtString)
+			}
+		}
+	}
+
+	if len(numDaysNoData) > 0 {
+		n := strings.Join(numDaysNoData, " ")
+		err := fmt.Errorf("no data found on :%s", n)
+		return false, err
+	}
+
+	return true, nil
+
 }

@@ -287,6 +287,10 @@ func main() {
 		if status["err"] != nil {
 			C.PingHealthcheckForFailure(healthcheckPingID, status)
 		}
+		if status["error"] != nil {
+			C.PingHealthcheckForFailure(healthcheckPingID, status)
+		}
+
 		C.PingHealthcheckForSuccess(healthcheckPingID, status)
 	}
 }
