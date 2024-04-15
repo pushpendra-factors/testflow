@@ -4825,7 +4825,7 @@ func TestAllAccounts(t *testing.T) {
 	err = json.Unmarshal(jsonResponse, &resp)
 	assert.Nil(t, err)
 	assert.Equal(t, len(resp), 1)
-	assert.Contains(t, resp[0].HostName, "adapt")
+	assert.Contains(t, resp[0].DomainName, "adapt")
 	assert.Greater(t, resp[0].LastActivity, U.TimeNowZ().AddDate(0, 0, -1))
 	assert.NotEmpty(t, resp[0].TableProps[U.SIX_SIGNAL_NAME])
 	assert.NotEmpty(t, resp[0].TableProps["$hubspot_company_name"])
