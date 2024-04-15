@@ -148,7 +148,7 @@ func (store *MemSQL) convertEventTriggerAlertToEventTriggerAlertInfo(list []mode
 			}
 		}
 
-		if !lastFail.IsPausedAutomatically && obj.LastAlertAt.Compare(lastFail.FailTime) <= 0 {
+		if obj.LastAlertAt.Compare(lastFail.FailTime) <= 0 {
 			lastFailJson = obj.LastFailDetails
 		} else {
 			lastFailJson = nil
