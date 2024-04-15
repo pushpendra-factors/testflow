@@ -44,6 +44,13 @@ func EventsPerformedCheck(projectID int64, segmentId string, eventNameIDsMap map
 
 		queryStr := "(event_name_id=?"
 		params = append(params, eventNameIDsMap[event.Name])
+
+		// support for in last x days
+		if event.From > 0 {
+			queryStr = queryStr + " AND timestamp >= ?"
+			params = append(params, event.From)
+		}
+
 		if len(event.Properties) > 0 {
 			whereCond, queryParams, err := buildWhereFromProperties(projectID, event.Properties, 0)
 			if err != nil {
