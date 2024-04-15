@@ -400,7 +400,7 @@ const Touchpoints = ({
           <TabPane tab='Hubspot' key='3'>
             <div className='mb-10 pl-4 mt-10'>
               {touchPointsData.filter((obj) => obj.crm_type === getCRMType())
-                .length > 0 || touchPointState.loading ? (
+                .length > 0 ? (
                 <Table
                   className='fa-table--basic mt-4'
                   columns={columns}
@@ -413,6 +413,7 @@ const Touchpoints = ({
               ) : (
                 <EmptyScreen
                   learnMore={`https://help.factors.ai/`}
+                  loading={touchPointState.loading}
                   title={`Record offline touchpoints from HubSpot to attribute them accurately to leads, opportunities, and pipeline stages. Apply custom rules to define your touchpoints accurately.`}
                 />
               )}
@@ -422,7 +423,7 @@ const Touchpoints = ({
           <TabPane tab='Salesforce' key='4'>
             <div className='mb-10 pl-4 mt-10'>
               {touchPointsData.filter((obj) => obj.crm_type === getCRMType())
-                .length > 0 || touchPointState.loading ? (
+                .length > 0 ? (
                 <Table
                   className='fa-table--basic mt-4'
                   columns={columns}
@@ -435,7 +436,8 @@ const Touchpoints = ({
               ) : (
                 <EmptyScreen
                   learnMore={'https://help.factors.ai/'}
-                  title={`Record offline touchpoints from HubSpot to attribute them accurately to leads, opportunities, and pipeline stages. Apply custom rules to define your touchpoints accurately.`}
+                  loading={touchPointState.loading}
+                  title={`Record offline touchpoints from Salesforce to attribute them accurately to leads, opportunities, and pipeline stages. Apply custom rules to define your touchpoints accurately.`}
                 />
               )}
             </div>
