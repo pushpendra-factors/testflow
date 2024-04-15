@@ -51,7 +51,7 @@ import logger from 'Utils/logger';
 import useAutoFocus from 'hooks/useAutoFocus';
 import { invalidBreakdownPropertiesList } from 'Constants/general.constants';
 import MomentTz from 'Components/MomentTz';
-import styles from './index.module.scss';
+import useAgentInfo from 'hooks/useAgentInfo';
 import {
   getGroups,
   getGroupProperties
@@ -92,6 +92,7 @@ import AccountsTabs from './AccountsTabs';
 import AccountsInsights from './AccountsInsights/AccountsInsights';
 import AccountDrawer from './AccountDrawer';
 import InsightsWrapper from './InsightsWrapper';
+import styles from './index.module.scss';
 
 function AccountProfiles({
   createNewSegment,
@@ -109,6 +110,8 @@ function AccountProfiles({
   const [timelineConfig, setTimelineConfig] = useState({});
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
   const [errMsg, setErrMsg] = useState('');
+  const { email } = useAgentInfo();
+  const isSolutionsAdmin = email === 'solutions@factors.ai';
 
   // Ant Table
   const [newTableColumns, setNewTableColumns] = useState([]);
@@ -1219,7 +1222,9 @@ function AccountProfiles({
             </Text>
           </div>
         </div>
-        <ControlledComponent controller={Boolean(accountPayload?.segment?.id)}>
+        <ControlledComponent
+          controller={isSolutionsAdmin && Boolean(accountPayload?.segment?.id)}
+        >
           <AccountsTabs />
         </ControlledComponent>
       </div>
