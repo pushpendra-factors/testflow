@@ -1134,7 +1134,7 @@ func RequestRateLimiterMiddleware(key string, numberOfRequestsALlowed int64, tim
 			"project_id": projectId,
 		})
 
-		key, err := cacheRedis.NewKey(projectId, "", key)
+		key, err := cacheRedis.NewKey(projectId, "RL", key)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get cache key for rate limiter middleware")
 			c.AbortWithStatus(http.StatusInternalServerError)
