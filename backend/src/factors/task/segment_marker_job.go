@@ -58,16 +58,6 @@ func SegmentMarker(projectID int64, projectIdListAllRun []int64) int {
 
 	log.WithFields(log.Fields{"project_id": projectID, "no_of_domains": len(domainsList)}).Info("Total no.of domains pulled time(sec) ", timeTaken)
 
-	if len(users) >= 250000 {
-		log.WithFields(log.Fields{"project_id": projectID}).Warn("Total records exceeded 250k")
-	}
-
-	if len(domainsList) == 2000000 {
-		log.WithFields(log.Fields{"project_id": projectID}).Error("No.of domains hitting max limit.")
-	} else if len(domainsList) >= 1000000 {
-		log.WithFields(log.Fields{"project_id": projectID}).Error("Total domains exceeded 1M")
-	}
-
 	// list of all segments
 	allSegmentsMap, statusCode := store.GetStore().GetAllSegments(projectID)
 	if statusCode != http.StatusFound {
@@ -263,8 +253,6 @@ func GetDomainsToRunMarkerFor(projectID int64, domainGroup *model.Group, domainG
 			Error("Server error, couldn't find updated records")
 		return []string{}, allUsersRun, statusCode, lookBack
 	} else if statusCode == http.StatusNotFound || len(domainIDList) == 0 {
-		log.WithFields(log.Fields{"project_id": projectID, "look_back": lookBack, "status_code": statusCode}).
-			Warn("Couldn't find updated records in last given hours for this project ")
 		return []string{}, allUsersRun, http.StatusOK, lookBack
 	}
 

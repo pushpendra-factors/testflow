@@ -160,6 +160,8 @@ func TestMain(m *testing.M) {
 		AccountLimitPreviewListing:                          250,
 		AccountsToProcessForPreview:                         1000,
 		EnableDomainWebsitePropertiesByProjectID:            "*",
+		EnableDeviceServiceByProjectID:                      "*",
+		DeviceServiceURL:                                    "http://localhost:3000/device_service",
 	}
 	C.InitConf(config)
 

@@ -59,6 +59,20 @@ func RunOTPHubspotForProjects(configs map[string]interface{}) (map[string]interf
 		}
 	}()
 
+	featureProjectIDs, err := store.GetStore().GetAllProjectsWithFeatureEnabled(model.FEATURE_HUBSPOT, false)
+	if err != nil {
+		log.WithError(err).Error("Failed to get hubspot feature enabled projects.")
+		return nil, false
+	}
+
+	featureEnabledProjectSettings := []model.HubspotProjectSettings{}
+	for i := range hubspotEnabledProjectSettings {
+		if U.ContainsInt64InArray(featureProjectIDs, hubspotEnabledProjectSettings[i].ProjectId) {
+			featureEnabledProjectSettings = append(featureEnabledProjectSettings, hubspotEnabledProjectSettings[i])
+		}
+	}
+	hubspotEnabledProjectSettings = featureEnabledProjectSettings
+
 	allProjects, allowedProjects, disabledProjects := C.GetProjectsFromListWithAllProjectSupport(
 		projectIDList, disabledProjectIDList)
 	if !allProjects {

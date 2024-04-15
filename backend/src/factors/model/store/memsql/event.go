@@ -472,7 +472,6 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 	model.SetCacheUserLastEvent(event.ProjectId, event.UserId,
 		&model.CacheEvent{ID: event.ID, Timestamp: event.Timestamp})
 
-	t1 := time.Now()
 	eventNameId := event.EventNameId
 
 	alerts, eventName, updatedUserProps, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, eventNameId, event.UserId, &event.Properties, event.UserProperties, nil, false)
@@ -509,7 +508,6 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 			}
 		}
 	}
-	log.Info("Control past EventTrigger block: ", time.Since(t1))
 
 	return event, http.StatusCreated
 }

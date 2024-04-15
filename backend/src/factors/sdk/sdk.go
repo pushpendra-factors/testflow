@@ -174,8 +174,20 @@ const (
 	sdkRequestTypeAMPIdentify              = "sdk_amp_identify"
 )
 
-func IsBot(userAgent, eventName string) bool {
-	return U.IsBotUserAgent(userAgent) || U.IsBotEventByPrefix(eventName)
+func IsBot(ProjectId int64, userAgent, eventName string) bool {
+
+	if !(U.IsBotUserAgent(userAgent) || U.IsBotEventByPrefix(eventName)) {
+		if C.AllowDeviceServiceByProjectID(ProjectId) {
+			deviceInfo, status, err := GetDeviceInfoFromDeviceService(userAgent)
+			if err != nil || status != http.StatusOK {
+				return false
+			}
+			return deviceInfo.IsBot
+		}
+
+	}
+	return (U.IsBotUserAgent(userAgent) || U.IsBotEventByPrefix(eventName))
+
 }
 
 func ProcessQueueRequest(token, reqType, reqPayloadStr string) (float64, string, error) {
@@ -554,7 +566,7 @@ func Track(projectId int64, request *TrackPayload,
 	}
 
 	// Terminate track calls from bot user_agent and event_name prefix.
-	if *projectSettings.ExcludeBot && IsBot(request.UserAgent, request.Name) {
+	if *projectSettings.ExcludeBot && IsBot(projectId, request.UserAgent, request.Name) {
 		return http.StatusNotModified, &TrackResponse{Message: "Tracking skipped. Bot request."}
 	}
 
@@ -1529,7 +1541,7 @@ func excludeBotRequestBySetting(token, userAgent string, eventName string, clien
 		return false
 	}
 
-	return settings != nil && *settings.ExcludeBot && IsBot(userAgent, eventName)
+	return settings != nil && *settings.ExcludeBot && IsBot(settings.ProjectId, userAgent, eventName)
 }
 
 func TrackByToken(token string, reqPayload *TrackPayload) (int, *TrackResponse) {
@@ -2316,27 +2328,33 @@ func PostDeviceServiceAPI(apiUrl string, userAgent string) (model.DeviceInfo, in
 	return res, http.StatusOK, nil
 }
 
-// FillDeviceInfoFromDeviceService - For given user agent it gets device info from php device service by default
-// and fallbacks to existing device data in case of failure
-func FillDeviceInfoFromDeviceService(userProperties *U.PropertiesMap, userAgent string) error {
-	var allDeviceInfo *model.DeviceInfo
+func GetDeviceInfoFromDeviceService(userAgent string) (deviceInfo model.DeviceInfo, status int, err error) {
 
 	resp, errCode, err := model.GetCacheResultByUserAgent(userAgent)
 
 	// check if device info for user agent exists in cache
 	if errCode == http.StatusFound && err == nil {
-		allDeviceInfo = resp
+		deviceInfo = *resp
 	} else {
 
-		deviceInfo, status, err := PostDeviceServiceAPI(C.GetConfig().DeviceServiceURL, userAgent)
+		deviceInfo, status, err = PostDeviceServiceAPI(C.GetConfig().DeviceServiceURL, userAgent)
 
-		// check for status of POST request
-		if err != nil || status != http.StatusOK {
-			return FillDeviceInfoFromFallback(userProperties, userAgent)
-		}
-
-		allDeviceInfo = &deviceInfo
 		model.SetCacheResultByUserAgent(userAgent, &deviceInfo)
+	}
+
+	return deviceInfo, status, err
+}
+
+// FillDeviceInfoFromDeviceService - For given user agent it gets device info from php device service by default
+// and fallbacks to existing device data in case of failure
+func FillDeviceInfoFromDeviceService(userProperties *U.PropertiesMap, userAgent string) error {
+	var allDeviceInfo *model.DeviceInfo
+
+	deviceInfo, status, err := GetDeviceInfoFromDeviceService(userAgent)
+	allDeviceInfo = &deviceInfo
+	// check for status of POST request
+	if err != nil || status != http.StatusOK {
+		return FillDeviceInfoFromFallback(userProperties, userAgent)
 	}
 
 	(*userProperties)[U.UP_USER_AGENT] = userAgent
