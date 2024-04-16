@@ -10,13 +10,13 @@ import cx from 'classnames';
 import {
   Table,
   Button,
-  Spin,
   Popover,
   Tabs,
   notification,
   Input,
   Form,
-  Tooltip
+  Tooltip,
+  Spin
 } from 'antd';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
@@ -29,6 +29,8 @@ import {
 } from 'Reducers/accountProfilesView/selectors';
 import {
   setAccountPayloadAction,
+  setActiveDomainAction,
+  setDrawerVisibleAction,
   setFiltersDirtyAction,
   setNewSegmentModeAction
 } from 'Reducers/accountProfilesView/actions';
@@ -106,6 +108,11 @@ function AccountProfiles({
   deleteSegment,
   getTop100Events
 }) {
+  const dispatch = useDispatch();
+  const history = useHistory();
+  const location = useLocation();
+  const { segment_id: segmentID } = useParams();
+
   // General
   const [timelineConfig, setTimelineConfig] = useState({});
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
@@ -144,19 +151,14 @@ function AccountProfiles({
 
   // Preview
   const [processedDomains, setProcessedDomains] = useState(new Set());
-  const [preview, setPreview] = useState({ drawerVisible: false, domain: {} });
 
-  const onDrawerClose = () =>
-    setPreview((prevState) => ({ ...prevState, drawerVisible: false }));
+  const onDrawerClose = () => {
+    dispatch(setDrawerVisibleAction(false));
+  };
 
   useEffect(() => {
     if (filtersExpanded) onDrawerClose();
   }, [filtersExpanded]);
-
-  const dispatch = useDispatch();
-  const history = useHistory();
-  const location = useLocation();
-  const { segment_id: segmentID } = useParams();
 
   const activeTab = useSelector((state) => selectActiveTab(state));
 
@@ -174,9 +176,11 @@ function AccountProfiles({
 
   const { sixSignalInfo } = useSelector((state) => state.featureConfig);
 
-  const { newSegmentMode, filtersDirty: areFiltersDirty } = useSelector(
-    (state) => state.accountProfilesView
-  );
+  const {
+    newSegmentMode,
+    filtersDirty: areFiltersDirty,
+    preview
+  } = useSelector((state) => state.accountProfilesView);
 
   const groupsList = useSelector((state) => selectGroupsList(state));
 
@@ -208,6 +212,7 @@ function AccountProfiles({
 
   useEffect(() => {
     dispatch(setNewSegmentModeAction(false));
+    dispatch(setDrawerVisibleAction(false));
   }, []);
 
   useEffect(() => {
@@ -927,7 +932,7 @@ function AccountProfiles({
   const onClickOpen = (domain) => {
     const domID = domain.identity || domain.id;
     const domName = domain.name;
-    history.push(`/profiles/accounts/${btoa(domID)}?view=birdview`, {
+    history.push(`/profiles/accounts/${btoa(domID)}?view=timeline`, {
       accountPayload,
       currentPage,
       currentPageSize,
@@ -940,7 +945,7 @@ function AccountProfiles({
 
   const onClickOpenNewTab = (domain) => {
     const domID = domain.identity || domain.id;
-    window.open(`/profiles/accounts/${btoa(domID)}?view=birdview`);
+    window.open(`/profiles/accounts/${btoa(domID)}?view=timeline`);
   };
 
   useEffect(() => {
@@ -989,10 +994,9 @@ function AccountProfiles({
   }, [newTableColumns, location.state]);
 
   const handleTableRowClick = (account) => {
-    setPreview({
-      drawerVisible: true,
-      domain: { id: account.identity, name: account.domain_name }
-    });
+    dispatch(
+      setActiveDomainAction({ id: account.identity, name: account.domain_name })
+    );
 
     if (!processedDomains.has(account.domain_name)) {
       setProcessedDomains(processedDomains.add(account.domain_name));

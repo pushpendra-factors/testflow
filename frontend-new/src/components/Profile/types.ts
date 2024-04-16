@@ -1,5 +1,3 @@
-/* eslint-disable camelcase */
-
 export interface DataMap {
   [key: string]: number;
 }
@@ -121,6 +119,8 @@ export interface AccountTimelineTableViewProps {
   eventPropsType: { [key: string]: string };
   userPropsType: { [key: string]: string };
   extraClass?: string;
+  eventDrawerVisible: boolean;
+  setEventDrawerVisible: (value: boolean) => void;
 }
 export interface EventDetailsProps {
   event: NewEvent;

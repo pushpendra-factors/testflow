@@ -51,3 +51,13 @@ export const setInsightsCompareSegment = (segmentId, compareSegmentId) => ({
   type: SET_INSIGHTS_COMPARE_SEGMENT,
   payload: { segmentId, compareSegmentId }
 });
+
+export const setDrawerVisibleAction = (isVisible) => ({
+  type: 'SET_DRAWER_VISIBLE',
+  payload: isVisible
+});
+
+export const setActiveDomainAction = (domainData) => ({
+  type: 'SET_ACTIVE_DOMAIN',
+  payload: domainData
+});

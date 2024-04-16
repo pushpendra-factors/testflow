@@ -29,25 +29,27 @@ function UsernameWithIcon({
 
   return (
     <>
-      {isAnonymous ? (
-        <SVG name={`TrackedUser${userID.match(/\d/g)?.[0] || 0}`} size={24} />
-      ) : (
-        <Avatar
-          size={24}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: getBackgroundColor(title),
-            fontSize: '16px'
-          }}
-        >
-          {getUsernameInitial(title)}
-        </Avatar>
-      )}
+      <div className='grow-0 shrink-0'>
+        {isAnonymous ? (
+          <SVG name={`TrackedUser${userID.match(/\d/g)?.[0] || 0}`} size={24} />
+        ) : (
+          <Avatar
+            size={24}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: getBackgroundColor(title),
+              fontSize: '16px'
+            }}
+          >
+            {getUsernameInitial(title)}
+          </Avatar>
+        )}
+      </div>
       <TextWithOverflowTooltip
         text={renderUsername(title, isAnonymous)}
-        extraClass='ml-2'
+        extraClass='text'
       />
     </>
   );

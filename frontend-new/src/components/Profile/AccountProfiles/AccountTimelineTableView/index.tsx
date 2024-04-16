@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Skeleton } from 'antd';
+import { Skeleton, Spin } from 'antd';
 import NoDataWithMessage from 'Components/Profile/MyComponents/NoDataWithMessage';
 import {
   AccountTimelineTableViewProps,
@@ -15,12 +15,13 @@ function AccountTimelineTableView({
   eventPropsType,
   userPropsType,
   loading,
-  extraClass
+  extraClass,
+  eventDrawerVisible,
+  setEventDrawerVisible
 }: AccountTimelineTableViewProps) {
   const [formattedData, setFormattedData] = useState<{
     [key: string]: NewEvent[];
   }>({});
-  const [drawerVisible, setDrawerVisible] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<NewEvent>();
 
   useEffect(() => {
@@ -34,11 +35,11 @@ function AccountTimelineTableView({
 
   const handleEventClick = (event: NewEvent) => {
     setSelectedEvent(event);
-    setDrawerVisible(true);
+    setEventDrawerVisible(true);
   };
 
   return loading ? (
-    <Skeleton active paragraph={{ rows: 10 }} />
+    <Spin size='large' className='fa-page-loader' />
   ) : timelineEvents.length === 0 ? (
     <NoDataWithMessage message='No Events Enabled to Show' />
   ) : (
@@ -67,8 +68,8 @@ function AccountTimelineTableView({
         </table>
       </div>
       <EventDrawer
-        visible={drawerVisible}
-        onClose={() => setDrawerVisible(false)}
+        visible={eventDrawerVisible}
+        onClose={() => setEventDrawerVisible(false)}
         event={selectedEvent}
         eventPropsType={eventPropsType}
         userPropsType={userPropsType}

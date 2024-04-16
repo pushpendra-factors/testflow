@@ -1,5 +1,5 @@
-import { Avatar, Spin } from 'antd';
-import React, { useState, useEffect } from 'react';
+import { Avatar, Skeleton, Spin } from 'antd';
+import React from 'react';
 import { CaretRightOutlined, CaretUpOutlined } from '@ant-design/icons';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import NoDataWithMessage from 'Components/Profile/MyComponents/NoDataWithMessage';
@@ -13,7 +13,6 @@ import {
 import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
 import { SVG, Text } from '../../../factorsComponents';
 import {
-  eventsFormattedForGranularity,
   getEventCategory,
   getIconForCategory,
   toggleCellCollapse
@@ -21,10 +20,9 @@ import {
 import InfoCard from '../../MyComponents/InfoCard';
 
 function AccountTimelineBirdView({
-  timelineEvents = [],
+  events,
+  setEvents,
   timelineUsers = [],
-  granularity,
-  collapseAll,
   setCollapseAll,
   loading = false,
   propertiesType,
@@ -32,35 +30,6 @@ function AccountTimelineBirdView({
 }) {
   const { groupPropNames } = useSelector((state) => state.coreQuery);
   const { projectDomainsList } = useSelector((state) => state.global);
-  const [formattedData, setFormattedData] = useState({});
-
-  useEffect(() => {
-    if (!timelineEvents) return;
-    const data = eventsFormattedForGranularity(
-      timelineEvents,
-      granularity,
-      collapseAll
-    );
-    document.title = 'Accounts - FactorsAI';
-    setFormattedData(data);
-  }, [timelineEvents, granularity]);
-
-  useEffect(() => {
-    const data = Object.keys(formattedData).reduce((acc, key) => {
-      acc[key] = Object.keys(formattedData[key]).reduce((userAcc, username) => {
-        userAcc[username] = {
-          ...formattedData[key][username],
-          collapsed:
-            collapseAll === undefined
-              ? formattedData[key][username].collapsed
-              : collapseAll
-        };
-        return userAcc;
-      }, {});
-      return acc;
-    }, {});
-    setFormattedData(data);
-  }, [collapseAll]);
 
   const renderIcon = (event) => {
     const eventIcon = eventIconsColorMap[event.icon]
@@ -235,7 +204,7 @@ function AccountTimelineBirdView({
           </tr>
         </thead>
         <tbody>
-          {Object.entries(formattedData).map(([timestamp, allEvents]) => {
+          {Object.entries(events || {}).map(([timestamp, allEvents]) => {
             const milestones = allEvents?.milestone;
             return (
               <tr>
@@ -280,9 +249,9 @@ function AccountTimelineBirdView({
                           allEvents[user.id].events.length,
                           allEvents[user.id].collapsed,
                           () => {
-                            setFormattedData(
+                            setEvents(
                               toggleCellCollapse(
-                                formattedData,
+                                events,
                                 timestamp,
                                 user.id,
                                 !allEvents[user.id].collapsed
@@ -308,7 +277,7 @@ function AccountTimelineBirdView({
     <Spin size='large' className='fa-page-loader' />
   ) : timelineUsers.length === 0 ? (
     <NoDataWithMessage message='No Associated Users' />
-  ) : timelineEvents.length === 0 ? (
+  ) : Object.keys(events).length === 0 ? (
     <NoDataWithMessage message='No Events Enabled to Show' />
   ) : (
     renderTimeline()

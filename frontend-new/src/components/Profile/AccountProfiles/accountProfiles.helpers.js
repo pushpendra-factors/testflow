@@ -257,16 +257,18 @@ export const getColumns = ({
             >
               Open
             </Button>
-            <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                onClickOpenNewTab(domain);
-              }}
-              className='preview-btn'
-              size='small'
-            >
-              <SVG name='ArrowUpRightSquare' size='12' />
-            </Button>
+            <Tooltip title='Open in new tab'>
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClickOpenNewTab(domain);
+                }}
+                className='preview-btn'
+                size='small'
+              >
+                <SVG name='ArrowUpRightSquare' size='12' />
+              </Button>
+            </Tooltip>
           </div>
         </div>
       ) || '-'
