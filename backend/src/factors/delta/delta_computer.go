@@ -1253,7 +1253,7 @@ func GetEventFileScanner(projectId int64, periodCode Period, archiveCloudManager
 		return nil, fmt.Errorf("previously failed merging events file")
 	}
 	if efCloudPath, efCloudName, err = merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", periodCode.From, periodCode.To,
-		archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0, useSortedFiles, false, false); err != nil {
+		archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0, useSortedFiles, false, false, nil); err != nil {
 		deltaComputeLog.WithError(err).Error("Failed creating events file")
 		pulledMap[periodCode.From][U.DataTypeEvent] = false
 		return nil, err
@@ -1290,7 +1290,7 @@ func GetChannelFileScanner(channel string, projectId int64, periodCode Period, a
 		return nil, fmt.Errorf("previously failed merging %s file", channel)
 	}
 	if cfCloudPath, cfCloudName, err = merge.MergeAndWriteSortedFile(projectId, U.DataTypeAdReport, channel, periodCode.From, periodCode.To,
-		archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0, useSortedFiles, false, false); err != nil {
+		archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0, useSortedFiles, false, false, nil); err != nil {
 		log.WithError(err).Error("Failed creating " + channel + " file")
 		pulledMap[periodCode.From][channel] = false
 		return nil, err
@@ -1325,7 +1325,7 @@ func GetUserFileScanner(dateField string, projectId int64, periodCode Period, ar
 		return nil, fmt.Errorf("previously failed merging %s file", dateField)
 	}
 	if ufCloudPath, ufCloudName, err = merge.MergeAndWriteSortedFile(projectId, U.DataTypeUser, dateField, periodCode.From, periodCode.To,
-		archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0, useSortedFiles, false, false); err != nil {
+		archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0, useSortedFiles, false, false, nil); err != nil {
 		log.WithError(err).Error("Failed creating " + dateField + " file")
 		pulledMap[periodCode.From][dateField] = false
 		return nil, err

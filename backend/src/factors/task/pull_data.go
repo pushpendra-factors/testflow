@@ -216,7 +216,7 @@ func MergeAndWriteSortedFileTask(projectId int64, configs map[string]interface{}
 	success := true
 	for ftype := range fileTypes {
 		if ftype == pull.FileType["events"] {
-			_, _, err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", startTimestamp, endTimestamp, archiveCloudManager, tmpCloudManager, cloudManager, diskManager, beamConfig, *hardPull, 0, true, false, false)
+			_, _, err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", startTimestamp, endTimestamp, archiveCloudManager, tmpCloudManager, cloudManager, diskManager, beamConfig, *hardPull, 0, true, false, false, nil)
 			if err != nil {
 				status["events-error"] = err
 				success = false
@@ -243,7 +243,7 @@ func MergeAndWriteSortedFileTask(projectId int64, configs map[string]interface{}
 				}
 			}
 			for dateField := range uniqueDateFileds {
-				_, _, err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeUser, dateField, startTimestamp, endTimestamp, archiveCloudManager, tmpCloudManager, cloudManager, diskManager, beamConfig, *hardPull, 0, true, false, false)
+				_, _, err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeUser, dateField, startTimestamp, endTimestamp, archiveCloudManager, tmpCloudManager, cloudManager, diskManager, beamConfig, *hardPull, 0, true, false, false, nil)
 				if err != nil {
 					status["users-"+dateField+"-error"] = err
 					success = false
@@ -252,7 +252,7 @@ func MergeAndWriteSortedFileTask(projectId int64, configs map[string]interface{}
 		} else {
 			for channel, ft := range pull.FileType {
 				if ft == ftype {
-					_, _, err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeAdReport, channel, startTimestamp, endTimestamp, archiveCloudManager, tmpCloudManager, cloudManager, diskManager, beamConfig, *hardPull, 0, true, false, false)
+					_, _, err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeAdReport, channel, startTimestamp, endTimestamp, archiveCloudManager, tmpCloudManager, cloudManager, diskManager, beamConfig, *hardPull, 0, true, false, false, nil)
 					if err != nil {
 						status[channel+"-error"] = err
 						success = false

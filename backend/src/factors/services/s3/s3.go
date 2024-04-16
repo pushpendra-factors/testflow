@@ -86,6 +86,18 @@ func (sd *S3Driver) GetProjectModelDir(projectId int64, modelId uint64) string {
 	return fmt.Sprintf("%smodels/%d/", path, modelId)
 }
 
+func (sd *S3Driver) GetPredictiveScoringProjectDir(projectId int64) string {
+	path := sd.GetProjectDir(projectId)
+	return fmt.Sprintf("%spredictive_scoring/", path)
+}
+
+func (sd *S3Driver) GetPredictiveScoringDir(projectId int64, startTimestamp, endTimestamp int64, lookback int) string {
+	path := sd.GetProjectDir(projectId)
+	startDateFormatted := U.GetDateOnlyFromTimestampZ(startTimestamp)
+	endDateFormatted := U.GetDateOnlyFromTimestampZ(endTimestamp)
+	return fmt.Sprintf("%spredictive_scoring/%s_%s_%d/", path, startDateFormatted, endDateFormatted, lookback)
+}
+
 func (sd *S3Driver) GetProjectDataFileDir(projectId int64, startTimestamp int64, dataType string) string {
 	path := sd.GetProjectDir(projectId)
 	dateFormatted := U.GetDateOnlyFromTimestampZ(startTimestamp)

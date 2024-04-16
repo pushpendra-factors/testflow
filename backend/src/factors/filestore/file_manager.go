@@ -95,6 +95,9 @@ type FileManager interface {
 	GetAdsDataFilePathAndName(projectId int64, report string, chunkNo int) (string, string)
 	GetListReferenceFileNameAndPathFromCloud(projectID int64, reference string) (string, string)
 
+	GetPredictiveScoringProjectDir(projectId int64) string
+	GetPredictiveScoringDir(projectId int64, startTimestamp, endTimestamp int64, lookback int) string
+
 	// Remove(path, filename string) error
 	// Del(dir, filename string)error
 }

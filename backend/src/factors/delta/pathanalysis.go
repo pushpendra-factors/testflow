@@ -261,7 +261,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 		}
 
 		cfCloudPath, cfCloudName, err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", actualQuery.StartTimestamp, actualQuery.EndTimestamp,
-			archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, groupId, useSortedFilesMerge, true, true)
+			archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, groupId, useSortedFilesMerge, true, true, nil)
 		if err != nil {
 			store.GetStore().UpdatePathAnalysisEntity(projectId, query.ID, M.SAVED)
 			finalStatus[query.ID] = err.Error()
