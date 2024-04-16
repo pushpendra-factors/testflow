@@ -218,7 +218,7 @@ func checkDependencyForEventsFile(projectId int64, startTimestamp, endTimestamp 
 // beamConfig - pass beam configs to sort using beam
 // timestampsInProjectTimezone - whether timestamps are in utc or project's timezone
 func MergeAndWriteSortedFile(projectId int64, dataType, channelOrDatefield string, startTimestamp, endTimestamp int64,
-	archiveCloudManager, tmpCloudManager, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, beamConfig *RunBeamConfig, hardPull bool, sortOnGroup int, useSortedFiles, timestampsInProjectTimezone, checkDependency bool, filterIds map[string]bool) (string, string, error) {
+	archiveCloudManager, tmpCloudManager, cloudManager *filestore.FileManager, diskManager *serviceDisk.DiskDriver, beamConfig *RunBeamConfig, hardPull bool, sortOnGroup int, useSortedFiles, timestampsInProjectTimezone, checkDependency bool) (string, string, error) {
 
 	if dataType != U.DataTypeEvent && channelOrDatefield == "" {
 		log.Error("merge failed as channelOrDatefield is empty")
@@ -307,7 +307,7 @@ func MergeAndWriteSortedFile(projectId int64, dataType, channelOrDatefield strin
 	var unsorted_cloud_dir, unsorted_cloud_name string
 	if useBeam {
 		batchSize := beamConfig.NumWorker
-		startIndexToFileInfoMap, indexMap, unsortedLinesCount, err = ReadAndMergeDailyFilesForBeam(projectId, dataType, fileNamePrefix, startDayTimestamp, endDayTimestamp, archiveCloudManager, tmpCloudManager, sortOnGroup, batchSize, filterIds)
+		startIndexToFileInfoMap, indexMap, unsortedLinesCount, err = ReadAndMergeDailyFilesForBeam(projectId, dataType, fileNamePrefix, startDayTimestamp, endDayTimestamp, archiveCloudManager, tmpCloudManager, sortOnGroup, batchSize)
 		if err != nil {
 			log.WithError(err).Error("unable to read daily part files and merge")
 			return sorted_cloud_dir, sorted_cloud_name, err
@@ -315,7 +315,7 @@ func MergeAndWriteSortedFile(projectId int64, dataType, channelOrDatefield strin
 	} else {
 		unsorted_cloud_dir, _ = GetSortedFilePathAndName(*tmpCloudManager, dataType, channelOrDatefield, projectId, startDayTimestamp, endDayTimestamp, sortOnGroup)
 		unsorted_cloud_name = "unsorted_" + sorted_cloud_name
-		unsortedLinesCount, err = ReadAndMergeDailyFiles(projectId, dataType, fileNamePrefix, unsorted_cloud_dir, unsorted_cloud_name, startDayTimestamp, endDayTimestamp, archiveCloudManager, tmpCloudManager, sortOnGroup, filterIds)
+		unsortedLinesCount, err = ReadAndMergeDailyFiles(projectId, dataType, fileNamePrefix, unsorted_cloud_dir, unsorted_cloud_name, startDayTimestamp, endDayTimestamp, archiveCloudManager, tmpCloudManager)
 		if err != nil {
 			return sorted_cloud_dir, sorted_cloud_name, err
 		}
@@ -359,7 +359,7 @@ func MergeAndWriteSortedFile(projectId int64, dataType, channelOrDatefield strin
 // fileNamePrefix - all daily files only with this prefix are read (give "events" for events, channel name for ad_reports and dateField for users),
 // getIdMap - whether to generate userIdMap
 func ReadAndMergeDailyFiles(projectId int64, dataType, fileNamePrefix string, unsortedDir, unsortedFileName string, startTimestamp, endTimestamp int64,
-	archiveCloudManager, tmpCloudManager *filestore.FileManager, sortOnGroup int, filterIds map[string]bool) (int, error) {
+	archiveCloudManager, tmpCloudManager *filestore.FileManager) (int, error) {
 	var countLines int
 	cloudWriter, err := (*tmpCloudManager).GetWriter(unsortedDir, unsortedFileName)
 	if err != nil {
@@ -392,18 +392,6 @@ func ReadAndMergeDailyFiles(projectId int64, dataType, fileNamePrefix string, un
 
 			for scanner.Scan() {
 				line := scanner.Text()
-
-				if len(filterIds) != 0 {
-					var event *P.CounterEventFormat
-					err = json.Unmarshal([]byte(line), &event)
-					if err != nil {
-						return countLines, err
-					}
-					userID := GetAptId(event, sortOnGroup)
-					if _, ok := filterIds[userID]; !ok {
-						continue
-					}
-				}
 
 				_, err = io.WriteString(cloudWriter, line+"\n")
 				if err != nil {
@@ -452,10 +440,10 @@ func SortUnsortedEventsFile(tmpCloudManager, sortedCloudManager *filestore.FileM
 		return 0, err
 	}
 	sort.Slice(eventsList, func(i, j int) bool {
-		if GetAptId(eventsList[i], sortOnGroup) == GetAptId(eventsList[j], sortOnGroup) {
+		if getAptId(eventsList[i], sortOnGroup) == getAptId(eventsList[j], sortOnGroup) {
 			return eventsList[i].EventTimestamp < eventsList[j].EventTimestamp
 		}
-		return GetAptId(eventsList[i], sortOnGroup) < GetAptId(eventsList[j], sortOnGroup)
+		return getAptId(eventsList[i], sortOnGroup) < getAptId(eventsList[j], sortOnGroup)
 	})
 	cloudWriter, err := (*sortedCloudManager).GetWriter(sortedDir, sortedName)
 	if err != nil {
@@ -640,7 +628,7 @@ func SortUnsortedUsersFile(tmpCloudManager, sortedCloudManager *filestore.FileMa
 // get the corresponding id from events based on num
 //
 // 0:uid, 1:group_1_id, 2:group_2_id, 3:group_3_id, 4:group_4_id
-func GetAptId(event *P.CounterEventFormat, num int) string {
+func getAptId(event *P.CounterEventFormat, num int) string {
 	switch num {
 	case 1:
 		return event.Group1UserId
@@ -650,14 +638,6 @@ func GetAptId(event *P.CounterEventFormat, num int) string {
 		return event.Group3UserId
 	case 4:
 		return event.Group4UserId
-	case 5:
-		return event.Group5UserId
-	case 6:
-		return event.Group6UserId
-	case 7:
-		return event.Group7UserId
-	case 8:
-		return event.Group8UserId
 	default:
 		return event.UserId
 	}

@@ -36,7 +36,7 @@ func NumericalBucketing(projectId int64, configs map[string]interface{}) (map[st
 	status := make(map[string]interface{})
 
 	efCloudPath, efCloudName, err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", startTimestamp, endTimestamp,
-		archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0, useSortedFilesMerge, false, false, nil)
+		archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0, useSortedFilesMerge, false, false)
 	if err != nil {
 		mineLog.Error("Failed creating events file")
 		status["error"] = err
