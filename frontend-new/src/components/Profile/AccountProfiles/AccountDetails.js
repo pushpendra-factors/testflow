@@ -10,7 +10,6 @@ import {
 } from 'antd';
 import { bindActionCreators } from 'redux';
 import { connect, useSelector } from 'react-redux';
-import useKey from 'hooks/useKey';
 import { insertUrlParam } from 'Utils/global';
 import {
   PropTextFormat,
@@ -31,6 +30,7 @@ import useFeatureLock from 'hooks/useFeatureLock';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 import logger from 'Utils/logger';
+import EmptyScreen from 'Components/EmptyScreen';
 import AccountOverview from './AccountOverview';
 import UpgradeModal from '../UpgradeModal';
 import { PathUrls } from '../../../routes/pathUrls';
@@ -46,14 +46,13 @@ import {
   setActivePageviewEvent
 } from '../../../reducers/timelines/middleware';
 import { udpateProjectSettings } from '../../../reducers/global';
-import { getHost, getPropType } from '../utils';
+import { eventsFormattedForGranularity, getHost, getPropType } from '../utils';
 import AccountTimelineBirdView from './AccountTimelineBirdView';
 import { Text, SVG } from '../../factorsComponents';
 import styles from './index.module.scss';
 import AccountTimelineTableView from './AccountTimelineTableView';
 import { GranularityOptions } from '../constants';
-import EmptyScreen from 'Components/EmptyScreen';
-import AccountsOverviewUpgrade from './../../../assets/images/illustrations/AccountsOverviewUpgrade.png';
+import AccountsOverviewUpgrade from '../../../assets/images/illustrations/AccountsOverviewUpgrade.png';
 
 function AccountDetails({
   getGroups,
@@ -78,12 +77,49 @@ function AccountDetails({
   const [filterProperties, setFilterProperties] = useState([]);
   const [propSelectOpen, setPropSelectOpen] = useState(false);
   const [tlConfig, setTLConfig] = useState({});
-  const [timelineViewMode, setTimelineViewMode] = useState('birdview');
+  const [timelineViewMode, setTimelineViewMode] = useState('');
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
   const [openPopover, setOpenPopover] = useState(false);
   const [requestedEvents, setRequestedEvents] = useState({});
   const [eventPropertiesType, setEventPropertiesType] = useState({});
   const [userPropertiesType, setUserPropertiesType] = useState({});
+  const [eventDrawerVisible, setEventDrawerVisible] = useState(false);
+  const [birdviewFormatEvents, setBirdviewFormatEvents] = useState({});
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const yourParam = params.get('view');
+    setTimelineViewMode(yourParam || 'timeline');
+  }, [location]);
+
+  const handleOptionBackClick = useCallback(() => {
+    const path = location.state?.path || PathUrls.ProfileAccounts;
+    history.replace(path, {
+      fromDetails: true,
+      accountPayload: location.state?.accountPayload,
+      currentPage: location.state?.currentPage,
+      currentPageSize: location.state?.currentPageSize,
+      activeSorter: location.state?.activeSorter,
+      appliedFilters: location.state?.appliedFilters,
+      accountsTableRow: location.state?.accountsTableRow
+    });
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape' && eventDrawerVisible) {
+        setEventDrawerVisible(false);
+      } else if (event.key === 'Escape' && !eventDrawerVisible) {
+        handleOptionBackClick();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [eventDrawerVisible]);
 
   const handleOpenPopoverChange = (value) => {
     setOpenPopover(value);
@@ -332,19 +368,6 @@ function AccountDetails({
     );
     setCheckListUserProps(userPropsWithEnableKey);
   }, [currentProjectSettings, userPropertiesV2]);
-
-  const handleOptionBackClick = useCallback(() => {
-    const path = location.state?.path || PathUrls.ProfileAccounts;
-    history.replace(path, {
-      fromDetails: true,
-      accountPayload: location.state?.accountPayload,
-      currentPage: location.state?.currentPage,
-      currentPageSize: location.state?.currentPageSize,
-      activeSorter: location.state?.activeSorter,
-      appliedFilters: location.state?.appliedFilters,
-      accountsTableRow: location.state?.accountsTableRow
-    });
-  }, []);
 
   const handleEventsChange = async (option) => {
     const { timelines_config } = currentProjectSettings;
@@ -725,12 +748,13 @@ function AccountDetails({
     }
     return events;
   };
+
   const renderOverview = () => (
     <AccountOverview
       overview={accountOverview?.data || {}}
       loading={accountOverview?.isLoading}
       top_engagement_signals={
-        accountDetails?.data?.leftpane_props?.['$top_enagagement_signals']
+        accountDetails?.data?.leftpane_props?.$top_enagagement_signals
       }
     />
   );
@@ -746,8 +770,44 @@ function AccountDetails({
       eventPropsType={eventPropertiesType}
       userPropsType={userPropertiesType}
       extraClass='mt-5'
+      eventDrawerVisible={eventDrawerVisible}
+      setEventDrawerVisible={setEventDrawerVisible}
     />
   );
+
+  useEffect(() => {
+    if (!activities) return;
+    const events = getFilteredEvents(
+      activities?.filter((activity) => activity.enabled === true) || []
+    );
+    const data = eventsFormattedForGranularity(
+      events,
+      granularity,
+      collapseAll
+    );
+    document.title = 'Accounts - FactorsAI';
+    setBirdviewFormatEvents(data);
+  }, [activities, granularity]);
+
+  useEffect(() => {
+    const data = Object.keys(birdviewFormatEvents).reduce((acc, key) => {
+      acc[key] = Object.keys(birdviewFormatEvents[key]).reduce(
+        (userAcc, username) => {
+          userAcc[username] = {
+            ...birdviewFormatEvents[key][username],
+            collapsed:
+              collapseAll === undefined
+                ? birdviewFormatEvents[key][username].collapsed
+                : collapseAll
+          };
+          return userAcc;
+        },
+        {}
+      );
+      return acc;
+    }, {});
+    setBirdviewFormatEvents(data);
+  }, [collapseAll]);
 
   const renderBirdviewWithActions = () => (
     <div className='flex flex-col'>
@@ -823,13 +883,10 @@ function AccountDetails({
         </div>
       </div>
       <AccountTimelineBirdView
-        timelineEvents={getFilteredEvents(
-          activities?.filter((activity) => activity.enabled === true) || []
-        )}
+        events={birdviewFormatEvents || {}}
+        setEvents={setBirdviewFormatEvents}
         timelineUsers={getTimelineUsers('birdview')}
-        collapseAll={collapseAll}
         setCollapseAll={setCollapseAll}
-        granularity={granularity}
         loading={accountDetails?.isLoading}
         propertiesType={eventPropertiesType}
         eventNamesMap={eventNamesMap}
@@ -862,7 +919,7 @@ function AccountDetails({
               </Text>
             </div>
           }
-          learnMore={'https://help.factors.ai'}
+          learnMore='https://help.factors.ai'
           ActionButton={{
             onClick: () => {
               history.push('/settings/pricing?activeTab=upgrade');
@@ -904,9 +961,6 @@ function AccountDetails({
       </Tabs>
     </div>
   );
-
-  // Temporary disabling because of conflict with drawer
-  // useKey(['Escape'], handleOptionBackClick);
 
   return (
     <div>

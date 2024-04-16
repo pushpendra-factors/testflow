@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Drawer, Button } from 'antd';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Drawer, Button, Tooltip } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import { AccountDrawerProps } from 'Components/Profile/types';
-import { ConnectedProps, connect, useDispatch, useSelector } from 'react-redux';
+import { ConnectedProps, connect, useSelector } from 'react-redux';
 import { setActivePageviewEvent } from 'Reducers/timelines/middleware';
 import {
   getEventPropertiesV2,
@@ -29,6 +29,7 @@ function AccountDrawer({
   const [userPropertiesType, setUserPropertiesType] = useState<{
     [key: string]: string;
   }>({});
+  const [eventDrawerVisible, setEventDrawerVisible] = useState(false);
 
   const { accountPreview } = useSelector((state: any) => state.timelines);
   const { eventPropertiesV2, userPropertiesV2 } = useSelector(
@@ -37,6 +38,22 @@ function AccountDrawer({
   const { active_project: activeProject } = useSelector(
     (state: any) => state.global
   );
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && eventDrawerVisible) {
+        setEventDrawerVisible(false);
+      } else if (event.key === 'Escape' && visible) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [visible, eventDrawerVisible]);
 
   const uniqueEventNames: string[] = useMemo(() => {
     const accountEvents = accountPreview?.[domain]?.events || [];
@@ -113,12 +130,16 @@ function AccountDrawer({
                 Open
               </div>
             </Button>
-            <Button onClick={onClickOpenNewtab} className='flex items-center'>
-              <SVG name='ArrowUpRightSquare' size={16} />
-            </Button>
-            <Button onClick={onClose} className='flex items-center'>
-              <SVG name='times' size={16} />
-            </Button>
+            <Tooltip title='Open in new tab' placement='bottom'>
+              <Button onClick={onClickOpenNewtab} className='flex items-center'>
+                <SVG name='ArrowUpRightSquare' size={16} />
+              </Button>
+            </Tooltip>
+            <Tooltip title='Close[Esc]' placement='bottom'>
+              <Button onClick={onClose} className='flex items-center'>
+                <SVG name='times' size={16} />
+              </Button>
+            </Tooltip>
           </div>
         </div>
       }
@@ -136,6 +157,8 @@ function AccountDrawer({
           loading={accountPreview?.[domain]?.loading}
           eventPropsType={eventPropertiesType}
           userPropsType={userPropertiesType}
+          eventDrawerVisible={eventDrawerVisible}
+          setEventDrawerVisible={setEventDrawerVisible}
         />
       </div>
     </Drawer>

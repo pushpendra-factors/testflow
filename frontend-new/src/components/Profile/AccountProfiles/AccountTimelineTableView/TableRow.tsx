@@ -63,15 +63,17 @@ function TableRow({ event, eventPropsType = {}, onEventClick }: TableRowProps) {
       } cursor-pointer`}
       onClick={onEventClick}
     >
-      <td className='timestamp-cell'>{timestamp}</td>
-      <td className='event-cell'>
+      <td className='fixed-cell timestamp-cell'>
+        <TextWithOverflowTooltip text={timestamp} />
+      </td>
+      <td className='fixed-cell event-cell'>
         <EventIcon icon={event.icon} size={24} />
         <TextWithOverflowTooltip
           text={event.display_name || event.name}
-          extraClass='ml-2'
+          extraClass='text'
         />
       </td>
-      <td className='properties-cell'>
+      <td className='fixed-cell properties-cell'>
         <div className='propkey'>{renderPropertyName()}</div>
         <TextWithOverflowTooltip
           text={renderPropertyValue()}
@@ -79,7 +81,7 @@ function TableRow({ event, eventPropsType = {}, onEventClick }: TableRowProps) {
           extraClass='propvalue'
         />
       </td>
-      <td className='user-cell'>
+      <td className='fixed-cell user-cell'>
         <UsernameWithIcon
           title={event.username || event.user_id}
           userID={event.user_id}

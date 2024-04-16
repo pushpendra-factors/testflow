@@ -6,6 +6,7 @@ import noop from 'lodash/noop';
 import { SVG as Svg, Text } from 'Components/factorsComponents';
 import {
   setAccountPayloadAction,
+  setDrawerVisibleAction,
   setNewSegmentModeAction
 } from 'Reducers/accountProfilesView/actions';
 import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
@@ -35,6 +36,7 @@ function SegmentItem({ segment }) {
   const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
 
   const changeActiveSegment = () => {
+    dispatch(setDrawerVisibleAction(false));
     dispatch(setNewSegmentModeAction(false));
     dispatch(setAccountPayloadAction({ source: GROUP_NAME_DOMAINS, segment }));
     history.replace({ pathname: `/accounts/segments/${segment.id}` });
@@ -94,6 +96,7 @@ function AccountsSidebar() {
               searchText={searchText}
               setSearchText={setSearchText}
               placeholder='Search segment'
+              onFocusSearch={() => dispatch(setDrawerVisibleAction(false))}
             />
             <ControlledComponent controller={newSegmentMode}>
               <NewSegmentItem />

@@ -55,6 +55,10 @@ const initialState = {
   insightsCompareConfig: {},
   editInsightsMetric: {
     ...apiStates
+  },
+  preview: {
+    drawerVisible: false,
+    domain: {}
   }
 };
 
@@ -276,6 +280,16 @@ export default function (state = initialState, action) {
         }
       };
     }
+    case 'SET_DRAWER_VISIBLE':
+      return {
+        ...state,
+        preview: { ...state.preview, drawerVisible: action.payload }
+      };
+    case 'SET_ACTIVE_DOMAIN':
+      return {
+        ...state,
+        preview: { drawerVisible: true, domain: action.payload }
+      };
     default:
       return state;
   }
