@@ -1856,7 +1856,7 @@ func PatternMine(db *gorm.DB, etcdClient *serviceEtcd.EtcdClient, archiveCloudMa
 
 	var efCloudPath, efCloudName string
 	if efCloudPath, efCloudName, err = merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", startTime, endTime,
-		archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0, useSortedFilesMerge, isTimeInProjectTimezone, checkDependency); err != nil {
+		archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, hardPull, 0, useSortedFilesMerge, isTimeInProjectTimezone, checkDependency, nil); err != nil {
 		mineLog.WithError(err).Error("Failed creating events file")
 		return 0, err
 	}
@@ -2922,13 +2922,12 @@ func GetEventNamesFromFile(scanner *bufio.Scanner, cloudManager *filestore.FileM
 }
 
 func CreateFileFromMap(fileDir, fileName string, cloudManager *filestore.FileManager, Map interface{}) error {
-	if mapBytes, err := json.Marshal(Map); err != nil {
+	mapBytes, err := json.Marshal(Map)
+	if err != nil {
 		mineLog.WithFields(log.Fields{"err": err}).Error("Failed to create ", fileName, " with error: ", err)
 		return err
-	} else {
-		(*cloudManager).Create(fileDir, fileName, bytes.NewReader(mapBytes))
 	}
-	return nil
+	return (*cloudManager).Create(fileDir, fileName, bytes.NewReader(mapBytes))
 }
 
 func removePropertiesTree(val string) bool {

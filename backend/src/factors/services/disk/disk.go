@@ -132,6 +132,18 @@ func (dd *DiskDriver) GetProjectModelDir(projectId int64, modelId uint64) string
 	return fmt.Sprintf("%smodels/%d/", path, modelId)
 }
 
+func (dd *DiskDriver) GetPredictiveScoringProjectDir(projectId int64) string {
+	path := dd.GetProjectDir(projectId)
+	return fmt.Sprintf("%spredictive_scoring/", path)
+}
+
+func (dd *DiskDriver) GetPredictiveScoringDir(projectId int64, startTimestamp, endTimestamp int64, lookback int) string {
+	path := dd.GetProjectDir(projectId)
+	startDateFormatted := U.GetDateOnlyFromTimestampZ(startTimestamp)
+	endDateFormatted := U.GetDateOnlyFromTimestampZ(endTimestamp)
+	return fmt.Sprintf("%spredictive_scoring/%s_%s_%d/", path, startDateFormatted, endDateFormatted, lookback)
+}
+
 func (dd *DiskDriver) GetProjectDataFileDir(projectId int64, startTimestamp int64, dataType, modelType string) string {
 	pathArr := strings.Split(dd.baseDir, "/")
 	folderName := pathArr[len(pathArr)-1]

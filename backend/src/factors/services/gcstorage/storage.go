@@ -147,6 +147,18 @@ func (gcsd *GCSDriver) GetProjectModelDir(projectId int64, modelId uint64) strin
 	return fmt.Sprintf("%smodels/%d/", path, modelId)
 }
 
+func (gcsd *GCSDriver) GetPredictiveScoringProjectDir(projectId int64) string {
+	path := gcsd.GetProjectDir(projectId)
+	return fmt.Sprintf("%spredictive_scoring/", path)
+}
+
+func (gcsd *GCSDriver) GetPredictiveScoringDir(projectId int64, startTimestamp, endTimestamp int64, lookback int) string {
+	path := gcsd.GetProjectDir(projectId)
+	startDateFormatted := U.GetDateOnlyFromTimestampZ(startTimestamp)
+	endDateFormatted := U.GetDateOnlyFromTimestampZ(endTimestamp)
+	return fmt.Sprintf("%spredictive_scoring/%s_%s_%d/", path, startDateFormatted, endDateFormatted, lookback)
+}
+
 func (gcsd *GCSDriver) GetProjectDataFileDir(projectId int64, startTimestamp int64, dataType, modelType string) string {
 	if gcsd.BucketName == "factors-production-v3" || gcsd.BucketName == "factors-staging-v3" {
 		dateFormatted := U.GetDateOnlyFromTimestampZ(startTimestamp)

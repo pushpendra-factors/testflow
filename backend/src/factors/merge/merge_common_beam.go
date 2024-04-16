@@ -156,7 +156,7 @@ func writeSortedFileToGCP(ctx context.Context, projectId int64, startTime, endTi
 // fileNamePrefix - all daily files only with this prefix are read (give "events" for events, channel name for ad_reports and dateField for users),
 // getIdMap - whether to generate userIdMap
 func ReadAndMergeDailyFilesForBeam(projectId int64, dataType, fileNamePrefix string, startTimestamp, endTimestamp int64,
-	archiveCloudManager, tmpCloudManager *filestore.FileManager, sortOnGroup int, numberOfUsersPerFile int) (map[int][]*partFileInfo, map[string]int64, int, error) {
+	archiveCloudManager, tmpCloudManager *filestore.FileManager, sortOnGroup int, numberOfUsersPerFile int, filterIds map[string]bool) (map[int][]*partFileInfo, map[string]int64, int, error) {
 
 	var countLines int
 	var startIndexToFileInfoMap = make(map[int][]*partFileInfo)
@@ -204,7 +204,12 @@ func ReadAndMergeDailyFilesForBeam(projectId int64, dataType, fileNamePrefix str
 					if err != nil {
 						return startIndexToFileInfoMap, indexMap, countLines, err
 					}
-					userID := getAptId(event, sortOnGroup)
+					userID := GetAptId(event, sortOnGroup)
+					if len(filterIds) != 0 {
+						if _, ok := filterIds[userID]; !ok {
+							continue
+						}
+					}
 					if _, ok := indexMap[userID]; !ok {
 						indexMap[userID] = keyCount
 						keyCount++
@@ -357,7 +362,7 @@ func resizeUnsortedPartFilesForBeamByUid(projectId, startTimestamp, endTimestamp
 				if err != nil {
 					return noOfFilesBroken, noOfFilesAdded, err
 				}
-				userID := getAptId(event, sortOnGroup)
+				userID := GetAptId(event, sortOnGroup)
 				uidIndex := int(indexMap[userID])
 				splitNum := (uidIndex - start) / noOfUidsAfterSplit
 				if splitNum == noOfSplits {

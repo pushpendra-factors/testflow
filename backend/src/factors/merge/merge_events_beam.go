@@ -253,7 +253,7 @@ func downloadAndSortEventsFile(ctx context.Context, projectId int64, cloudManage
 			return err
 		}
 
-		uid = getAptId(event, sortOnGroup)
+		uid = GetAptId(event, sortOnGroup)
 
 		userIdEventsMap[uid] = append(userIdEventsMap[uid], event)
 	}
