@@ -2,16 +2,10 @@ import React from 'react';
 import lazyWithRetry from 'Utils/lazyWithRetry';
 import { Text } from 'factorsComponents';
 import { Button } from 'antd';
+import animationData from './assets/lottie/38064-error-cone.json';
 
 const Lottie = lazyWithRetry(
   () => import(/* webpackChunkName: "animation" */ 'react-lottie')
-);
-
-const animationData = lazyWithRetry(
-  () =>
-    import(
-      /* webpackChunkName: "animation" */ './assets/lottie/38064-error-cone.json'
-    )
 );
 
 const defaultOptions = {
