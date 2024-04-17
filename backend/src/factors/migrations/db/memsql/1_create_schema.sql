@@ -1535,5 +1535,5 @@ CREATE TABLE IF NOT EXISTS workflows (
     created_by TEXT,
     is_deleted BOOLEAN DEFAULT FALSE,
     SHARD KEY (project_id),
-    KEY (project_id, id) USING HASH,
+    KEY (project_id, id) USING HASH
 );
