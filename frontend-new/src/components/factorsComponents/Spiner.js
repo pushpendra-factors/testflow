@@ -1,16 +1,9 @@
 import React from 'react';
-// import Lottie from 'react-lottie';
 import lazyWithRetry from 'Utils/lazyWithRetry';
+import animationData from '../../assets/lottie/fa-loader.json';
 
 const Lottie = lazyWithRetry(
   () => import(/* webpackChunkName: "animation" */ 'react-lottie')
-);
-
-const animationData = lazyWithRetry(
-  () =>
-    import(
-      /* webpackChunkName: "animation" */ '../../assets/lottie/fa-loader.json'
-    )
 );
 
 const defaultOptions = {
