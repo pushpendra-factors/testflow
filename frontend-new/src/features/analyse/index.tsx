@@ -148,7 +148,11 @@ const CoreQuery = () => {
     }
     if (location?.state?.navigatedResultState) {
       const queryToAdd = getQueryFromHashId();
-      createStateFromResult(queryToAdd);
+      if (query_type === QUERY_TYPE_EVENT) {
+        createStateFromResult(queryToAdd);
+      } else if (query_type === QUERY_TYPE_FUNNEL) {
+        createFunnelStateFromResult(queryToAdd);
+      }
     }
   }, [query_id, query_type, savedQueries, location]);
 
@@ -261,6 +265,108 @@ const CoreQuery = () => {
     qState.appliedBreakdown = newAppliedBreakdown;
   };
 
+  const createFunnelStateFromResult = (
+    queryToAdd: (typeof savedQueries)[0],
+    resultState?: ResultState | null
+  ) => {
+    const equivalentQuery = getStateQueryFromRequestQuery(queryToAdd?.query);
+    const queryState = new CoreQueryState();
+    queryState.queryType = QUERY_TYPE_FUNNEL;
+    queryState.querySaved = { name: queryToAdd.title, id: queryToAdd.id };
+    queryState.requestQuery = queryToAdd?.query;
+    queryState.showResult = true;
+    queryState.loading = false;
+    setLoading(false);
+    queryState.queries = equivalentQuery.events;
+    queryState.appliedQueries = equivalentQuery.events.map((elem: any) =>
+      elem.alias ? elem.alias : elem.label
+    );
+    queryState.queryOptions = getQueryOptionsFromEquivalentQuery(
+      queryState.queryOptions,
+      equivalentQuery
+    );
+    queryState.breakdownType = REVERSE_USER_TYPES[queryState.requestQuery.ec];
+
+    if (queryState.requestQuery) {
+      updateEventFunnelsState(
+        equivalentQuery,
+        location?.state?.navigatedFromDashboard,
+        queryState
+      );
+      if (queryState.requestQuery.length === 1) {
+        dispatch({
+          type: SET_PERFORMANCE_CRITERIA,
+          payload: REVERSE_USER_TYPES[queryState.requestQuery.ec]
+        });
+        dispatch({
+          type: SET_SHOW_CRITERIA,
+          payload: TOTAL_USERS_CRITERIA
+        });
+      } else {
+        dispatch({
+          type: SET_PERFORMANCE_CRITERIA,
+          payload: EACH_USER_TYPE
+        });
+        if (queryState.requestQuery.length === 2) {
+          dispatch({
+            type: SET_SHOW_CRITERIA,
+            payload:
+              queryState.requestQuery.ty === TYPE_EVENTS_OCCURRENCE
+                ? TOTAL_EVENTS_CRITERIA
+                : TOTAL_USERS_CRITERIA
+          });
+        }
+        // else if (queryState.requestQuery.query.length === 3) {
+        //   dispatch({
+        //     type: SET_SHOW_CRITERIA,
+        //     payload: ACTIVE_USERS_CRITERIA
+        //   });
+        // }
+        else {
+          dispatch({
+            type: SET_SHOW_CRITERIA,
+            payload: FREQUENCY_CRITERIA
+          });
+        }
+      }
+    }
+
+    dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
+    dispatch({
+      type: SET_COMPARISON_SUPPORTED,
+      payload: isComparisonEnabled(
+        queryState.queryType,
+        equivalentQuery.events,
+        equivalentQuery.breakdown,
+        models
+      )
+    });
+
+    setAppliedBreakdowns(equivalentQuery.breakdown, queryState);
+
+    // updateAppliedBreakdown();
+    dispatch({
+      type: UPDATE_PIVOT_CONFIG,
+      payload: { ...DEFAULT_PIVOT_CONFIG }
+    });
+    dispatch({ type: SET_SAVED_QUERY_SETTINGS, payload: EMPTY_OBJECT });
+
+    if (resultState) {
+      queryState.resultState = {
+        ...INITIAL_RESULT_STATE,
+        data: resultState.data.result || resultState.data,
+        status: resultState.status
+      };
+      // updateResultState();
+      // updateResultFromSavedQuery(resultState, queryState);
+    }
+    if (location?.state?.navigatedResultState && !resultState) {
+      queryState.resultState = location.state.navigatedResultState;
+    }
+
+    setCoreQueryState(queryState);
+  };
+
   const createStateFromResult = (
     queryToAdd: (typeof savedQueries)[0],
     resultState?: ResultState | null
@@ -362,15 +468,26 @@ const CoreQuery = () => {
     const queryToAdd = getQueryFromHashId();
     if (queryToAdd) {
       // updateResultState({ ...initialState, loading: true });
-      dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
-      getEventsData(active_project.id, null, null, false, query_id).then(
-        (res) => {
-          createStateFromResult(queryToAdd, res);
-        },
-        (err) => {
-          logger.error(err);
-        }
-      );
+      // dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
+      if (query_type === QUERY_TYPE_FUNNEL) {
+        getFunnelData(active_project.id, null, null, false, query_id).then(
+          (res) => {
+            createFunnelStateFromResult(queryToAdd, res);
+          },
+          (err) => {
+            logger.error(err);
+          }
+        );
+      } else if (query_type === QUERY_TYPE_EVENT) {
+        getEventsData(active_project.id, null, null, false, query_id).then(
+          (res) => {
+            createFunnelStateFromResult(queryToAdd, res);
+          },
+          (err) => {
+            logger.error(err);
+          }
+        );
+      }
     }
   };
 
