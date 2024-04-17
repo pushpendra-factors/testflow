@@ -12,6 +12,7 @@ type AlertTemplate struct {
 	Title             string          `gorm:"not null" json:"title"`
 	Alert             *postgres.Jsonb `json:"alert"`
 	TemplateConstants *postgres.Jsonb `json:"template_constants"`
+	WorkflowConfig    *postgres.Jsonb `json:"workflow_config"`
 	IsWorkflow        bool            `json:"is_workflow"`
 	CreatedAt         time.Time       `json:"created_at"`
 	UpdatedAt         time.Time       `json:"updated_at"`
