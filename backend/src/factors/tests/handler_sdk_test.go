@@ -491,7 +491,7 @@ func TestSDKTrackHandler(t *testing.T) {
 	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"event_name": "%s", "event_properties": {"mobile" : "true"}}`, U.RandomString(8))),
 		map[string]string{
 			"Authorization": project.Token,
-			"User-Agent":    "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2272.96 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+			"User-Agent":    "User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 6_0 like Mac OS X) AppleWebKit/536.26 (KHTML, like Gecko) Version/6.0 Mobile/10A5376e Safari/8536.25 (compatible; SiteAuditBot/0.97; +http://www.semrush.com/bot.html)",
 		})
 	assert.Equal(t, http.StatusNotModified, w.Code)
 
@@ -622,9 +622,9 @@ func TestSDKTrackHandler(t *testing.T) {
 	json.Unmarshal(userPropertiesBytes.([]byte), &userProperties)
 	assert.NotNil(t, userProperties["name"])
 	// OS and Browser Properties should be filled on backend using user agent.
-	assert.Equal(t, "Mac OS X", userProperties[U.UP_OS])
+	assert.Equal(t, "Mac", userProperties[U.UP_OS])
 	assert.Equal(t, "10.13.6", userProperties[U.UP_OS_VERSION])
-	assert.Equal(t, "Mac OS X-10.13.6", userProperties[U.UP_OS_WITH_VERSION])
+	assert.Equal(t, "Mac-10.13.6", userProperties[U.UP_OS_WITH_VERSION])
 	assert.Equal(t, "Chrome", userProperties[U.UP_BROWSER])
 	assert.Equal(t, "79.0.3945.130", userProperties[U.UP_BROWSER_VERSION])
 	assert.Equal(t, "Chrome-79.0.3945.130", userProperties[U.UP_BROWSER_WITH_VERSION])
@@ -4870,4 +4870,63 @@ func TestAllAccountWebsiteProperties(t *testing.T) {
 	for key := range allKeys {
 		assert.Contains(t, resultPropertyKeys, key)
 	}
+}
+
+func TestLatestPageProperties(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	uri := "/sdk/event/track"
+
+	joinTime := U.TimeNowZ().Add(-10 * time.Minute).Unix()
+	createdUserID, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: joinTime, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	status := SDK.TrackUserAccountGroup(project.ID, createdUserID, model.GROUP_NAME_SIX_SIGNAL, &U.PropertiesMap{U.SIX_SIGNAL_DOMAIN: "www.example.com"}, U.TimeNowUnix()-10)
+	assert.Equal(t, http.StatusOK, status)
+
+	createdUserID2, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID,
+		JoinTimestamp: joinTime, Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+	assert.Equal(t, http.StatusCreated, errCode)
+
+	status = SDK.TrackUserAccountGroup(project.ID, createdUserID2, model.GROUP_NAME_SIX_SIGNAL, &U.PropertiesMap{U.SIX_SIGNAL_DOMAIN: "www.example.com"}, U.TimeNowUnix()-10)
+	assert.Equal(t, http.StatusOK, status)
+
+	w := ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"auto":true, "user_id": "%s", "event_name": "www.example.com/", 
+	"event_properties": {"$page_domain": "www.example.com", "$page_raw_url": "https://www.example.com/", "$page_url": "www.example.com/", 
+	"$referrer": "", "$referrer_url": "","$referrer_domain":"gartner.com","$page_spent_time":120,"$qp_utm_campaign":"google","$qp_utm_source":"google",
+	"$qp_utm_medium":"email","$qp_utm_keyword":"analytics","$qp_utm_term":"term1","$qp_utm_content":"content1"}}`, createdUserID)),
+		map[string]string{
+			"Authorization": project.Token,
+		})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	w = ServePostRequestWithHeaders(r, uri, []byte(fmt.Sprintf(`{"auto":true, "user_id": "%s", "event_name": "www.example.com/a", 
+	"event_properties": {"$page_domain": "www.example.com", "$page_raw_url": "https://www.example.com/a", "$page_url": "www.example.com/a", 
+	"$referrer": "", "$referrer_url": "","$referrer_domain":"","$page_spent_time":120,"$qp_utm_campaign":"google","$qp_utm_source":"google",
+	"$qp_utm_medium":"email","$qp_utm_keyword":"analytics","$qp_utm_term":"term1","$qp_utm_content":"content1"}}`, createdUserID2)),
+		map[string]string{
+			"Authorization": project.Token,
+		})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	domainUser, status := store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_DOMAINS, "example.com")
+	assert.Equal(t, http.StatusFound, status)
+	propertiesMap1, err := U.DecodePostgresJsonb(&domainUser.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, "www.example.com/a", (*propertiesMap1)[util.DP_LATEST_PAGE_URL])
+
+	time.Sleep(1 * time.Second)
+	_, status = store.GetStore().UpdateUserProperties(project.ID, createdUserID, &postgres.Jsonb{[]byte(`{"a":1}`)}, util.TimeNowUnix()+1000)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	domainUser, status = store.GetStore().GetGroupUserByGroupID(project.ID, model.GROUP_NAME_DOMAINS, "example.com")
+	assert.Equal(t, http.StatusFound, status)
+	propertiesMap1, err = U.DecodePostgresJsonb(&domainUser.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, "www.example.com/a", (*propertiesMap1)[util.DP_LATEST_PAGE_URL])
+
 }

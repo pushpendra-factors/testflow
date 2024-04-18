@@ -11,6 +11,7 @@ import { PathUrls } from 'Routes/pathUrls';
 import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
 import {
   setAccountPayloadAction,
+  setDrawerVisibleAction,
   setNewSegmentModeAction
 } from 'Reducers/accountProfilesView/actions';
 import { selectTimelinePayload } from 'Reducers/userProfilesView/selectors';
@@ -61,6 +62,7 @@ function AppSidebar() {
   };
 
   const changeAccountPayload = () => {
+    dispatch(setDrawerVisibleAction(false));
     dispatch(setAccountPayloadAction(INITIAL_ACCOUNT_PAYLOAD));
     dispatch(setNewSegmentModeAction(false));
     history.replace(PathUrls.ProfileAccounts);

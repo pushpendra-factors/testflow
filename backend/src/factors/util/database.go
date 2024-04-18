@@ -306,7 +306,7 @@ func GormCleanupCallback(scope *gorm.Scope) {
 			fieldValue := field.Field.Interface().(string)
 			err := field.Set(SanitizeStringValueForUnicode(fieldValue))
 			if err != nil {
-				log.WithError(err).Error("Failed to cleanup string field value.")
+				log.WithField("fieldValue", fieldValue).WithError(err).Error("Failed to cleanup string field value.")
 				return
 			}
 		case "postgres.Jsonb":
@@ -314,7 +314,7 @@ func GormCleanupCallback(scope *gorm.Scope) {
 			fieldValue.RawMessage = CleanupUnsupportedCharOnStringBytes(fieldValue.RawMessage)
 			err := field.Set(fieldValue)
 			if err != nil {
-				log.WithError(err).Error("Failed to cleanup postgres.Jsonb field value.")
+				log.WithField("fieldValue", fieldValue.RawMessage).WithError(err).Error("Failed to cleanup postgres.Jsonb field value.")
 				return
 			}
 
@@ -327,7 +327,7 @@ func GormCleanupCallback(scope *gorm.Scope) {
 			fieldValue.RawMessage = CleanupUnsupportedCharOnStringBytes(fieldValue.RawMessage)
 			err := field.Set(fieldValue)
 			if err != nil {
-				log.WithError(err).Error("Failed to cleanup *postgres.Jsonb field value.")
+				log.WithField("fieldValue", fieldValue.RawMessage).WithError(err).Error("Failed to cleanup *postgres.Jsonb field value.")
 				return
 			}
 		}

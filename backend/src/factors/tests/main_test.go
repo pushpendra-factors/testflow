@@ -156,9 +156,12 @@ func TestMain(m *testing.M) {
 		BatchSizePreviewDomain:                              100,
 		MarkerPreviewAllAccountsProjectId:                   "*",
 		NumberOfRunsForPreview:                              2,
+		JobRunCountPerDayMarker:                             48,
 		AccountLimitPreviewListing:                          250,
 		AccountsToProcessForPreview:                         1000,
 		EnableDomainWebsitePropertiesByProjectID:            "*",
+		EnableDeviceServiceByProjectID:                      "*",
+		DeviceServiceURL:                                    "http://localhost:3000/device_service",
 	}
 	C.InitConf(config)
 

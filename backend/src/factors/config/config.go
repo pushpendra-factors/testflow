@@ -197,6 +197,7 @@ type Configuration struct {
 	RunAllAccountsMarkerProjectIDs     string
 	DisableAllAccountsMarkerProjectIDs string
 	RunForAllAccountsInHours           int
+	JobRunCountPerDayMarker            int
 	DomainsLimitAllRun                 int
 	BatchSizeDomains                   int
 	// Flag for enabling only the /mql routes for secondary env testing.
@@ -688,6 +689,9 @@ func LookbackForSegmentMarker() int {
 // Run marker for all accounts if marker_last_run_all_accounts is greater than given hours
 func TimeRangeForAllDomains() int {
 	return configuration.RunForAllAccountsInHours
+}
+func MarkerJobRunCountPerDay() int {
+	return configuration.JobRunCountPerDayMarker
 }
 func MarkerDomainLimitForAllRun() int {
 	return configuration.DomainsLimitAllRun

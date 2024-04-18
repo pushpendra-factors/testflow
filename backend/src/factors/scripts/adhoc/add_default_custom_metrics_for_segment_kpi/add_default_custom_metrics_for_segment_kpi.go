@@ -91,10 +91,10 @@ func main() {
 
 func createCustomKPIs(allProjects bool, projectIdsArray []int64) {
 	defaultHealthcheckPingID := C.HealthCheckPreBuiltCustomKPIPingID
-	allowedProjectIDs, err := store.GetStore().GetAllProjectsWithFeatureEnabled(model.FEATURE_CUSTOM_METRICS, false)
-	if err != nil {
-		errString := "Failed in fetching projects with this feature flag enabled - events_cube_aggregation_deploy"
-		log.WithField("err", err).Warn(errString)
+	allowedProjectIDs, stCode := store.GetStore().GetAllProjectIDs()
+	if stCode != http.StatusFound {
+		errString := "Failed in fetching projects"
+		log.WithField("err", errString).Warn(errString)
 		C.PingHealthcheckForFailure(defaultHealthcheckPingID, errString)
 		os.Exit(1)
 	}

@@ -19,7 +19,10 @@ import {
   ACCOUNTS_INSIGHTS_ERROR,
   ACCOUNTS_INSIGHTS_SUCCESS,
   SET_INSIGHTS_DURATION,
-  SET_INSIGHTS_COMPARE_SEGMENT
+  SET_INSIGHTS_COMPARE_SEGMENT,
+  EDIT_INSIGHTS_METRIC_LOADING,
+  EDIT_INSIGHTS_METRIC_SUCCESS,
+  EDIT_INSIGHTS_METRIC_ERROR
 } from './types';
 
 export function generateInsightsKey({
@@ -49,7 +52,14 @@ const initialState = {
     dateRange: {}
   },
   insights: {},
-  insightsCompareConfig: {}
+  insightsCompareConfig: {},
+  editInsightsMetric: {
+    ...apiStates
+  },
+  preview: {
+    drawerVisible: false,
+    domain: {}
+  }
 };
 
 export default function (state = initialState, action) {
@@ -220,6 +230,66 @@ export default function (state = initialState, action) {
         }
       };
     }
+    case EDIT_INSIGHTS_METRIC_LOADING: {
+      return {
+        ...state,
+        editInsightsMetric: {
+          ...apiStates,
+          loading: true
+        }
+      };
+    }
+    case EDIT_INSIGHTS_METRIC_SUCCESS: {
+      const { widgetGroupId, widgetId, metric, metricName } = action.payload;
+      const updatedConfig = {
+        ...state.insightsConfig,
+        config: state.insightsConfig.config.map((elem) => {
+          if (elem.wid_g_id !== widgetGroupId) {
+            return elem;
+          }
+          return {
+            ...elem,
+            wids: elem.wids.map((wid) => {
+              if (wid.id !== widgetId) {
+                return wid;
+              }
+              return {
+                ...wid,
+                d_name: metricName != null ? metricName : wid.d_name,
+                q_me: metric != null ? metric : wid.q_me
+              };
+            })
+          };
+        })
+      };
+      return {
+        ...state,
+        editInsightsMetric: {
+          ...apiStates,
+          completed: true
+        },
+        insightsConfig: updatedConfig
+      };
+    }
+    case EDIT_INSIGHTS_METRIC_ERROR: {
+      return {
+        ...state,
+        editInsightsMetric: {
+          ...apiStates,
+          error: true
+        }
+      };
+    }
+    case 'SET_DRAWER_VISIBLE':
+      return {
+        ...state,
+        preview: { ...state.preview, drawerVisible: action.payload }
+      };
+    case 'SET_ACTIVE_DOMAIN':
+      return {
+        ...state,
+        preview: { drawerVisible: true, domain: action.payload }
+      };
     default:
       return state;
   }

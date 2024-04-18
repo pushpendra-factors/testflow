@@ -24,7 +24,8 @@ export class ResultState {
   loading: boolean = false;
   error: boolean = false;
   data: any = null;
-  apiCallStatus: any = { required: true, message: null }
+  apiCallStatus: any = { required: true, message: null };
+  status?: any;
 };
 
 export class QueryOptions {

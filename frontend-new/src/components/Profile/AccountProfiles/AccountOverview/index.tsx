@@ -1,4 +1,4 @@
-import { Badge, Popover, Spin, Tag } from 'antd';
+import { Badge, Popover, Skeleton, Space, Spin, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { Text } from 'Components/factorsComponents';
 import { EngagementTag } from 'Components/Profile/constants';
@@ -160,119 +160,121 @@ function AccountOverview({
   return loading ? (
     <Spin size='large' className='fa-page-loader' />
   ) : (
-    <div className='overview'>
-      <div className='top-metrics'>
-        <div className='metric'>
-          <Text type='title' level={7} extraClass='m-0' color='grey'>
-            Condition
-          </Text>
-          {overview?.engagement ? (
-            <div
-              className='engagement-tag'
-              style={styles as React.CSSProperties}
-            >
-              <img
-                src={`../../../assets/icons/${
-                  EngagementTag[overview?.engagement]?.icon || 'fire'
-                }.svg`}
-                alt=''
-              />
-              <Text type='title' level={7} extraClass='m-0'>
-                {overview?.engagement}
+    <div className='overview-container'>
+      <div className='overview'>
+        <div className='top-metrics'>
+          <div className='metric'>
+            <Text type='title' level={7} extraClass='m-0' color='grey'>
+              Condition
+            </Text>
+            {overview?.engagement ? (
+              <div
+                className='engagement-tag'
+                style={styles as React.CSSProperties}
+              >
+                <img
+                  src={`../../../assets/icons/${
+                    EngagementTag[overview?.engagement]?.icon || 'fire'
+                  }.svg`}
+                  alt=''
+                />
+                <Text type='title' level={7} extraClass='m-0'>
+                  {overview?.engagement}
+                </Text>
+              </div>
+            ) : (
+              <Text
+                type='title'
+                level={4}
+                extraClass='m-0'
+                color='red'
+                weight='bold'
+              >
+                NA
               </Text>
+            )}
+          </div>
+          <div className='metric'>
+            <Text
+              type='title'
+              level={7}
+              extraClass='m-0 whitespace-nowrap'
+              color='grey'
+            >
+              Engagement Score
+            </Text>
+            <div className='flex items-center'>
+              <Text
+                type='title'
+                level={4}
+                extraClass='m-0 px-1'
+                color='red'
+                weight='bold'
+              >
+                {overview?.temperature
+                  ? parseInt(overview?.temperature?.toFixed())
+                  : 'NA'}
+              </Text>
+              {top_engagement_signals && renderTopEngagementSignals()}
             </div>
-          ) : (
+          </div>
+          <div className='metric'>
+            <Text type='title' level={7} extraClass='m-0' color='grey'>
+              #Users
+            </Text>
+            <Text type='title' level={4} extraClass='m-0' weight='bold'>
+              {overview?.users_count > 25 ? '25+' : overview?.users_count || 0}
+            </Text>
+          </div>
+          <div className='metric'>
+            <Text
+              type='title'
+              level={7}
+              extraClass='m-0 whitespace-nowrap'
+              color='grey'
+            >
+              Active Time
+            </Text>
             <Text
               type='title'
               level={4}
-              extraClass='m-0'
-              color='red'
+              extraClass='m-0 whitespace-nowrap'
               weight='bold'
             >
-              NA
+              {formatDuration(parseInt((overview?.time_active || 0).toFixed()))}
             </Text>
-          )}
-        </div>
-        <div className='metric'>
-          <Text
-            type='title'
-            level={7}
-            extraClass='m-0 whitespace-nowrap'
-            color='grey'
-          >
-            Engagement Score
-          </Text>
-          <div className='flex items-center'>
-            <Text
-              type='title'
-              level={4}
-              extraClass='m-0 px-1'
-              color='red'
-              weight='bold'
-            >
-              {overview?.temperature
-                ? parseInt(overview?.temperature?.toFixed())
-                : 'NA'}
-            </Text>
-            {top_engagement_signals && renderTopEngagementSignals()}
           </div>
         </div>
-        <div className='metric'>
-          <Text type='title' level={7} extraClass='m-0' color='grey'>
-            #Users
-          </Text>
-          <Text type='title' level={4} extraClass='m-0' weight='bold'>
-            {overview?.users_count > 25 ? '25+' : overview?.users_count || 0}
-          </Text>
+        <div className='trend'>
+          <div className='heading'>
+            <Text
+              type='title'
+              level={7}
+              extraClass='m-0 whitespace-nowrap'
+              weight='bold'
+              color='grey-2'
+            >
+              Account Signal Trend
+            </Text>
+          </div>
+          <div className='chart'>
+            <TrendsChart data={overview.scores_list} />
+          </div>
         </div>
-        <div className='metric'>
-          <Text
-            type='title'
-            level={7}
-            extraClass='m-0 whitespace-nowrap'
-            color='grey'
-          >
-            Active Time
-          </Text>
-          <Text
-            type='title'
-            level={4}
-            extraClass='m-0 whitespace-nowrap'
-            weight='bold'
-          >
-            {formatDuration(parseInt((overview?.time_active || 0).toFixed()))}
-          </Text>
+        <div className='top-tables'>
+          <TableWithHeading
+            heading='Top Pages'
+            data={overview.top_pages}
+            columns={topPageColumns}
+            yScroll={200}
+          />
+          <TableWithHeading
+            heading='Top Users'
+            data={overview.top_users}
+            columns={topUserColumns}
+            yScroll={200}
+          />
         </div>
-      </div>
-      <div className='trend'>
-        <div className='heading'>
-          <Text
-            type='title'
-            level={7}
-            extraClass='m-0 whitespace-nowrap'
-            weight='bold'
-            color='grey-2'
-          >
-            Account Signal Trend
-          </Text>
-        </div>
-        <div className='chart'>
-          <TrendsChart data={overview.scores_list} />
-        </div>
-      </div>
-      <div className='top-tables'>
-        <TableWithHeading
-          heading='Top Pages'
-          data={overview.top_pages}
-          columns={topPageColumns}
-          yScroll={200}
-        />
-        <TableWithHeading
-          heading='Top Users'
-          data={overview.top_users}
-          columns={topUserColumns}
-          yScroll={200}
-        />
       </div>
     </div>
   );

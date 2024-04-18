@@ -29,21 +29,13 @@ export const defaultSegmentsList = [
 ];
 
 export const reorderDefaultDomainSegmentsToTop = (segments = []) => {
-  segments?.sort((a, b) => {
-    const aIsMatch = defaultSegmentsList.includes(a?.name);
-    const bIsMatch = defaultSegmentsList.includes(b?.name);
-
-    if (aIsMatch && !bIsMatch) {
-      return -1;
-    }
-    if (!aIsMatch && bIsMatch) {
-      return 1;
-    }
-
-    return 0;
-  });
-
-  return segments;
+  const defaultSegments = segments
+    .filter((segment) => defaultSegmentsList.includes(segment.name))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const createdSegments = segments
+    .filter((segment) => !defaultSegmentsList.includes(segment.name))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  return defaultSegments.concat(createdSegments);
 };
 
 export const getGroupList = (groupOptions) => {
@@ -221,7 +213,6 @@ export const getColumns = ({
   listProperties,
   defaultSorterInfo,
   projectDomainsList,
-  onRowRender,
   onClickOpen,
   onClickOpenNewTab
 }) => {
@@ -237,37 +228,36 @@ export const getColumns = ({
     fixed: 'left',
     showSorterTooltip: null,
     sorter: (a, b) => sortStringColumn(a.domain.name, b.domain.name),
-    render: (domain) => {
-      onRowRender(domain.name);
-      return (
-        (
-          <div className='flex items-center justify-between'>
-            <div className='inline-flex gap--8' id={domain.id}>
-              <img
-                src={`https://logo.clearbit.com/${getHost(domain.name)}`}
-                onError={(e) => {
-                  if (e.target.src !== placeholderIcon) {
-                    e.target.src = placeholderIcon;
-                  }
-                }}
-                alt=''
-                width='24'
-                height='24'
-                loading='lazy'
-              />
-              <TextWithOverflowTooltip text={domain.name} />
-            </div>
-            <div className='flex items-center'>
-              <Button
-                size='small'
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onClickOpen(domain);
-                }}
-                className='mr-1 preview-btn'
-              >
-                Open
-              </Button>
+    render: (domain) =>
+      (
+        <div className='flex items-center justify-between'>
+          <div className='inline-flex gap--8' id={domain.id}>
+            <img
+              src={`https://logo.clearbit.com/${getHost(domain.name)}`}
+              onError={(e) => {
+                if (e.target.src !== placeholderIcon) {
+                  e.target.src = placeholderIcon;
+                }
+              }}
+              alt=''
+              width='24'
+              height='24'
+              loading='lazy'
+            />
+            <TextWithOverflowTooltip text={domain.name} />
+          </div>
+          <div className='flex items-center'>
+            <Button
+              size='small'
+              onClick={(e) => {
+                e.stopPropagation();
+                onClickOpen(domain);
+              }}
+              className='mr-1 preview-btn'
+            >
+              Open
+            </Button>
+            <Tooltip title='Open in new tab'>
               <Button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -278,11 +268,10 @@ export const getColumns = ({
               >
                 <SVG name='ArrowUpRightSquare' size='12' />
               </Button>
-            </div>
+            </Tooltip>
           </div>
-        ) || '-'
-      );
-    }
+        </div>
+      ) || '-'
   };
 
   const tablePropColumns = displayTableProps?.map((prop) =>

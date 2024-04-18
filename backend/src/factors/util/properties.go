@@ -1714,7 +1714,7 @@ var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
 	GROUP_NAME_HUBSPOT_DEAL:           "Hubspot Deals",
 	GROUP_NAME_SALESFORCE_ACCOUNT:     "Salesforce Accounts",
 	GROUP_NAME_SALESFORCE_OPPORTUNITY: "Salesforce Opportunities",
-	GROUP_NAME_SIX_SIGNAL:             "Identified Companies",
+	GROUP_NAME_SIX_SIGNAL:             "Company Identification",
 	GROUP_NAME_LINKEDIN_COMPANY:       "Linkedin Company Engagements",
 	GROUP_NAME_G2:                     "G2 Engagements",
 }
@@ -1728,6 +1728,14 @@ var ALL_ACCOUNT_DEFAULT_PROPERTIES = []string{
 }
 
 var ALL_ACCOUNTS_PROPERTIES = []string{
+	DP_ENGAGEMENT_LEVEL,
+	DP_ENGAGEMENT_SCORE,
+	DP_TOTAL_ENGAGEMENT_SCORE,
+	DP_DOMAIN_NAME,
+	DP_ENGAGEMENT_SIGNALS,
+}
+
+var ALL_ACCOUNTS_TOTAL_PROPERTIES = []string{
 	DP_ENGAGEMENT_LEVEL,
 	DP_ENGAGEMENT_SCORE,
 	DP_TOTAL_ENGAGEMENT_SCORE,

@@ -134,6 +134,7 @@ function ProfilesSidebar() {
                     ?.toLowerCase()
                     .includes(searchText.toLowerCase())
                 )
+                ?.sort((a, b) => a.name.localeCompare(b.name))
                 ?.map((value) => (
                   <SegmentItem key={value.id} segment={value} />
                 ))}

@@ -15,9 +15,8 @@ export const getAccountActivitiesWithEnableKey = (accountTimeline = []) => {
       username: user.is_anonymous ? 'new_user' : user.user_name,
       user_id: user.user_id,
       is_group_user: user.user_name === 'group_user',
-      is_anonymous_user: event.username === 'new_user',
+      is_anonymous_user: user.is_anonymous,
       properties: event.properties || [],
-      user_properties: user.properties || [],
       enabled: true
     }));
     timelineArray.push(...newOpts);
@@ -30,14 +29,12 @@ const mapUser = ({
   user_name: name,
   additional_prop: extraProp,
   user_id: id,
-  is_anonymous: isAnonymous,
-  user_properties: properties
+  is_anonymous: isAnonymous
 }) => ({
   name,
   extraProp,
   id,
-  isAnonymous,
-  properties
+  isAnonymous
 });
 
 export const formatAccountTimeline = (data) => {

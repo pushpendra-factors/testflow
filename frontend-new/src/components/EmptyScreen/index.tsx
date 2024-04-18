@@ -2,7 +2,7 @@ import React from 'react';
 import EmptyScreenDefaultIllustration from './../../assets/images/illustrations/EmptyScreenDefaultIllustration.png';
 import styles from './index.module.scss';
 import { Text } from 'Components/factorsComponents';
-import { Button, Empty } from 'antd';
+import { Button, Empty, Spin } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import SVG from 'Components/factorsComponents/SVG';
 type EmptyScreenProps = {
@@ -11,21 +11,33 @@ type EmptyScreenProps = {
   learnMore?: null | string; // If we have any URL
   topTitle?: JSX.Element | null;
   showTop?: boolean;
+  imageStyle?: React.CSSProperties;
   ActionButton?: {
     icon?: JSX.Element;
     text?: string | JSX.Element;
     onClick?: () => void | null;
   } | null;
+  upgradeScreen?: boolean;
+  loading?: boolean;
 };
 export default function ({
   image,
+  imageStyle = { width: 216, height: 216 },
   title,
   topTitle,
   ActionButton,
   showTop,
-  learnMore
+  learnMore,
+  upgradeScreen = false,
+  loading = false
 }: EmptyScreenProps) {
-  console.log(title);
+  if (loading) {
+    return (
+      <div className={`${styles.parent} flex justify-center`}>
+        <Spin />
+      </div>
+    );
+  }
   return (
     <div className={styles.parent}>
       {showTop && (
@@ -44,12 +56,15 @@ export default function ({
         </div>
       )}
       <Empty
-        imageStyle={{ width: 216, height: 216, margin: '0 auto' }}
+        imageStyle={{
+          margin: '0 auto',
+          ...imageStyle
+        }}
         image={image || EmptyScreenDefaultIllustration}
         style={{
-          width: '60%',
+          width: upgradeScreen ? '100%' : '60%',
           margin: '0 auto',
-          padding: 10,
+          padding: 5,
           textAlign: 'center'
         }}
         description={
@@ -78,7 +93,7 @@ export default function ({
           {!showTop && ActionButton && (
             <Button
               type='primary'
-              icon={ActionButton.icon || <PlusOutlined />}
+              icon={!upgradeScreen && <PlusOutlined />}
               onClick={ActionButton.onClick}
             >
               {ActionButton.text || 'Add New'}{' '}

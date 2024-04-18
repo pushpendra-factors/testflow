@@ -4489,7 +4489,7 @@ func TestAllAccounts(t *testing.T) {
 		{"$hubspot_company_name": "Mad Street Den", "$hubspot_company_country": "US", "$hubspot_company_domain": "madstreetden.com", "$hubspot_company_num_associated_contacts": 100, "$hubspot_company_industry": "Software Development", "$browser": "Chrome", "$device_type": "PC"},
 		{"$hubspot_company_name": "Heyflow", "$hubspot_company_country": "Germany", "$hubspot_company_domain": "heyflow.app", "$hubspot_company_num_associated_contacts": 20, "$hubspot_company_industry": "Software Development", "$browser": "Chrome", "$device_type": "PC", "$hubspot_company_is_public": "true"},
 		{"$hubspot_company_name": "Clientjoy Ads", "$hubspot_company_country": "India", "$hubspot_company_domain": "clientjoy.io", "$hubspot_company_num_associated_contacts": 20, "$hubspot_company_industry": "IT Services", "$browser": "Chrome", "$device_type": "PC"},
-		{"$hubspot_company_name": "Adapt.IO", "$hubspot_company_country": "India", "$hubspot_company_domain": "adapt.io", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "IT Services", "$browser": "Chrome", "$device_type": "PC"},
+		{"$hubspot_company_name": "Adapt.IO", "$hubspot_company_country": "India", "$hubspot_company_domain": "adapt.io", "$hubspot_company_num_associated_contacts": 50, "$hubspot_company_industry": "IT Services", "$browser": "Chrome", "$device_type": "PC", "$hubspot_company_notes_last_updated": 1710848309},
 		{"$salesforce_account_name": "AdPushup", "$salesforce_account_billingcountry": "India", "$salesforce_account_website": "adpushup.com", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Target", "$browser": "Chrome", "$device_type": "PC", "$salesforce_account_target_account__c": true},
 		{"$salesforce_account_name": "Mad Street Den", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "madstreetden.com", "$salesforce_account_sales_play": "Shape", "$salesforce_account_status": "Unknown", "$browser": "Chrome", "$device_type": "PC", "$salesforce_account_target_account__c": true},
 		{"$salesforce_account_name": "Heyflow", "$salesforce_account_billingcountry": "US", "$salesforce_account_website": "heyflow.app", "$salesforce_account_sales_play": "Penetrate", "$salesforce_account_status": "Unknown", "$browser": "Chrome", "$device_type": "PC"},
@@ -4804,6 +4804,35 @@ func TestAllAccounts(t *testing.T) {
 		assert.Equal(t, 5.3, resp[i].TableProps["$engagement_score"])
 		assert.Equal(t, float64(120), resp[i].TableProps["$total_enagagement_score"])
 	}
+
+	payload = model.TimelinePayload{
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Entity:    "user_g",
+					Type:      "datetime",
+					Property:  "$hubspot_company_notes_last_updated",
+					Operator:  "notInLast",
+					Value:     "{\"fr\":1712428200,\"to\":1713032999,\"ovp\":false,\"num\":1,\"gran\":\"week\"}",
+					LogicalOp: "AND",
+					GroupName: U.GROUP_NAME_HUBSPOT_COMPANY,
+				},
+			}, Source: "$domains",
+			TableProps: []string{"$hubspot_company_name", U.SIX_SIGNAL_NAME, "$salesforce_account_name"},
+		},
+	}
+	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = io.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 1)
+	assert.Contains(t, resp[0].DomainName, "adapt")
+	assert.Greater(t, resp[0].LastActivity, U.TimeNowZ().AddDate(0, 0, -1))
+	assert.NotEmpty(t, resp[0].TableProps[U.SIX_SIGNAL_NAME])
+	assert.NotEmpty(t, resp[0].TableProps["$hubspot_company_name"])
+	assert.NotEmpty(t, resp[0].TableProps["$salesforce_account_name"])
 
 	// Create Events
 	trackPayload := SDK.TrackPayload{

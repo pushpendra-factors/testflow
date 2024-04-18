@@ -1,5 +1,3 @@
-/* eslint-disable camelcase */
-
 export interface DataMap {
   [key: string]: number;
 }
@@ -83,7 +81,6 @@ export interface NewEvent {
   is_group_user: boolean;
   is_anonymous_user: boolean;
   properties?: { [key: string]: unknown };
-  user_properties?: { [key: string]: unknown };
   enabled: boolean;
 }
 
@@ -91,13 +88,13 @@ export interface EventDrawerProps {
   visible: boolean;
   event: NewEvent;
   eventPropsType: { [key: string]: string };
+  userPropsType: { [key: string]: string };
   onClose: () => void;
 }
 
 export interface AccountDrawerProps {
   domain: string;
   visible: boolean;
-  events: NewEvent[];
   onClose: () => void;
   onClickMore: () => void;
   onClickOpenNewtab: () => void;
@@ -108,7 +105,6 @@ export interface TimelineUser {
   id: string;
   isAnonymous: boolean;
   extraProp?: string;
-  properties?: { [key: string]: unknown };
 }
 
 export interface TableRowProps {
@@ -121,7 +117,10 @@ export interface AccountTimelineTableViewProps {
   timelineEvents?: NewEvent[];
   loading: boolean;
   eventPropsType: { [key: string]: string };
+  userPropsType: { [key: string]: string };
   extraClass?: string;
+  eventDrawerVisible: boolean;
+  setEventDrawerVisible: (value: boolean) => void;
 }
 export interface EventDetailsProps {
   event: NewEvent;
@@ -131,5 +130,6 @@ export interface EventDetailsProps {
 
 export interface UserDetailsProps {
   user: TimelineUser;
+  userPropsType: { [key: string]: string };
   onUpdate: (newOrder: string[]) => void;
 }

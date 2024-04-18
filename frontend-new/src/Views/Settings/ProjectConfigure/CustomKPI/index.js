@@ -1237,6 +1237,7 @@ function CustomKPI({
                         />
                       ) : (
                         <EmptyScreen
+                          loading={tableLoading}
                           title={`Define custom metrics to monitor conversion rates, track engagement metrics, and measure revenue targets tailored to your organization’s definitions.`}
                           learnMore={'https://help.factors.ai/'}
                         />

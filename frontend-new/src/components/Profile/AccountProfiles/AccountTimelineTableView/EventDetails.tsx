@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ReactSortable } from 'react-sortablejs';
-import { useSelector } from 'react-redux';
+import { ConnectedProps, connect, useSelector } from 'react-redux';
 import { HolderOutlined } from '@ant-design/icons';
 import { SVG, Text } from 'Components/factorsComponents';
 import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
@@ -10,12 +10,33 @@ import { PropTextFormat } from 'Utils/dataFormatter';
 import { EventDetailsProps } from 'Components/Profile/types';
 import { Button } from 'antd';
 import _ from 'lodash';
+import { getConfiguredEventProperties } from 'Reducers/timelines/middleware';
+import { bindActionCreators } from 'redux';
 import EventIcon from './EventIcon';
 
-function EventDetails({ event, eventPropsType, onUpdate }: EventDetailsProps) {
+function EventDetails({
+  event,
+  eventPropsType,
+  onUpdate,
+  getConfiguredEventProperties
+}: ComponentProps) {
   const [sortableItems, setSortableItems] = useState<string[]>([]);
   const { eventPropNames } = useSelector((state: any) => state.coreQuery);
-  const { currentProjectSettings } = useSelector((state: any) => state.global);
+  const { active_project: activeProject, currentProjectSettings } = useSelector(
+    (state: any) => state.global
+  );
+  const { eventConfigProperties } = useSelector(
+    (state: any) => state.timelines
+  );
+
+  useEffect(() => {
+    if (!event) return;
+    if (!eventConfigProperties[event?.id]) {
+      const eventName =
+        event.display_name === 'Page View' ? 'PageView' : event.name;
+      getConfiguredEventProperties(activeProject.id, event.id, eventName);
+    }
+  }, [activeProject, event, eventConfigProperties]);
 
   const eventIcon = eventIconsColorMap[event.icon]
     ? event.icon
@@ -110,7 +131,7 @@ function EventDetails({ event, eventPropsType, onUpdate }: EventDetailsProps) {
                     >
                       {propValueFormat(
                         property,
-                        event.properties?.[property],
+                        eventConfigProperties?.[event.id]?.[property],
                         propType
                       ) || '-'}
                     </Text>
@@ -134,4 +155,16 @@ function EventDetails({ event, eventPropsType, onUpdate }: EventDetailsProps) {
   );
 }
 
-export default EventDetails;
+const mapDispatchToProps = (dispatch: any) =>
+  bindActionCreators(
+    {
+      getConfiguredEventProperties
+    },
+    dispatch
+  );
+
+const connector = connect(null, mapDispatchToProps);
+type ReduxProps = ConnectedProps<typeof connector>;
+type ComponentProps = ReduxProps & EventDetailsProps;
+
+export default connector(EventDetails);

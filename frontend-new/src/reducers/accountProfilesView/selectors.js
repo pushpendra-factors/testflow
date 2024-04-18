@@ -35,3 +35,6 @@ export const selectInsightsByWidgetGroupId = createSelector(
 
 export const selectInsightsCompareSegmentBySegmentId = (state, segmentId) =>
   state.accountProfilesView.insightsCompareConfig[segmentId];
+
+export const selectEditInsightsMetricStatus = (state) =>
+  state.accountProfilesView.editInsightsMetric;

@@ -321,11 +321,11 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.DELETE("/:project_id/segments/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), DeleteSegmentByIdHandler)
 
 	// Segment analysis
-	authRouteGroup.GET("/:project_id/segments/analytics/config", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), GetSegmentAnalyticsConfigHandler)
-	authRouteGroup.POST("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(AddNewWidgetToWidgetGroupHandler))
-	authRouteGroup.PATCH("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:widget_id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(EditSegmentAnalyticsWidgetHandler))
-	authRouteGroup.DELETE("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:widget_id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(DeleteSegmentAnalyticsWidgetHandler))
-	authRouteGroup.POST("/:project_id/segments/:segment_id/analytics/widget_group/:widget_group_id/query", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), ExecuteSegmentQueryHandler)
+	authRouteGroup.GET("/:project_id/segments/analytics/config", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS}), GetSegmentAnalyticsConfigHandler)
+	authRouteGroup.POST("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS}), responseWrapper(AddNewWidgetToWidgetGroupHandler))
+	authRouteGroup.PUT("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:widget_id", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS}), responseWrapper(EditSegmentAnalyticsWidgetHandler))
+	authRouteGroup.DELETE("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:widget_id", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS}), responseWrapper(DeleteSegmentAnalyticsWidgetHandler))
+	authRouteGroup.POST("/:project_id/segments/:segment_id/analytics/widget_group/:widget_group_id/query", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS}), ExecuteSegmentQueryHandler)
 
 	// path analysis
 	authRouteGroup.GET("/:project_id/v1/pathanalysis", mid.FeatureMiddleware([]string{M.FEATURE_PATH_ANALYSIS}), responseWrapper(V1.GetPathAnalysisEntityHandler))
@@ -363,8 +363,11 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/v1/eventtriggeralert/test_teams", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), responseWrapper(V1.TeamsTestforEventTriggerAlerts))
 
 	//alert workflows
-	authRouteGroup.GET("/:project_id/v1/workflow/templates", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), V1.GetAllWorkflowTemplates)
-	authRouteGroup.GET("/:project_id/v1/workflow/saved", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), responseWrapper(V1.GetAllSavedWorkflows))
+	authRouteGroup.GET("/:project_id/v1/workflow/templates", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), V1.GetAllWorkflowTemplatesHandler)
+	authRouteGroup.GET("/:project_id/v1/workflow/saved", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), responseWrapper(V1.GetAllSavedWorkflowsHandler))
+	authRouteGroup.POST("/:project_id/v1/workflow", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), responseWrapper(V1.CreateWorkflowHandler))
+	authRouteGroup.PUT("/:project_id/v1/workflow/edit/:id", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), responseWrapper(V1.EditWorkflowHandler))
+	authRouteGroup.DELETE("/:project_id/v1/workflow/:id", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), V1.DeleteWorkflowHandler)
 
 	// teams
 	authRouteGroup.POST("/:project_id/teams/auth", mid.FeatureMiddleware([]string{M.FEATURE_TEAMS}), V1.TeamsAuthRedirectHandler)

@@ -136,6 +136,9 @@ const SavedQueriesTable = ({
       if (query?.query?.query_group?.[0]?.cl === 'events') {
         analyseQueryParamsPath =
           analyseQueryParamsPath + '/events/' + query.id_text;
+      } else if (query?.query?.query_group?.[0]?.cl === 'funnel') {
+        analyseQueryParamsPath =
+          analyseQueryParamsPath + '/funnel/' + query.id_text;
       }
 
       history.push({

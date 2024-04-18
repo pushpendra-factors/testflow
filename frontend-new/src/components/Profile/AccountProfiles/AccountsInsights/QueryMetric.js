@@ -33,8 +33,13 @@ function QueryMetric({
   compareInsightsDataByKey,
   comparedSegmentId,
   comparedSegmentName,
-  compareDateRange
+  compareDateRange,
+  onEditMetricClick
 }) {
+  const handleEditMetric = () => {
+    onEditMetricClick(queryMetric);
+  };
+
   const compareText =
     comparedSegmentId == null ? (
       `in prev. period`
@@ -51,20 +56,33 @@ function QueryMetric({
   return (
     <div
       key={queryMetric.id}
-      className={cx('flex w-1/4 items-center justify-center flex-col gap-y-4', {
-        'border-r': index !== totalWidgets - 1
-      })}
+      className={cx(
+        'flex w-1/4 items-center justify-center flex-col gap-y-4',
+        styles['metric-container'],
+        {
+          'border-r pr-2': index !== totalWidgets - 1
+        }
+      )}
     >
-      <div className='flex flex-col items-center'>
-        <Text
-          type='title'
-          level={7}
-          weight='medium'
-          color='character-primary'
-          extraClass='mb-0'
-        >
-          {queryMetric.d_name}
-        </Text>
+      <div className='flex flex-col items-center w-full'>
+        <div className='flex items-center justify-between w-full'>
+          <div className='w-6' />
+          <Text
+            type='title'
+            level={7}
+            weight='medium'
+            color='character-primary'
+            extraClass='mb-0'
+          >
+            {queryMetric.d_name}
+          </Text>
+          <div
+            onClick={handleEditMetric}
+            className={cx('invisible', styles['edit-button'])}
+          >
+            <Svg name='pencil' color='currentColor' />
+          </div>
+        </div>
         <Text
           extraClass='mb-0'
           type='title'
