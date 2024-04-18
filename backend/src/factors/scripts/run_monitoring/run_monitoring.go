@@ -174,10 +174,12 @@ func main() {
 		C.PingHealthcheckForSuccess(dbHealthcheckPingID, "db health check success")
 	}
 
+	var healthCheckFailurePinged bool
+
 	var isFailure bool
 	apiPayload["delayed_task_count"], apiPayload["sdk_queue_length"], apiPayload["integration_queue_length"],
 		apiPayload["isQueue_duplication_enabled"], apiPayload["dup_delayed_task_count"], apiPayload["dup_sdk_queue_length"], apiPayload["dup_integration_queue_length"],
-		isFailure = MonitorSDKHealth(*delayedTaskThreshold, *sdkQueueThreshold, *integrationQueueThreshold, apiPayload)
+		isFailure, healthCheckFailurePinged = MonitorSDKHealth(*delayedTaskThreshold, *sdkQueueThreshold, *integrationQueueThreshold, apiPayload)
 	// Should not proceed with success ping, incase of failure.
 	if isFailure {
 		return
@@ -209,7 +211,10 @@ func main() {
 	}
 
 	C.PingHealthcheckForSuccess(healthcheckPingID, monitoringPayload)
-	C.PingHealthcheckForSuccess(C.HealthcheckSDKHealthPingID, "sdk health check success")
+	
+	if !healthCheckFailurePinged {
+		C.PingHealthcheckForSuccess(C.HealthcheckSDKHealthPingID, "sdk health check success")
+	}
 
 }
 
@@ -242,13 +247,14 @@ func GetHealth(apiToken string, apiUrl string) (map[string]interface{}, string, 
 }
 
 func MonitorSDKHealth(delayedTaskThreshold, sdkQueueThreshold, integrationQueueThreshold int,
-	apiPayload map[string]interface{}) (float64, float64, float64, bool, float64, float64, float64, bool) {
+	apiPayload map[string]interface{}) (float64, float64, float64, bool, float64, float64, float64, bool, bool) {
 	var delayedTaskCount float64
 	var duplicateDelayedTaskCount float64
 	var sdkQueueLength float64
 	var duplicateSdkQueueLength float64
 	var integrationQueueLength float64
 	var duplicateIntegrationQueueLength float64
+	var healthCheckFailurePinged bool
 
 	if apiPayload["delayed_task_count"] != nil {
 		delayedTaskCount = apiPayload["delayed_task_count"].(float64)
@@ -272,35 +278,41 @@ func MonitorSDKHealth(delayedTaskThreshold, sdkQueueThreshold, integrationQueueT
 	if delayedTaskCount > float64(delayedTaskThreshold) {
 		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
 			fmt.Sprintf("Delayed task count %f exceeds threshold of %d", delayedTaskCount, delayedTaskThreshold))
+		healthCheckFailurePinged = true
 	}
 	if C.IsQueueDuplicationEnabled() {
 		if duplicateDelayedTaskCount > float64(delayedTaskThreshold) {
 			C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
 				fmt.Sprintf("Duplicate queue delayed task count %f exceeds threshold of %d", duplicateDelayedTaskCount, delayedTaskThreshold))
+			healthCheckFailurePinged = true
 		}
 	}
 
 	if sdkQueueLength > float64(sdkQueueThreshold) {
 		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
 			fmt.Sprintf("SDK queue length %f exceeds threshold of %d", sdkQueueLength, sdkQueueThreshold))
+		healthCheckFailurePinged = true
 	}
 
 	if C.IsQueueDuplicationEnabled() {
 		if duplicateSdkQueueLength > float64(sdkQueueThreshold) {
 			C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
 				fmt.Sprintf("SDK duplicate queue length %f exceeds threshold of %d", duplicateSdkQueueLength, sdkQueueThreshold))
+			healthCheckFailurePinged = true
 		}
 	}
 
 	if integrationQueueLength > float64(integrationQueueThreshold) {
 		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
 			fmt.Sprintf("Integration queue length %f exceeds threshold of %d", integrationQueueLength, integrationQueueThreshold))
+		healthCheckFailurePinged = true
 	}
 
 	if C.IsQueueDuplicationEnabled() {
 		if duplicateIntegrationQueueLength > float64(integrationQueueThreshold) {
 			C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
 				fmt.Sprintf("Integration duplicate queue length %f exceeds threshold of %d", duplicateIntegrationQueueLength, integrationQueueThreshold))
+			healthCheckFailurePinged = true
 		}
 	}
 
@@ -314,9 +326,10 @@ func MonitorSDKHealth(delayedTaskThreshold, sdkQueueThreshold, integrationQueueT
 		}
 
 		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID, message)
+		healthCheckFailurePinged = true
 		return delayedTaskCount, sdkQueueLength, integrationQueueLength,
 			C.IsQueueDuplicationEnabled(), duplicateDelayedTaskCount, duplicateSdkQueueLength, duplicateIntegrationQueueLength,
-			true
+			true, healthCheckFailurePinged
 	}
 
 	sdkBody, err := ioutil.ReadAll(res.Body)
@@ -324,12 +337,13 @@ func MonitorSDKHealth(delayedTaskThreshold, sdkQueueThreshold, integrationQueueT
 		// Approx file size of 20k. Error out if less than that.
 		C.PingHealthcheckForFailure(C.HealthcheckSDKHealthPingID,
 			fmt.Sprintf("Size '%d' of SDK file lesser than expected 20k chars. Content: '%s'", len(sdkBody), string(sdkBody)))
+		healthCheckFailurePinged = true
 		return delayedTaskCount, sdkQueueLength, integrationQueueLength,
 			C.IsQueueDuplicationEnabled(), duplicateDelayedTaskCount, duplicateSdkQueueLength, duplicateIntegrationQueueLength,
-			true
+			true, healthCheckFailurePinged
 	}
 	return delayedTaskCount, sdkQueueLength, integrationQueueLength,
-		C.IsQueueDuplicationEnabled(), duplicateDelayedTaskCount, duplicateSdkQueueLength, duplicateIntegrationQueueLength, false
+		C.IsQueueDuplicationEnabled(), duplicateDelayedTaskCount, duplicateSdkQueueLength, duplicateIntegrationQueueLength, false, healthCheckFailurePinged
 
 }
 

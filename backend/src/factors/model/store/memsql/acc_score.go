@@ -386,7 +386,7 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
 
-	var rt string
+	var rtNull sql.NullString
 	var fscore float64
 	var result model.PerAccountScore
 	countsMapDays := make(map[string]model.LatestScore)
@@ -405,12 +405,16 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 
 	stmt := "select event_aggregate from users where id=? and project_id=?"
 	tx := db.Raw(stmt, userId, projectId).Row()
-	err := tx.Scan(&rt)
+	err := tx.Scan(&rtNull)
 	if err != nil {
 		logCtx.WithError(err).Error("Unable to read user counts data from DB")
-		return result, nil, "", err
+	}
+	if !rtNull.Valid {
+		logCtx.WithFields(log.Fields{"project_id": projectId, "id": userId}).Debug("Unable to read user counts data from DB")
+		return result, nil, "", nil
 	}
 
+	rt := U.IfThenElse(rtNull.Valid, rtNull.String, "").(string)
 	err = json.Unmarshal([]byte(rt), &countsMapDays)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to unmarshall json counts for users per day")
