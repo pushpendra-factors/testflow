@@ -131,7 +131,7 @@ function FirstScreen({
   const [results, setResults] = useState<Array<FlowItemType>>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const searchInputRef = useAutoFocus();
+
   useEffect(() => {
     setResults(data);
   }, []);
@@ -251,7 +251,7 @@ function FirstScreen({
         size='large'
         className='fa-input'
         type='text'
-        ref={searchInputRef}
+        autoFocus
         onChange={(e) => {
           setSearchTerm(e.target.value);
         }}
