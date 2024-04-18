@@ -236,7 +236,7 @@ const MartInt = ({ activeProject, udpateProjectDetails }) => {
 
   return (
     <>
-      <div className='mb-10 pl-4'>
+      <div className='mb-10'>
         {/* <Row>
                 <Col span={24}>
                     <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>Marketing Touchpoints</Text>
@@ -244,11 +244,11 @@ const MartInt = ({ activeProject, udpateProjectDetails }) => {
                 </Col>
             </Row> */}
 
-        <Row className='mt-4'>
+        <Row className='mt-2'>
           <Col span={24}>
-            <div className='mt-6'>
+            <div>
               <Table
-                className='fa-table--basic mt-4'
+                className='fa-table--basic'
                 columns={columns}
                 dataSource={dataSource?.filter(
                   (ds) => ds?.parameter !== '$ep_email'

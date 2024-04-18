@@ -504,11 +504,11 @@ function QueryBlock({
               <Button
                 icon={
                   <SVG
-                    name={getGroupIcon(
+                    name={
                       showGroups.find((group) => group.label === event.group)
                         ?.iconName
-                    )}
-                    size={18}
+                    }
+                    size={20}
                   />
                 }
                 className='fa-button--truncate fa-button--truncate-lg'
@@ -524,6 +524,11 @@ function QueryBlock({
           </div>
         </div>
       </div>
+      {queries?.[0]?.filters?.length > 0 && (
+        <Text type='title' level={7} extraClass='m-0 ml-2 mt-2'>
+          Filter By
+        </Text>
+      )}
       {eventFilters()}
       <div className='mt-2'>{additionalActions()}</div>
       {/* {groupByItems()} */}

@@ -303,7 +303,7 @@ const EventBasedAlert = ({
         <ControlledComponent controller={icon != null}>
           <SVG name={icon} size={20} color={iconColor} />
         </ControlledComponent>
-        {segment?.name}
+        <div className='m-0 ml-1 truncate'>{segment?.name}</div>
       </div>
     );
   };
@@ -1641,7 +1641,10 @@ const EventBasedAlert = ({
             <Col span={18}>
               <Select
                 showSearch
-                style={{ minWidth: 350 }}
+                style={{
+                  width: 'fix-content',
+                  minWidth: 350
+                }}
                 className='fa-select'
                 placeholder='Select or search segment'
                 labelInValue

@@ -16,6 +16,7 @@ import { connect } from 'react-redux';
 import { Text, SVG } from 'factorsComponents';
 import { ExclamationCircleOutlined } from '@ant-design/icons';
 import { udpateProjectDetails } from 'Reducers/global';
+import logger from 'Utils/logger.js';
 import PlatformCard from './PlatformCard.tsx';
 
 const { confirm } = Modal;
@@ -34,20 +35,20 @@ const EmailClicks = ({ activeProject, udpateProjectDetails }) => {
   const [selectedPlatform, setSelectedPlatform] = useState<object>({});
 
   const [form] = Form.useForm();
-  const [errorInfo, seterrorInfo] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [visible, setVisible] = useState(false);
+  const [errorInfo, seterrorInfo] = useState<null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [visible, setVisible] = useState<boolean>(false);
 
   useEffect(() => {
     const DS: any = Object.keys(UTM)?.map((key, index) => ({
       key: index,
-      parameter: key,
+      parameter: 'User Email ID',
       actions: {
         key,
         tags: UTM[key]
       }
     }));
-    setDataSource(DS);
+    setDataSource(DS?.filter((ds: any) => ds?.actions?.key === '$ep_email'));
 
     const data = UTM?.$ep_email?.map((item: string) =>
       item.startsWith('$qp_') ? item.slice(4) : item
@@ -100,7 +101,7 @@ const EmailClicks = ({ activeProject, udpateProjectDetails }) => {
         setLoading(false);
       })
       .catch((err: any) => {
-        console.log('err->', err);
+        logger.log(err);
         seterrorInfo(err.data.error);
         setLoading(false);
       });
@@ -138,7 +139,7 @@ const EmailClicks = ({ activeProject, udpateProjectDetails }) => {
             setLoading(false);
           })
           .catch((err: any) => {
-            console.log('err->', err);
+            logger.log(err);
             message.error(err.data.error);
             setLoading(false);
           });
@@ -148,12 +149,12 @@ const EmailClicks = ({ activeProject, udpateProjectDetails }) => {
 
   const columns = [
     {
-      title: 'For the following parameter',
+      title: 'To identify',
       dataIndex: 'parameter',
       key: 'parameter'
     },
     {
-      title: 'Track with these UTM tags, in this order of preference',
+      title: 'Check value of one of these UTM tag values',
       dataIndex: 'actions',
       key: 'actions',
       render: (text: any) => {
@@ -224,7 +225,7 @@ const EmailClicks = ({ activeProject, udpateProjectDetails }) => {
     },
     {
       value: 'salesforceOutreach',
-      label: 'Salesforce outreach'
+      label: 'Salesforce'
     },
     {
       value: 'salesforceEmailStudio',
@@ -246,14 +247,14 @@ const EmailClicks = ({ activeProject, udpateProjectDetails }) => {
 
   return (
     <>
-      <div className='mb-10 pl-4'>
+      <div className='mb-10'>
         <Row>
           <Col>
-            <Text type='title' level={7} color='grey-2' extraClass='m-0'>
-              This can be used as another way to identify emails of the users
-              through the UTM value of email UTM parameter. This can be used as
-              another way to identify emails of the users through the UTM value
-              of email UTM parameter.
+            <Text type='title' level={7} color='grey' extraClass='m-0'>
+              Identify the email address of people clicking on links inside your
+              emails. You can attach specific UTM tags inside links to your
+              website. Once a user visits your website using a link with such a
+              tag added, their email will get identified.
             </Text>
           </Col>
         </Row>
@@ -262,7 +263,7 @@ const EmailClicks = ({ activeProject, udpateProjectDetails }) => {
             <Text type='title' level={6} weight='bold' extraClass='m-0'>
               Map your UTM tags
             </Text>
-            <Text type='title' level={7} color='grey-2' extraClass='m-0'>
+            <Text type='title' level={7} color='grey' extraClass='m-0'>
               These are the tags that will be used to get the email of the
               person clicking the link in your emails.
             </Text>
@@ -275,9 +276,7 @@ const EmailClicks = ({ activeProject, udpateProjectDetails }) => {
               <Table
                 className='fa-table--basic mt-2'
                 columns={columns}
-                dataSource={dataSource?.filter(
-                  (ds: any) => ds?.parameter === '$ep_email'
-                )}
+                dataSource={dataSource}
                 pagination={false}
               />
             </div>
@@ -290,9 +289,8 @@ const EmailClicks = ({ activeProject, udpateProjectDetails }) => {
             <Text type='title' level={6} weight='bold' extraClass='m-0'>
               How to get contact’s email from links inside your emails
             </Text>
-            <Text type='title' level={7} color='grey-2' extraClass='m-0'>
-              Please select the platform and copy the respective utm tag and
-              paste it in your platform
+            <Text type='title' level={7} color='grey' extraClass='m-0'>
+              Please select the platform you use to send out emails
             </Text>
           </Col>
         </Row>

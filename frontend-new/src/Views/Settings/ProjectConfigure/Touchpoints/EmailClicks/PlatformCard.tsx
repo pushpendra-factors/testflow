@@ -45,11 +45,10 @@ const PlatformCard = ({ tags, selectedPlatform }: Props) => {
           <Text
             type='title'
             level={7}
-            color='grey-2'
+            color='grey'
             extraClass={`${styles.textEmptyBox}`}
           >
-            Select any platform from the above dropdown to get the proper UTM
-            parameter respectively
+            Choose the platform that you use to send emails to your prospects
           </Text>
         </Col>
       </Row>
@@ -63,7 +62,7 @@ const PlatformCard = ({ tags, selectedPlatform }: Props) => {
           <Text type='title' level={6} weight='bold' extraClass='m-0'>
             {selectedPlatform?.label} UTM Parameter
           </Text>
-          <Text type='title' level={7} color='grey-2' extraClass='m-0'>
+          <Text type='title' level={7} color='grey' extraClass='m-0'>
             Next to a link in your email, add the UTM tag for email followed by{' '}
             {selectedTags}
           </Text>
