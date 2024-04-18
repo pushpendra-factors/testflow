@@ -362,6 +362,7 @@ type Configuration struct {
 	SkipKpiResultValidation                              bool
 	EnableDomainWebsitePropertiesByProjectID             string
 	HubspotEnrichSkipContactUpdatesByProjectID           string
+	EnableSalesforceDeletedRecordByProjectID             string
 }
 
 type Services struct {
@@ -3260,6 +3261,15 @@ func EnableDomainWebsitePropertiesByProjectID(projectID int64) bool {
 
 func HubspotEnrichSkipContactUpdatesByProjectID(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().HubspotEnrichSkipContactUpdatesByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
+}
+
+func EnableSalesforceDeletedRecordByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableSalesforceDeletedRecordByProjectID, "")
 	if allProjects {
 		return true
 	}
