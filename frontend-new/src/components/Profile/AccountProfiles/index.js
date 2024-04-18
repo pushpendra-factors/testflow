@@ -1126,7 +1126,7 @@ function AccountProfiles({
               ? `"${d.table_props[elem]}"`
               : '-'
         );
-        values.unshift(d.name);
+        values.unshift(d.domain_name);
 
         csvRows.push(values);
       });
