@@ -46,7 +46,8 @@ type SalesforceLastSyncInfo struct {
 type SalesforceSyncInfo struct {
 	ProjectSettings map[int64]*SalesforceProjectSettings `json:"project_settings"`
 	// project_id: { type: last_sync_info }
-	LastSyncInfo map[int64]map[string]int64 `json:"last_sync_info"`
+	LastSyncInfo              map[int64]map[string]int64 `json:"last_sync_info"`
+	DeletedRecordLastSyncInfo map[int64]map[string]int64 `json:"deleted_record_last_sync_info"`
 }
 
 // SalesforceRecord is map for fields and their values
@@ -133,6 +134,7 @@ const (
 	EP_SFCampaignMemberCreated                             = "$salesforce_campaignmember_createddate"
 	SalesforceDocumentCreated             SalesforceAction = 1
 	SalesforceDocumentUpdated             SalesforceAction = 2
+	SalesforceDocumentDeleted             SalesforceAction = 3
 
 	// Standard template for salesforce date time
 	SalesforceDocumentDateTimeLayout = "2006-01-02T15:04:05.000-0700"
@@ -273,6 +275,25 @@ func GetSalesforceLastModifiedTimestamp(document *SalesforceDocument) (int64, er
 	return GetSalesforceDocumentTimestamp(date)
 }
 
+func isDeletedDocument(document *SalesforceDocument) (bool, error) {
+	if document.Type == 0 {
+		return false, errors.New("invalid document type")
+	}
+
+	value, err := util.DecodePostgresJsonb(document.Value)
+	if err != nil {
+		return false, err
+	}
+
+	deletedKey := "IsDeleted"
+	deleted, exists := (*value)[deletedKey]
+	if !exists {
+		return false, nil
+	}
+
+	return deleted == true, nil
+}
+
 // GetSalesforceDocumentTimestampByAction returns created or last modified timestamp by SalesforceAction
 func GetSalesforceDocumentTimestampByAction(document *SalesforceDocument,
 	action SalesforceAction) (int64, error) {
@@ -367,6 +388,16 @@ func GetSalesforceDocumentsWithActionAndTimestamp(documents []*SalesforceDocumen
 		}
 
 		documents[i].Timestamp = timestamp
+
+		deleted, err := isDeletedDocument(documents[i])
+		if err == nil && deleted {
+			if existDocuments[documents[i].ID] {
+				documents[i].Action = SalesforceDocumentDeleted
+				documents[i].Timestamp++
+				documentsWithAction = append(documentsWithAction, documents[i])
+			}
+			continue
+		}
 
 		if !existDocuments[documents[i].ID] {
 			documents[i].Action = SalesforceDocumentCreated

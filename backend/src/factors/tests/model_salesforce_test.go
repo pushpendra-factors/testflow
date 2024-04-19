@@ -6410,3 +6410,123 @@ func TestSalesforceAccountObjectURL(t *testing.T) {
 	domainName := getUserDomainName(project.ID, document.GroupUserID)
 	assert.Equal(t, "abc.com", domainName)
 }
+
+func TestSalesforceDeletedRecord(t *testing.T) {
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	accountCreateDate := U.TimeNowZ().AddDate(0, 0, -1)
+	var records []model.SalesforceRecord
+
+	account1 := map[string]interface{}{
+		"Id":               "1",
+		"Name":             "account_1",
+		"Website":          "abc.com",
+		"CreatedDate":      accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"IsDeleted":        true,
+	}
+
+	records = []model.SalesforceRecord{account1}
+	err = store.GetStore().BuildAndUpsertDocumentInBatch(project.ID, model.SalesforceDocumentTypeNameAccount, records)
+	assert.Nil(t, err)
+
+	_, status := store.GetStore().GetSalesforceDocumentByTypeAndAction(project.ID, "1",
+		model.SalesforceDocumentTypeAccount, model.SalesforceDocumentCreated)
+	assert.Equal(t, status, http.StatusNotFound)
+
+	_, status = store.GetStore().GetSalesforceDocumentByTypeAndAction(project.ID, "1",
+		model.SalesforceDocumentTypeAccount, model.SalesforceDocumentDeleted)
+	assert.Equal(t, status, http.StatusNotFound)
+
+	account1 = map[string]interface{}{
+		"Id":               "1",
+		"Name":             "account_1",
+		"Website":          "abc.com",
+		"CreatedDate":      accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+	}
+
+	records = []model.SalesforceRecord{account1}
+	err = store.GetStore().BuildAndUpsertDocumentInBatch(project.ID, model.SalesforceDocumentTypeNameAccount, records)
+	assert.Nil(t, err)
+
+	account1 = map[string]interface{}{
+		"Id":               "1",
+		"Name":             "account_1",
+		"Website":          "abc.com",
+		"CreatedDate":      accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"IsDeleted":        true,
+	}
+
+	records = []model.SalesforceRecord{account1}
+	err = store.GetStore().BuildAndUpsertDocumentInBatch(project.ID, model.SalesforceDocumentTypeNameAccount, records)
+	assert.Nil(t, err)
+
+	_, status = store.GetStore().GetSalesforceDocumentByTypeAndAction(project.ID, "1",
+		model.SalesforceDocumentTypeAccount, model.SalesforceDocumentCreated)
+	assert.Equal(t, status, http.StatusFound)
+	_, status = store.GetStore().GetSalesforceDocumentByTypeAndAction(project.ID, "1",
+		model.SalesforceDocumentTypeAccount, model.SalesforceDocumentDeleted)
+	assert.Equal(t, status, http.StatusFound)
+
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil, 1, 0, 45, "")
+	assert.Len(t, enrichStatus, 1)
+
+	document, _ := store.GetStore().GetSalesforceDocumentByTypeAndAction(project.ID, "1",
+		model.SalesforceDocumentTypeAccount, model.SalesforceDocumentCreated)
+	assert.Equal(t, true, document.Synced)
+	deletedUserID := document.GroupUserID
+
+	document, _ = store.GetStore().GetSalesforceDocumentByTypeAndAction(project.ID, "1",
+		model.SalesforceDocumentTypeAccount, model.SalesforceDocumentDeleted)
+	assert.Equal(t, true, document.Synced)
+
+	user, status := store.GetStore().GetUser(project.ID, deletedUserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, true, user.IsDeleted)
+
+	propertiesMap, err := U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, true, (*propertiesMap)["$salesforce_account_deleted"])
+
+	lead := map[string]interface{}{
+		"Id":               "1",
+		"Name":             "lead_1",
+		"CreatedDate":      accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+	}
+
+	records = []model.SalesforceRecord{lead}
+	err = store.GetStore().BuildAndUpsertDocumentInBatch(project.ID, model.SalesforceDocumentTypeNameLead, records)
+	assert.Nil(t, err)
+
+	lead = map[string]interface{}{
+		"Id":               "1",
+		"Name":             "lead_1",
+		"CreatedDate":      accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"IsDeleted":        true,
+	}
+
+	records = []model.SalesforceRecord{lead}
+	err = store.GetStore().BuildAndUpsertDocumentInBatch(project.ID, model.SalesforceDocumentTypeNameLead, records)
+	assert.Nil(t, err)
+
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2, nil, 1, 0, 45, "")
+	assert.Len(t, enrichStatus, 1)
+
+	document, _ = store.GetStore().GetSalesforceDocumentByTypeAndAction(project.ID, "1",
+		model.SalesforceDocumentTypeLead, model.SalesforceDocumentCreated)
+	assert.Equal(t, true, document.Synced)
+	deletedUserID = document.UserID
+
+	user, status = store.GetStore().GetUser(project.ID, deletedUserID)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, true, user.IsDeleted)
+
+	propertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
+	assert.Nil(t, err)
+	assert.Equal(t, true, (*propertiesMap)["$salesforce_lead_deleted"])
+}

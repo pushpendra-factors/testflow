@@ -86,13 +86,14 @@ func (store *MemSQL) isSalesforceDocumentExistByPrimaryKey(document *model.Sales
 func (store *MemSQL) GetSalesforceSyncInfo() (model.SalesforceSyncInfo, int) {
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
-	var lastSyncInfo []model.SalesforceLastSyncInfo
 	var syncInfo model.SalesforceSyncInfo
 
-	db := C.GetServices().Db
-	err := db.Table("salesforce_documents").Select(
-		"project_id, type, MAX(timestamp) as timestamp").Group(
-		"project_id, type").Find(&lastSyncInfo).Error
+	lastSyncInfo, err := getSalesforceSyncInfoFromDB(false)
+	if err != nil {
+		return syncInfo, http.StatusInternalServerError
+	}
+
+	deletedLastSyncInfo, err := getSalesforceSyncInfoFromDB(true)
 	if err != nil {
 		return syncInfo, http.StatusInternalServerError
 	}
@@ -104,6 +105,15 @@ func (store *MemSQL) GetSalesforceSyncInfo() (model.SalesforceSyncInfo, int) {
 		}
 
 		lastSyncInfoByProject[syncInfo.ProjectID][model.GetSalesforceAliasByDocType(syncInfo.Type)] = syncInfo.Timestamp
+	}
+
+	deletedLastSyncInfoByProject := make(map[int64]map[string]int64, 0)
+	for _, syncInfo := range deletedLastSyncInfo {
+		if _, projectExists := deletedLastSyncInfoByProject[syncInfo.ProjectID]; !projectExists {
+			deletedLastSyncInfoByProject[syncInfo.ProjectID] = make(map[string]int64)
+		}
+
+		deletedLastSyncInfoByProject[syncInfo.ProjectID][model.GetSalesforceAliasByDocType(syncInfo.Type)] = syncInfo.Timestamp
 	}
 
 	enabledProjectLastSync := make(map[int64]map[string]int64, 0)
@@ -137,10 +147,58 @@ func (store *MemSQL) GetSalesforceSyncInfo() (model.SalesforceSyncInfo, int) {
 		settingsByProject[projectSettings[i].ProjectID] = &projectSettings[i]
 	}
 
+	enabledProjectDeletedRecordLastSync := make(map[int64]map[string]int64, 0)
+	for _, ps := range projectSettings {
+		if !C.EnableSalesforceDeletedRecordByProjectID(ps.ProjectID) {
+			continue
+		}
+
+		_, pExists := deletedLastSyncInfoByProject[ps.ProjectID]
+		if !pExists {
+			enabledProjectDeletedRecordLastSync[ps.ProjectID] = make(map[string]int64, 0)
+		} else {
+			enabledProjectDeletedRecordLastSync[ps.ProjectID] = deletedLastSyncInfoByProject[ps.ProjectID]
+		}
+
+		// add types not synced before.
+		for typ := range map[string]bool{model.SalesforceDocumentTypeNameLead: true,
+			model.SalesforceDocumentTypeNameContact:     true,
+			model.SalesforceDocumentTypeNameAccount:     true,
+			model.SalesforceDocumentTypeNameOpportunity: true} {
+			_, typExists := enabledProjectDeletedRecordLastSync[ps.ProjectID][typ]
+			if !typExists {
+				// last sync timestamp as zero as type not synced before.
+				enabledProjectDeletedRecordLastSync[ps.ProjectID][typ] = 0
+			}
+		}
+
+	}
+
 	syncInfo.LastSyncInfo = enabledProjectLastSync
 	syncInfo.ProjectSettings = settingsByProject
+	syncInfo.DeletedRecordLastSyncInfo = enabledProjectDeletedRecordLastSync
 
 	return syncInfo, http.StatusFound
+}
+
+func getSalesforceSyncInfoFromDB(deletedRecords bool) ([]model.SalesforceLastSyncInfo, error) {
+	var lastSyncInfo []model.SalesforceLastSyncInfo
+
+	db := C.GetServices().Db
+	dbtx := db.Table("salesforce_documents").Select(
+		"project_id, type, MAX(timestamp) as timestamp").Group(
+		"project_id, type")
+
+	if deletedRecords {
+		dbtx = dbtx.Where("action = ?", model.SalesforceDocumentDeleted)
+	}
+
+	err := dbtx.Find(&lastSyncInfo).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return lastSyncInfo, nil
 }
 
 func getSalesforceDocumentID(document *model.SalesforceDocument) (string, error) {
@@ -362,6 +420,10 @@ func (store *MemSQL) CreateSalesforceDocumentInBatches(projectID int64, TypeAlia
 
 	for i := range batchedDocuments {
 		processDocuments := model.GetSalesforceDocumentsWithActionAndTimestamp(batchedDocuments[i], existDocuments)
+
+		if len(processDocuments) == 0 {
+			continue
+		}
 
 		status = store.CreateBatchedSalesforceDocument(projectID, processDocuments)
 		if status != http.StatusOK {
