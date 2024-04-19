@@ -202,9 +202,9 @@ function EventDrawer({
       visible={visible}
       className='fa-event-drawer--right'
       onClose={onClose}
+      bodyStyle={{ overflow: 'hidden' }}
     >
       <Tabs
-        className='timeline-view--tabs'
         defaultActiveKey={activeTab}
         size='small'
         activeKey={activeTab}

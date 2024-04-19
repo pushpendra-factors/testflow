@@ -2750,7 +2750,6 @@ func (store *MemSQL) GetTopEventsForADomain(projectID int64, domainName string) 
 			FROM users
 		WHERE project_id = ?
 			AND group_%d_user_id = (SELECT id FROM users WHERE project_id = ? AND group_%d_id = ? AND source = ? LIMIT 1)
-			AND last_event_at > ?
 		ORDER BY last_event_at DESC
 		LIMIT 25
 		) AS domain_users ON events.user_id = domain_users.id
@@ -2758,7 +2757,6 @@ func (store *MemSQL) GetTopEventsForADomain(projectID int64, domainName string) 
 		AND events.project_id = event_names.project_id
 	WHERE events.project_id = ?
 		AND event_names.name NOT IN (%s)
-		AND events.timestamp > ?
 	ORDER BY events.timestamp DESC
 	LIMIT 100;`, U.UP_NAME, domainGroup.ID, domainGroup.ID, eventNamesToExcludePlaceholders)
 
@@ -2771,11 +2769,9 @@ func (store *MemSQL) GetTopEventsForADomain(projectID int64, domainName string) 
 		projectID,
 		domainName,
 		model.UserSourceDomains,
-		model.FormatTimeToString(time.Unix(U.UnixTimeBeforeAWeek(), 0)),
 		projectID,
 	}
 	queryArgs = append(queryArgs, excludedEventNamesArgs...)
-	queryArgs = append(queryArgs, U.UnixTimeBeforeAWeek())
 
 	db := C.GetServices().Db
 	rows, err := db.Raw(queryStmt, queryArgs...).Rows()

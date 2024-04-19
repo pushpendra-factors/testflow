@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Skeleton, Spin } from 'antd';
+import React, { useState, useEffect, useRef } from 'react';
+import { Spin } from 'antd';
 import NoDataWithMessage from 'Components/Profile/MyComponents/NoDataWithMessage';
 import {
   AccountTimelineTableViewProps,
@@ -17,12 +17,42 @@ function AccountTimelineTableView({
   loading,
   extraClass,
   eventDrawerVisible,
-  setEventDrawerVisible
+  setEventDrawerVisible,
+  hasScrollAction,
+  setScrollPercent
 }: AccountTimelineTableViewProps) {
   const [formattedData, setFormattedData] = useState<{
     [key: string]: NewEvent[];
   }>({});
   const [selectedEvent, setSelectedEvent] = useState<NewEvent>();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const handleScroll = () => {
+    const container = scrollContainerRef.current;
+    if (!container) {
+      setScrollPercent(0);
+      return;
+    }
+
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    const percentage = (scrollTop / (scrollHeight - clientHeight)) * 100;
+    setScrollPercent(percentage);
+  };
+
+  useEffect(() => {
+    let flag = false;
+    const scrollContainer = scrollContainerRef.current;
+
+    if (hasScrollAction && scrollContainer) {
+      flag = true;
+      scrollContainer.addEventListener('scroll', handleScroll);
+    }
+
+    return () => {
+      if (flag && scrollContainer)
+        scrollContainer.removeEventListener('scroll', handleScroll);
+    };
+  }, [scrollContainerRef, timelineEvents]);
 
   useEffect(() => {
     const data = eventsGroupedByGranularity(
@@ -44,7 +74,12 @@ function AccountTimelineTableView({
     <NoDataWithMessage message='No Events Enabled to Show' />
   ) : (
     <>
-      <div className={`account-timeline-table-container ${extraClass}`}>
+      <div
+        ref={scrollContainerRef}
+        className={`timeline-table-container bordered-gray--bottom ${
+          extraClass || ''
+        }`}
+      >
         <table>
           <tbody>
             {Object.entries(formattedData || {}).map(([date, events]) => (

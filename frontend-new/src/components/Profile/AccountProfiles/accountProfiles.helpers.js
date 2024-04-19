@@ -8,7 +8,7 @@ import truncateURL from 'Utils/truncateURL';
 import { Button, Popover, Tag, Tooltip } from 'antd';
 import { ACCOUNTS_TABLE_COLUMN_TYPES, COLUMN_TYPE_PROPS } from 'Utils/table';
 import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
-import { EngagementTag } from '../constants';
+import { EngagementTag, placeholderIcon } from '../constants';
 import {
   getHost,
   getPropType,
@@ -17,8 +17,6 @@ import {
   sortStringColumn
 } from '../utils';
 import styles from './index.module.scss';
-
-const placeholderIcon = '/assets/avatar/company-placeholder.png';
 
 export const defaultSegmentsList = [
   'In Hubspot',
@@ -93,7 +91,6 @@ const EngagementSignalTag = ({ eventName, score, displayNames }) => (
 );
 
 const getTablePropColumn = ({
-  headerClassStr,
   prop,
   groupPropNames,
   eventNames,

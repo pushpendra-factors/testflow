@@ -121,6 +121,8 @@ export interface AccountTimelineTableViewProps {
   extraClass?: string;
   eventDrawerVisible: boolean;
   setEventDrawerVisible: (value: boolean) => void;
+  hasScrollAction: boolean;
+  setScrollPercent: (value: number) => void;
 }
 export interface EventDetailsProps {
   event: NewEvent;
@@ -132,4 +134,12 @@ export interface UserDetailsProps {
   user: TimelineUser;
   userPropsType: { [key: string]: string };
   onUpdate: (newOrder: string[]) => void;
+}
+
+export interface TableWithHeadingProps {
+  heading: string;
+  data: any;
+  columns: any;
+  xScroll: number;
+  yScroll: number;
 }
