@@ -76,6 +76,7 @@ import {
   fetchQueries
 } from '../../reducers/coreQuery/services';
 import { fetchAlertTemplates } from 'Reducers/alertTemplates';
+import { checkMatchPath } from 'Views/AppSidebar/appSidebar.helpers';
 
 // customizing highcharts for project requirements
 customizeHighCharts(Highcharts);
@@ -342,7 +343,13 @@ function AppLayout({
           >
             <Content
               className={cx('bg-white', {
-                'py-6 px-10': !show_analytics_result
+                'py-6 px-10':
+                  !checkMatchPath(
+                    pathname,
+                    PathUrls.ProfileAccountDetailsURL
+                  ) &&
+                  !checkMatchPath(pathname, PathUrls.ProfilePeopleDetailsURL) &&
+                  !show_analytics_result
               })}
             >
               <Suspense fallback={<PageSuspenseLoader />}>

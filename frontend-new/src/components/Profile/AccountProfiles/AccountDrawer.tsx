@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Drawer, Button, Tooltip } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import { AccountDrawerProps } from 'Components/Profile/types';
@@ -10,6 +10,8 @@ import {
 } from 'Reducers/coreQuery/middleware';
 import { bindActionCreators } from 'redux';
 import AccountTimelineTableView from './AccountTimelineTableView';
+import { placeholderIcon } from '../constants';
+import { getHost } from '../utils';
 
 function AccountDrawer({
   domain,
@@ -30,6 +32,7 @@ function AccountDrawer({
     [key: string]: string;
   }>({});
   const [eventDrawerVisible, setEventDrawerVisible] = useState(false);
+  const [scrollPercent, setScrollPercent] = useState<number>(0);
 
   const { accountPreview } = useSelector((state: any) => state.timelines);
   const { eventPropertiesV2, userPropertiesV2 } = useSelector(
@@ -38,6 +41,10 @@ function AccountDrawer({
   const { active_project: activeProject } = useSelector(
     (state: any) => state.global
   );
+
+  useEffect(() => {
+    setScrollPercent(0);
+  }, [domain]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -120,9 +127,23 @@ function AccountDrawer({
     <Drawer
       title={
         <div className='flex justify-between items-center'>
-          <Text type='title' level={4} weight='bold' extraClass='m-0'>
-            {domain}
-          </Text>
+          <div className='inline-flex gap--8'>
+            <img
+              src={`https://logo.clearbit.com/${getHost(domain)}`}
+              onError={(e) => {
+                if (e.target.src !== placeholderIcon) {
+                  e.target.src = placeholderIcon;
+                }
+              }}
+              alt=''
+              width='32'
+              height='32'
+              loading='lazy'
+            />
+            <Text type='title' level={4} weight='bold' extraClass='m-0'>
+              {domain}
+            </Text>
+          </div>
           <div className='inline-flex gap--8'>
             <Button onClick={onClickMore}>
               <div className='inline-flex gap--4'>
@@ -159,7 +180,20 @@ function AccountDrawer({
           userPropsType={userPropertiesType}
           eventDrawerVisible={eventDrawerVisible}
           setEventDrawerVisible={setEventDrawerVisible}
+          hasScrollAction
+          setScrollPercent={setScrollPercent}
         />
+        {accountPreview?.[domain]?.events?.length > 0 &&
+          scrollPercent > 100 - 200 / accountPreview[domain].events.length && (
+            <div className='see-more-section'>
+              <Button onClick={onClickMore}>
+                <div className='inline-flex gap--4'>
+                  <SVG name='expand' />
+                  Open to see more
+                </div>
+              </Button>
+            </div>
+          )}
       </div>
     </Drawer>
   );

@@ -93,7 +93,7 @@ function UserDetails({
           />
         </div>
       </div>
-      <div>
+      <div className='event-drawer-items'>
         {sortableItems.map((property, index) => {
           const propType = userPropsType[property] || 'categorical';
           return (

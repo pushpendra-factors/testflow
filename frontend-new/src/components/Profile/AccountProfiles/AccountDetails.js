@@ -671,7 +671,7 @@ function AccountDetails({
             >
               {accountDetails?.data?.name || accountDetails?.data?.domain}
             </Text>
-            <SVG name='ArrowUpRightSquare' />
+            <SVG name='ArrowUpRightSquare' size={16} />
           </a>
         </div>
       </div>
@@ -760,19 +760,21 @@ function AccountDetails({
   );
 
   const renderTimelineTableView = () => (
-    <AccountTimelineTableView
-      timelineEvents={getFilteredEvents(
-        activities
-          ?.filter((activity) => activity.enabled === true)
-          ?.slice(0, 1000) || []
-      )}
-      loading={accountDetails?.isLoading}
-      eventPropsType={eventPropertiesType}
-      userPropsType={userPropertiesType}
-      extraClass='mt-5'
-      eventDrawerVisible={eventDrawerVisible}
-      setEventDrawerVisible={setEventDrawerVisible}
-    />
+    <>
+      <div className='h-6' />
+      <AccountTimelineTableView
+        timelineEvents={getFilteredEvents(
+          activities
+            ?.filter((activity) => activity.enabled === true)
+            ?.slice(0, 1000) || []
+        )}
+        loading={accountDetails?.isLoading}
+        eventPropsType={eventPropertiesType}
+        userPropsType={userPropertiesType}
+        eventDrawerVisible={eventDrawerVisible}
+        setEventDrawerVisible={setEventDrawerVisible}
+      />
+    </>
   );
 
   useEffect(() => {
@@ -811,11 +813,7 @@ function AccountDetails({
 
   const renderBirdviewWithActions = () => (
     <div className='flex flex-col'>
-      <div
-        className={`timeline-actions ${
-          isFreePlan ? 'justify-between' : 'flex-row-reverse'
-        } `}
-      >
+      <div className={isFreePlan ? 'flex justify-between items-center' : ''}>
         {isFreePlan && (
           <div className='flex items-baseline flex-wrap'>
             <Text
@@ -837,18 +835,17 @@ function AccountDetails({
             </Text>
           </div>
         )}
-        <div className='timeline-actions__group'>
-          <div className='timeline-actions__group__collapse'>
+
+        <div className='tl-actions-row'>
+          <div className='collapse-btns'>
             <Button
-              className='collapse-btn collapse-btn--left'
-              type='text'
+              className='collapse-btns--btn'
               onClick={() => setCollapseAll(false)}
             >
               <SVG name='line_height' size={22} />
             </Button>
             <Button
-              className='collapse-btn collapse-btn--right'
-              type='text'
+              className='collapse-btns--btn'
               onClick={() => setCollapseAll(true)}
             >
               <SVG name='grip_lines' size={22} />
@@ -862,11 +859,7 @@ function AccountDetails({
             open={openPopover}
             onOpenChange={handleOpenPopoverChange}
           >
-            <Button
-              size='large'
-              className='fa-btn--custom mx-2 relative'
-              type='text'
-            >
+            <Button type='text'>
               <SVG name='activity_filter' />
             </Button>
           </Popover>
@@ -875,7 +868,7 @@ function AccountDetails({
             placement='bottomRight'
             trigger={['click']}
           >
-            <Button type='text' className='flex items-center'>
+            <Button type='text'>
               {granularity}
               <SVG name='caretDown' size={16} extraClass='ml-1' />
             </Button>
@@ -904,30 +897,32 @@ function AccountDetails({
       key={key}
     >
       {key === 'overview' && isScoringLocked ? (
-        <EmptyScreen
-          upgradeScreen
-          image={AccountsOverviewUpgrade}
-          imageStyle={{ width: '600px', height: '450px' }}
-          title={
-            <div>
-              <Text type='title' level={3} weight='bold' extraClass='m-0'>
-                Your plan doesn’t have this feature
-              </Text>
-              <Text type='title' level={7} extraClass='m-0'>
-                This feature is not included in your current plan. Please
-                upgrade to use this feature
-              </Text>
-            </div>
-          }
-          learnMore='https://help.factors.ai'
-          ActionButton={{
-            onClick: () => {
-              history.push('/settings/pricing?activeTab=upgrade');
-            },
-            text: 'Upgrade Now',
-            icon: null
-          }}
-        />
+        <div className='overview-container'>
+          <EmptyScreen
+            upgradeScreen
+            image={AccountsOverviewUpgrade}
+            imageStyle={{ width: '600px', height: '450px' }}
+            title={
+              <div>
+                <Text type='title' level={3} weight='bold' extraClass='m-0'>
+                  Your plan doesn’t have this feature
+                </Text>
+                <Text type='title' level={7} extraClass='m-0'>
+                  This feature is not included in your current plan. Please
+                  upgrade to use this feature
+                </Text>
+              </div>
+            }
+            learnMore='https://help.factors.ai'
+            ActionButton={{
+              onClick: () => {
+                history.push('/settings/pricing?activeTab=upgrade');
+              },
+              text: 'Upgrade Now',
+              icon: null
+            }}
+          />
+        </div>
       ) : (
         content
       )}
@@ -963,18 +958,20 @@ function AccountDetails({
   );
 
   return (
-    <div>
+    <>
       <div className='fa-timeline'>
         {renderHeader()}
-        {renderLeftPane()}
-        {renderTimelineView()}
+        <div className='fa-timeline--content'>
+          {renderLeftPane()}
+          {renderTimelineView()}
+        </div>
       </div>
       <UpgradeModal
         visible={isUpgradeModalVisible}
         variant='timeline'
         onCancel={() => setIsUpgradeModalVisible(false)}
       />
-    </div>
+    </>
   );
 }
 

@@ -300,7 +300,7 @@ function ContactDetails({
     });
   }, []);
 
-  const renderModalHeader = () => (
+  const renderHeader = () => (
     <div className='fa-timeline--header'>
       <div className='flex items-center'>
         <div
@@ -478,62 +478,57 @@ function ContactDetails({
   );
 
   const renderSingleTimelineView = () => (
-    <UserTimelineSingleview
-      activities={activities?.filter((activity) => activity.enabled === true)}
-      milestones={userDetails.data?.milestones || {}}
-      loading={userDetails.isLoading}
-      propertiesType={eventPropertiesType}
-      eventNamesMap={eventNamesMap}
-    />
+    <>
+      <div className='h-6' />
+      <UserTimelineSingleview
+        activities={activities?.filter((activity) => activity.enabled === true)}
+        milestones={userDetails.data?.milestones || {}}
+        loading={userDetails.isLoading}
+        propertiesType={eventPropertiesType}
+        eventNamesMap={eventNamesMap}
+      />
+    </>
   );
 
   const renderBirdviewWithActions = () => (
     <div className='flex flex-col'>
-      <div className='timeline-actions flex-row-reverse'>
-        <div className='timeline-actions__group'>
-          <div className='timeline-actions__group__collapse'>
-            <Button
-              className='collapse-btn collapse-btn--left'
-              type='text'
-              onClick={() => setCollapse(false)}
-            >
-              <SVG name='line_height' size={22} />
-            </Button>
-            <Button
-              className='collapse-btn collapse-btn--right'
-              type='text'
-              onClick={() => setCollapse(true)}
-            >
-              <SVG name='grip_lines' size={22} />
-            </Button>
-          </div>
-          <Popover
-            overlayClassName='fa-activity--filter'
-            placement='bottomLeft'
-            trigger='click'
-            content={controlsPopover}
-            open={openPopover}
-            onOpenChange={handleOpenPopoverChange}
+      <div className='tl-actions-row'>
+        <div className='collapse-btns'>
+          <Button
+            className='collapse-btns--btn'
+            onClick={() => setCollapse(false)}
           >
-            <Button
-              size='large'
-              className='fa-btn--custom mx-2 relative'
-              type='text'
-            >
-              <SVG name='activity_filter' />
-            </Button>
-          </Popover>
-          <Dropdown
-            overlay={granularityMenu}
-            placement='bottomRight'
-            trigger={['click']}
+            <SVG name='line_height' size={22} />
+          </Button>
+          <Button
+            className='collapse-btns--btn'
+            onClick={() => setCollapse(true)}
           >
-            <Button type='text' className='flex items-center'>
-              {granularity}
-              <SVG name='caretDown' size={16} extraClass='ml-1' />
-            </Button>
-          </Dropdown>
+            <SVG name='grip_lines' size={22} />
+          </Button>
         </div>
+        <Popover
+          overlayClassName='fa-activity--filter'
+          placement='bottomLeft'
+          trigger='click'
+          content={controlsPopover}
+          open={openPopover}
+          onOpenChange={handleOpenPopoverChange}
+        >
+          <Button type='text'>
+            <SVG name='activity_filter' />
+          </Button>
+        </Popover>
+        <Dropdown
+          overlay={granularityMenu}
+          placement='bottomRight'
+          trigger={['click']}
+        >
+          <Button type='text' className='flex items-center'>
+            {granularity}
+            <SVG name='caretDown' size={16} extraClass='ml-1' />
+          </Button>
+        </Dropdown>
       </div>
       <UserTimelineBirdview
         activities={activities?.filter((activity) => activity.enabled === true)}
@@ -572,10 +567,11 @@ function ContactDetails({
     </div>
   );
   useKey(['Escape'], handleOptionBackClick);
+
   return (
-    <div>
-      {renderModalHeader()}
-      <div className='fa-timeline'>
+    <div className='fa-timeline'>
+      {renderHeader()}
+      <div className='fa-timeline--content'>
         {renderLeftPane()}
         {renderTimelineView()}
       </div>

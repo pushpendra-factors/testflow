@@ -10,17 +10,18 @@ import {
 } from 'Components/Profile/types';
 import React from 'react';
 import { PropTextFormat, formatDuration } from 'Utils/dataFormatter';
-import TableWithHeading from './TableWithHeading';
-import TrendsChart from './TrendsChart';
 import { CheckCircleFilled } from '@ant-design/icons';
 import { useSelector } from 'react-redux';
+import TableWithHeading from './TableWithHeading';
+import TrendsChart from './TrendsChart';
+
 const topPageColumns: ColumnsType<TopPage> = [
   {
     title: 'Page URL',
     dataIndex: 'page_url',
     key: 'page_url',
     ellipsis: true,
-    width: 224,
+    width: 176,
     render: (text: string) => (
       <a href={`https://${text}`} target='_blank' rel='noopener noreferrer'>
         {text}
@@ -31,14 +32,14 @@ const topPageColumns: ColumnsType<TopPage> = [
     title: '# Views',
     dataIndex: 'views',
     align: 'right',
-    width: 96,
+    width: 84,
     key: 'views'
   },
   {
     title: '# Users',
     dataIndex: 'users_count',
     align: 'right',
-    width: 96,
+    width: 84,
     key: 'users_count'
   },
   {
@@ -46,14 +47,14 @@ const topPageColumns: ColumnsType<TopPage> = [
     dataIndex: 'total_time',
     key: 'total_time',
     align: 'right',
-    width: 96,
+    width: 84,
     render: (time: number) => formatDuration(time.toFixed())
   },
   {
     title: 'Avg. Scroll %',
     dataIndex: 'avg_scroll_percent',
     key: 'avg_scroll_percent',
-    width: 112,
+    width: 84,
     align: 'right',
     render: (percent: number) => `${percent?.toFixed(2)}%`
   }
@@ -64,19 +65,19 @@ const topUserColumns: ColumnsType<TopUser> = [
     title: 'Name',
     dataIndex: 'name',
     key: 'name',
-    width: 264
+    width: 188
   },
   {
     title: '# Views',
     align: 'right',
-    width: 120,
+    width: 108,
     dataIndex: 'num_page_views',
     key: 'num_page_views'
   },
   {
     title: 'Active Time',
     align: 'right',
-    width: 120,
+    width: 108,
     dataIndex: 'active_time',
     key: 'active_time',
     render: (time: number) => formatDuration(time.toFixed())
@@ -84,7 +85,7 @@ const topUserColumns: ColumnsType<TopUser> = [
   {
     title: '# Pages',
     align: 'right',
-    width: 120,
+    width: 108,
     dataIndex: 'num_of_pages',
     key: 'num_of_pages'
   }
@@ -121,7 +122,7 @@ function AccountOverview({
     );
   }
   function renderTopEngagementSignals() {
-    let signals = top_engagement_signals.trim().split(' , ');
+    const signals = top_engagement_signals.trim().split(' , ');
 
     return (
       <Popover
@@ -160,7 +161,7 @@ function AccountOverview({
   return loading ? (
     <Spin size='large' className='fa-page-loader' />
   ) : (
-    <div className='overview-container'>
+    <div className='overview-container bordered-gray--bottom'>
       <div className='overview'>
         <div className='top-metrics'>
           <div className='metric'>
