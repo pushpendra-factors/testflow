@@ -4459,3 +4459,36 @@ func (store *MemSQL) updateDomainPropertiesIfChanged(projectID int64, domainName
 
 	return http.StatusOK
 }
+
+func (store *MemSQL) DeleteUser(projectId int64, userID string) int {
+	logFields := log.Fields{
+		"project_id": projectId,
+		"user_id":    userID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
+	if projectId == 0 || userID == "" {
+		logCtx.Error("Invalid parameters.")
+		return http.StatusBadRequest
+	}
+
+	updateFields := map[string]interface{}{"is_deleted": true}
+
+	db := C.GetServices().Db
+	query := db.Model(&model.User{}).Where("project_id = ? AND id = ?",
+		projectId, userID).Updates(updateFields)
+
+	if err := query.Error; err != nil {
+		log.WithError(err).Error("Failed deleting user.")
+
+		return http.StatusInternalServerError
+	}
+
+	if query.RowsAffected == 0 {
+		return http.StatusBadRequest
+	}
+
+	return http.StatusAccepted
+}

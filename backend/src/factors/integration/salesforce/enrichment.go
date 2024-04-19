@@ -420,6 +420,21 @@ func enrichGroupAccount(projectID int64, document *model.SalesforceDocument, sal
 		return http.StatusInternalServerError, ""
 	}
 
+	if document.Action == model.SalesforceDocumentDeleted {
+		groupUserId, status := updateUserAsDeleted(projectID, document)
+		if status != http.StatusOK {
+			logCtx.Error("Failed to updateUserAsDeleted")
+			return http.StatusInternalServerError, ""
+		}
+
+		errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, "", "", groupUserId, true)
+		if errCode != http.StatusAccepted {
+			logCtx.Error("Failed to update salesforce deleted account document as synced.")
+			return http.StatusInternalServerError, ""
+		}
+		return http.StatusOK, groupUserId
+	}
+
 	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document, organizationURL)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
@@ -504,6 +519,23 @@ func enrichContact(projectID int64, document *model.SalesforceDocument, salesfor
 	}
 
 	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
+
+	if document.Action == model.SalesforceDocumentDeleted {
+		userID, status := updateUserAsDeleted(projectID, document)
+		if status != http.StatusOK {
+			logCtx.Error("Failed to updateUserAsDeleted")
+			return http.StatusInternalServerError
+		}
+
+		errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, "", userID, "", true)
+		if errCode != http.StatusAccepted {
+			logCtx.Error("Failed to update salesforce deleted contact document as synced.")
+			return http.StatusInternalServerError
+		}
+
+		return http.StatusOK
+	}
+
 	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document, organizationURL)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
@@ -1049,6 +1081,22 @@ func enrichGroupOpportunity(projectID int64, document *model.SalesforceDocument,
 		return nil, http.StatusInternalServerError
 	}
 
+	if document.Action == model.SalesforceDocumentDeleted {
+		groupUserId, status := updateUserAsDeleted(projectID, document)
+		if status != http.StatusOK {
+			logCtx.Error("Failed to updateUserAsDeleted")
+			return nil, http.StatusInternalServerError
+		}
+
+		errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, "", "", groupUserId, true)
+		if errCode != http.StatusAccepted {
+			logCtx.Error("Failed to update salesforce deleted opportunity document as synced.")
+			return nil, http.StatusInternalServerError
+		}
+
+		return nil, http.StatusOK
+	}
+
 	createCreatedEvent := false
 	if document.GroupUserID != "" {
 
@@ -1395,6 +1443,23 @@ func enrichLeads(projectID int64, document *model.SalesforceDocument, salesforce
 	}
 
 	logCtx := log.WithField("project_id", projectID).WithField("document_id", document.ID)
+
+	if document.Action == model.SalesforceDocumentDeleted {
+		userID, status := updateUserAsDeleted(projectID, document)
+		if status != http.StatusOK {
+			logCtx.Error("Failed to updateUserAsDeleted")
+			return http.StatusInternalServerError
+		}
+
+		errCode := store.GetStore().UpdateSalesforceDocumentBySyncStatus(projectID, document, "", userID, "", true)
+		if errCode != http.StatusAccepted {
+			logCtx.Error("Failed to update salesforce deleted lead document as synced.")
+			return http.StatusInternalServerError
+		}
+
+		return http.StatusOK
+	}
+
 	enProperties, properties, err := GetSalesforceDocumentProperties(projectID, document, organizationURL)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get properties")
@@ -1454,6 +1519,56 @@ func enrichLeads(projectID int64, document *model.SalesforceDocument, salesforce
 	}
 
 	return http.StatusOK
+}
+
+func updateUserAsDeleted(projectID int64, document *model.SalesforceDocument) (string, int) {
+	if document.Action != model.SalesforceDocumentDeleted {
+		return "", http.StatusBadRequest
+	}
+
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "document_id": document.ID})
+	createdDocument, status := store.GetStore().GetSalesforceDocumentByTypeAndAction(projectID, document.ID, document.Type, model.SalesforceDocumentCreated)
+	if status != http.StatusFound {
+		logCtx.Error("Failed to get created document for deleting user.")
+		return "", http.StatusInternalServerError
+	}
+
+	userID := ""
+	if document.Type == model.SalesforceDocumentTypeAccount || document.Type == model.SalesforceDocumentTypeOpportunity {
+		userID = createdDocument.GroupUserID
+	} else {
+		userID = createdDocument.UserID
+	}
+
+	if userID == "" {
+		logCtx.Error("Missing user id for deleting user.")
+		return "", http.StatusInternalServerError
+	}
+
+	typeAlias := model.GetSalesforceAliasByDocType(document.Type)
+	keyDelete := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce,
+		typeAlias, "deleted")
+
+	properties := map[string]interface{}{keyDelete: true}
+	propertiesJSON, err := U.EncodeToPostgresJsonb(&properties)
+	if err != nil {
+		log.WithError(err).Error("Failed to encode properties for deleted record.")
+		return "", http.StatusInternalServerError
+	}
+
+	_, status = store.GetStore().UpdateUserProperties(projectID, userID, propertiesJSON, U.TimeNowUnix())
+	if status != http.StatusAccepted {
+		logCtx.Error("Failed to update user properties for deleted record.")
+		return "", http.StatusInternalServerError
+	}
+
+	status = store.GetStore().DeleteUser(projectID, userID)
+	if status != http.StatusAccepted {
+		logCtx.Error("Failed to update mark user as deleted.")
+		return "", http.StatusInternalServerError
+	}
+
+	return userID, http.StatusOK
 }
 
 func getCampaignMemberIDsFromCampaign(document *model.SalesforceDocument) ([]string, error) {
