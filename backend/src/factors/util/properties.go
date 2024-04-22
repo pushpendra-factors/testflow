@@ -710,6 +710,9 @@ var SIX_SIGNAL_NAICS = "$6Signal_naics"
 var SIX_SIGNAL_ANNUAL_REVENUE = "$6Signal_annual_revenue"
 var SIX_SIGNAL_SIC_DESCRIPTION = "$6Signal_sic_description"
 
+var SALESFORCE_CONTACT_DELETED_KEY = "$salesforce_contact_isdeleted"
+var SALESFORCE_LEAD_DELETED_KEY = "$salesforce_lead_isdeleted"
+
 // Enriched Company properties
 var ENRICHED_PROPERTIES_PREFIX = "$enriched_"
 var ENRICHMENT_SOURCE = "$enrichment_source"
@@ -1522,6 +1525,9 @@ var DISABLED_USER_PROPERTIES_UI = [...]string{
 	UP_BROWSER_WITH_VERSION,
 	UP_OS_WITH_VERSION,
 	UP_SESSION_COUNT,
+	// remove depricated keys
+	"$salesforce_contact_deleted",
+	"$salesforce_lead_deleted",
 }
 
 var DISABLED_EVENT_PROPERTIES_UI = [...]string{
