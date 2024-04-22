@@ -6489,7 +6489,7 @@ func TestSalesforceDeletedRecord(t *testing.T) {
 
 	propertiesMap, err := U.DecodePostgresJsonb(&user.Properties)
 	assert.Nil(t, err)
-	assert.Equal(t, true, (*propertiesMap)["$salesforce_account_deleted"])
+	assert.Equal(t, true, (*propertiesMap)["$salesforce_account_isdeleted"])
 
 	lead := map[string]interface{}{
 		"Id":               "1",
@@ -6528,5 +6528,5 @@ func TestSalesforceDeletedRecord(t *testing.T) {
 
 	propertiesMap, err = U.DecodePostgresJsonb(&user.Properties)
 	assert.Nil(t, err)
-	assert.Equal(t, true, (*propertiesMap)["$salesforce_lead_deleted"])
+	assert.Equal(t, true, (*propertiesMap)["$salesforce_lead_isdeleted"])
 }
