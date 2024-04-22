@@ -80,7 +80,7 @@ func (store *MemSQL) buildKPIQuery(projectID int64, widget model.Widget, segment
 	kpiQuery.Metrics = []string{widget.QueryMetric}
 	kpiQuery.From = requestParams.From
 	kpiQuery.To = requestParams.To
-	kpiQuery.GroupByTimestamp = model.GroupByTimestampMonth
+	kpiQuery.GroupByTimestamp = model.GroupByTimestampQuarter
 	kpiQuery.Timezone = requestParams.Timezone
 	kpiQuery.SegmentID = segmentID
 
