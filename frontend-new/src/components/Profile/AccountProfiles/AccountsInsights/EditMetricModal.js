@@ -110,6 +110,7 @@ function EditMetricModal({
               className={cx('fa-input', styles.input)}
               size='large'
               placeholder='Name'
+              disabled
             />
           </div>
 

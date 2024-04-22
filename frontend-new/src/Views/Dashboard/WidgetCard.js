@@ -450,7 +450,10 @@ function WidgetCard({
     }
 
     let analyseQueryParamsPath = '/analyse';
-    if (unit?.query?.query?.query_group?.[0]?.cl === 'events') {
+    if (
+      unit?.query?.query?.query_group?.[0]?.cl === 'events' &&
+      unit?.query?.id_text
+    ) {
       analyseQueryParamsPath =
         analyseQueryParamsPath + '/events/' + unit.query.id_text;
     } else if (unit?.query?.query?.cl === 'funnel') {

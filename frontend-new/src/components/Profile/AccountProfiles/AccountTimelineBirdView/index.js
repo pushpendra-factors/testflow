@@ -1,4 +1,4 @@
-import { Avatar, Skeleton, Spin } from 'antd';
+import { Avatar, Spin } from 'antd';
 import React from 'react';
 import { CaretRightOutlined, CaretUpOutlined } from '@ant-design/icons';
 import { PropTextFormat } from 'Utils/dataFormatter';
@@ -115,11 +115,11 @@ function AccountTimelineBirdView({
   const renderAdditionalDiv = (eventsCount, collapseState, onClick) =>
     eventsCount > 1 ? (
       collapseState ? (
-        <div className='timeline-events__num' onClick={onClick}>
+        <div className='birdview-events__num' onClick={onClick}>
           {`+${Number(eventsCount - 1)}`}
         </div>
       ) : (
-        <div className='timeline-events__num' onClick={onClick}>
+        <div className='birdview-events__num' onClick={onClick}>
           <CaretUpOutlined /> Show Less
         </div>
       )
@@ -143,7 +143,7 @@ function AccountTimelineBirdView({
     ) : null;
 
   const renderTimeline = () => (
-    <div className='table-scroll'>
+    <div className='birdview-container bordered-gray--bottom'>
       <table>
         <thead>
           <tr>
@@ -233,14 +233,14 @@ function AccountTimelineBirdView({
                       }`}
                     >
                       <div
-                        className={`timeline-events account-pad ${
+                        className={`birdview-events account-pad ${
                           allEvents[user.id].collapsed
-                            ? 'timeline-events--collapsed'
-                            : 'timeline-events--expanded'
+                            ? 'birdview-events--collapsed'
+                            : 'birdview-events--expanded'
                         }`}
                       >
                         {eventsList?.map((event) => (
-                          <div className='timeline-events__event'>
+                          <div className='birdview-events__event'>
                             {renderIcon(event)}
                             {renderInfoCard(event)}
                           </div>

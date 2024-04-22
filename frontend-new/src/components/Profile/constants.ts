@@ -123,3 +123,5 @@ export const EngagementTag: Record<string, { bgColor: string; icon: string }> =
       icon: 'icecube'
     }
   };
+
+export const placeholderIcon = '/assets/avatar/company-placeholder.png';

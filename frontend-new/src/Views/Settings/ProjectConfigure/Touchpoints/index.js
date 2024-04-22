@@ -22,6 +22,7 @@ import {
 } from 'Utils/operatorMapping';
 import { MoreOutlined } from '@ant-design/icons';
 import { data } from 'autoprefixer';
+import EmptyScreen from 'Components/EmptyScreen';
 import TouchpointView from './TouchPointView';
 import MarketingInteractions from '../MarketingInteractions';
 import FAFilterSelect from '../../../../components/FaFilterSelect';
@@ -30,7 +31,6 @@ import { OTPService } from '../../../../reducers/touchpoints/services';
 import useService from '../../../../hooks/useService';
 import { Otp } from '../../../../reducers/touchpoints/classes';
 import EmailClicks from './EmailClicks/index';
-import EmptyScreen from 'Components/EmptyScreen';
 
 const { TabPane } = Tabs;
 
@@ -393,16 +393,16 @@ const Touchpoints = ({
           <TabPane tab='Digital Marketing' key='1'>
             <MarketingInteractions />
           </TabPane>
-          <TabPane tab='Email Clicks' key='2'>
+          <TabPane tab='Email tracking' key='2'>
             <EmailClicks />
           </TabPane>
 
           <TabPane tab='Hubspot' key='3'>
-            <div className='mb-10 pl-4 mt-10'>
+            <div className='mb-10 mt-2'>
               {touchPointsData.filter((obj) => obj.crm_type === getCRMType())
                 .length > 0 ? (
                 <Table
-                  className='fa-table--basic mt-4'
+                  className='fa-table--basic'
                   columns={columns}
                   dataSource={touchPointsData.filter(
                     (obj) => obj.crm_type === getCRMType()
@@ -412,20 +412,20 @@ const Touchpoints = ({
                 />
               ) : (
                 <EmptyScreen
-                  learnMore={`https://help.factors.ai/`}
+                  learnMore='https://help.factors.ai/'
                   loading={touchPointState.loading}
-                  title={`Record offline touchpoints from HubSpot to attribute them accurately to leads, opportunities, and pipeline stages. Apply custom rules to define your touchpoints accurately.`}
+                  title='Record offline touchpoints from HubSpot to attribute them accurately to leads, opportunities, and pipeline stages. Apply custom rules to define your touchpoints accurately.'
                 />
               )}
             </div>
           </TabPane>
 
           <TabPane tab='Salesforce' key='4'>
-            <div className='mb-10 pl-4 mt-10'>
+            <div className='mb-10 mt-2'>
               {touchPointsData.filter((obj) => obj.crm_type === getCRMType())
                 .length > 0 ? (
                 <Table
-                  className='fa-table--basic mt-4'
+                  className='fa-table--basic'
                   columns={columns}
                   dataSource={touchPointsData.filter(
                     (obj) => obj.crm_type === getCRMType()
@@ -435,9 +435,9 @@ const Touchpoints = ({
                 />
               ) : (
                 <EmptyScreen
-                  learnMore={'https://help.factors.ai/'}
+                  learnMore='https://help.factors.ai/'
                   loading={touchPointState.loading}
-                  title={`Record offline touchpoints from Salesforce to attribute them accurately to leads, opportunities, and pipeline stages. Apply custom rules to define your touchpoints accurately.`}
+                  title='Record offline touchpoints from Salesforce to attribute them accurately to leads, opportunities, and pipeline stages. Apply custom rules to define your touchpoints accurately.'
                 />
               )}
             </div>
@@ -482,12 +482,12 @@ const Touchpoints = ({
           </Row>
           <Row className='mt-4'>
             <Col span={24}>
-              <Text type='title' level={7} color='grey-2' extraClass='m-0'>
+              <Text type='title' level={7} color='grey' extraClass='m-0'>
                 Effortlessly map and standardize your marketing parameters.
                 Connect and align UTMs and other parameters used across your
                 marketing efforts to a standardized set.
               </Text>
-              <Text type='title' level={7} color='grey-2' extraClass='m-0 mt-2'>
+              <Text type='title' level={7} color='grey' extraClass='m-0 mt-2'>
                 Query and filter by different parameter values within Factors,
                 enabling seamless tracking and analysis of customer touchpoints
               </Text>

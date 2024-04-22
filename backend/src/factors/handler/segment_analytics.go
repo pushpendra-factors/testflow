@@ -19,7 +19,7 @@ import (
 )
 
 const FifteenMinutesTime = 15 * 60
-const TwentyMinutesTime = 15 * 60
+const TwentyMinutesTime = 20 * 60
 
 // GetSegmentAnalyticsConfigHandler godoc
 // @Summary To get config for the segment analytics.
@@ -300,6 +300,7 @@ func ExecuteSegmentQueryHandler(c *gin.Context) {
 
 	// Keeping the cache expiry to 15 minutes. Not invalidating the cache.
 	if !hardRefresh && !markerExists {
+		log.Warn("getting values from cache")
 		shouldReturn, resCode, resMsg := GetSegmentResponseIfCachedQuery(c, projectID, segmentID, widgetGroupID, requestParams.From, requestParams.To)
 		if shouldReturn {
 			if resCode == http.StatusOK {
@@ -310,8 +311,9 @@ func ExecuteSegmentQueryHandler(c *gin.Context) {
 				return
 			}
 		}
+		log.Warn("setting placeholder values to cache")
+		SetSegmentCachePlaceholder(projectID, segmentID, widgetGroupID, requestParams.From, requestParams.To)
 	}
-	SetSegmentCachePlaceholder(projectID, segmentID, widgetGroupID, requestParams.From, requestParams.To)
 
 	results, statusCode := store.GetStore().ExecuteWidgetGroup(projectID, widgetGroup, segmentID, reqID, requestParams)
 	responseData := gin.H{
@@ -322,7 +324,10 @@ func ExecuteSegmentQueryHandler(c *gin.Context) {
 		c.JSON(statusCode, responseData)
 		return
 	}
-	SetSegmentCacheResult(projectID, segmentID, widgetGroupID, requestParams.From, requestParams.To, results)
+	if !markerExists {
+		log.Warn("setting values from cache")
+		SetSegmentCacheResult(projectID, segmentID, widgetGroupID, requestParams.From, requestParams.To, results)
+	}
 
 	c.JSON(statusCode, responseData)
 }
@@ -396,6 +401,7 @@ func setWidgetGroupMarker(projectID int64, widgetGroup string) error {
 	return cacheRedis.SetPersistent(cacheKey, string("1"), TwentyMinutesTime)
 }
 
+// Marker here implies cache is getting invalidated.
 func getIfExistsWidgetGroupMarker(projectID int64, widgetGroup string) (bool, int) {
 	cacheKey, _ := getWidgetGroupMarkerKey(projectID, widgetGroup)
 	_, exists, err := cacheRedis.GetIfExistsPersistent(cacheKey)

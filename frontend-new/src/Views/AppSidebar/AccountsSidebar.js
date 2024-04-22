@@ -7,7 +7,8 @@ import { SVG as Svg, Text } from 'Components/factorsComponents';
 import {
   setAccountPayloadAction,
   setDrawerVisibleAction,
-  setNewSegmentModeAction
+  setNewSegmentModeAction,
+  toggleAccountsTab
 } from 'Reducers/accountProfilesView/actions';
 import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
 import { selectSegments } from 'Reducers/timelines/selectors';
@@ -123,6 +124,7 @@ function AccountsSidebar() {
           )}
           onClick={() => {
             history.replace(PathUrls.ProfileAccounts);
+            dispatch(toggleAccountsTab('accounts'));
             dispatch(setNewSegmentModeAction(true));
             dispatch(setAccountPayloadAction({}));
           }}

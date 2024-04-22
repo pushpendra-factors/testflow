@@ -203,7 +203,7 @@ func (s *DataClient) getSalesforceDataByQuery(projectID int64, query, objectName
 		return nil, errors.New("missing required fields")
 	}
 
-	queryURL := s.instanceURL + salesforceDataServiceRoute + GetSalesforceAPIVersion(projectID) + "/query?q=" + query
+	queryURL := s.instanceURL + salesforceDataServiceRoute + GetSalesforceAPIVersion(projectID) + "/" + s.queryRoute + "?q=" + query
 
 	dataClient := &DataClient{
 		ProjectID:      projectID,
@@ -228,10 +228,11 @@ type DataClient struct {
 	queryURL       string
 	APICall        int
 	ObjectName     string
+	queryRoute     string
 }
 
 // NewSalesforceDataClient create new instance of DataClient for fetching data from salesforce
-func NewSalesforceDataClient(accessToken string, instanceURL string) (*DataClient, error) {
+func NewSalesforceDataClient(accessToken string, instanceURL string, useQueryAllAPI bool) (*DataClient, error) {
 	if accessToken == "" || instanceURL == "" {
 		return nil, errors.New("missing requied field")
 	}
@@ -240,6 +241,11 @@ func NewSalesforceDataClient(accessToken string, instanceURL string) (*DataClien
 		accessToken: accessToken,
 		instanceURL: instanceURL,
 		isFirstRun:  true,
+	}
+	if useQueryAllAPI {
+		dataClient.queryRoute = "queryAll"
+	} else {
+		dataClient.queryRoute = "query"
 	}
 
 	return dataClient, nil
@@ -478,7 +484,7 @@ func getSalesforceContactIDANDLeadIDFromCampaignMember(properties *model.Salesfo
 func getAllCampaignMemberContactAndLeadRecords(projectID int64, campaignMemberIDs []string, accessToken, instanceURL string) ([]model.SalesforceRecord, []string, int, int, error) {
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
-	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL, false)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build salesforce data client to getAllCampaignMemberContactAndLeadRecords.")
 		return nil, nil, 0, 0, err
@@ -564,7 +570,7 @@ func getAllCampaignMemberContactAndLeadRecords(projectID int64, campaignMemberID
 
 func syncOpportunityPrimaryContact(projectID int64, primaryContactIDs []string, accessToken, instanceURL string) ([]string, int, bool) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
-	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL, false)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build new salesforce data client fron primary contact sync")
 		return nil, 0, true
@@ -635,7 +641,7 @@ func getLeadIDForOpportunityRecords(projectID int64, records []model.SalesforceR
 	leadIDForOpportunityRecordsAPICalls := 0
 	batchedOppIDs := util.GetStringListAsBatch(oppIDs, 50)
 	for bi := range batchedOppIDs {
-		salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
+		salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL, false)
 		if err != nil {
 			return nil, nil, 0, err
 		}
@@ -730,7 +736,7 @@ func getOpportunityPrimaryContactIDs(projectID int64, oppRecords []model.Salesfo
 func syncOpporunitiesUsingAssociations(projectID int64, accessToken, instanceURL string, timestamp int64) ([]string, int, int, int, error) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 	allowedObject := model.GetSalesforceDocumentTypeAlias(projectID)
-	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL, false)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build salesforceDataClient for opportunity sync.")
 		return nil, 0, 0, 0, err
@@ -838,7 +844,7 @@ func getLeadIDAndContactIDForActivityRecords(projectID int64, records []model.Sa
 
 func syncMissingObjectsForSalesforceActivities(projectID int64, documentIDs []string, objectName string, accessToken, instanceURL string) ([]string, int, bool) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
-	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL, false)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build new salesforce data client on syncMissingObjectsForSalesforceActivities")
 		return []string{"Failed to build new salesforce data client on syncMissingObjectsForSalesforceActivities"}, 0, true
@@ -897,7 +903,7 @@ func syncMissingObjectsForSalesforceActivities(projectID int64, documentIDs []st
 
 func syncTasks(projectID int64, accessToken, instanceURL string, timestamp int64) ([]string, []string, []string, int, error) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
-	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL, false)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build salesforceDataClient for task sync.")
 		return nil, nil, nil, 0, err
@@ -957,7 +963,7 @@ func syncTasks(projectID int64, accessToken, instanceURL string, timestamp int64
 
 func syncEvents(projectID int64, accessToken, instanceURL string, timestamp int64) ([]string, []string, []string, int, error) {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
-	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL)
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL, false)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build salesforceDataClient for event sync.")
 		return nil, nil, nil, 0, err
@@ -1279,7 +1285,7 @@ func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName str
 		return salesforceObjectStatus, nil
 	}
 
-	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL)
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL, false)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build salesforceDataClient.")
 		return salesforceObjectStatus, err
@@ -1417,6 +1423,62 @@ func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName str
 			salesforceObjectStatus.TotalAPICalls[docObjectName] += paginatedObjectByID.APICall
 		}
 	}
+
+	return salesforceObjectStatus, nil
+}
+
+func syncDeletedRecordByType(ps *model.SalesforceProjectSettings, accessToken, objectName string, startTime int64) (ObjectStatus, error) {
+	var salesforceObjectStatus ObjectStatus
+	salesforceObjectStatus.DocType = objectName
+
+	logFields := log.Fields{"project_id": ps.ProjectID, "object_name": objectName, "start_time": startTime}
+
+	logCtx := log.WithFields(logFields)
+
+	if ps.ProjectID == 0 || accessToken == "" || objectName == "" {
+		logCtx.Error("Invalid parameters.")
+		return salesforceObjectStatus, errors.New("invalid parameters")
+	}
+
+	logCtx.Info("Downloading deleted document.")
+
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL, true)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to build salesforceDataClient on syncDeletedRecordByType.")
+		return salesforceObjectStatus, err
+	}
+
+	query := fmt.Sprintf("SELECT id, isDeleted, LastModifiedDate FROM %s WHERE isDeleted = true", objectName)
+	if startTime > 0 {
+		t := time.Unix(startTime, 0)
+		query = fmt.Sprintf("%s AND LastModifiedDate >= %s", query, t.UTC().Format(model.SalesforceDocumentDateTimeLayout))
+	}
+
+	query = query + " ORDER BY LastModifiedDate ASC"
+	paginatedRecords, err := salesforceDataClient.getSalesforceDataByQuery(ps.ProjectID, url.QueryEscape(query), objectName)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to intialize query.")
+		return salesforceObjectStatus, errors.New("failed to initialize query")
+	}
+
+	done := false
+	var objectRecords []model.SalesforceRecord
+	for !done {
+		objectRecords, done, err = paginatedRecords.getNextBatch()
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get next batch.")
+			return salesforceObjectStatus, err
+		}
+
+		err = store.GetStore().BuildAndUpsertDocumentInBatch(ps.ProjectID, objectName, objectRecords)
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to BuildAndUpsertDocumentInBatch documents in syncDeletedRecordByType.")
+			return salesforceObjectStatus, err
+		}
+		salesforceObjectStatus.TotalRecords += len(objectRecords)
+	}
+
+	salesforceObjectStatus.TotalAPICalls = map[string]int{fmt.Sprintf("deleted_%s", objectName): paginatedRecords.APICall}
 
 	return salesforceObjectStatus, nil
 }
@@ -1767,7 +1829,7 @@ func syncAccountUsingFields(ps *model.SalesforceProjectSettings, accessToken str
 	salesforceObjectStatus.TotalAPICalls = make(map[string]int)
 	salesforceObjectStatus.Failures = make([]string, 0)
 
-	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL)
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL, false)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build salesforceDataClient in syncAccountUsingFields.")
 		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
@@ -1892,7 +1954,7 @@ func syncOpporunityUsingFields(ps *model.SalesforceProjectSettings, accessToken 
 	salesforceObjectStatus.DocType = model.SalesforceDocumentTypeNameOpportunity
 	salesforceObjectStatus.TotalAPICalls = make(map[string]int)
 
-	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL)
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL, false)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build salesforceDataClient in syncOpporunityUsingFields")
 		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
@@ -1980,7 +2042,7 @@ func syncContactUsingFields(ps *model.SalesforceProjectSettings, accessToken str
 	salesforceObjectStatus.DocType = model.SalesforceDocumentTypeNameContact
 	salesforceObjectStatus.TotalAPICalls = make(map[string]int)
 
-	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL)
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL, false)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build salesforceDataClient in syncContactUsingFields")
 		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
@@ -2051,7 +2113,7 @@ func syncLeadUsingFields(ps *model.SalesforceProjectSettings, accessToken string
 	salesforceObjectStatus.DocType = model.SalesforceDocumentTypeNameLead
 	salesforceObjectStatus.TotalAPICalls = make(map[string]int)
 
-	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL)
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL, false)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build salesforceDataClient in syncLeadUsingFields")
 		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
@@ -2122,7 +2184,7 @@ func syncCampaignUsingFields(ps *model.SalesforceProjectSettings, accessToken st
 	salesforceObjectStatus.DocType = model.SalesforceDocumentTypeNameCampaign
 	salesforceObjectStatus.TotalAPICalls = make(map[string]int)
 
-	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL)
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL, false)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build salesforceDataClient in syncCampaignUsingFields")
 		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
@@ -2263,7 +2325,7 @@ func syncCampaignMemberUsingFields(ps *model.SalesforceProjectSettings, accessTo
 	salesforceObjectStatus.DocType = model.SalesforceDocumentTypeNameCampaignMember
 	salesforceObjectStatus.TotalAPICalls = make(map[string]int)
 
-	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL)
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL, false)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build salesforceDataClient in syncCampaignMemberUsingFields")
 		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
@@ -2414,7 +2476,7 @@ func syncOpportunityContactRoleUsingFields(ps *model.SalesforceProjectSettings, 
 	salesforceObjectStatus.TotalAPICalls = make(map[string]int)
 	salesforceObjectStatus.Failures = make([]string, 0)
 
-	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL)
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL, false)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build salesforceDataClient in syncOpportunityContactRoleUsingFields.")
 		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
@@ -2489,7 +2551,7 @@ func syncActivitiesUsingFields(ps *model.SalesforceProjectSettings, objectName, 
 		return salesforceObjectStatus
 	}
 
-	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL)
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL, false)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build salesforceDataClient in syncActivitiesUsingFields")
 		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
@@ -2602,7 +2664,7 @@ func syncUserUsingFields(ps *model.SalesforceProjectSettings, accessToken string
 	salesforceObjectStatus.DocType = model.SalesforceDocumentTypeNameUser
 	salesforceObjectStatus.TotalAPICalls = make(map[string]int)
 
-	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL)
+	salesforceDataClient, err := NewSalesforceDataClient(accessToken, ps.InstanceURL, false)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to build salesforceDataClient in syncUserUsingFields")
 		salesforceObjectStatus.Failures = append(salesforceObjectStatus.Failures, err.Error())
@@ -2696,7 +2758,7 @@ func syncByTypeUsingFields(ps *model.SalesforceProjectSettings, accessToken, obj
 }
 
 // SyncDocuments syncs from salesforce to database by doc type
-func SyncDocuments(ps *model.SalesforceProjectSettings, lastSyncInfo map[string]int64, accessToken string) []ObjectStatus {
+func SyncDocuments(ps *model.SalesforceProjectSettings, lastSyncInfo, deletedRecordLastSyncInfo map[string]int64, accessToken string) []ObjectStatus {
 	var allObjectStatus []ObjectStatus
 
 	for docType, timestamp := range lastSyncInfo {
@@ -2736,6 +2798,22 @@ func SyncDocuments(ps *model.SalesforceProjectSettings, lastSyncInfo map[string]
 		}
 
 		objectStatus.SyncAll = syncAll
+		allObjectStatus = append(allObjectStatus, objectStatus)
+	}
+
+	for docType, timestamp := range deletedRecordLastSyncInfo {
+		objectStatus, err := syncDeletedRecordByType(ps, accessToken, docType, timestamp)
+		if err != nil || len(objectStatus.Failures) != 0 {
+			log.WithFields(log.Fields{
+				"project_id": ps.ProjectID,
+				"doctype":    docType,
+			}).WithError(err).Errorf("Failed to sync deleted documents")
+
+			objectStatus.Message = err.Error()
+			objectStatus.Status = U.CRM_SYNC_STATUS_FAILURES
+		} else {
+			objectStatus.Status = U.CRM_SYNC_STATUS_SUCCESS
+		}
 		allObjectStatus = append(allObjectStatus, objectStatus)
 	}
 

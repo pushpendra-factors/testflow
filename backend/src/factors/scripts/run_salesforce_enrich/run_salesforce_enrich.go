@@ -172,6 +172,7 @@ func main() {
 	addCRMObjectURLByProjectID := flag.String("add_crm_object_url_by_project_id", "", "")
 	enableTotalSessionPropertiesV2ByProjectID := flag.String("enable_total_session_properties_v2", "", "")
 	enableDomainWebsitePropertiesByProjectID := flag.String("enable_domain_website_properties_by_project_id", "", "")
+	enableDeletedRecordProjectID := flag.String("enable_deleted_record_by_project_id", "", "")
 
 	flag.Parse()
 
@@ -258,6 +259,7 @@ func main() {
 		AddCRMObjectURLPropertyByProjectID:                   *addCRMObjectURLByProjectID,
 		EnableTotalSessionPropertiesV2ByProjectID:            *enableTotalSessionPropertiesV2ByProjectID,
 		EnableDomainWebsitePropertiesByProjectID:             *enableDomainWebsitePropertiesByProjectID,
+		EnableSalesforceDeletedRecordByProjectID:             *enableDeletedRecordProjectID,
 	}
 
 	C.InitConf(config)
@@ -320,7 +322,7 @@ func main() {
 
 			syncInfo.LastSyncInfo[pid] = overrideLastSyncTimestampIfRequired(*overrideLastSyncTimestamp, syncInfo.LastSyncInfo[pid])
 
-			objectStatus := IntSalesforce.SyncDocuments(projectSettings, syncInfo.LastSyncInfo[pid], accessToken)
+			objectStatus := IntSalesforce.SyncDocuments(projectSettings, syncInfo.LastSyncInfo[pid], syncInfo.DeletedRecordLastSyncInfo[pid], accessToken)
 			for i := range objectStatus {
 				if objectStatus[i].Status != U.CRM_SYNC_STATUS_SUCCESS {
 					syncStatus.Failures = append(syncStatus.Failures, objectStatus[i])

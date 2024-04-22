@@ -12,7 +12,8 @@ import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
 import {
   setAccountPayloadAction,
   setDrawerVisibleAction,
-  setNewSegmentModeAction
+  setNewSegmentModeAction,
+  toggleAccountsTab
 } from 'Reducers/accountProfilesView/actions';
 import { selectTimelinePayload } from 'Reducers/userProfilesView/selectors';
 import { setTimelinePayloadAction } from 'Reducers/userProfilesView/actions';
@@ -65,11 +66,12 @@ function AppSidebar() {
     dispatch(setDrawerVisibleAction(false));
     dispatch(setAccountPayloadAction(INITIAL_ACCOUNT_PAYLOAD));
     dispatch(setNewSegmentModeAction(false));
+    dispatch(toggleAccountsTab('accounts'));
     history.replace(PathUrls.ProfileAccounts);
   };
 
   const selectAllAccounts = () => {
-    if (isAllAccountsSelected === false) {
+    if (isAllAccountsSelected === false || newSegmentMode === true) {
       changeAccountPayload();
     }
   };

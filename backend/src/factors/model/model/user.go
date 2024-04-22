@@ -65,6 +65,7 @@ type User struct {
 	// These columns should accessed using direct methods.
 	// This is required to avoid any invalid state as we have
 	// excluded JSON columns for better performance.
+	IsDeleted bool `gorm:"type:boolean;default:false" json:"is_deleted"`
 }
 
 type LatestUserPropertiesFromSession struct {

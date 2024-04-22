@@ -264,7 +264,11 @@ func PerformCompanyEnrichmentAndUserAndEventCreationForProject(projectSetting mo
 		req.Header.Add("Authorization", authToken)
 		resp, err := client.Do(req)
 		if err != nil {
-			return err.Error(), resp.StatusCode
+			if resp != nil {
+				return err.Error(), resp.StatusCode
+			} else {
+				return err.Error(), http.StatusInternalServerError
+			}
 		}
 
 		var jsonResponse CompanyAPIResponseStruct

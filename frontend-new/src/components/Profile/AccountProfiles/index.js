@@ -54,6 +54,7 @@ import useAutoFocus from 'hooks/useAutoFocus';
 import { invalidBreakdownPropertiesList } from 'Constants/general.constants';
 import MomentTz from 'Components/MomentTz';
 import useAgentInfo from 'hooks/useAgentInfo';
+import { solutionsEmailId } from 'Utils/constants';
 import {
   getGroups,
   getGroupProperties
@@ -118,7 +119,10 @@ function AccountProfiles({
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
   const [errMsg, setErrMsg] = useState('');
   const { email } = useAgentInfo();
-  const isSolutionsAdmin = email === 'solutions@factors.ai';
+  const isSolutionsAdmin =
+    email === solutionsEmailId ||
+    email === 'sarath_tdfect@factors.ai' ||
+    email === 'jitesh@factors.ai';
 
   // Ant Table
   const [newTableColumns, setNewTableColumns] = useState([]);
@@ -209,11 +213,6 @@ function AccountProfiles({
     }
     return accountPayload;
   };
-
-  useEffect(() => {
-    dispatch(setNewSegmentModeAction(false));
-    dispatch(setDrawerVisibleAction(false));
-  }, []);
 
   useEffect(() => {
     if (activeProject?.id) {
@@ -1126,7 +1125,7 @@ function AccountProfiles({
               ? `"${d.table_props[elem]}"`
               : '-'
         );
-        values.unshift(d.name);
+        values.unshift(d.domain_name);
 
         csvRows.push(values);
       });

@@ -639,7 +639,7 @@ export const APP_LAYOUT_ROUTES = {
     Private: true
   },
   ProfileAccountsDetails: {
-    path: '/profiles/accounts/:id',
+    path: PathUrls.ProfileAccountDetailsURL,
     Component: AccountDetails,
     Private: true
   },

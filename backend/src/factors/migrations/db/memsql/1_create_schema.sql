@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS users (
     event_aggregate json,
     associated_segments json,
     last_event_at timestamp(6),
+    is_deleted bool NOT NULL DEFAULT false,
     -- COLUMNSTORE key is sort key, can we add an incremental numerical column to the end?
     -- Initial parts of the indices are still useful when don't use the last column which is an incremental value.
     KEY (project_id, source, join_timestamp) USING CLUSTERED COLUMNSTORE,

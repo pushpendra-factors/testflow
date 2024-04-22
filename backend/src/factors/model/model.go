@@ -716,6 +716,7 @@ type Model interface {
 	UpdateAssociatedSegments(projectID int64, id string, associatedSegments map[string]model.AssociatedSegments) (int, error)
 	GetNonGroupUsersUpdatedAtGivenHour(projectID int64, fromTime time.Time) ([]model.User, int)
 	UpdateSessionProperties(projectID int64, customerUserID, userID string) int
+	DeleteUser(projectId int64, userID string) int
 
 	// web_analytics
 	GetWebAnalyticsQueriesFromDashboardUnits(projectID int64) (int64, *model.WebAnalyticsQueries, int)
