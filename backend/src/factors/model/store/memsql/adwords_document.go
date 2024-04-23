@@ -627,8 +627,21 @@ func (store *MemSQL) GetAdwordsLastSyncInfoForProject(projectID int64) ([]model.
 	if errCode != http.StatusOK {
 		return []model.AdwordsLastSyncInfo{}, errCode
 	}
+	projectIdsMap, err := store.GetAllProjectIDsMapWithFeatureEnabled(model.FEATURE_GOOGLE_ADS)
+	if err != nil {
+		log.WithError(err).Error("Failed to get adwords feature enabled projects for sync info.")
+		return []model.AdwordsLastSyncInfo{}, http.StatusInternalServerError
+	}
 
-	return store.sanitizedLastSyncInfos(adwordsLastSyncInfos, adwordsSettings)
+	finalSettings := make([]model.AdwordsProjectSettings, 0)
+	for _, setting := range adwordsSettings {
+		if _, exists := projectIdsMap[setting.ProjectId]; exists {
+			finalSettings = append(finalSettings, setting)
+		}
+	}
+
+	return store.sanitizedLastSyncInfos(adwordsLastSyncInfos, finalSettings)
+
 }
 
 // GetAllAdwordsLastSyncInfoForAllProjects - @TODO Kark v1
@@ -645,8 +658,20 @@ func (store *MemSQL) GetAllAdwordsLastSyncInfoForAllProjects() ([]model.AdwordsL
 	if errCode != http.StatusOK {
 		return []model.AdwordsLastSyncInfo{}, errCode
 	}
+	projectIdsMap, err := store.GetAllProjectIDsMapWithFeatureEnabled(model.FEATURE_GOOGLE_ADS)
+	if err != nil {
+		log.WithError(err).Error("Failed to get adwords feature enabled projects for sync info.")
+		return []model.AdwordsLastSyncInfo{}, http.StatusInternalServerError
+	}
 
-	return store.sanitizedLastSyncInfos(adwordsLastSyncInfos, adwordsSettings)
+	finalSettings := make([]model.AdwordsProjectSettings, 0)
+	for _, setting := range adwordsSettings {
+		if _, exists := projectIdsMap[setting.ProjectId]; exists {
+			finalSettings = append(finalSettings, setting)
+		}
+	}
+
+	return store.sanitizedLastSyncInfos(adwordsLastSyncInfos, finalSettings)
 }
 
 func getAdwordsLastSyncInfo(query string, params []interface{}) ([]model.AdwordsLastSyncInfo, int) {

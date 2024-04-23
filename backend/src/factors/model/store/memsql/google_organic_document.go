@@ -124,9 +124,20 @@ func (store *MemSQL) GetAllGoogleOrganicLastSyncInfoForAllProjects() ([]model.Go
 	if errCode != http.StatusOK {
 		return []model.GoogleOrganicLastSyncInfo{}, errCode
 	}
-	log.Info("All settings ", googleOrganicSettings)
+	projectIdsMap, err := store.GetAllProjectIDsMapWithFeatureEnabled(model.FEATURE_GOOGLE_ORGANIC)
+	if err != nil {
+		log.WithError(err).Error("Failed to get GSC feature enabled projects for sync info.")
+		return []model.GoogleOrganicLastSyncInfo{}, http.StatusInternalServerError
+	}
 
-	return sanitizedLastSyncInfosGoogleOrganic(googleOrganicLastSyncInfos, googleOrganicSettings)
+	finalSettings := make([]model.GoogleOrganicProjectSettings, 0)
+	for _, setting := range googleOrganicSettings {
+		if _, exists := projectIdsMap[setting.ProjectID]; exists {
+			finalSettings = append(finalSettings, setting)
+		}
+	}
+
+	return sanitizedLastSyncInfosGoogleOrganic(googleOrganicLastSyncInfos, finalSettings)
 }
 
 func (store *MemSQL) GetGoogleOrganicLastSyncInfoForProject(projectID int64) ([]model.GoogleOrganicLastSyncInfo, int) {
@@ -143,8 +154,20 @@ func (store *MemSQL) GetGoogleOrganicLastSyncInfoForProject(projectID int64) ([]
 	if errCode != http.StatusOK {
 		return []model.GoogleOrganicLastSyncInfo{}, errCode
 	}
+	projectIdsMap, err := store.GetAllProjectIDsMapWithFeatureEnabled(model.FEATURE_GOOGLE_ORGANIC)
+	if err != nil {
+		log.WithError(err).Error("Failed to get GSC feature enabled projects for sync info.")
+		return []model.GoogleOrganicLastSyncInfo{}, http.StatusInternalServerError
+	}
 
-	return sanitizedLastSyncInfosGoogleOrganic(googleOrganicLastSyncInfos, googleOrganicSettings)
+	finalSettings := make([]model.GoogleOrganicProjectSettings, 0)
+	for _, setting := range googleOrganicSettings {
+		if _, exists := projectIdsMap[setting.ProjectID]; exists {
+			finalSettings = append(finalSettings, setting)
+		}
+	}
+
+	return sanitizedLastSyncInfosGoogleOrganic(googleOrganicLastSyncInfos, finalSettings)
 }
 
 func getGoogleOrganicLastSyncInfo(query string, params []interface{}) ([]model.GoogleOrganicLastSyncInfo, int) {
