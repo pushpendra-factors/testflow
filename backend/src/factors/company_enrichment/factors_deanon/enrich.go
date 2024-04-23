@@ -140,7 +140,10 @@ func (fd *FactorsDeanon) HandleAccountLimitAlert(projectId int64, client HTTPCli
 		return http.StatusInternalServerError, errors.New("failed fetching admin email by projectId")
 	}
 
-	isEmailAllowed := model.IsReceipentAllowedMailmodo(email, EMAIL_TYPE_TRANSACTIONAL)
+	isEmailAllowed, err := model.IsReceipentAllowedMailmodo(email, EMAIL_TYPE_TRANSACTIONAL)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
 	if !isEmailAllowed {
 		logCtx.Info("Email failed the check ", email)
 		return http.StatusForbidden, nil
