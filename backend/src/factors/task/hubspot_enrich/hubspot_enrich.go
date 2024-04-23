@@ -81,7 +81,7 @@ func StartEnrichmentByProjectIdWorker(projectSettingsChannel chan model.HubspotP
 				projectSettings.APIKey, projectSettings.RefreshToken, model.HubspotDataTypeDate)
 			if err != nil {
 				log.WithFields(log.Fields{"project_id": projectSettings.ProjectId}).WithError(err).Error("Failed to get date properties.")
-				workerStatus.Status = []IntHubspot.Status{{ProjectId: projectSettings.ProjectId, Message: err.Error(), Status: U.CRM_SYNC_STATUS_FAILURES}}
+				workerStatus.Status = []IntHubspot.Status{{ProjectId: projectSettings.ProjectId, Message: model.CLIENT_TOKEN_EXPIRED, Status: U.CRM_SYNC_STATUS_FAILURES}}
 				workerStatus.HasFailure = true
 				workerStatus.ProjectId = projectSettings.ProjectId
 				syncStatusChannel <- workerStatus
@@ -318,6 +318,24 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 		"property_type_sync": propertyDetailSyncStatus,
 	}
 	panicError = false
+
+	for _, state := range syncStatus.Status {
+		if state.IsProcessLimitExceeded {
+			status := store.GetStore().UpdateProjectSettingsIntegrationStatus(state.ProjectId, model.HUBSPOT, model.HEAVY_DELAYED)
+			if status != http.StatusAccepted {
+				log.WithFields(log.Fields{"project_id": state.ProjectId}).Warn("Failed to update integration status")
+
+			}
+		}
+
+		if state.Message == model.CLIENT_TOKEN_EXPIRED {
+			status := store.GetStore().UpdateProjectSettingsIntegrationStatus(state.ProjectId, model.HUBSPOT, model.CLIENT_TOKEN_EXPIRED)
+			if status != http.StatusAccepted {
+				log.WithFields(log.Fields{"project_id": state.ProjectId}).Warn("Failed to update integration status")
+
+			}
+		}
+	}
 
 	return jobStatus, true
 
