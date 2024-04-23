@@ -93,7 +93,7 @@ func IntegrationsStatusHandler(c *gin.Context) {
 		return
 	}
 
-	var intStatusMap map[string]model.IntegrationState
+	var intStatusMap map[string]string
 	if settings.IntegrationStatus != nil {
 		err := json.Unmarshal(settings.IntegrationStatus.RawMessage, &intStatusMap)
 		if err != nil {
@@ -103,9 +103,12 @@ func IntegrationsStatusHandler(c *gin.Context) {
 
 	result := map[string]model.IntegrationState{}
 	for _, integrationName := range model.IntegrationNameList {
-		if status, ok := intStatusMap[integrationName]; ok && status.State != model.SUCCESS {
-			status.Message = model.ErrorStateToErrorMessageMap[status.State]
-			result[integrationName] = status
+		if statusString, ok := intStatusMap[integrationName]; ok && statusString != model.SUCCESS {
+
+			result[integrationName] = model.IntegrationState{
+				State:   statusString,
+				Message: model.ErrorStateToErrorMessageMap[statusString],
+			}
 
 		} else {
 			state, errCode := store.GetStore().GetIntegrationState(projectId, integrationName)
@@ -118,26 +121,15 @@ func IntegrationsStatusHandler(c *gin.Context) {
 
 	result[model.FEATURE_SLACK] = slack.GetSlackIntegrationState(projectId, agentUUID)
 
-	if status, ok := intStatusMap[model.FEATURE_SIX_SIGNAL]; ok {
-		status.Message = model.ErrorStateToErrorMessageMap[status.State]
-		result[model.FEATURE_SIX_SIGNAL] = status
-
-	} else {
-		result[model.FEATURE_SIX_SIGNAL] = model.IntegrationState{}
-	}
-
-	if status, ok := intStatusMap[model.FEATURE_CLEARBIT]; ok {
-		status.Message = model.ErrorStateToErrorMessageMap[status.State]
-		result[model.FEATURE_CLEARBIT] = status
-	} else {
-		result[model.FEATURE_CLEARBIT] = model.IntegrationState{}
-	}
-
-	if status, ok := intStatusMap[model.FEATURE_FACTORS_DEANONYMISATION]; ok {
-		status.Message = model.ErrorStateToErrorMessageMap[status.State]
-		result[model.FEATURE_FACTORS_DEANONYMISATION] = status
-	} else {
-		result[model.FEATURE_FACTORS_DEANONYMISATION] = model.IntegrationState{}
+	for _, integrationName := range []string{model.FEATURE_FACTORS_DEANONYMISATION, model.FEATURE_SIX_SIGNAL, model.FEATURE_CLEARBIT} {
+		if statusString, ok := intStatusMap[integrationName]; ok {
+			result[integrationName] = model.IntegrationState{
+				State:   statusString,
+				Message: model.ErrorStateToErrorMessageMap[statusString],
+			}
+		} else {
+			result[integrationName] = model.IntegrationState{}
+		}
 	}
 
 	c.JSON(http.StatusOK, result)
