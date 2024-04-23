@@ -92,7 +92,6 @@ import { getSegmentColorCode } from 'Views/AppSidebar/appSidebar.helpers';
 import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
 import cx from 'classnames';
 import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
-import { WhiteListedAccounts } from 'Routes/constants';
 import {
   getMsgPayloadMapping,
   dummyPayloadValue,
@@ -1585,49 +1584,41 @@ const EventBasedAlert = ({
           </div>
         </Col>
       </Row>
-      {WhiteListedAccounts.includes(agent_details?.email) && (
-        <>
-          <Row className='mt-4 mb-1'>
-            <Col span={18}>
-              <Text type='title' level={7} extraClass='m-0'>
-                Do this
-              </Text>
-            </Col>
-          </Row>
-          <Row>
-            <Col span={22}>
-              <Select
-                showSearch
-                style={{ minWidth: 350 }}
-                className='fa-select'
-                placeholder='Select segment type'
-                optionFilterProp='children'
-                onChange={onChangeSegmentType}
-                filterOption={(input, option) =>
-                  option.props.children
-                    .toLowerCase()
-                    .indexOf(input.toLowerCase()) >= 0
-                }
-                value={segmentType}
-              >
-                {activeGrpBtn === 'users' ? (
-                  <Option value='action_event'>Performs an event</Option>
-                ) : (
-                  <>
-                    <Option value='action_event'>Performs an event</Option>
-                    <Option value='action_segment_entry'>
-                      Enter the segment
-                    </Option>
-                    <Option value='action_segment_exit'>
-                      Exit the segment
-                    </Option>
-                  </>
-                )}
-              </Select>
-            </Col>
-          </Row>{' '}
-        </>
-      )}
+      <Row className='mt-4 mb-1'>
+        <Col span={18}>
+          <Text type='title' level={7} extraClass='m-0'>
+            Do this
+          </Text>
+        </Col>
+      </Row>
+      <Row>
+        <Col span={22}>
+          <Select
+            showSearch
+            style={{ minWidth: 350 }}
+            className='fa-select'
+            placeholder='Select segment type'
+            optionFilterProp='children'
+            onChange={onChangeSegmentType}
+            filterOption={(input, option) =>
+              option.props.children
+                .toLowerCase()
+                .indexOf(input.toLowerCase()) >= 0
+            }
+            value={segmentType}
+          >
+            {activeGrpBtn === 'users' ? (
+              <Option value='action_event'>Performs an event</Option>
+            ) : (
+              <>
+                <Option value='action_event'>Performs an event</Option>
+                <Option value='action_segment_entry'>Enter the segment</Option>
+                <Option value='action_segment_exit'>Exit the segment</Option>
+              </>
+            )}
+          </Select>
+        </Col>
+      </Row>
       {segmentType !== 'action_event' ? (
         <>
           <Row className='mt-4'>
