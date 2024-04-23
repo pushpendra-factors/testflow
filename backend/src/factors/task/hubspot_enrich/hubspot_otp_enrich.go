@@ -200,8 +200,6 @@ func syncWorkerForOTP(projectID int64, startTime, endTime int64, backfillEnabled
 
 		for _, eventName := range AllowedHsEventTypeForOTP {
 
-			logCtx.Info(fmt.Sprintf("event name  %s", eventName))
-
 			eventDetails, err := store.GetStore().GetEventNameIDFromEventName(eventName, project.ID)
 			if err != nil {
 				logCtx.WithField("error", err).Error("Failed to get event Name")
@@ -243,7 +241,6 @@ func RunHSOfflineTouchContact(project *model.Project, otpRules []model.OTPRule, 
 	}
 
 	if len(eventsIds) == 0 {
-		logCtx.Warn("no event found")
 		return
 	}
 
@@ -266,7 +263,6 @@ func RunHSOfflineTouchForms(project *model.Project, otpRules []model.OTPRule, un
 	}
 
 	if len(eventsIds) == 0 {
-		logCtx.Warn("no event found")
 		return
 	}
 
@@ -289,7 +285,6 @@ func RunHSOfflineTouchContactList(project *model.Project, otpRules []model.OTPRu
 	}
 
 	if len(eventsIds) == 0 {
-		logCtx.Warn("no event found")
 		return
 	}
 
@@ -312,7 +307,6 @@ func RunHSOfflineTouchEngagement(project *model.Project, otpRules []model.OTPRul
 	}
 
 	if len(eventsIds) == 0 {
-		logCtx.Warn("no event found")
 		return
 	}
 
