@@ -706,7 +706,9 @@ func Track(projectId int64, request *TrackPayload,
 	_, _, isoCode := model.FillLocationUserProperties(userProperties, clientIP)
 	pageURLProp := U.GetPropertyValueAsString((*eventProperties)[U.EP_PAGE_URL])
 
-	FillCompanyIdentificationUserProperties(projectId, clientIP, projectSettings, userProperties, eventProperties, request.UserId, isoCode, pageURLProp)
+	if clientIP != "" {
+		FillCompanyIdentificationUserProperties(projectId, clientIP, projectSettings, userProperties, eventProperties, request.UserId, isoCode, pageURLProp)
+	}
 
 	if C.EnableSixSignalGroupByProjectID(projectId) {
 		groupProperties := U.FilterPropertiesByKeysByPrefix(userProperties, U.SIX_SIGNAL_PROPERTIES_PREFIX)
