@@ -12,18 +12,18 @@ import {
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { signup } from 'Reducers/agentActions';
+import HelpButton from 'Components/GenericComponents/HelpButton';
+import { Link } from 'react-router-dom';
+import useScript from 'hooks/useScript';
 import Congrats from './Congrats';
 import { SSO_SIGNUP_URL } from '../../utils/sso';
 import styles from './index.module.scss';
-import HelpButton from 'Components/GenericComponents/HelpButton';
-import { Link } from 'react-router-dom';
 import Testimonial1 from '../../assets/images/testimonials/testimonial-1.png';
 import Testimonial2 from '../../assets/images/testimonials/testimonial-2.png';
 import Testimonial3 from '../../assets/images/testimonials/testimonial-3.png';
 import Testimonial4 from '../../assets/images/testimonials/testimonial-4.png';
 import Testimonial5 from '../../assets/images/testimonials/testimonial-5.png';
 import HappyCustomers from '../../assets/images/happy_curtomers.png';
-import useScript from 'hooks/useScript';
 
 function SignUp({ signup }) {
   const [form] = Form.useForm();
@@ -39,14 +39,17 @@ function SignUp({ signup }) {
     id: 'hs-script-loader'
   });
 
- 
+  useScript({
+    url: 'https://tribl.io/footer.js?orgId=kBXL81Dq42snObK5D623',
+    async: false
+  });
 
   const checkError = () => {
     const url = new URL(window.location.href);
     const error = url.searchParams.get('error');
     if (error) {
-      let str = error.replace('_', ' ');
-      let finalmsg = str.toLocaleLowerCase();
+      const str = error.replace('_', ' ');
+      const finalmsg = str.toLocaleLowerCase();
       message.error(finalmsg);
     }
   };
@@ -93,14 +96,10 @@ function SignUp({ signup }) {
   return (
     <>
       {!formData && (
-        <div
-          className={
-            'fa-content-container.no-sidebar fa-content-container--full-height w-full'
-          }
-        >
+        <div className='fa-content-container.no-sidebar fa-content-container--full-height w-full'>
           {/* //parent container starts here */}
 
-          <div className={'flex w-full h-full '}>
+          <div className='flex w-full h-full '>
             {/* //left side content starts here */}
             <Col
               xs={{ span: 0 }}
@@ -110,7 +109,12 @@ function SignUp({ signup }) {
               <div className='w-full h-screen flex items-center justify-center'>
                 <div style={{ width: 460 }}>
                   <div className='flex justify-center items-center w-full'>
-                    <SVG name={'BrandFull'} width={240} height={64} color='white' />
+                    <SVG
+                      name='BrandFull'
+                      width={240}
+                      height={64}
+                      color='white'
+                    />
                   </div>
                   <div className='mt-10 flex justify-center'>
                     <Carousel
@@ -130,7 +134,7 @@ function SignUp({ signup }) {
                         <div key={i}>
                           <img
                             src={image}
-                            className={'m-0'}
+                            className='m-0'
                             style={{ width: '100%' }}
                             alt='reviews'
                           />
@@ -138,8 +142,13 @@ function SignUp({ signup }) {
                       ))}
                     </Carousel>
                   </div>
-                  <div className='mt-10 flex justify-center' >
-                    <img style={{width: 388}} src={HappyCustomers} className={'m-0 '} alt='brands' />
+                  <div className='mt-10 flex justify-center'>
+                    <img
+                      style={{ width: 388 }}
+                      src={HappyCustomers}
+                      className='m-0 '
+                      alt='brands'
+                    />
                   </div>
                 </div>
               </div>
@@ -156,12 +165,12 @@ function SignUp({ signup }) {
                 </div>
                 <div className='mt-20'>
                   <Text
-                    type={'title'}
+                    type='title'
                     level={2}
-                    weight={'bold'}
-                    align={'center'}
-                    color={'character-primary'}
-                    extraClass={'m-0'}
+                    weight='bold'
+                    align='center'
+                    color='character-primary'
+                    extraClass='m-0'
                   >
                     Create your free account
                   </Text>
@@ -178,18 +187,18 @@ function SignUp({ signup }) {
                     >
                       <div>
                         <Text
-                          type={'title'}
+                          type='title'
                           level={6}
-                          align={'center'}
-                          color={'character-primary'}
-                          extraClass={'m-0'}
-                          weight={'bold'}
+                          align='center'
+                          color='character-primary'
+                          extraClass='m-0'
+                          weight='bold'
                         >
                           Free forever. No credit card required
                         </Text>
                       </div>
 
-                      <div className={' mt-8 w-full'}>
+                      <div className=' mt-8 w-full'>
                         {/* <Text type={'title'} level={7} extraClass={'m-0'}>Work Email</Text> */}
                         <Form.Item
                           label={null}
@@ -221,25 +230,22 @@ function SignUp({ signup }) {
                           validateTrigger={emailValidateType}
                         >
                           <Input
-                            className={'fa-input w-full'}
+                            className='fa-input w-full'
                             disabled={dataLoading}
-                            size={'large'}
+                            size='large'
                             placeholder='Work Email'
                             onBlur={() => setEmailValidateType('onChange')}
                           />
                         </Form.Item>
                       </div>
-                      <div className={' mt-6'}>
-                        <Form.Item
-                          className={'m-0 w-full'}
-                          loading={dataLoading}
-                        >
+                      <div className=' mt-6'>
+                        <Form.Item className='m-0 w-full' loading={dataLoading}>
                           <Button
                             htmlType='submit'
                             loading={dataLoading}
-                            type={'primary'}
-                            size={'large'}
-                            className={'w-full'}
+                            type='primary'
+                            size='large'
+                            className='w-full'
                           >
                             Signup with Email
                           </Button>
@@ -249,28 +255,28 @@ function SignUp({ signup }) {
                       <Row>
                         {errorInfo && (
                           <Col span={24}>
-                            <div
-                              className={
-                                'flex flex-col justify-center items-center mt-1'
-                              }
-                            >
+                            <div className='flex flex-col justify-center items-center mt-1'>
                               <Text
-                                type={'title'}
-                                color={'red'}
-                                size={'7'}
-                                className={'m-0'}
+                                type='title'
+                                color='red'
+                                size='7'
+                                className='m-0'
                               >
-                               
-                                {errorInfo === 'EMAIL_ALREADY_EXIST' ?  (<>Email already exists. Try logging in. {' '}
-                                  <Link
-                            disabled={dataLoading}
-                            to={{
-                              pathname: '/login'
-                            }}
-                          >
-                            Login
-                          </Link>
-                                </>): errorInfo}
+                                {errorInfo === 'EMAIL_ALREADY_EXIST' ? (
+                                  <>
+                                    Email already exists. Try logging in.{' '}
+                                    <Link
+                                      disabled={dataLoading}
+                                      to={{
+                                        pathname: '/login'
+                                      }}
+                                    >
+                                      Login
+                                    </Link>
+                                  </>
+                                ) : (
+                                  errorInfo
+                                )}
                               </Text>
                             </div>
                           </Col>
@@ -279,35 +285,31 @@ function SignUp({ signup }) {
 
                       <Divider className='my-6'>
                         <Text
-                          type={'title'}
+                          type='title'
                           level={7}
-                          extraClass={'m-0'}
-                          color={'grey'}
+                          extraClass='m-0'
+                          color='grey'
                         >
                           OR
                         </Text>
                       </Divider>
 
-                      <div className={' mt-6'}>
-                        <Form.Item className={'m-0 w-full'}>
+                      <div className=' mt-6'>
+                        <Form.Item className='m-0 w-full'>
                           <a href={SSO_SIGNUP_URL}>
                             <Button
-                              type={'default'}
-                              size={'large'}
+                              type='default'
+                              size='large'
                               className='btn-custom--bordered w-full'
                             >
-                              <SVG name={'Google'} size={24} />
+                              <SVG name='Google' size={24} />
                               Continue with Google
                             </Button>
                           </a>
                         </Form.Item>
                       </div>
-                      <div className={'flex justify-center  mt-8 '}>
-                        <Text
-                          type={'title'}
-                          level={7}
-                          color={'character-primary'}
-                        >
+                      <div className='flex justify-center  mt-8 '>
+                        <Text type='title' level={7} color='character-primary'>
                           Already have an account?{' '}
                           <Link
                             disabled={dataLoading}
@@ -325,14 +327,14 @@ function SignUp({ signup }) {
                 <div style={{ marginTop: 110 }} className='flex justify-center'>
                   <div style={{ width: 428 }}>
                     <Text
-                      type={'title'}
+                      type='title'
                       level={8}
-                      color={'grey'}
-                      extraClass={'text-center'}
+                      color='grey'
+                      extraClass='text-center'
                     >
                       By signing up, I accept the Factors.ai{' '}
                       <a
-                        href={'https://www.factors.ai/terms-of-use'}
+                        href='https://www.factors.ai/terms-of-use'
                         target='_blank'
                         rel='noreferrer'
                       >
@@ -340,7 +342,7 @@ function SignUp({ signup }) {
                       </a>{' '}
                       and acknowledge having read through the{' '}
                       <a
-                        href={'https://www.factors.ai/privacy-policy'}
+                        href='https://www.factors.ai/privacy-policy'
                         target='_blank'
                         rel='noreferrer'
                       >

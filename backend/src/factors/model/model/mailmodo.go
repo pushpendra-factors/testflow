@@ -56,7 +56,7 @@ func GetMailmodoGetContactDetailsResponse(email string) (*http.Response, error) 
 	logCtx := log.WithField("email_id", email)
 
 	apiKey := config.GetMailmodoTriggerCampaignAPIResponse()
-	url := MAILMODO_TRIGGER_CAMPAIGN_BASE_URL + email
+	url := MAILMODO_GET_CONTACT_DETAILS_URL + email
 
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {

@@ -39,6 +39,8 @@ import { DashboardContext } from '../../contexts/DashboardContext';
 import { shouldDataFetch } from '../../utils/dataFormatter';
 import { fetchWeeklyIngishts as fetchWeeklyInsightsAction } from '../../reducers/insights';
 import styles from './index.module.scss';
+import { featureLock } from 'Routes/feature';
+import useAgentInfo from 'hooks/useAgentInfo';
 
 function WidgetCard({
   unit,
@@ -55,6 +57,7 @@ function WidgetCard({
   const cardRef = useRef(null);
   const history = useHistory();
   const location = useLocation();
+  const { email } = useAgentInfo();
   const [resultState, setResultState] = useState(initialState);
   const { active_project: activeProject } = useSelector(
     (state) => state.global
@@ -456,7 +459,7 @@ function WidgetCard({
     ) {
       analyseQueryParamsPath =
         analyseQueryParamsPath + '/events/' + unit.query.id_text;
-    } else if (unit?.query?.query?.cl === 'funnel') {
+    } else if (unit?.query?.query?.cl === 'funnel' && featureLock(email)) {
       analyseQueryParamsPath =
         analyseQueryParamsPath + '/funnel/' + unit.query.id_text;
     }
