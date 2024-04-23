@@ -36,6 +36,10 @@ const (
 	BINGADS        = "bingads"
 	LEADSQUARED    = "leadsquared"
 	SESSION        = "session"
+	G2             = "g2"
+	SEGMENT        = "segment"
+	RUDDERSTACK    = "rudderstack"
+	SDK            = "sdk"
 )
 
 var INTEGRATIONS_QUERY = map[string]string{

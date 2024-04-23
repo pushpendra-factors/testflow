@@ -372,7 +372,7 @@ function SaveQuery({
           setQuerySaved({ name: title, id: res.data.id });
 
           if (queryType === QUERY_TYPE_EVENT && res?.data?.id_text) {
-            history.replace(`/analyse/event/${res.data.id_text}`);
+            history.replace(`/analyse/events/${res.data.id_text}`);
           }
 
           // if (queryType === QUERY_TYPE_FUNNEL && res?.data?.id_text) {

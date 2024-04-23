@@ -436,9 +436,34 @@ func TestIntegrationsStatusHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 	assert.Equal(t, user1.Action, model.CRMActionCreated)
 
+	// creating linkedin document
+	customerAccountID := U.RandomNumericString(10)
+	_, errCode := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
+		IntLinkedinAdAccount: customerAccountID,
+	})
+	assert.Equal(t, http.StatusAccepted, errCode)
+
+	campaignID1 := U.RandomNumericString(8)
+	campaign1Value, _ := json.Marshal(map[string]interface{}{"costInLocalCurrency": "100", "clicks": "50", "campaign_group_id": campaignID1, "impressions": "1000", "campaign_group_name": "campaign_group_1"})
+
+	linkedinDocument := model.LinkedinDocument{
+		ID:                  campaignID1,
+		ProjectID:           project.ID,
+		CustomerAdAccountID: customerAccountID,
+		TypeAlias:           "campaign_group_insights",
+		Timestamp:           20210205,
+		Value:               &postgres.Jsonb{campaign1Value},
+	}
+
+	errCode = store.GetStore().CreateLinkedinDocument(linkedinDocument.ProjectID, &linkedinDocument)
+	assert.Equal(t, http.StatusCreated, errCode)
+	currentTime := time.Now().AddDate(0, 0, -4)
+	_, errCode = store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Source: model.GetRequestSourcePointer(model.UserSourceWeb), LastEventAt: &currentTime})
+	assert.Equal(t, http.StatusCreated, errCode)
+
 	w := sendIntegrationsStatusReq(r, project.ID, agent)
 	assert.Equal(t, http.StatusOK, w.Code)
-	var jsonResponseMap map[string]model.IntegrationStatus
+	var jsonResponseMap map[string]model.IntegrationState
 	jsonResponse, _ := ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &jsonResponseMap)
 
@@ -452,7 +477,7 @@ func TestIntegrationsStatusHandler(t *testing.T) {
 	assert.NotEqual(t, jsonResponseMap["facebook"].LastSyncedAt, int64(0))
 
 	assert.Equal(t, jsonResponseMap["linkedin"].State, model.SYNCED)
-	assert.Equal(t, jsonResponseMap["linkedin"].LastSyncedAt, int64(0))
+	assert.NotEqual(t, jsonResponseMap["linkedin"].LastSyncedAt, int64(0))
 
 	assert.Equal(t, jsonResponseMap["salesforce"].State, model.SYNCED)
 	assert.Equal(t, jsonResponseMap["salesforce"].LastSyncedAt, int64(0))
@@ -465,4 +490,14 @@ func TestIntegrationsStatusHandler(t *testing.T) {
 
 	assert.Equal(t, jsonResponseMap["marketo"].State, model.SYNCED)
 	assert.NotEqual(t, jsonResponseMap["marketo"].LastSyncedAt, int64(0))
+
+	assert.Equal(t, jsonResponseMap["sdk"].State, model.SYNCED)
+	assert.NotEqual(t, jsonResponseMap["sdk"].LastSyncedAt, int64(0))
+
+	assert.Equal(t, jsonResponseMap["segment"].State, model.SYNCED)
+	assert.NotEqual(t, jsonResponseMap["segment"].LastSyncedAt, int64(0))
+
+	assert.Equal(t, jsonResponseMap["rudderstack"].State, model.SYNCED)
+	assert.NotEqual(t, jsonResponseMap["rudderstack"].LastSyncedAt, int64(0))
+
 }

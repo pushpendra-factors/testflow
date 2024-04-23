@@ -275,6 +275,8 @@ func GetSalesforceLastModifiedTimestamp(document *SalesforceDocument) (int64, er
 	return GetSalesforceDocumentTimestamp(date)
 }
 
+const SALESFORCE_OBJECT_DELETED_KEY = "IsDeleted"
+
 func isDeletedDocument(document *SalesforceDocument) (bool, error) {
 	if document.Type == 0 {
 		return false, errors.New("invalid document type")
@@ -285,7 +287,7 @@ func isDeletedDocument(document *SalesforceDocument) (bool, error) {
 		return false, err
 	}
 
-	deletedKey := "IsDeleted"
+	deletedKey := SALESFORCE_OBJECT_DELETED_KEY
 	deleted, exists := (*value)[deletedKey]
 	if !exists {
 		return false, nil

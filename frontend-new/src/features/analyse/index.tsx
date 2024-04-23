@@ -267,7 +267,8 @@ const CoreQuery = () => {
 
   const createFunnelStateFromResult = (
     queryToAdd: (typeof savedQueries)[0],
-    resultState?: ResultState | null
+    resultState?: ResultState | null,
+    dateRange?: any | null
   ) => {
     const equivalentQuery = getStateQueryFromRequestQuery(queryToAdd?.query);
     const queryState = new CoreQueryState();
@@ -285,6 +286,11 @@ const CoreQuery = () => {
       queryState.queryOptions,
       equivalentQuery
     );
+
+    if (dateRange) {
+      queryState.queryOptions.date_range = dateRange;
+    }
+
     queryState.breakdownType = REVERSE_USER_TYPES[queryState.requestQuery.ec];
 
     if (queryState.requestQuery) {
@@ -481,7 +487,7 @@ const CoreQuery = () => {
       } else if (query_type === QUERY_TYPE_EVENT) {
         getEventsData(active_project.id, null, null, false, query_id).then(
           (res) => {
-            createFunnelStateFromResult(queryToAdd, res);
+            createStateFromResult(queryToAdd, res);
           },
           (err) => {
             logger.error(err);
@@ -725,6 +731,8 @@ const CoreQuery = () => {
 
     if (qState.queryType === QUERY_TYPE_EVENT) {
       runQuery(qState.queryOptions.date_range);
+    } else if (qState.queryType === QUERY_TYPE_FUNNEL) {
+      runFunnelQuery(true, qState.queryOptions.date_range, isCompareDate);
     }
   };
 
@@ -933,23 +941,12 @@ const CoreQuery = () => {
           qState.resultState = { ...qState.resultState, loading: true };
           qState.querySaved = {};
           setCoreQueryState(qState);
-        } else {
-          // updateLocalReducer(COMPARISON_DATA_LOADING);
         }
+
         const res = await getFunnelData(active_project.id, query, null, true);
-        // if (isCompareQuery) {
-        updateLocalReducer(
-          COMPARISON_DATA_FETCHED,
-          res?.data.result || res?.data
-        );
-        // } else {
-        //   setLoading(false);
-        //   updateResultState({
-        //     ...initialState,
-        //     data: res.data.result || res.data,
-        //     status: res.status
-        //   });
-        // }
+
+        const queryToAdd = getQueryFromHashId();
+        createFunnelStateFromResult(queryToAdd, res, dateRange);
       } catch (err) {
         logger.error(err);
         setLoading(false);
