@@ -56,6 +56,7 @@ type PatternProperties interface {
 }
 
 const SECONDS_IN_A_DAY int64 = 24 * 60 * 60
+const SECONDS_IN_A_HOUR int64 = 60 * 60
 const EVENT_USER_CACHE_EXPIRY_SECS = 1728000
 
 // timeoutForClearbitEnrichment

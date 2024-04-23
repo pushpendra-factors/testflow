@@ -595,6 +595,9 @@ func InitIntRoutes(r *gin.Engine) {
 func InitDataServiceRoutes(r *gin.Engine) {
 	dataServiceRouteGroup := r.Group(ROUTE_DATA_SERVICE_ROOT)
 
+	// update data service job status in project settings table
+	dataServiceRouteGroup.POST("/:project_id/integration_job_status", UpdateIntegratioinJobStatus)
+
 	//todo @ashhar: merge adwords and google_organic whereever possible
 	dataServiceRouteGroup.POST("/adwords/documents/add", mid.FeatureMiddleware([]string{M.FEATURE_GOOGLE_ADS}),
 		IH.DataServiceAdwordsAddDocumentHandler)

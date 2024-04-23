@@ -318,3 +318,32 @@ func RemoveLeadSquaredConfigHandler(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, resp)
 }
+
+func UpdateIntegratioinJobStatus(c *gin.Context) {
+	r := c.Request
+
+	var requestPayload model.IntegrationDocument
+
+	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectId == 0 {
+		log.Error("Update project_settings for explain failed. Failed to get project_id.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid project id."})
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&requestPayload); err != nil {
+		log.WithError(err).Error("integration status update payload JSON decode failure.")
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid json payload. update failed."})
+		return
+	}
+
+	status := store.GetStore().UpdateProjectSettingsIntegrationStatus(projectId, model.FEATURE_SIX_SIGNAL, model.LIMIT_EXCEED)
+	if status != http.StatusAccepted {
+		log.WithFields(log.Fields{"project_id": projectId}).Warn("Failed to update integration status")
+
+	}
+
+	c.JSON(status, gin.H{})
+}

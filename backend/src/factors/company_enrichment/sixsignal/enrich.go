@@ -44,13 +44,15 @@ func (ss *CustomerSixSignal) IsEligible(projectSettings *model.ProjectSetting) (
 
 // Enrich method fetches the customer sixsignal API Key and calls the method for enrichment via sixsignal.
 func (ss *CustomerSixSignal) Enrich(projectSettings *model.ProjectSetting,
-	userProperties *U.PropertiesMap, userId, clientIP string) {
+	userProperties *U.PropertiesMap, userId, clientIP string) (string, int) {
 
 	projectId := projectSettings.ProjectId
 	customerSixSignalAPIKey := projectSettings.Client6SignalKey
 
-	FillSixSignalUserProperties(projectId, customerSixSignalAPIKey, userProperties, userId, clientIP)
+	domain, status := FillSixSignalUserProperties(projectId, customerSixSignalAPIKey, userProperties, userId, clientIP)
+
 	(*userProperties)[U.ENRICHMENT_SOURCE] = API_6SIGNAL
+	return domain, status
 }
 
 // FillSixSignalUserProperties checks if the cache exists, if not it executes the enrich method using goroutine.

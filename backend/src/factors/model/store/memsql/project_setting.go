@@ -1981,10 +1981,10 @@ func (store *MemSQL) AddParagonTokenAndEnablingAgentToProjectSetting(projectID i
 	return http.StatusAccepted, nil
 }
 
-func (store *MemSQL) GetIntegrationState(projectID int64, docType string, isCRMTypeDoc bool) (model.IntegrationStatus, int) {
+func (store *MemSQL) GetIntegrationState(projectID int64, integrationName string) (model.IntegrationState, int) {
 	logFields := log.Fields{
-		"project_id":    projectID,
-		"document_type": docType,
+		"project_id":       projectID,
+		"integration_name": integrationName,
 	}
 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
@@ -1992,36 +1992,15 @@ func (store *MemSQL) GetIntegrationState(projectID int64, docType string, isCRMT
 	logCtx := log.WithFields(logFields)
 	if projectID == 0 {
 		logCtx.Error("invalid parameter")
-		return model.IntegrationStatus{}, http.StatusBadRequest
+		return model.IntegrationState{}, http.StatusBadRequest
 	}
 	db := C.GetServices().Db
-	var stmt string
-	var params []interface{}
-	if isCRMTypeDoc {
-		if docType == model.LEADSQUARED || docType == model.MARKETO {
 
-			stmt = fmt.Sprintf(`with 
-			step_1 as (select synced, MAX(created_at) created_at  from crm_users where project_id = ? and source = %d group by synced),
-			step_2 as (select synced,MAX(created_at) created_at  from crm_activities where project_id = ? and source = %d group by synced),
-			step_3 as (select synced,MAX(created_at) created_at from crm_groups where project_id = ? and source = %d group by synced),
-			step_4 as (select * from step_1
-			union all
-			select * from step_2
-			union all
-			select * from step_3)
-			select synced,MAX(created_at) last_at from step_4 group by synced`, U.SourceCRM[docType], U.SourceCRM[docType], U.SourceCRM[docType])
-			params = append(params, projectID, projectID, projectID)
-		} else {
-			stmt = fmt.Sprintf("SELECT synced, MAX(created_at) last_at from %s_documents where project_id= ? group by synced", docType)
-			params = append(params, projectID)
-		}
-	} else {
-		stmt = fmt.Sprintf("SELECT MAX(created_at) last_at from %s_documents where project_id= ? ", docType)
-		params = append(params, projectID)
-	}
-	rows, err := db.Raw(stmt, params...).Rows()
+	stmnt, params := getQueryStmntFromIntegrationName(integrationName, projectID)
+
+	rows, err := db.Raw(stmnt, params...).Rows()
 	if err != nil {
-		return model.IntegrationStatus{}, http.StatusInternalServerError
+		return model.IntegrationState{}, http.StatusInternalServerError
 	}
 	defer rows.Close()
 
@@ -2031,13 +2010,7 @@ func (store *MemSQL) GetIntegrationState(projectID int64, docType string, isCRMT
 		var lastAtNull sql.NullTime
 		var synced int
 
-		var err error
-		if isCRMTypeDoc {
-			err = rows.Scan(&synced, &lastAtNull)
-		} else {
-			err = rows.Scan(&lastAtNull)
-			synced = 1
-		}
+		err := rows.Scan(&synced, &lastAtNull)
 
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get status for document type")
@@ -2053,18 +2026,21 @@ func (store *MemSQL) GetIntegrationState(projectID int64, docType string, isCRMT
 
 	}
 
-	result := model.IntegrationStatus{}
+	result := model.IntegrationState{}
 
-	a := U.TimeNowUnix()
-	if (a-lastSyncedAt < 2*U.SECONDS_IN_A_DAY) && isCRMTypeDoc {
+	if U.TimeNowUnix()-lastSyncedAt < model.IntegrationCheckFrequency[integrationName] {
 		result.State = model.SYNC_PENDING
-	} else if a-lastPulledAt < 2*U.SECONDS_IN_A_DAY {
+
+		result.Message = model.ErrorStateToErrorMessageMap[model.SYNC_PENDING]
+	} else if U.TimeNowUnix()-lastPulledAt < 2*model.IntegrationCheckFrequency[integrationName] {
 		result.State = model.PULL_DELAYED
+		result.Message = fmt.Sprintf(model.ErrorStateToErrorMessageMap[model.PULL_DELAYED], integrationName)
 	} else {
 		result.State = model.SYNCED
+		result.Message = model.ErrorStateToErrorMessageMap[model.SYNCED]
 	}
 
-	if isCRMTypeDoc {
+	if U.ContainsStringInArray([]string{model.HUBSPOT, model.SALESFORCE, model.LEADSQUARED, model.MARKETO, model.LINKEDIN}, integrationName) {
 		result.LastSyncedAt = lastSyncedAt
 	} else {
 		result.LastSyncedAt = lastPulledAt
@@ -2072,4 +2048,96 @@ func (store *MemSQL) GetIntegrationState(projectID int64, docType string, isCRMT
 
 	return result, http.StatusOK
 
+}
+
+func getQueryStmntFromIntegrationName(integrationName string, projectID int64) (string, []interface{}) {
+
+	var stmt string
+	var params []interface{}
+
+	switch integrationName {
+	case model.FEATURE_MARKETO, model.FEATURE_LEADSQUARED:
+
+		stmt = fmt.Sprintf(`with 
+			step_1 as (select type,synced, MAX(created_at) created_at  from crm_users where project_id = ? and source = %d group by synced,type),
+			step_2 as (select type,synced,MAX(created_at) created_at  from crm_activities where project_id = ? and source = %d group by synced,type),
+			step_3 as (select type,synced,MAX(created_at) created_at from crm_groups where project_id = ? and source = %d group by synced,type),
+			step_4 as (select * from step_1
+			union all
+			select * from step_2
+			union all
+			select * from step_3)
+			select synced,MIN(created_at) last_at from step_4 group by synced;`, U.SourceCRM[integrationName], U.SourceCRM[integrationName], U.SourceCRM[integrationName])
+		params = append(params, projectID, projectID, projectID)
+		return stmt, params
+
+	case model.FEATURE_HUBSPOT, model.FEATURE_SALESFORCE:
+
+		stmt = fmt.Sprintf(`with
+			step_1 as (SELECT type , synced, MAX(created_at) last_at from %s_documents where project_id= ? group by synced,type )
+			select synced,min(last_at) last_at from step_1 group by synced`, integrationName)
+		params = append(params, projectID)
+		return stmt, params
+
+	case model.FEATURE_FACEBOOK, model.ADWORDS, model.FEATURE_G2, model.FEATURE_GOOGLE_ORGANIC:
+
+		stmt = fmt.Sprintf("SELECT 1 synced,MAX(created_at) last_at from %s_documents where project_id= ? ", integrationName)
+		params = append(params, projectID)
+		return stmt, params
+
+	case model.FEATURE_LINKEDIN:
+
+		stmt = fmt.Sprintf(`with
+		step_1 as (select 0 synced, type , MAX(Timestamp(timestamp)) last_at  from linkedin_documents where project_id= ? group by type),
+		 step_2 as (select 1 synced,  MAX(Timestamp(timestamp)) last_at from linkedin_documents where project_id= ? and type = 8 and is_group_user_created = true),
+		step_3 as (select synced , MIN(last_at) from step_1)
+		 select * from step_3 
+		union all
+		 select * from step_2 ;`)
+		params = append(params, projectID, projectID)
+		return stmt, params
+	case model.SDK, model.FEATURE_RUDDERSTACK, model.FEATURE_SEGMENT:
+
+		stmt = fmt.Sprintf("SELECT 1 synced, MAX(last_event_at) FROM users WHERE project_id = ? AND source = %d", model.UserSourceWeb)
+		params = append(params, projectID)
+		return stmt, params
+
+	case model.FEATURE_BING_ADS:
+
+		stmt = fmt.Sprintf("SELECT 1 synced,MAX(created_at) last_at from integration_documents where project_id = ? and source = '%s'", model.BINGADS)
+		params = append(params, projectID)
+		return stmt, params
+
+	}
+
+	return stmt, params
+
+}
+
+func (store *MemSQL) UpdateProjectSettingsIntegrationStatus(projectId int64, integrationName, errState string) int {
+	logFields := log.Fields{
+		"project_id": projectId,
+		"errState":   errState,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+
+	if projectId == 0 {
+		return http.StatusBadRequest
+	}
+
+	if err := db.Model(&model.ProjectSetting{}).Where("project_id = ?", projectId).
+		UpdateColumn("integration_status", gorm.Expr("JSON_SET_STRING(  case when integration_status is null then '{}'  else integration_status end, ?, ?)", integrationName, string(errState))).Error; err != nil {
+
+		if gorm.IsRecordNotFoundError(err) {
+			return http.StatusNotFound
+		}
+
+		log.WithFields(log.Fields{"projectId": projectId}).WithError(
+			err).Error("Failed updating ProjectSettings Error message State.")
+		return http.StatusInternalServerError
+	}
+	store.delAllProjectSettingsCacheForProject(projectId)
+
+	return http.StatusAccepted
 }

@@ -43,13 +43,14 @@ func (cb *CustomerClearbit) IsEligible(projectSettings *model.ProjectSetting) (b
 }
 
 // Enrich is a method on CustomerClearbit to enrich the company identification user properties.
-func (cb *CustomerClearbit) Enrich(projectSettings *model.ProjectSetting, userProperties *U.PropertiesMap, userId, clientIP string) {
+func (cb *CustomerClearbit) Enrich(projectSettings *model.ProjectSetting, userProperties *U.PropertiesMap, userId, clientIP string) (string, int) {
 
 	projectId := projectSettings.ProjectId
 	customerClearbitAPIKey := projectSettings.ClearbitKey
 
-	FillClearbitUserProperties(projectId, customerClearbitAPIKey, userProperties, userId, clientIP)
+	domain, status := FillClearbitUserProperties(projectId, customerClearbitAPIKey, userProperties, userId, clientIP)
 	(*userProperties)[U.ENRICHMENT_SOURCE] = API_CLEARBIT
+	return domain, status
 }
 
 // FillClearbitUserProperties checks the cache and if not present it calls the goroutine func for enrichment.

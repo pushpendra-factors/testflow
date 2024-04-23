@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"encoding/json"
 	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
@@ -226,4 +227,35 @@ func TestIsValidIp(t *testing.T) {
 	}
 	isValid = memsql.IsValidIP(filterIps)
 	assert.False(t, isValid)
+}
+
+func TestUpdateProjectSettingsIntegrationStatus(t *testing.T) {
+	project, _ := SetupProjectReturnDAO()
+	assert.NotNil(t, project)
+
+	status := store.GetStore().UpdateProjectSettingsIntegrationStatus(project.ID, model.SDK, model.PULL_DELAYED)
+	assert.Equal(t, status, http.StatusAccepted)
+
+	projectSettings, status := store.GetStore().GetProjectSetting(project.ID)
+	assert.Equal(t, status, http.StatusFound)
+	assert.NotNil(t, projectSettings)
+
+	var result map[string]interface{}
+
+	err := json.Unmarshal(projectSettings.IntegrationStatus.RawMessage, &result)
+	assert.Empty(t, err)
+	assert.Equal(t, result[model.SDK], model.PULL_DELAYED)
+
+	status = store.GetStore().UpdateProjectSettingsIntegrationStatus(project.ID, model.HUBSPOT, model.PULL_DELAYED)
+	assert.Equal(t, status, http.StatusAccepted)
+
+	projectSettings, status = store.GetStore().GetProjectSetting(project.ID)
+	assert.Equal(t, status, http.StatusFound)
+	assert.NotNil(t, projectSettings)
+
+	err = json.Unmarshal(projectSettings.IntegrationStatus.RawMessage, &result)
+	assert.Empty(t, err)
+	assert.Equal(t, result[model.SDK], model.PULL_DELAYED)
+	assert.Equal(t, result[model.HUBSPOT], model.PULL_DELAYED)
+
 }
