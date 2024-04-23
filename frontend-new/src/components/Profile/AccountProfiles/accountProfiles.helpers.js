@@ -56,9 +56,16 @@ const getTitleText = ({ title, extraClass = '' }) => (
   </Text>
 );
 
-const renderValue = (value, propType, prop, domainsList) => {
+export const renderValue = (
+  value,
+  propType,
+  prop,
+  domainsList,
+  isText = false
+) => {
   const formattedValue = propValueFormat(prop, value, propType) || '-';
   const urlTruncatedValue = truncateURL(formattedValue, domainsList);
+  if (isText) return `"${formattedValue}"`;
   return (
     <Text
       type='title'
