@@ -1145,8 +1145,7 @@ function UserProfiles({
           }}
           onChange={handleTableChange}
           scroll={{
-            x: (tableProperties?.length || 0) * 250,
-            y: 'calc(100vh - 340px)'
+            x: (tableProperties?.length || 0) * 250
           }}
         />
         <div className='flex flex-row-reverse mt-4' />

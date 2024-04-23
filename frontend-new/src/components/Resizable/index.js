@@ -1,11 +1,10 @@
-import React from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { Resizable } from 'react-resizable';
 import styles from './index.module.scss';
 var currentColumn = null;
 var currentIndex = -1;
 const tableParentId = 'resizing-table-container-div';
 var colHead = null;
-var colBody = null;
 /*
 
 Use this component only when columns are sticky 
@@ -30,30 +29,43 @@ const ResizableTitle = (props) => {
     if (currentColumn) {
       currentColumn = null;
       colHead = null;
-      colBody = null;
       currentIndex = -1;
     }
   };
+  const defaultResize = useCallback(()=>{
+
+      const TableParentWidth = document.querySelector('.fa-table--profileslist').querySelector('.ant-table-content').getBoundingClientRect().width - 5 // -5 is added to remove the scrolling for default screen
+      const allCols = document.querySelector('.fa-table--profileslist').querySelector('table').querySelector('colgroup').childNodes
+      if(TableParentWidth && allCols && allCols.length <= 5){
+        allCols.forEach((each)=>{
+         
+          each.style.width = `${TableParentWidth/allCols.length}px`
+        })
+      }
+  
+  },[])
+  useEffect(()=>{
+    defaultResize();
+    window.onresize = defaultResize
+    document.onmousemove = (e) => {
+      if (currentColumn) {
+        let minwidth = Math.max(
+          e.clientX -
+            currentColumn.parentElement.getBoundingClientRect().left,
+          152
+        );
+        colHead.style.width = minwidth + 'px';
+      }
+    }
+  },[])
   return (
     <th
       {...restProps}
       className={`${className} ${styles['table-custom-th']}`}
-      onMouseMove={(e) => {
-        if (currentColumn) {
-          let minwidth = Math.max(
-            e.clientX -
-              currentColumn.parentElement.getBoundingClientRect().left,
-            152
-          );
-          colHead.style.width = minwidth + 'px';
-          colBody.style.width = minwidth + 'px';
-        }
-      }}
       onMouseUp={(e) => {
         if (currentColumn) {
           currentColumn = null;
           colHead = null;
-          colBody = null;
           currentIndex = -1;
         }
       }}
@@ -90,7 +102,7 @@ const ResizableTitle = (props) => {
 
           if (colGroups) {
             colHead = colGroups[0].childNodes[currentIndex];
-            colBody = colGroups[1].childNodes[currentIndex];
+            
           }
           if (!currentColumn) currentColumn = e.currentTarget;
         }}
