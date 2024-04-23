@@ -531,7 +531,8 @@ type Model interface {
 	GetParagonTokenFromProjectSetting(projectID int64) (string, int, error)
 	GetParagonEnabledProjectsCount(projectID int64) (int64, int, error)
 	AddParagonTokenAndEnablingAgentToProjectSetting(projectID int64, agentID, token string) (int, error)
-	GetIntegrationState(projectID int64, DocumentType string, isCRMTypeDoc bool) (model.IntegrationStatus, int)
+	GetIntegrationState(projectID int64, DocumentType string) (model.IntegrationState, int)
+	UpdateProjectSettingsIntegrationStatus(projectId int64, integrationName, errState string) int
 
 	// project_settings for segment marker
 	GetSegmentMarkerLastRunTime(projectID int64) (time.Time, int)

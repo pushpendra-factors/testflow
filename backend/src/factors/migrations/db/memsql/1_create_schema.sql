@@ -482,6 +482,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS project_settings (
     clearbit_provision_acc_response JSON,
     int_paragon_token text,
     int_paragon_enabling_agent_id text,
+    integration_status JSON,
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)

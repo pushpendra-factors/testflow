@@ -56,7 +56,7 @@ func syncWorker(projectID int64, wg *sync.WaitGroup, workerIndex, workerPerProje
 	accessToken, instanceURL, err := IntSalesforce.GetAccessToken(salesforceProjectSettings, H.GetSalesforceRedirectURL())
 	if err != nil || accessToken == "" || instanceURL == "" {
 		log.WithField("project_id", salesforceProjectSettings.ProjectID).Errorf("Failed to get salesforce access token: %s", err)
-		enrichStatus.AddEnrichStatus([]IntSalesforce.Status{{ProjectID: projectID, Message: err.Error()}}, false)
+		enrichStatus.AddEnrichStatus([]IntSalesforce.Status{{ProjectID: projectID, Message: model.CLIENT_TOKEN_EXPIRED}}, false)
 		return
 	}
 
@@ -426,6 +426,24 @@ func main() {
 		}
 		jobStatus.SyncStatus = syncStatus
 		jobStatus.PropertyDetailStatus = propertyDetailSyncStatus
+
+		for _, state := range jobStatus.EnrichStatus {
+			if state.LimitExceeded {
+				status := store.GetStore().UpdateProjectSettingsIntegrationStatus(state.ProjectID, model.SALESFORCE, model.HEAVY_DELAYED)
+				if status != http.StatusAccepted {
+					log.WithFields(log.Fields{"project_id": state.ProjectID}).Warn("Failed to update integration status")
+
+				}
+			}
+
+			if state.Message == model.CLIENT_TOKEN_EXPIRED {
+				status := store.GetStore().UpdateProjectSettingsIntegrationStatus(state.ProjectID, model.SALESFORCE, model.CLIENT_TOKEN_EXPIRED)
+				if status != http.StatusAccepted {
+					log.WithFields(log.Fields{"project_id": state.ProjectID}).Warn("Failed to update integration status")
+
+				}
+			}
+		}
 
 		if anyFailure {
 			C.PingHealthcheckForFailure(enrichHealthcheckPingID, jobStatus)
