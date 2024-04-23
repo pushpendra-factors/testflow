@@ -1,6 +1,7 @@
 package model
 
 import (
+	U "factors/util"
 	"strings"
 	"time"
 
@@ -10,8 +11,22 @@ import (
 var ISOCODES = map[string]int{"AF": 1, "AX": 1, "AL": 1, "DZ": 1, "AS": 1, "AD": 1, "AO": 1, "AI": 1, "AQ": 1, "AG": 1, "AR": 1, "AM": 1, "AW": 1, "AU": 1, "AT": 1, "AZ": 1, "BS": 1, "BH": 1, "BD": 1, "BB": 1, "BY": 1, "BE": 1, "BZ": 1, "BJ": 1, "BM": 1, "BT": 1, "BO": 1, "BQ": 1, "BA": 1, "BW": 1, "BV": 1, "BR": 1, "IO": 1, "BN": 1, "BG": 1, "BF": 1, "BI": 1, "KH": 1, "CM": 1, "CA": 1, "CV": 1, "KY": 1, "CF": 1, "TD": 1, "CL": 1, "CN": 1, "CX": 1, "CC": 1, "CO": 1, "KM": 1, "CG": 1, "CD": 1, "CK": 1, "CR": 1, "CI": 1, "HR": 1, "CU": 1, "CW": 1, "CY": 1, "CZ": 1, "DK": 1, "DJ": 1, "DM": 1, "DO": 1, "EC": 1, "EG": 1, "SV": 1, "GQ": 1, "ER": 1, "EE": 1, "ET": 1, "FK": 1, "FO": 1, "FJ": 1, "FI": 1, "FR": 1, "GF": 1, "PF": 1, "TF": 1, "GA": 1, "GM": 1, "GE": 1, "DE": 1, "GH": 1, "GI": 1, "GR": 1, "GL": 1, "GD": 1, "GP": 1, "GU": 1, "GT": 1, "GG": 1, "GN": 1, "GW": 1, "GY": 1, "HT": 1, "HM": 1, "VA": 1, "HN": 1, "HK": 1, "HU": 1, "IS": 1, "IN": 1, "ID": 1, "IR": 1, "IQ": 1, "IE": 1, "IM": 1, "IL": 1, "IT": 1, "JM": 1, "JP": 1, "JE": 1, "JO": 1, "KZ": 1, "KE": 1, "KI": 1, "KP": 1, "KR": 1, "KW": 1, "KG": 1, "LA": 1, "LV": 1, "LB": 1, "LS": 1, "LR": 1, "LY": 1, "LI": 1, "LT": 1, "LU": 1, "MO": 1, "MK": 1, "MG": 1, "MW": 1, "MY": 1, "MV": 1, "ML": 1, "MT": 1, "MH": 1, "MQ": 1, "MR": 1, "MU": 1, "YT": 1, "MX": 1, "FM": 1, "MD": 1, "MC": 1, "MN": 1, "ME": 1, "MS": 1, "MA": 1, "MZ": 1, "MM": 1, "NA": 1, "NR": 1, "NP": 1, "NL": 1, "NC": 1, "NZ": 1, "NI": 1, "NE": 1, "NG": 1, "NU": 1, "NF": 1, "MP": 1, "NO": 1, "OM": 1, "PK": 1, "PW": 1, "PS": 1, "PA": 1, "PG": 1, "PY": 1, "PE": 1, "PH": 1, "PN": 1, "PL": 1, "PT": 1, "PR": 1, "QA": 1, "RE": 1, "RO": 1, "RU": 1, "RW": 1, "BL": 1, "SH": 1, "KN": 1, "LC": 1, "MF": 1, "PM": 1, "VC": 1, "WS": 1, "SM": 1, "ST": 1, "SA": 1, "SN": 1, "RS": 1, "SC": 1, "SL": 1, "SG": 1, "SX": 1, "SK": 1, "SI": 1, "SB": 1, "SO": 1, "ZA": 1, "GS": 1, "SS": 1, "ES": 1, "LK": 1, "SD": 1, "SR": 1, "SJ": 1, "SZ": 1, "SE": 1, "CH": 1, "SY": 1, "TW": 1, "TJ": 1, "TZ": 1, "TH": 1, "TL": 1, "TG": 1, "TK": 1, "TO": 1, "TT": 1, "TN": 1, "TR": 1, "TM": 1, "TC": 1, "TV": 1, "UG": 1, "UA": 1, "AE": 1, "GB": 1, "US": 1, "UM": 1, "UY": 1, "UZ": 1, "VU": 1, "VE": 1, "VN": 1, "VG": 1, "VI": 1, "WF": 1, "EH": 1, "YE": 1, "ZM": 1, "ZW": 1, "XK": 1}
 var countryMap = map[string]string{"afghanistan": "AF", "albania": "AL", "algeria": "DZ", "american samoa": "AS", "andorra": "AD", "angola": "AO", "anguilla": "AI", "antarctica": "AQ", "antigua and barbuda": "AG", "argentina": "AR", "armenia": "AM", "aruba": "AW", "australia": "AU", "austria": "AT", "azerbaijan": "AZ", "bahamas": "BS", "bahrain": "BH", "bangladesh": "BD", "barbados": "BB", "belarus": "BY", "belgium": "BE", "belize": "BZ", "benin": "BJ", "bermuda": "BM", "bhutan": "BT", "bolivarian republic of venezuela": "VE", "bolivia": "BO", "bolivia (plurinational state of)": "BO", "bonaire, sint eustatius and saba": "BQ", "bonaire, sint eustatius, and saba": "BQ", "bosnia and herzegovina": "BA", "botswana": "BW", "bouvet island": "BV", "brazil": "BR", "british indian ocean territory": "IO", "british virgin islands": "IO", "brunei": "BN", "brunei darussalam": "BN", "bulgaria": "BG", "burkina faso": "BF", "burundi": "BI", "cabo verde": "CV", "cambodia": "KH", "cameroon": "CM", "canada": "CA", "cayman islands": "KY", "central african republic": "CF", "chad": "TD", "chile": "CL", "china": "CN", "christmas island": "CX", "cocos (keeling) islands": "CC", "colombia": "CO", "comoros": "KM", "congo": "CG", "congo republic": "CD", "congo, democratic republic of the congo": "CD", "cook islands": "CK", "costa rica": "CR", "croatia": "HR", "cuba": "CU", "curaao": "CW", "curaçao": "CW", "cyprus": "CY", "czechia": "CZ", "côte d'ivoire": "CI", "democratic republic of timor-leste": "TL", "denmark": "DK", "djibouti": "DJ", "dominica": "DM", "dominican republic": "DO", "dr congo": "CD", "east timor": "TL", "ecuador": "EC", "egypt": "EG", "el salvador": "SV", "equatorial guinea": "GQ", "eritrea": "ER", "estonia": "EE", "eswatini": "SZ", "ethiopia": "ET", "falkland islands": "FK", "falkland islands (malvinas)": "FK", "faroe islands": "FO", "federated states of micronesia": "FM", "fiji": "FJ", "finland": "FI", "france": "FR", "french guiana": "GF", "french polynesia": "PF", "french southern territories": "TF", "gabon": "GA", "gambia": "GM", "georgia": "GE", "germany": "DE", "ghana": "GH", "gibraltar": "GI", "greece": "GR", "greenland": "GL", "grenada": "GD", "guadeloupe": "GP", "guam": "GU", "guatemala": "GT", "guernsey": "GG", "guinea": "GN", "guinea-bissau": "GW", "guyana": "GY", "haiti": "HT", "hashemite kingdom of jordan": "JO", "heard island and mcdonald islands": "HM", "holy see": "VA", "honduras": "HN", "hong kong": "HK", "hungary": "HU", "iceland": "IS", "india": "IN", "indonesia": "ID", "iran": "IR", "iran (islamic republic of)": "IR", "iraq": "IQ", "ireland": "IE", "isle of man": "IM", "israel": "IL", "italy": "IT", "ivory coast": "CI", "jamaica": "JM", "japan": "JP", "jersey": "JE", "jordan": "JO", "kazakhstan": "KZ", "kenya": "KE", "kiribati": "KI", "korea (democratic people's republic of)": "KP", "korea, republic of": "KR", "kuwait": "KW", "kyrgyzstan": "KG", "lao people's democratic republic": "LA", "laos": "LA", "latvia": "LV", "lebanon": "LB", "lesotho": "LS", "liberia": "LR", "libya": "LY", "liechtenstein": "LI", "lithuania": "LT", "luxembourg": "LU", "macao": "MO", "macedonia": "MK", "madagascar": "MG", "malawi": "MW", "malaysia": "MY", "maldives": "MV", "mali": "ML", "malta": "MT", "marshall islands": "MH", "martinique": "MQ", "mauritania": "MR", "mauritius": "MU", "mayotte": "YT", "mexico": "MX", "micronesia (federated states of)": "FM", "moldova": "MD", "moldova, republic of": "MD", "monaco": "MC", "mongolia": "MN", "montenegro": "ME", "montserrat": "MS", "morocco": "MA", "mozambique": "MZ", "myanmar": "MM", "namibia": "NA", "nauru": "NR", "nepal": "NP", "netherlands": "NL", "new caledonia": "NC", "new zealand": "NZ", "nicaragua": "NI", "niger": "NE", "nigeria": "NG", "niue": "NU", "norfolk island": "NF", "north macedonia": "MK", "northern mariana islands": "MP", "norway": "NO", "oman": "OM", "pakistan": "PK", "palau": "PW", "palestine": "PS", "palestine, state of": "PS", "panama": "PA", "papua new guinea": "PG", "paraguay": "PY", "peru": "PE", "philippines": "PH", "pitcairn": "PN", "poland": "PL", "portugal": "PT", "principality of monaco": "MC", "puerto rico": "PR", "qatar": "QA", "republic of korea": "KR", "republic of lithuania": "LT", "republic of moldova": "MD", "republic of the congo": "CD", "romania": "RO", "runion": "RE", "russia": "RU", "russian federation": "RU", "rwanda": "RW", "réunion": "RE", "saint barthlemy": "BL", "saint barthélemy": "BL", "saint helena, ascension and tristan da cunha": "SH", "saint kitts and nevis": "KN", "saint lucia": "LC", "saint martin": "SX", "saint martin (french part)": "MF", "saint pierre and miquelon": "PM", "saint vincent and the grenadines": "VC", "samoa": "WS", "san marino": "SM", "sao tome and principe": "ST", "saudi arabia": "SA", "senegal": "SN", "serbia": "RS", "seychelles": "SC", "sierra leone": "SL", "singapore": "SG", "sint maarten": "SX", "sint maarten (dutch part)": "SX", "slovakia": "SK", "slovenia": "SI", "so tom and prncipe": "ST", "solomon islands": "SB", "somalia": "SO", "south africa": "ZA", "south georgia and the south sandwich islands": "GS", "south korea": "KR", "south sudan": "SS", "spain": "ES", "sri lanka": "LK", "st kitts and nevis": "KN", "st vincent and grenadines": "VC", "sudan": "SD", "suriname": "SR", "svalbard and jan mayen": "SJ", "sweden": "SE", "switzerland": "CH", "syria": "SY", "syrian arab republic": "SY", "são tomé and príncipe": "ST", "taiwan": "TW", "taiwan, province of china": "TW", "tajikistan": "TJ", "tanzania": "TZ", "tanzania, united republic of": "TZ", "thailand": "TH", "timor-leste": "TL", "togo": "TG", "tokelau": "TK", "tonga": "TO", "trinidad and tobago": "TT", "tunisia": "TN", "turkey": "TR", "turkmenistan": "TM", "turks and caicos islands": "TC", "tuvalu": "TV", "uganda": "UG", "ukraine": "UA", "united arab emirates": "AE", "united kingdom": "GB", "united states": "US", "uruguay": "UY", "us virgin islands": "VI", "uzbekistan": "UZ", "vanuatu": "VU", "vatican city": "VA", "venezuela": "VE", "viet nam": "VN", "vietnam": "VN", "virgin islands, u.s.": "VI", "wallis and futuna": "WF", "wallis and futuna islands": "WF", "western sahara": "EH", "yemen": "YE", "zambia": "ZM", "zimbabwe": "ZW", "åland islands": "AX"}
 
-var CRMDocTypeList = []string{HUBSPOT, SALESFORCE, LEADSQUARED, MARKETO}
-var DocTypeList = []string{FACEBOOK, LINKEDIN, ADWORDS, "google_organic", "g2"}
+var IntegrationNameList = []string{FEATURE_FACEBOOK, FEATURE_LINKEDIN, ADWORDS, FEATURE_GOOGLE_ORGANIC, FEATURE_G2, FEATURE_SEGMENT, FEATURE_BING_ADS, FEATURE_RUDDERSTACK, SDK, FEATURE_HUBSPOT, FEATURE_SALESFORCE, FEATURE_LEADSQUARED, FEATURE_MARKETO}
+var IntegrationCheckFrequency = map[string]int64{
+	FEATURE_HUBSPOT:        24 * U.SECONDS_IN_A_HOUR,
+	FEATURE_SALESFORCE:     24 * U.SECONDS_IN_A_HOUR,
+	ADWORDS:                12 * U.SECONDS_IN_A_HOUR,
+	FEATURE_FACEBOOK:       12 * U.SECONDS_IN_A_HOUR,
+	FEATURE_LINKEDIN:       24 * U.SECONDS_IN_A_HOUR,
+	FEATURE_GOOGLE_ORGANIC: 12 * U.SECONDS_IN_A_HOUR,
+	BINGADS:                12 * U.SECONDS_IN_A_HOUR,
+	FEATURE_LEADSQUARED:    4 * U.SECONDS_IN_A_HOUR,
+	FEATURE_MARKETO:        24 * U.SECONDS_IN_A_HOUR,
+	FEATURE_G2:             12 * U.SECONDS_IN_A_HOUR,
+	FEATURE_SEGMENT:        1 * U.SECONDS_IN_A_HOUR,
+	FEATURE_RUDDERSTACK:    1 * U.SECONDS_IN_A_HOUR,
+	SDK:                    1 * U.SECONDS_IN_A_HOUR,
+}
 
 type ProjectSetting struct {
 	// Foreign key constraint project_id -> projects(id)
@@ -108,19 +123,34 @@ type ProjectSetting struct {
 	ClearbitProvisionAccResponse *postgres.Jsonb `json:"clearbit_provision_acc_response"`
 	IntParagonToken              string          `gorm:"column:int_paragon_token" json:"int_paragon_token"`
 	IntParagonEnablingAgentID    string          `gorm:"column int_paragon_enabling_agent_id" json:"int_paragon_enabling_agent_id"`
+	IntegrationStatus            *postgres.Jsonb `json:"integration_status"`
 }
 
-type IntegrationStatus struct {
+type IntegrationState struct {
 	State        string `json:"state"`
 	LastSyncedAt int64  `json:"last_synced_at"`
 	Message      string `json:"message,omitempty"`
 }
 
 const (
-	PULL_DELAYED = "delayed"
-	SYNC_PENDING = "pending"
-	SYNCED       = "synced"
+	PULL_DELAYED         = "delayed"
+	SYNC_PENDING         = "pending"
+	SYNCED               = "synced"
+	ACCOUNT_DELETOIN     = "accountDeletion"
+	CLIENT_TOKEN_EXPIRED = "client_side_token_expired"
+	HEAVY_DELAYED        = "large_data_delayed"
+	LIMIT_EXCEED         = "limit_exceed"
+	SUCCESS              = "success"
 )
+
+var ErrorStateToErrorMessageMap = map[string]string{
+	PULL_DELAYED:         "Dev diagnosis required- “There is something wrong with pulling data from %s, we are investigating this. All your data is secure and you will be able to access it shortly.”",
+	SYNC_PENDING:         "Delay- “Your data is running slow, don’t worry all your data is secure and you will be able to access it shortly.”",
+	SYNCED:               "Unhealthy trigger hasn’t occurred",
+	HEAVY_DELAYED:        "“Data will not be lost, just delayed”",
+	CLIENT_TOKEN_EXPIRED: "client side token expired",
+	LIMIT_EXCEED:         "SixSignal Limit Exhausted",
+}
 
 /* Sample Attribution Setting
 {

@@ -79,13 +79,13 @@ func GetMailmodoGetContactDetailsResponse(email string) (*http.Response, error) 
 }
 
 // IsReceipentAllowedMailmodo checks if the receipent has blocked the emails or have unsubscribed the email categorised by emailTypes.
-func IsReceipentAllowedMailmodo(email string, emailType string) bool {
+func IsReceipentAllowedMailmodo(email string, emailType string) (bool, error) {
 
 	logCtx := log.WithField("email_id", email)
 	response, err := GetMailmodoGetContactDetailsResponse(email)
 	if err != nil {
 		logCtx.Error("Failed to get mailmodo get contact details response.")
-		return false
+		return false, err
 	}
 
 	defer response.Body.Close()
@@ -93,24 +93,24 @@ func IsReceipentAllowedMailmodo(email string, emailType string) bool {
 	// case of new email id
 	if response.StatusCode != http.StatusOK {
 		logCtx.Info("Passing email check")
-		return true
+		return true, nil
 	}
 
 	var contactDetailsResponse MailmodoGetContactDetailsAPIResponse
 	err = json.NewDecoder(response.Body).Decode(&contactDetailsResponse)
 	if err != nil {
 		logCtx.Error("GetContactDetails API Response decode failed.")
-		return false
+		return false, err
 	}
 
 	if contactDetailsResponse.Blocked {
-		return false
+		return false, nil
 	} else if contactDetailsResponse.Unsubscribed {
 		if util.StringValueIn(emailType, contactDetailsResponse.UnsubscribedEmailTypes) {
-			return false
+			return false, nil
 		}
 	}
 
-	return true
+	return true, nil
 
 }

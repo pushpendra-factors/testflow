@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"encoding/json"
+	slack "factors/integration/slack"
 	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
@@ -78,27 +80,56 @@ func IntegrationsStatusHandler(c *gin.Context) {
 	})
 
 	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 	if projectId == 0 {
 		logCtx.Error("Get project_settings failed. Failed to get project_id.")
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
-	result := map[string]model.IntegrationStatus{}
-	for _, docType := range model.CRMDocTypeList {
-		state, errCode := store.GetStore().GetIntegrationState(projectId, docType, true)
-		if errCode != http.StatusOK {
-			logCtx.Error("Failed to Integration state")
-		}
-		result[docType] = state
+	settings, errCode := store.GetStore().GetProjectSetting(projectId)
+	if errCode != http.StatusFound {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "Failed to get project settings."})
+		return
 	}
 
-	for _, docType := range model.DocTypeList {
-		state, errCode := store.GetStore().GetIntegrationState(projectId, docType, false)
-		if errCode != http.StatusOK {
-			logCtx.Error("Failed to Integration state")
+	var intStatusMap map[string]string
+	if settings.IntegrationStatus != nil {
+		err := json.Unmarshal(settings.IntegrationStatus.RawMessage, &intStatusMap)
+		if err != nil {
+			logCtx.WithField("integration status", settings.IntegrationStatus).WithError(err).Error("Failed to decode integration status ")
 		}
-		result[docType] = state
+	}
+
+	result := map[string]model.IntegrationState{}
+	for _, integrationName := range model.IntegrationNameList {
+		if statusString, ok := intStatusMap[integrationName]; ok && statusString != model.SUCCESS {
+
+			result[integrationName] = model.IntegrationState{
+				State:   statusString,
+				Message: model.ErrorStateToErrorMessageMap[statusString],
+			}
+
+		} else {
+			state, errCode := store.GetStore().GetIntegrationState(projectId, integrationName)
+			if errCode != http.StatusOK {
+				logCtx.Error("Failed to get Integration state")
+			}
+			result[integrationName] = state
+		}
+	}
+
+	result[model.FEATURE_SLACK] = slack.GetSlackIntegrationState(projectId, agentUUID)
+
+	for _, integrationName := range []string{model.FEATURE_FACTORS_DEANONYMISATION, model.FEATURE_SIX_SIGNAL, model.FEATURE_CLEARBIT} {
+		if statusString, ok := intStatusMap[integrationName]; ok {
+			result[integrationName] = model.IntegrationState{
+				State:   statusString,
+				Message: model.ErrorStateToErrorMessageMap[statusString],
+			}
+		} else {
+			result[integrationName] = model.IntegrationState{}
+		}
 	}
 
 	c.JSON(http.StatusOK, result)

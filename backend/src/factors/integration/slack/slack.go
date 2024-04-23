@@ -9,6 +9,7 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -91,9 +92,9 @@ func SendSlackAlert(projectID int64, message, agentUUID string, channel model.Sl
 		return response, true, nil
 	}
 	log.WithFields(log.Fields{
-		"message": message,
+		"message":  message,
 		"response": response,
-		}).Error("failed to send slack alert")
+	}).Error("failed to send slack alert")
 	defer resp.Body.Close()
 	return response, false, fmt.Errorf("failed to send slack alert")
 }
@@ -229,4 +230,46 @@ func UpdateSlackUsersListTable(projectID int64, agentID string) ([]model.SlackMe
 	}
 
 	return members, http.StatusOK, nil
+}
+
+func GetSlackIntegrationState(projectID int64, agentUUID string) model.IntegrationState {
+	// get the auth token for the agent uuid and then call the POST method to send the message
+	accessTokens, err := store.GetStore().GetSlackAuthToken(projectID, agentUUID)
+	if err != nil {
+		log.Error("Failed to get access token for slack")
+		return model.IntegrationState{}
+	}
+	url := fmt.Sprintf("https://slack.com/api/auth.test")
+
+	// create new http post request
+	request, _ := http.NewRequest("POST", url, nil)
+	request.Header.Set("Content-Type", "application/json; charset=utf-8")
+	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessTokens.UserAccessToken))
+
+	client := &http.Client{Timeout: time.Second}
+	resp, err := client.Do(request)
+	if err != nil {
+		log.Error("Failed to make request to slack health check")
+		return model.IntegrationState{}
+	}
+	var response map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&response)
+	if err != nil {
+		log.Error("Failed to decode response from slack")
+		return model.IntegrationState{}
+	}
+
+	//switch case for all possible error
+	if response["ok"] == true {
+		return model.IntegrationState{
+			State:   model.SYNCED,
+			Message: U.GetPropertyValueAsString(response["error"]),
+		}
+	}
+
+	return model.IntegrationState{
+		State:   model.SYNC_PENDING,
+		Message: U.GetPropertyValueAsString(response["error"]),
+	}
+
 }
