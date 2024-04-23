@@ -1547,7 +1547,7 @@ func updateUserAsDeleted(projectID int64, document *model.SalesforceDocument) (s
 
 	typeAlias := model.GetSalesforceAliasByDocType(document.Type)
 	keyDelete := model.GetCRMEnrichPropertyKeyByType(model.SmartCRMEventSourceSalesforce,
-		typeAlias, "deleted")
+		typeAlias, model.SALESFORCE_OBJECT_DELETED_KEY)
 
 	properties := map[string]interface{}{keyDelete: true}
 	propertiesJSON, err := U.EncodeToPostgresJsonb(&properties)

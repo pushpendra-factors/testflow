@@ -116,6 +116,8 @@ var UserPropertiesToSkipOnMergeByCustomerUserID = []string{
 	UserPropertyLeadSquaredLeadDeleted,
 	U.UP_REAL_PAGE_COUNT,
 	U.UP_REAL_PAGE_SPENT_TIME,
+	U.SALESFORCE_LEAD_DELETED_KEY,
+	U.SALESFORCE_CONTACT_DELETED_KEY,
 }
 
 var ErrDifferentEmailSeen error = errors.New("different_email_seen_for_customer_user_id")

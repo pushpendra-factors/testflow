@@ -35,6 +35,8 @@ import {
 import AppModal from 'Components/AppModal/AppModal';
 import ShareToSlackModal from 'Components/ShareToSlackModal/ShareToSlackModal';
 import ShareToEmailModal from 'Components/ShareToEmailModal/ShareToEmailModal';
+import { featureLock } from 'Routes/feature';
+import useAgentInfo from 'hooks/useAgentInfo';
 
 const columns = [
   {
@@ -104,6 +106,7 @@ const SavedQueriesTable = ({
 
   const [channelOpts, setChannelOpts] = useState([]);
   const [allChannels, setAllChannels] = useState([]);
+  const { email } = useAgentInfo();
   const { agent_details } = useSelector((state) => state.agent);
   const [deleteModal, showDeleteModal] = useState(false);
   const history = useHistory();
@@ -136,7 +139,10 @@ const SavedQueriesTable = ({
       if (query?.query?.query_group?.[0]?.cl === 'events') {
         analyseQueryParamsPath =
           analyseQueryParamsPath + '/events/' + query.id_text;
-      } else if (query?.query?.query_group?.[0]?.cl === 'funnel') {
+      } else if (
+        query?.query?.query_group?.[0]?.cl === 'funnel' &&
+        featureLock(email)
+      ) {
         analyseQueryParamsPath =
           analyseQueryParamsPath + '/funnel/' + query.id_text;
       }

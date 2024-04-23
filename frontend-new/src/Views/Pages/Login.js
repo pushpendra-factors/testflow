@@ -3,12 +3,13 @@ import { connect } from 'react-redux';
 import { Row, Col, Button, Input, Form, message, Divider } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { Link, useHistory } from 'react-router-dom';
-import { login } from '../../reducers/agentActions';
 import { EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
 import factorsai from 'factorsai';
+import LoggedOutScreenHeader from 'Components/GenericComponents/LoggedOutScreenHeader';
+import useScript from 'hooks/useScript';
+import { login } from '../../reducers/agentActions';
 import styles from './index.module.scss';
 import { SSO_LOGIN_URL } from '../../utils/sso';
-import LoggedOutScreenHeader from 'Components/GenericComponents/LoggedOutScreenHeader';
 import LoginIllustration from '../../assets/images/login_Illustration.png';
 
 function Login(props) {
@@ -18,6 +19,11 @@ function Login(props) {
 
   const history = useHistory();
 
+  useScript({
+    url: 'https://tribl.io/footer.js?orgId=kBXL81Dq42snObK5D623',
+    async: false
+  });
+
   const checkError = () => {
     const url = new URL(window.location.href);
     const error = url.searchParams.get('error');
@@ -25,12 +31,13 @@ function Login(props) {
       if (error === 'INVALID_AGENT') {
         message.error('Account doesn’t exist, please sign up');
         return;
-      } else if (error === 'AGENT_NOT_ACTIVE') {
+      }
+      if (error === 'AGENT_NOT_ACTIVE') {
         message.error('Already a user. Verify your email or Signup again.');
         return;
       }
-      let str = error.replace('_', ' ');
-      let finalmsg = str.toLocaleLowerCase();
+      const str = error.replace('_', ' ');
+      const finalmsg = str.toLocaleLowerCase();
       message.error(finalmsg);
     }
   };
@@ -55,7 +62,7 @@ function Login(props) {
       .then((value) => {
         setDataLoading(true);
 
-        //Factors LOGIN tracking
+        // Factors LOGIN tracking
         factorsai.track('LOGIN', { username: value?.form_username });
 
         setTimeout(() => {
@@ -87,17 +94,17 @@ function Login(props) {
 
   return (
     <>
-      <div className={'fa-container h-screen relative'}>
-        <Row justify={'center'} className={`${styles.start}`}>
+      <div className='fa-container h-screen relative'>
+        <Row justify='center' className={`${styles.start}`}>
           <Col span={24}>
             <LoggedOutScreenHeader />
           </Col>
           <Col justify='center' className='mt-10'>
             <Text
               color='character-primary'
-              type={'title'}
+              type='title'
               level={2}
-              weight={'bold'}
+              weight='bold'
               extraClass='m-0'
             >
               Welcome back !
@@ -123,18 +130,18 @@ function Login(props) {
                   onChange={onChange}
                   className='w-full'
                 >
-                  <div className={'flex justify-center items-center  '}>
+                  <div className='flex justify-center items-center  '>
                     <Text
-                      type={'title'}
+                      type='title'
                       level={5}
-                      extraClass={'m-0'}
-                      weight={'bold'}
+                      extraClass='m-0'
+                      weight='bold'
                       color='character-primary'
                     >
                       Login to Continue
                     </Text>
                   </div>
-                  <div className={'mt-8'}>
+                  <div className='mt-8'>
                     <Form.Item
                       label={null}
                       name='form_username'
@@ -148,14 +155,14 @@ function Login(props) {
                       className='w-full'
                     >
                       <Input
-                        className={'fa-input w-full'}
+                        className='fa-input w-full'
                         disabled={dataLoading}
-                        size={'large'}
+                        size='large'
                         placeholder='Email'
                       />
                     </Form.Item>
                   </div>
-                  <div className={'mt-4'}>
+                  <div className='mt-4'>
                     <Form.Item
                       label={null}
                       name='form_password'
@@ -168,8 +175,8 @@ function Login(props) {
                       className='w-full'
                     >
                       <Input.Password
-                        className={'fa-input w-full'}
-                        size={'large'}
+                        className='fa-input w-full'
+                        size='large'
                         placeholder='Password'
                         disabled={dataLoading}
                         iconRender={(visible) =>
@@ -178,58 +185,44 @@ function Login(props) {
                       />
                     </Form.Item>
                   </div>
-                  <div className={' mt-6'}>
-                    <Form.Item className={'m-0'} loading={dataLoading}>
+                  <div className=' mt-6'>
+                    <Form.Item className='m-0' loading={dataLoading}>
                       <Button
                         htmlType='submit'
                         loading={dataLoading}
-                        type={'primary'}
-                        size={'large'}
-                        className={'w-full'}
+                        type='primary'
+                        size='large'
+                        className='w-full'
                       >
                         LOG IN
                       </Button>
                     </Form.Item>
                   </div>
                   {errorInfo && (
-                    <div
-                      className={
-                        'flex flex-col justify-center items-center mt-1'
-                      }
-                    >
-                      <Text
-                        type={'title'}
-                        color={'red'}
-                        size={'7'}
-                        className={'m-0'}
-                      >
+                    <div className='flex flex-col justify-center items-center mt-1'>
+                      <Text type='title' color='red' size='7' className='m-0'>
                         {errorInfo}
                       </Text>
                     </div>
                   )}
                   <Divider className='my-6'>
-                    <Text
-                      type={'title'}
-                      level={7}
-                      extraClass={'m-0'}
-                      color={'grey'}
-                    >
+                    <Text type='title' level={7} extraClass='m-0' color='grey'>
                       OR
                     </Text>
                   </Divider>
 
-                  <Form.Item className={'m-0'}>
+                  <Form.Item className='m-0'>
                     <a href={SSO_LOGIN_URL}>
                       <Button
-                        type={'default'}
-                        size={'large'}
+                        type='default'
+                        size='large'
                         style={{
                           background: '#fff',
                           boxShadow: '0px 0px 2px rgba(0, 0, 0, 0.3)'
                         }}
-                        className={'w-full'}
+                        className='w-full'
                       >
-                        <SVG name={'Google'} size={24} />
+                        <SVG name='Google' size={24} />
                         Continue with Google
                       </Button>
                     </a>
@@ -250,16 +243,14 @@ function Login(props) {
           </Col>
 
           <Col span={8}>
-            <div className={'flex flex-col justify-center items-center '}>
+            <div className='flex flex-col justify-center items-center '>
               <Row>
-                <Col span={24}></Col>
+                <Col span={24} />
               </Row>
               <Row>
                 <Col span={24}>
-                  <div
-                    className={'flex flex-col justify-center items-center mt-5'}
-                  >
-                    <Text type={'paragraph'} mini color={'grey'}>
+                  <div className='flex flex-col justify-center items-center mt-5'>
+                    <Text type='paragraph' mini color='grey'>
                       Don’t have an account?{' '}
                       <Link
                         disabled={dataLoading}
@@ -285,15 +276,10 @@ function Login(props) {
           />
         </div>
         <div className='text-center mt-10'>
-          <Text
-            type={'title'}
-            level={8}
-            color={'grey'}
-            extraClass={'text-center'}
-          >
+          <Text type='title' level={8} color='grey' extraClass='text-center'>
             By logging in, I accept the Factors.ai{' '}
             <a
-              href={'https://www.factors.ai/terms-of-use'}
+              href='https://www.factors.ai/terms-of-use'
               target='_blank'
               rel='noreferrer'
             >
@@ -301,7 +287,7 @@ function Login(props) {
             </a>{' '}
             and acknowledge having read through the{' '}
             <a
-              href={'https://www.factors.ai/privacy-policy'}
+              href='https://www.factors.ai/privacy-policy'
               target='_blank'
               rel='noreferrer'
             >
