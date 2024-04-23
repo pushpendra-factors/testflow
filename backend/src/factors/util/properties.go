@@ -560,6 +560,7 @@ var EP_FORM_ACTION string = "$form_action"
 var UP_INITIAL_PAGE_EVENT_ID string = "$initial_page_event_id" // internal. id of initial page event.
 var UP_MERGE_TIMESTAMP string = "$merge_timestamp"             // Internal property used in user properties merge.
 
+var UP_IS_OFFLINE string = "$is_offline"
 var UP_PLATFORM string = "$platform"
 var UP_BROWSER string = "$browser"
 var UP_BROWSER_VERSION string = "$browser_version"
@@ -1719,7 +1720,7 @@ var STANDARD_GROUP_DISPLAY_NAMES = map[string]string{
 	GROUP_NAME_HUBSPOT_DEAL:           "Hubspot Deals",
 	GROUP_NAME_SALESFORCE_ACCOUNT:     "Salesforce Accounts",
 	GROUP_NAME_SALESFORCE_OPPORTUNITY: "Salesforce Opportunities",
-	GROUP_NAME_SIX_SIGNAL:             "Identified Companies",
+	GROUP_NAME_SIX_SIGNAL:             "Company Identification",
 	GROUP_NAME_LINKEDIN_COMPANY:       "Linkedin Company Engagements",
 	GROUP_NAME_G2:                     "G2 Engagements",
 }

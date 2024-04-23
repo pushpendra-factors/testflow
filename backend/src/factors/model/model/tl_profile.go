@@ -14,8 +14,7 @@ import (
 type Profile struct {
 	Identity     string                 `json:"identity"`
 	Properties   *postgres.Jsonb        `json:"-"`
-	Name         string                 `json:"name,omitempty"`
-	HostName     string                 `json:"host_name,omitempty"`
+	DomainName   string                 `json:"domain_name,omitempty"`
 	IsAnonymous  bool                   `json:"is_anonymous"`
 	LastActivity time.Time              `json:"last_activity"`
 	TableProps   map[string]interface{} `json:"table_props"`
@@ -44,6 +43,7 @@ type GroupsInfo struct {
 }
 
 type UserActivity struct {
+	EventID     string          `json:"event_id"`
 	EventName   string          `json:"event_name"`
 	EventType   string          `json:"event_type"`
 	DisplayName string          `json:"display_name"`
@@ -54,16 +54,18 @@ type UserActivity struct {
 }
 
 type TimelineEvent struct {
-	ID          string          `json:"id"`
-	Name        string          `json:"name"`
-	DisplayName string          `json:"display_name"`
-	AliasName   string          `json:"alias_name,omitempty"`
-	Icon        string          `json:"icon"`
-	Type        string          `json:"type"`
-	Timestamp   uint64          `json:"timestamp"`
-	Properties  *postgres.Jsonb `json:"properties,omitempty"`
-	UserID      string          `json:"user_id"`
-	IsGroupUser bool            `json:"is_group_user"`
+	ID              string          `json:"id"`
+	Name            string          `json:"name"`
+	DisplayName     string          `json:"display_name"`
+	AliasName       string          `json:"alias_name,omitempty"`
+	Icon            string          `json:"icon"`
+	Type            string          `json:"type"`
+	Timestamp       uint64          `json:"timestamp"`
+	Properties      *postgres.Jsonb `json:"properties,omitempty"`
+	UserID          string          `json:"user_id"`
+	Username        string          `json:"username"`
+	IsGroupUser     bool            `json:"is_group_user"`
+	IsAnonymousUser bool            `json:"is_anonymous_user"`
 }
 
 type TimelinePayload struct {
@@ -74,7 +76,7 @@ type TimelinePayload struct {
 
 type AccountDetails struct {
 	Name            string                 `json:"name"`
-	HostName        string                 `json:"host_name"`
+	DomainName      string                 `json:"domain_name"`
 	Properties      *postgres.Jsonb        `json:"-"`
 	LeftPaneProps   map[string]interface{} `json:"leftpane_props"`
 	Milestones      map[string]interface{} `json:"milestones"`
@@ -89,6 +91,7 @@ type Overview struct {
 	ScoresList  map[string]float32 `json:"scores_list"` // Score trends list
 	TopPages    []TopPage          `json:"top_pages"`
 	TopUsers    []TopUser          `json:"top_users"`
+	LastEventTS string             `json:"last_event_ts"` // timestamp of last occured event on account scoring
 }
 
 type TopPage struct {
@@ -108,12 +111,13 @@ type TopUser struct {
 }
 
 type UserTimeline struct {
-	UserId         string                 `json:"user_id"`
-	IsAnonymous    bool                   `json:"is_anonymous"`
-	UserName       string                 `json:"user_name"`
-	UserProperties map[string]interface{} `json:"user_properties"`
-	AdditionalProp string                 `json:"additional_prop"`
-	UserActivities []UserActivity         `json:"user_activities"`
+	UserId                 string                 `json:"user_id"`
+	IsAnonymous            bool                   `json:"is_anonymous"`
+	UserName               string                 `json:"user_name"`
+	UserProperties         *postgres.Jsonb        `json:"-"`
+	FilteredUserProperties map[string]interface{} `json:"properties"`
+	ExtraProp              string                 `json:"extra_prop"`
+	UserActivities         []UserActivity         `json:"user_activities"`
 }
 
 // Constants

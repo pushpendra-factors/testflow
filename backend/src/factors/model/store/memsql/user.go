@@ -501,7 +501,7 @@ func (store *MemSQL) GetDomainDetailsByID(projectID int64, id string, domGroupID
 
 	var grpCol string
 
-	// fetching group_x_id for host_name
+	// fetching group_x_id for domain_name
 	if domGroupID > 0 {
 		grpCol = fmt.Sprintf(", group_%d_id", domGroupID)
 	}

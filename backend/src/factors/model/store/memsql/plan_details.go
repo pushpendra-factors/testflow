@@ -5,10 +5,11 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
-	"fmt"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -587,4 +588,24 @@ func (store *MemSQL) PopulatePlanDetailsTable(planDetails model.PlanDetails) (in
 	}
 
 	return http.StatusCreated, nil
+}
+
+func (store *MemSQL) GetAllProjectIdsUsingPaidPlan() ([]int64, int, string, error) {
+
+	var ppMap []model.ProjectPlanMapping
+	pids := make([]int64, 0)
+	db := C.GetServices().Db
+
+	err := db.Where("plan_id IN (?,?,?,?)", model.PLAN_ID_BASIC, model.PLAN_ID_GROWTH, model.PLAN_ID_PROFESSIONAL, model.PLAN_ID_CUSTOM).Find(&ppMap).Error
+	if err != nil {
+		errMsg := "failed to fetch records from db"
+		log.WithError(err).Error(errMsg)
+		return pids, http.StatusNotFound, errMsg, err
+	}
+
+	for _, pp := range ppMap {
+		pids = append(pids, pp.ProjectID)
+	}
+
+	return pids, http.StatusFound, "", nil
 }

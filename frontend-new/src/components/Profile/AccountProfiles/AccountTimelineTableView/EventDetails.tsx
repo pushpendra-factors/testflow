@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ReactSortable } from 'react-sortablejs';
-import { useSelector } from 'react-redux';
+import { ConnectedProps, connect, useSelector } from 'react-redux';
 import { HolderOutlined } from '@ant-design/icons';
 import { SVG, Text } from 'Components/factorsComponents';
 import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
@@ -10,12 +10,33 @@ import { PropTextFormat } from 'Utils/dataFormatter';
 import { EventDetailsProps } from 'Components/Profile/types';
 import { Button } from 'antd';
 import _ from 'lodash';
+import { getConfiguredEventProperties } from 'Reducers/timelines/middleware';
+import { bindActionCreators } from 'redux';
 import EventIcon from './EventIcon';
 
-function EventDetails({ event, eventPropsType, onUpdate }: EventDetailsProps) {
+function EventDetails({
+  event,
+  eventPropsType,
+  onUpdate,
+  getConfiguredEventProperties
+}: ComponentProps) {
   const [sortableItems, setSortableItems] = useState<string[]>([]);
   const { eventPropNames } = useSelector((state: any) => state.coreQuery);
-  const { currentProjectSettings } = useSelector((state: any) => state.global);
+  const { active_project: activeProject, currentProjectSettings } = useSelector(
+    (state: any) => state.global
+  );
+  const { eventConfigProperties } = useSelector(
+    (state: any) => state.timelines
+  );
+
+  useEffect(() => {
+    if (!event) return;
+    if (!eventConfigProperties[event?.id]) {
+      const eventName =
+        event.display_name === 'Page View' ? 'PageView' : event.name;
+      getConfiguredEventProperties(activeProject.id, event.id, eventName);
+    }
+  }, [activeProject, event, eventConfigProperties]);
 
   const eventIcon = eventIconsColorMap[event.icon]
     ? event.icon
@@ -23,7 +44,7 @@ function EventDetails({ event, eventPropsType, onUpdate }: EventDetailsProps) {
 
   const renderAliasName = () => (
     <TextWithOverflowTooltip
-      text={event.event_type === 'FE' ? event.event_name : event.alias_name}
+      text={event.type === 'FE' ? event.name : event.alias_name}
       extraClass='main'
     />
   );
@@ -31,7 +52,7 @@ function EventDetails({ event, eventPropsType, onUpdate }: EventDetailsProps) {
   useEffect(() => {
     if (event && currentProjectSettings?.timelines_config?.events_config) {
       const eventName =
-        event.display_name === 'Page View' ? 'PageView' : event.event_name;
+        event.display_name === 'Page View' ? 'PageView' : event.name;
       setSortableItems(
         currentProjectSettings.timelines_config.events_config[eventName]
       );
@@ -41,7 +62,7 @@ function EventDetails({ event, eventPropsType, onUpdate }: EventDetailsProps) {
   const compareOrder = (newOrder: string[]) => {
     const existingOrder =
       currentProjectSettings?.timelines_config?.events_config?.[
-        event.display_name === 'Page View' ? 'PageView' : event.event_name
+        event.display_name === 'Page View' ? 'PageView' : event.name
       ];
     if (_.isEqual(existingOrder, newOrder)) return;
     onUpdate(newOrder);
@@ -80,7 +101,7 @@ function EventDetails({ event, eventPropsType, onUpdate }: EventDetailsProps) {
           )}
         </div>
       </div>
-      <div>
+      <div className='event-drawer-items'>
         {sortableItems && (
           <ReactSortable list={sortableItems} setList={handleSortableItems}>
             {sortableItems.map((property, index) => {
@@ -91,13 +112,13 @@ function EventDetails({ event, eventPropsType, onUpdate }: EventDetailsProps) {
                     <div className='del-button mr-4' style={{ cursor: 'grab' }}>
                       <HolderOutlined />
                     </div>
-                    <div className='flex flex-col items-start truncate'>
+                    <div className='flex flex-col items-start'>
                       <Text
                         type='title'
                         level={8}
                         color='grey'
                         truncate
-                        charLimit={44}
+                        charLimit={40}
                         extraClass='m-0'
                       >
                         {eventPropNames[property] || PropTextFormat(property)}
@@ -106,12 +127,12 @@ function EventDetails({ event, eventPropsType, onUpdate }: EventDetailsProps) {
                         type='title'
                         level={7}
                         truncate
-                        charLimit={44}
+                        charLimit={36}
                         extraClass='m-0'
                       >
                         {propValueFormat(
                           property,
-                          event.properties?.[property],
+                          eventConfigProperties?.[event.id]?.[property],
                           propType
                         ) || '-'}
                       </Text>
@@ -136,4 +157,16 @@ function EventDetails({ event, eventPropsType, onUpdate }: EventDetailsProps) {
   );
 }
 
-export default EventDetails;
+const mapDispatchToProps = (dispatch: any) =>
+  bindActionCreators(
+    {
+      getConfiguredEventProperties
+    },
+    dispatch
+  );
+
+const connector = connect(null, mapDispatchToProps);
+type ReduxProps = ConnectedProps<typeof connector>;
+type ComponentProps = ReduxProps & EventDetailsProps;
+
+export default connector(EventDetails);

@@ -9,7 +9,7 @@ import styles from './index.module.scss';
 import FiltersBox from './FiltersBox';
 
 function PropertyFilter({
-  profileType,
+  profileType = 'account',
   applyFilters,
   disableDiscardButton,
   filtersExpanded,
@@ -40,7 +40,7 @@ function PropertyFilter({
     (state) => state.userProfilesView
   );
 
-  const newSegmentMode = accountsNewSegmentMode || profilesNewSegmentMode;
+  const newSegmentMode = profileType === 'account' ? accountsNewSegmentMode : profilesNewSegmentMode;
 
   const toggleFilters = useCallback(() => {
     setFiltersExpanded((curr) => !curr);

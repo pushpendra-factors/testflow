@@ -127,7 +127,13 @@ func evalProperty(properties map[string]interface{}, propFilter M.WeightKeyValue
 	for _, propertyVal := range propFilter.Value {
 		propFilterMap[propertyVal] = true
 	}
-	propvalKey := properties[propFilter.Key]
+	propvalKey, prop_ok := properties[propFilter.Key]
+
+	if propFilter.Operator == model.IsKnown {
+		return prop_ok
+	} else if propFilter.Operator == model.IsUnKnown {
+		return !prop_ok
+	}
 
 	if propFilter.ValueType == U.PropertyTypeCategorical {
 

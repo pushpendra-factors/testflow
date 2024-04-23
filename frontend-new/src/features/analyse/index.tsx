@@ -15,6 +15,7 @@ import cx from 'classnames';
 import {
   fetchQueries,
   getEventsData,
+  getFunnelData,
   updateQuery
 } from 'Reducers/coreQuery/services';
 import { EMPTY_ARRAY, EMPTY_OBJECT, generateRandomKey } from 'Utils/global';
@@ -36,6 +37,7 @@ import {
   TYPE_EVENTS_OCCURRENCE
 } from 'Utils/constants';
 import {
+  COMPARISON_DATA_FETCHED,
   CORE_QUERY_INITIAL_STATE,
   DEFAULT_PIVOT_CONFIG,
   INITIAL_STATE as INITIAL_RESULT_STATE,
@@ -47,6 +49,7 @@ import {
 } from 'Views/CoreQuery/constants';
 import {
   formatApiData,
+  getFunnelQuery,
   getQuery,
   getStateQueryFromRequestQuery,
   isComparisonEnabled
@@ -145,7 +148,11 @@ const CoreQuery = () => {
     }
     if (location?.state?.navigatedResultState) {
       const queryToAdd = getQueryFromHashId();
-      createStateFromResult(queryToAdd);
+      if (query_type === QUERY_TYPE_EVENT) {
+        createStateFromResult(queryToAdd);
+      } else if (query_type === QUERY_TYPE_FUNNEL) {
+        createFunnelStateFromResult(queryToAdd);
+      }
     }
   }, [query_id, query_type, savedQueries, location]);
 
@@ -258,6 +265,114 @@ const CoreQuery = () => {
     qState.appliedBreakdown = newAppliedBreakdown;
   };
 
+  const createFunnelStateFromResult = (
+    queryToAdd: (typeof savedQueries)[0],
+    resultState?: ResultState | null,
+    dateRange?: any | null
+  ) => {
+    const equivalentQuery = getStateQueryFromRequestQuery(queryToAdd?.query);
+    const queryState = new CoreQueryState();
+    queryState.queryType = QUERY_TYPE_FUNNEL;
+    queryState.querySaved = { name: queryToAdd.title, id: queryToAdd.id };
+    queryState.requestQuery = queryToAdd?.query;
+    queryState.showResult = true;
+    queryState.loading = false;
+    setLoading(false);
+    queryState.queries = equivalentQuery.events;
+    queryState.appliedQueries = equivalentQuery.events.map((elem: any) =>
+      elem.alias ? elem.alias : elem.label
+    );
+    queryState.queryOptions = getQueryOptionsFromEquivalentQuery(
+      queryState.queryOptions,
+      equivalentQuery
+    );
+
+    if (dateRange) {
+      queryState.queryOptions.date_range = dateRange;
+    }
+
+    queryState.breakdownType = REVERSE_USER_TYPES[queryState.requestQuery.ec];
+
+    if (queryState.requestQuery) {
+      updateEventFunnelsState(
+        equivalentQuery,
+        location?.state?.navigatedFromDashboard,
+        queryState
+      );
+      if (queryState.requestQuery.length === 1) {
+        dispatch({
+          type: SET_PERFORMANCE_CRITERIA,
+          payload: REVERSE_USER_TYPES[queryState.requestQuery.ec]
+        });
+        dispatch({
+          type: SET_SHOW_CRITERIA,
+          payload: TOTAL_USERS_CRITERIA
+        });
+      } else {
+        dispatch({
+          type: SET_PERFORMANCE_CRITERIA,
+          payload: EACH_USER_TYPE
+        });
+        if (queryState.requestQuery.length === 2) {
+          dispatch({
+            type: SET_SHOW_CRITERIA,
+            payload:
+              queryState.requestQuery.ty === TYPE_EVENTS_OCCURRENCE
+                ? TOTAL_EVENTS_CRITERIA
+                : TOTAL_USERS_CRITERIA
+          });
+        }
+        // else if (queryState.requestQuery.query.length === 3) {
+        //   dispatch({
+        //     type: SET_SHOW_CRITERIA,
+        //     payload: ACTIVE_USERS_CRITERIA
+        //   });
+        // }
+        else {
+          dispatch({
+            type: SET_SHOW_CRITERIA,
+            payload: FREQUENCY_CRITERIA
+          });
+        }
+      }
+    }
+
+    dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
+    dispatch({
+      type: SET_COMPARISON_SUPPORTED,
+      payload: isComparisonEnabled(
+        queryState.queryType,
+        equivalentQuery.events,
+        equivalentQuery.breakdown,
+        models
+      )
+    });
+
+    setAppliedBreakdowns(equivalentQuery.breakdown, queryState);
+
+    // updateAppliedBreakdown();
+    dispatch({
+      type: UPDATE_PIVOT_CONFIG,
+      payload: { ...DEFAULT_PIVOT_CONFIG }
+    });
+    dispatch({ type: SET_SAVED_QUERY_SETTINGS, payload: EMPTY_OBJECT });
+
+    if (resultState) {
+      queryState.resultState = {
+        ...INITIAL_RESULT_STATE,
+        data: resultState.data.result || resultState.data,
+        status: resultState.status
+      };
+      // updateResultState();
+      // updateResultFromSavedQuery(resultState, queryState);
+    }
+    if (location?.state?.navigatedResultState && !resultState) {
+      queryState.resultState = location.state.navigatedResultState;
+    }
+
+    setCoreQueryState(queryState);
+  };
+
   const createStateFromResult = (
     queryToAdd: (typeof savedQueries)[0],
     resultState?: ResultState | null
@@ -359,15 +474,26 @@ const CoreQuery = () => {
     const queryToAdd = getQueryFromHashId();
     if (queryToAdd) {
       // updateResultState({ ...initialState, loading: true });
-      dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
-      getEventsData(active_project.id, null, null, false, query_id).then(
-        (res) => {
-          createStateFromResult(queryToAdd, res);
-        },
-        (err) => {
-          logger.error(err);
-        }
-      );
+      // dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
+      if (query_type === QUERY_TYPE_FUNNEL) {
+        getFunnelData(active_project.id, null, null, false, query_id).then(
+          (res) => {
+            createFunnelStateFromResult(queryToAdd, res);
+          },
+          (err) => {
+            logger.error(err);
+          }
+        );
+      } else if (query_type === QUERY_TYPE_EVENT) {
+        getEventsData(active_project.id, null, null, false, query_id).then(
+          (res) => {
+            createStateFromResult(queryToAdd, res);
+          },
+          (err) => {
+            logger.error(err);
+          }
+        );
+      }
     }
   };
 
@@ -433,7 +559,7 @@ const CoreQuery = () => {
   const runQuery = async (dateRange: any = undefined) => {
     try {
       let durationObj;
-      const qState = { ...coreQueryState };
+      const qState = _.cloneDeep(coreQueryState);
 
       if (!dateRange) {
         durationObj = coreQueryState.queryOptions.date_range;
@@ -605,6 +731,8 @@ const CoreQuery = () => {
 
     if (qState.queryType === QUERY_TYPE_EVENT) {
       runQuery(qState.queryOptions.date_range);
+    } else if (qState.queryType === QUERY_TYPE_FUNNEL) {
+      runFunnelQuery(true, qState.queryOptions.date_range, isCompareDate);
     }
   };
 
@@ -767,6 +895,71 @@ const CoreQuery = () => {
     ]
   );
 
+  const runFunnelQuery = useCallback(
+    async (isQuerySaved, dateRange, isCompareQuery) => {
+      try {
+        let durationObj;
+        const qState = _.cloneDeep(coreQueryState);
+
+        if (!dateRange) {
+          durationObj = coreQueryState.queryOptions.date_range;
+        } else {
+          durationObj = dateRange;
+        }
+
+        const query = getFunnelQuery(
+          coreQueryState.queryOptions.groupBy,
+          coreQueryState.queries,
+          coreQueryState.queryOptions.session_analytics_seq,
+          durationObj,
+          coreQueryState.queryOptions.globalFilters,
+          coreQueryState.queryOptions.events_condition,
+          coreQueryState.queryOptions.group_analysis,
+          coreQueryReducerState.funnelConversionDurationNumber,
+          coreQueryReducerState.funnelConversionDurationUnit
+        );
+
+        if (!isQuerySaved) {
+          // Factors RUN_QUERY tracking
+          // factorsai.track('RUN-QUERY', {
+          //   email_id: currentAgent?.email,
+          //   query_type: QUERY_TYPE_FUNNEL,
+          //   project_id: activeProject?.id,
+          //   project_name: activeProject?.name
+          // });
+        }
+
+        if (!isCompareQuery) {
+          setLoading(true);
+          configActionsOnRunningQuery(isQuerySaved, qState);
+          setAppliedBreakdowns(coreQueryState.queryOptions?.groupBy, qState);
+          qState.showResult = true;
+          qState.loading = true;
+          setLoading(true);
+          configActionsOnRunningQuery(false, qState);
+          qState.requestQuery = query;
+          qState.resultState = { ...qState.resultState, loading: true };
+          qState.querySaved = {};
+          setCoreQueryState(qState);
+        }
+
+        const res = await getFunnelData(active_project.id, query, null, true);
+
+        const queryToAdd = getQueryFromHashId();
+        createFunnelStateFromResult(queryToAdd, res, dateRange);
+      } catch (err) {
+        logger.error(err);
+        setLoading(false);
+        // updateResultState({ ...initialState, error: true, status: err.status });
+      }
+    },
+    [
+      coreQueryState,
+      coreQueryReducerState.funnelConversionDurationNumber,
+      coreQueryReducerState.funnelConversionDurationUnit
+    ]
+  );
+
   const renderComposer = () => {
     if (
       coreQueryState.queryType === QUERY_TYPE_FUNNEL ||
@@ -781,7 +974,7 @@ const CoreQuery = () => {
           queryType={coreQueryState.queryType}
           queryOptions={coreQueryState.queryOptions}
           setQueryOptions={setQueryOptions}
-          runFunnelQuery={() => {}}
+          runFunnelQuery={runFunnelQuery}
           collapse={coreQueryState.showResult}
           setCollapse={() => setQueryOpen(false)}
         />

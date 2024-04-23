@@ -445,6 +445,7 @@ func (store *MemSQL) GetPerAccountScore(projectId int64, timestamp string, userI
 	result.Trend = scoreOnDays
 	result.Score = float32(fscore)
 	result.Timestamp = timestamp
+	result.LastEventTimeStamp = ev.LastEventTimeStamp
 	return result, weights, engagementLevel, nil
 }
 

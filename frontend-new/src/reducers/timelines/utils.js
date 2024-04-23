@@ -1,23 +1,24 @@
 export const compareObjTimestampsDesc = (a, b) => b.timestamp - a.timestamp;
 
-export const getAccountActivitiesWithEnableKeyConfig = (
-  accountTimeline = [],
-  disabledEvents = []
-) => {
+export const getAccountActivitiesWithEnableKey = (accountTimeline = []) => {
   const timelineArray = [];
 
   accountTimeline.forEach((user) => {
-    const newOpts = (user.user_activities || []).map((activity) => {
-      const isEnabled = !disabledEvents.includes(activity.display_name);
-      return {
-        ...activity,
-        username: user.is_anonymous ? 'new_user' : user.user_name,
-        user_id: user.user_id,
-        user_properties: user.properties,
-        enabled: isEnabled,
-        is_group_event: user.user_name === 'group_user'
-      };
-    });
+    const newOpts = (user.user_activities || []).map((event) => ({
+      id: event.event_id,
+      name: event.event_name,
+      display_name: event.display_name,
+      alias_name: event.alias_name,
+      icon: event.icon,
+      type: event.event_type,
+      timestamp: event.timestamp,
+      username: user.is_anonymous ? 'new_user' : user.user_name,
+      user_id: user.user_id,
+      is_group_user: user.user_name === 'group_user',
+      is_anonymous_user: user.is_anonymous,
+      properties: event.properties || [],
+      enabled: true
+    }));
     timelineArray.push(...newOpts);
   });
 
@@ -28,23 +29,18 @@ const mapUser = ({
   user_name: name,
   additional_prop: extraProp,
   user_id: id,
-  is_anonymous: isAnonymous,
-  user_properties: properties
+  is_anonymous: isAnonymous
 }) => ({
   name,
   extraProp,
   id,
-  isAnonymous,
-  properties
+  isAnonymous
 });
 
-export const formatAccountTimeline = (data, config) => {
+export const formatAccountTimeline = (data) => {
   const milestones = data.milestones || {};
   const accountTimeline = data.account_timeline || [];
-  const accountActivities = getAccountActivitiesWithEnableKeyConfig(
-    accountTimeline,
-    config?.disabled_events
-  );
+  const accountActivities = getAccountActivitiesWithEnableKey(accountTimeline);
 
   const accountUser = accountTimeline
     .filter((user) => user.user_name === 'group_user')
@@ -62,7 +58,7 @@ export const formatAccountTimeline = (data, config) => {
 
   const milestoneEvents = Object.entries(milestones).map(
     ([event_name, timestamp]) => ({
-      event_name,
+      name: event_name,
       timestamp,
       username: 'milestone',
       user_id: 'milestone'
@@ -74,7 +70,8 @@ export const formatAccountTimeline = (data, config) => {
   );
 
   return {
-    domain: data.name,
+    name: data.name,
+    domain: data.domain_name,
     leftpane_props: data.leftpane_props,
     overview: data.overview,
     users: [...webUsers, ...accountUser],

@@ -131,6 +131,16 @@ type Response struct {
 	Error   string `json:"error,omitempty"`
 }
 
+type AccountPayload struct {
+	Domain     string          `json:"domain"`
+	Properties U.PropertiesMap `json:"properties,omitempty"`
+}
+
+type AccountTrackPayload struct {
+	Domain string          `json:"domain"`
+	Event  U.PropertiesMap `json:"event"`
+}
+
 const (
 	SourceJSSDK  = "js_sdk"
 	SourceAMPSDK = "amp_sdk"

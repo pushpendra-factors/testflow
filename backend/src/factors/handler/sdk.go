@@ -601,7 +601,7 @@ func SDKAMPUpdateEventPropertiesHandler(c *gin.Context) {
 		Timestamp:     time.Now().Unix(), // request timestamp.
 		UserAgent:     c.Request.UserAgent(),
 		RequestSource: model.UserSourceWeb,
-		ClientIP: c.ClientIP(),
+		ClientIP:      c.ClientIP(),
 	}
 
 	status, response := SDK.AMPUpdateEventPropertiesWithQueue(token, payload, C.GetSDKRequestQueueAllowedTokens())

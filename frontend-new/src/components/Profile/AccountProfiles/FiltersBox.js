@@ -49,7 +49,7 @@ function FiltersBox({
     (state) => state.userProfilesView
   );
 
-  const newSegmentMode = accountsNewSegmentMode || profilesNewSegmentMode;
+  const newSegmentMode = profileType === 'account' ? accountsNewSegmentMode : profilesNewSegmentMode;
   const groupsList = useSelector((state) => selectGroupsList(state));
   const activeProject = useSelector((state) => state.global.active_project);
   const [filterDD, setFilterDD] = useState(false);

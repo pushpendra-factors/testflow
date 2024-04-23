@@ -150,9 +150,9 @@ function EngagementCategoryModal({
     updateEngagementCategoryRanges(activeProject.id, payload)
       .then(() => {
         notification.success({
-          message: 'Engagement category re-assignment has begun.',
+          message: 'Engagement category rules updated.',
           description:
-            'All accounts will get updated with new categories within 1 day.'
+            'All accounts will be re-assigned categories based on new rules within 24 hours.'
         });
       })
       .catch((err) => {

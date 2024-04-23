@@ -1,7 +1,8 @@
-import { Button, message } from 'antd';
+import { Button, message, notification } from 'antd';
 import { SVG } from 'Components/factorsComponents';
 import React from 'react';
 import styles from './index.module.scss';
+
 const CodeBlock = ({
   codeContent,
   preClassName = 'my-4 fa-code-block',
@@ -10,49 +11,43 @@ const CodeBlock = ({
   codeProps = {},
   pureTextCode = ``,
   hideCopyBtn = false
-}) => {
-  return (
-    <div>
-      <pre className={preClassName} {...preProps}>
-        {!hideCopyBtn && (
-          <div style={{ position: 'absolute', right: '8px' }}>
-            <Button
-              className={styles['btn']}
-              onClick={() => {
-                navigator?.clipboard
-                  ?.writeText(pureTextCode)
-                  .then(() => {
-                    message.success({
-                      content: 'copied',
-                      style: {
-                        display: 'flex',
-                        justifyContent: 'center',
-                        margin: '0 auto'
-                      }
-                    });
-                  })
-                  .catch(() => {
-                    console.log('ERROR');
-                    message.error({
-                      content: 'copying failed',
-                      style: {
-                        display: 'flex',
-                        justifyContent: 'center',
-                        margin: '0 auto'
-                      }
-                    });
+}) => (
+  <div>
+    <pre className={preClassName} {...preProps}>
+      {!hideCopyBtn && (
+        <div style={{ position: 'absolute', right: '8px' }}>
+          <Button
+            className={styles.btnV2}
+            style={{ marginTop: '-6px' }}
+            type='text'
+            onClick={(e) => {
+              e.stopPropagation();
+              navigator?.clipboard
+                ?.writeText(pureTextCode)
+                .then(() => {
+                  notification.success({
+                    message: 'Success',
+                    description: 'Successfully copied!',
+                    duration: 3
                   });
-              }}
-            >
-              <SVG name='copycode' />
-            </Button>
-          </div>
-        )}
-        <code className={codeClassName} {...codeProps}>
-          {codeContent}
-        </code>
-      </pre>
-    </div>
-  );
-};
+                })
+                .catch(() => {
+                  notification.error({
+                    message: 'Failed!',
+                    description: 'Failed to copy!',
+                    duration: 3
+                  });
+                });
+            }}
+          >
+            <SVG name='TextCopy' size='16' color='#8C8C8C' />
+          </Button>
+        </div>
+      )}
+      <code className={codeClassName} {...codeProps}>
+        {codeContent}
+      </code>
+    </pre>
+  </div>
+);
 export default CodeBlock;

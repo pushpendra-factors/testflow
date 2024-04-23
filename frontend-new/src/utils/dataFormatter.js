@@ -43,9 +43,8 @@ export const visualizationColors = [
 export const numberWithCommas = (x) =>
   x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
-export const setDisplayName = (nameMap, key) => {
-  return nameMap[key] ? nameMap[key] : key;
-};
+export const setDisplayName = (nameMap, key) =>
+  nameMap[key] ? nameMap[key] : key;
 
 export const calculatePercentage = (numerator, denominator, precision = 1) => {
   if (!denominator) {
@@ -270,8 +269,8 @@ export const getClickableTitleSorter = (
     verticalAlignment === 'start'
       ? 'items-start'
       : verticalAlignment === 'end'
-      ? 'items-end'
-      : 'items-center';
+        ? 'items-end'
+        : 'items-center';
 
   return (
     <div
@@ -372,8 +371,8 @@ export const getQueryType = (query) => {
   const cl = query.cl
     ? query.cl
     : Array.isArray(query.query_group) && query.query_group.length
-    ? query.query_group[0].cl
-    : QUERY_TYPE_EVENT;
+      ? query.query_group[0].cl
+      : QUERY_TYPE_EVENT;
   return cl;
 };
 
@@ -799,7 +798,11 @@ export const groupKPIPropertiesOnCategory = (
   return (
     kpiProperties?.reduce((result, kpiItem) => {
       //category check for dropdown (also handles custom property mapping)
-      const category = kpiItem[4] ? kpiItem[4] : (kpiItem[3]=='propMap'? 'Properties':null);
+      const category = kpiItem[4]
+        ? kpiItem[4]
+        : kpiItem[3] == 'propMap'
+          ? 'Properties'
+          : null;
       if (!category) {
         return result;
       }
@@ -829,4 +832,21 @@ export const groupKPIPropertiesOnCategory = (
       return result;
     }, {}) || {}
   );
+};
+
+export const currencyFormatter = (num, digits) => {
+  const lookup = [
+    { value: 1, symbol: '' },
+    { value: 1e3, symbol: 'k' },
+    { value: 1e6, symbol: 'M' },
+    { value: 1e9, symbol: 'G' },
+    { value: 1e12, symbol: 'T' },
+    { value: 1e15, symbol: 'P' },
+    { value: 1e18, symbol: 'E' }
+  ];
+  const regexp = /\.0+$|(?<=\.[0-9]*[1-9])0+$/;
+  const item = lookup.findLast((it) => num >= it.value);
+  return item
+    ? (num / item.value).toFixed(digits).replace(regexp, '').concat(item.symbol)
+    : '0';
 };

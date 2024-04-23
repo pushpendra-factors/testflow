@@ -1,16 +1,25 @@
 package handler
 
 import (
+	"encoding/json"
+	cacheRedis "factors/cache/redis"
 	v1 "factors/handler/v1"
 	mid "factors/middleware"
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
+	"fmt"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
+
+const FifteenMinutesTime = 15 * 60
+const TwentyMinutesTime = 20 * 60
 
 // GetSegmentAnalyticsConfigHandler godoc
 // @Summary To get config for the segment analytics.
@@ -114,6 +123,11 @@ func AddNewWidgetToWidgetGroupHandler(c *gin.Context) (interface{}, int, string,
 		return nil, http.StatusConflict, v1.DUPLICATE_RECORD, errmsg, true
 	}
 
+	markerError := setWidgetGroupMarker(projectID, widgetGroupID)
+	if markerError != nil {
+		log.WithField("projectID", projectID).WithField("widgetGroupID", widgetGroupID).Error("Failed in adding new Widget group" + markerError.Error())
+	}
+
 	request, errMsg, statusCode = store.GetStore().AddWidgetToWidgetGroup(widgetGroup, request)
 	if statusCode != http.StatusCreated {
 		return nil, statusCode, v1.PROCESSING_FAILED, errMsg, true
@@ -193,6 +207,13 @@ func EditSegmentAnalyticsWidgetHandler(c *gin.Context) (interface{}, int, string
 		return nil, http.StatusConflict, v1.DUPLICATE_RECORD, errmsg, true
 	}
 
+	if queryMetricChanged {
+		markerError := setWidgetGroupMarker(projectID, widgetGroupID)
+		if markerError != nil {
+			log.WithField("projectID", projectID).WithField("widgetGroupID", widgetGroupID).Error("Failed in Edit Widget group" + markerError.Error())
+		}
+	}
+
 	widget, errMsg, statusCode = store.GetStore().UpdateWidgetToWidgetGroup(widgetGroup, widget)
 	if statusCode != http.StatusOK {
 		logCtx.WithField("errMsg", errMsg).Warn("Failed in updating widget to widget group")
@@ -204,6 +225,15 @@ func EditSegmentAnalyticsWidgetHandler(c *gin.Context) (interface{}, int, string
 	}
 
 	return responseData, http.StatusOK, "", "", false
+}
+
+func hardRefreshPresent(c *gin.Context) bool {
+	refreshParam := c.Query("refresh")
+	if refreshParam != "" {
+		hardRefresh, _ := strconv.ParseBool(refreshParam)
+		return hardRefresh
+	}
+	return false
 }
 
 // ExecuteSegmentQueryHandler godoc.
@@ -221,6 +251,7 @@ func ExecuteSegmentQueryHandler(c *gin.Context) {
 
 	reqID, projectID, widgetGroupID, segmentID := getReqIDSegmentIDProjectIDAndWidgetGroupID(c)
 	logCtx := log.WithField("reqID", reqID).WithField("projectID", projectID)
+	hardRefresh := hardRefreshPresent(c)
 	if projectID == 0 {
 		logCtx.Error("AddNewWidgetToWidgetGroupHandler - Execute Segment analytics failed. Invalid project.")
 		c.AbortWithStatusJSON(http.StatusBadRequest, &model.SegmentResponse{
@@ -249,6 +280,12 @@ func ExecuteSegmentQueryHandler(c *gin.Context) {
 		return
 	}
 
+	markerExists, statusCode := getIfExistsWidgetGroupMarker(projectID, widgetGroupID)
+	if statusCode == http.StatusInternalServerError {
+		log.WithField("projectID", projectID).WithField("widgetGroupID", widgetGroupID).Warn("Failed in getting getIfExistsWidgetGroupMarker")
+		markerExists = true
+	}
+
 	requestParams := model.RequestSegmentKPI{}
 	if err := c.BindJSON(&requestParams); err != nil {
 		var requestAsMap map[string]interface{}
@@ -261,13 +298,145 @@ func ExecuteSegmentQueryHandler(c *gin.Context) {
 	}
 	log.WithField("reqID", reqID).WithField("widgetGroup", widgetGroup.ID).WithField("segmentID", segmentID).Warn("Kartheek Complete2")
 
-	results, statusCode := store.GetStore().ExecuteWidgetGroup(projectID, widgetGroup, segmentID, reqID, requestParams)
+	// Keeping the cache expiry to 15 minutes. Not invalidating the cache.
+	if !hardRefresh && !markerExists {
+		log.Warn("getting values from cache")
+		shouldReturn, resCode, resMsg := GetSegmentResponseIfCachedQuery(c, projectID, segmentID, widgetGroupID, requestParams.From, requestParams.To)
+		if shouldReturn {
+			if resCode == http.StatusOK {
+				responseData := gin.H{
+					"result": resMsg,
+				}
+				c.JSON(resCode, responseData)
+				return
+			}
+		}
+		log.Warn("setting placeholder values to cache")
+		SetSegmentCachePlaceholder(projectID, segmentID, widgetGroupID, requestParams.From, requestParams.To)
+	}
 
+	results, statusCode := store.GetStore().ExecuteWidgetGroup(projectID, widgetGroup, segmentID, reqID, requestParams)
 	responseData := gin.H{
 		"result": results,
 	}
+	if statusCode != http.StatusOK {
+		DeleteSegmentCache(projectID, segmentID, widgetGroupID, requestParams.From, requestParams.To)
+		c.JSON(statusCode, responseData)
+		return
+	}
+	if !markerExists {
+		log.Warn("setting values from cache")
+		SetSegmentCacheResult(projectID, segmentID, widgetGroupID, requestParams.From, requestParams.To, results)
+	}
 
 	c.JSON(statusCode, responseData)
+}
+
+func GetSegmentResponseIfCachedQuery(c *gin.Context, projectID int64, segmentID, widgetGroup string, from, to int64) (bool, int, interface{}) {
+	cacheResult, errCode := GetSegmentResultFromCache(c, projectID, segmentID, widgetGroup, from, to)
+	if errCode == http.StatusFound {
+		return getSegmentCacheResponse(c, cacheResult)
+	} else if errCode == http.StatusAccepted {
+		// An instance of query is in progress. Poll for result.
+		for {
+
+			time.Sleep(5 * time.Second)
+
+			cacheResult, errCode = GetSegmentResultFromCache(c, projectID, segmentID, widgetGroup, from, to)
+			if errCode == http.StatusAccepted {
+				continue
+			} else if errCode == http.StatusFound {
+				return getSegmentCacheResponse(c, cacheResult)
+			} else {
+				// If not in Accepted state, return with error.
+				return true, http.StatusInternalServerError, errors.New("Query Cache: Failed to fetch from cache")
+			}
+		}
+	}
+	return false, errCode, errors.New("Query Cache: Failed to fetch from cache")
+}
+
+func GetSegmentResultFromCache(c *gin.Context, projectID int64, segmentID, widgetGroup string, from, to int64) (interface{}, int) {
+	queryResult := model.QueryCacheResult{}
+
+	cacheKey, _ := getSegmentWidgetGroupCacheKey(projectID, segmentID, widgetGroup, from, to)
+	value, exists, err := cacheRedis.GetIfExistsPersistent(cacheKey)
+
+	if err != nil {
+		return queryResult.Result, http.StatusInternalServerError
+	}
+	if !exists {
+		return queryResult.Result, http.StatusNotFound
+	} else if value == model.QueryCacheInProgressPlaceholder {
+		return queryResult.Result, http.StatusAccepted
+	}
+
+	err = json.Unmarshal([]byte(value), &queryResult)
+	if err != nil {
+		log.WithError(err).Error("Segment analytics : Failed to unmarshal cache result to result container")
+		return queryResult, http.StatusInternalServerError
+	}
+	return queryResult.Result, http.StatusFound
+}
+
+func getSegmentCacheResponse(c *gin.Context, result interface{}) (bool, int, interface{}) {
+	c.Header(model.QueryCacheResponseFromCacheHeader, "true")
+	return true, http.StatusOK, result
+}
+
+// SetQueryCachePlaceholder To set a placeholder temporarily to indicate that query is already running.
+func SetSegmentCachePlaceholder(projectID int64, segmentID, widgetGroup string, from, to int64) {
+	cacheKey, _ := getSegmentWidgetGroupCacheKey(projectID, segmentID, widgetGroup, from, to)
+	cacheRedis.SetPersistent(cacheKey, model.QueryCacheInProgressPlaceholder, model.QueryCachePlaceholderExpirySeconds)
+}
+
+func getWidgetGroupMarkerKey(projectID int64, widgetGroup string) (*cacheRedis.Key, error) {
+	suffix := fmt.Sprintf("widgetGroup:%s", widgetGroup)
+	return cacheRedis.NewKey(projectID, model.WidgetGroupMarker, suffix)
+}
+
+// Set when edit of widget group query is changed.
+func setWidgetGroupMarker(projectID int64, widgetGroup string) error {
+	cacheKey, _ := getWidgetGroupMarkerKey(projectID, widgetGroup)
+	return cacheRedis.SetPersistent(cacheKey, string("1"), TwentyMinutesTime)
+}
+
+// Marker here implies cache is getting invalidated.
+func getIfExistsWidgetGroupMarker(projectID int64, widgetGroup string) (bool, int) {
+	cacheKey, _ := getWidgetGroupMarkerKey(projectID, widgetGroup)
+	_, exists, err := cacheRedis.GetIfExistsPersistent(cacheKey)
+	if err != nil {
+		return true, http.StatusInternalServerError
+	}
+	if !exists {
+		return false, http.StatusNotFound
+	} else {
+		return true, http.StatusFound
+	}
+
+}
+
+// DeleteQueryCacheKey Delete a query cache key on error.
+func DeleteSegmentCache(projectID int64, segmentID string, widgetGroup string, fr, to int64) {
+	cacheKey, _ := getSegmentWidgetGroupCacheKey(projectID, segmentID, widgetGroup, fr, to)
+	cacheRedis.DelPersistent(cacheKey)
+}
+
+func SetSegmentCacheResult(projectID int64, segmentID string, widgetGroup string, fr, to int64, results []model.QueryResult) {
+	cacheKey, _ := getSegmentWidgetGroupCacheKey(projectID, segmentID, widgetGroup, fr, to)
+	queryCache := model.QueryCacheResult{
+		Result: results,
+	}
+	queryResultString, err := json.Marshal(queryCache)
+	if err != nil {
+		return
+	}
+	cacheRedis.SetPersistent(cacheKey, string(queryResultString), FifteenMinutesTime)
+}
+
+func getSegmentWidgetGroupCacheKey(projectID int64, segmentID string, widgetGroup string, fr, to int64) (*cacheRedis.Key, error) {
+	suffix := fmt.Sprintf("segment:%s:widgetGroup:%s:from:%d:to:%d", segmentID, widgetGroup, fr, to)
+	return cacheRedis.NewKey(projectID, model.QueryCacheKeyForSegmentAnalytics, suffix)
 }
 
 // Doesnt have any dependencies to be checked when deleting segment analysis.

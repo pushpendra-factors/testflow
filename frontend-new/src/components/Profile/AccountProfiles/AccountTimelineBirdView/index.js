@@ -1,5 +1,5 @@
 import { Avatar, Spin } from 'antd';
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { CaretRightOutlined, CaretUpOutlined } from '@ant-design/icons';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import NoDataWithMessage from 'Components/Profile/MyComponents/NoDataWithMessage';
@@ -11,10 +11,8 @@ import {
   iconColors
 } from 'Components/Profile/constants';
 import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
-import logger from 'Utils/logger';
 import { SVG, Text } from '../../../factorsComponents';
 import {
-  eventsFormattedForGranularity,
   getEventCategory,
   getIconForCategory,
   toggleCellCollapse
@@ -22,10 +20,9 @@ import {
 import InfoCard from '../../MyComponents/InfoCard';
 
 function AccountTimelineBirdView({
-  timelineEvents = [],
+  events,
+  setEvents,
   timelineUsers = [],
-  granularity,
-  collapseAll,
   setCollapseAll,
   loading = false,
   propertiesType,
@@ -33,40 +30,6 @@ function AccountTimelineBirdView({
 }) {
   const { groupPropNames } = useSelector((state) => state.coreQuery);
   const { projectDomainsList } = useSelector((state) => state.global);
-  const [formattedData, setFormattedData] = useState({});
-
-  useEffect(() => {
-    if (!timelineEvents) return;
-    const data = eventsFormattedForGranularity(
-      timelineEvents,
-      granularity,
-      collapseAll
-    );
-    document.title = 'Accounts - FactorsAI';
-    setFormattedData(data);
-  }, [timelineEvents, granularity]);
-
-  // temp
-  useEffect(() => {
-    logger.log(formattedData);
-  }, [formattedData]);
-
-  useEffect(() => {
-    const data = Object.keys(formattedData).reduce((acc, key) => {
-      acc[key] = Object.keys(formattedData[key]).reduce((userAcc, username) => {
-        userAcc[username] = {
-          ...formattedData[key][username],
-          collapsed:
-            collapseAll === undefined
-              ? formattedData[key][username].collapsed
-              : collapseAll
-        };
-        return userAcc;
-      }, {});
-      return acc;
-    }, {});
-    setFormattedData(data);
-  }, [collapseAll]);
 
   const renderIcon = (event) => {
     const eventIcon = eventIconsColorMap[event.icon]
@@ -105,7 +68,7 @@ function AccountTimelineBirdView({
       event.alias_name ||
       (event.display_name !== 'Page View' &&
         PropTextFormat(event.display_name)) ||
-      event.event_name;
+      event.name;
     const isHoverable = Object.keys(event.properties || {}).length > 0;
     const category = getEventCategory(event, eventNamesMap);
     const icon = getIconForCategory(category);
@@ -113,10 +76,10 @@ function AccountTimelineBirdView({
     return (
       <div className='tag'>
         <InfoCard
-          eventType={event?.event_type}
+          eventType={event?.type}
           title={event?.alias_name}
           eventSource={event?.display_name}
-          eventName={event?.event_name}
+          eventName={event?.name}
           properties={event?.properties || {}}
           propertiesType={propertiesType}
           trigger={isHoverable ? 'hover' : []}
@@ -152,11 +115,11 @@ function AccountTimelineBirdView({
   const renderAdditionalDiv = (eventsCount, collapseState, onClick) =>
     eventsCount > 1 ? (
       collapseState ? (
-        <div className='timeline-events__num' onClick={onClick}>
+        <div className='birdview-events__num' onClick={onClick}>
           {`+${Number(eventsCount - 1)}`}
         </div>
       ) : (
-        <div className='timeline-events__num' onClick={onClick}>
+        <div className='birdview-events__num' onClick={onClick}>
           <CaretUpOutlined /> Show Less
         </div>
       )
@@ -169,9 +132,9 @@ function AccountTimelineBirdView({
           <div className={`green-stripe ${showText ? '' : 'opaque'}`}>
             {showText ? (
               <div className='text'>
-                {groupPropNames[milestone.event_name]
-                  ? groupPropNames[milestone.event_name]
-                  : milestone.event_name}
+                {groupPropNames[milestone.name]
+                  ? groupPropNames[milestone.name]
+                  : milestone.name}
               </div>
             ) : null}
           </div>
@@ -180,7 +143,7 @@ function AccountTimelineBirdView({
     ) : null;
 
   const renderTimeline = () => (
-    <div className='table-scroll'>
+    <div className='birdview-container bordered-gray--bottom'>
       <table>
         <thead>
           <tr>
@@ -241,11 +204,15 @@ function AccountTimelineBirdView({
           </tr>
         </thead>
         <tbody>
-          {Object.entries(formattedData).map(([timestamp, allEvents]) => {
+          {Object.entries(events || {}).map(([timestamp, allEvents]) => {
             const milestones = allEvents?.milestone;
             return (
               <tr>
-                <td className={`pb-${(milestones?.events?.length || 0) * 8}`}>
+                <td
+                  style={{
+                    paddingBottom: `${(milestones?.events?.length || 0) * 32}px`
+                  }}
+                >
                   <div className='timestamp top-64'>{timestamp}</div>
                   {milestones && renderMilestoneStrip(milestones, true)}
                 </td>
@@ -266,14 +233,14 @@ function AccountTimelineBirdView({
                       }`}
                     >
                       <div
-                        className={`timeline-events account-pad ${
+                        className={`birdview-events account-pad ${
                           allEvents[user.id].collapsed
-                            ? 'timeline-events--collapsed'
-                            : 'timeline-events--expanded'
+                            ? 'birdview-events--collapsed'
+                            : 'birdview-events--expanded'
                         }`}
                       >
                         {eventsList?.map((event) => (
-                          <div className='timeline-events__event'>
+                          <div className='birdview-events__event'>
                             {renderIcon(event)}
                             {renderInfoCard(event)}
                           </div>
@@ -282,9 +249,9 @@ function AccountTimelineBirdView({
                           allEvents[user.id].events.length,
                           allEvents[user.id].collapsed,
                           () => {
-                            setFormattedData(
+                            setEvents(
                               toggleCellCollapse(
-                                formattedData,
+                                events,
                                 timestamp,
                                 user.id,
                                 !allEvents[user.id].collapsed
@@ -310,7 +277,7 @@ function AccountTimelineBirdView({
     <Spin size='large' className='fa-page-loader' />
   ) : timelineUsers.length === 0 ? (
     <NoDataWithMessage message='No Associated Users' />
-  ) : timelineEvents.length === 0 ? (
+  ) : Object.keys(events).length === 0 ? (
     <NoDataWithMessage message='No Events Enabled to Show' />
   ) : (
     renderTimeline()

@@ -21,7 +21,7 @@ import {
 import useAutoFocus from 'hooks/useAutoFocus';
 import { PathUrls } from 'Routes/pathUrls';
 import useKeyboardNavigation from 'hooks/useKeyboardNavigation';
-import { AdminLock } from 'Routes/feature';
+import { AdminLock, featureLock } from 'Routes/feature';
 import useAgentInfo from 'hooks/useAgentInfo';
 import styles from './index.module.scss';
 import AIPrompt from './AIPrompt';
@@ -741,6 +741,7 @@ const GlobalSearch = () => {
   };
   const dispatch = useDispatch();
   const history = useHistory();
+  const { email } = useAgentInfo();
   const [step, setStep] = useState(1);
   const [step2Content, setStep2Content] = useState([]);
   const [searchString, setSearchString] = useState('');
@@ -773,11 +774,11 @@ const GlobalSearch = () => {
     let analyseQueryParamsPath = '/analyse';
     if (query?.query?.query_group?.[0]?.cl === 'events') {
       analyseQueryParamsPath = `${analyseQueryParamsPath}/events/${query.id_text}`;
+    } else if (query?.query?.cl === 'funnel' && featureLock(email)) {
+      analyseQueryParamsPath =
+        analyseQueryParamsPath + '/funnel/' + query.id_text;
     }
-    // } else if (query?.query?.cl === 'funnel') {
-    //   analyseQueryParamsPath =
-    //     analyseQueryParamsPath + '/funnel/' + query.id_text;
-    // }
+
     history.push({
       pathname: analyseQueryParamsPath,
       state: { query, global_search: true, navigatedFromDashboard: query }

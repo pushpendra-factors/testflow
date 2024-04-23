@@ -427,7 +427,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 		}
 
 		filterSteps = filterSteps + fmt.Sprintf(`, filter_%d as (
-			SELECT identity, host_name FROM all_users WHERE %s AND 
+			SELECT identity, domain_name FROM all_users WHERE %s AND 
 				%s
 		)`, stepNumber, isGroupStr, filterString)
 
@@ -466,14 +466,14 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 				addSpecialFilter = "WHERE filter_1.identity NOT IN (SELECT identity FROM filter_special) "
 			}
 			intersectStep = fmt.Sprintf(`SELECT 
-			filter_1.identity, filter_1.host_name
+			filter_1.identity, filter_1.domain_name
 			FROM filter_1 %s
 			GROUP BY filter_1.identity`, addSpecialFilter)
 			break
 		}
 		if stepNo == 1 {
 			intersectStep = `SELECT 
-			filter_1.identity, filter_1.host_name FROM filter_1 `
+			filter_1.identity, filter_1.domain_name FROM filter_1 `
 		}
 		intersectStep = intersectStep + fmt.Sprintf(`INNER JOIN filter_%d 
 		ON filter_%d.identity = filter_%d.identity `, stepNo+1, stepNo, stepNo+1)
@@ -490,7 +490,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 
 	if len(groupedFilters) == 0 {
 		intersectStep = `SELECT 
-		identity, host_name 
+		identity, domain_name 
 		FROM all_users 
 		GROUP BY identity`
 	}
@@ -504,7 +504,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 
 	finalStep := fmt.Sprintf(`, final_step as (%s)
 		SELECT 
-        final_step.identity as identity, final_step.host_name as host_name, MAX(users.last_event_at) as last_activity 
+        final_step.identity as identity, final_step.domain_name as domain_name, MAX(users.last_event_at) as last_activity 
 		FROM final_step JOIN (SELECT last_event_at, group_%d_user_id FROM users WHERE users.project_id=? AND users.source!=? AND 
 		last_event_at IS NOT NULL ) AS users ON 
 		final_step.identity = users.group_%d_user_id
@@ -516,7 +516,7 @@ func (store *MemSQL) GenerateAllAccountsQueryString(
 		  SELECT u.properties,
 		  u.last_event_at as last_activity,
 		  d.id as identity,
-		  d.group_%d_id as host_name,
+		  d.group_%d_id as domain_name,
 		  u.is_group_user,
 		  u.customer_user_id
 		  FROM users as u
@@ -821,7 +821,7 @@ func (store *MemSQL) BuildQueryStringForDomains(projectID int64, filterString st
 		" ) AS domain_groups"
 	onCondition := fmt.Sprintf("ON users.group_%d_user_id = domain_groups.id", domainGroup.ID)
 	groupByStr := "GROUP BY identity"
-	selectString := fmt.Sprintf("domain_groups.id AS identity, users.properties as properties, MAX(users.last_activity) AS last_activity, domain_groups.group_%d_id as host_name", domainGroup.ID)
+	selectString := fmt.Sprintf("domain_groups.id AS identity, users.properties as properties, MAX(users.last_activity) AS last_activity, domain_groups.group_%d_id as domain_name", domainGroup.ID)
 	selectFilterString, havingString, havingFilterParams := SelectFilterAndHavingStringsForAccounts(filters, nullFilterMap)
 	if selectFilterString != "" {
 		selectString = selectString + ", " + selectFilterString
@@ -977,7 +977,7 @@ func (store *MemSQL) GetUsersAssociatedToDomain(projectID int64, timeWindow *mod
 	query := fmt.Sprintf(`SELECT domain_groups.id AS identity, 
 	  user_global_user_properties as properties, 
 	  MAX(users.last_activity) AS last_activity, 
-	  domain_groups.group_%d_id as host_name 
+	  domain_groups.group_%d_id as domain_name 
 	FROM (
 		SELECT id,
 		  properties as user_global_user_properties, 
@@ -1385,21 +1385,8 @@ func formatAccountProfilesList(profiles []model.Profile, tableProps []string, so
 		filterTableProps := filterPropertiesByKeys(properties, tableProps)
 		profiles[index].TableProps = filterTableProps
 
-		if model.IsDomainGroup(source) {
-			if profiles[index].HostName == "" {
-				continue
-			}
-			profiles[index].Name = profiles[index].HostName
-		} else {
-			if name, exists := (*properties)[model.AccountNames[source]]; exists {
-				profiles[index].Name = fmt.Sprintf("%s", name)
-			}
-			if hostname, exists := (*properties)[model.HostNameGroup[source]]; exists {
-				profiles[index].HostName = fmt.Sprintf("%s", hostname)
-			}
-			if profiles[index].Name == "" && profiles[index].HostName != "" {
-				profiles[index].Name = profiles[index].HostName
-			}
+		if profiles[index].DomainName == "" {
+			continue
 		}
 	}
 }
@@ -1470,8 +1457,8 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 		if err != nil {
 			log.WithField("status", err).WithError(err).Error("Failed to fetch timelines_config from project_settings.")
 		}
-		uniqueUser.LeftPaneProps = GetLeftPanePropertiesFromConfig(timelinesConfig, model.PROFILE_TYPE_USER, propertiesDecoded)
-		uniqueUser.Milestones = GetMilestonesFromConfig(timelinesConfig, model.PROFILE_TYPE_USER, propertiesDecoded)
+		uniqueUser.LeftPaneProps = FilterConfiguredProperties(timelinesConfig.UserConfig.TableProps, propertiesDecoded)
+		uniqueUser.Milestones = FilterConfiguredProperties(timelinesConfig.UserConfig.Milestones, propertiesDecoded)
 	}
 
 	if activities, err := store.GetUserActivities(projectID, identity, userId); err == nil {
@@ -1496,12 +1483,14 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId 
 	var userActivities []model.UserActivity
 
 	eventNamesToExcludePlaceholders := strings.Repeat("?,", len(model.ExcludedEvents)-1) + "?"
-	eventsQuery := fmt.Sprintf(`SELECT event_names.name AS event_name, 
+
+	eventsQuery := fmt.Sprintf(`SELECT events1.id AS event_id,
+		event_names.name AS event_name, 
         event_names.type as event_type, 
         events1.timestamp AS timestamp, 
         events1.properties AS properties 
     FROM (
-        SELECT project_id, event_name_id, timestamp, properties 
+        SELECT project_id, id, event_name_id, timestamp, properties 
         FROM events 
         WHERE project_id=? AND timestamp <= ? 
         AND user_id IN (
@@ -1518,6 +1507,7 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId 
 	for i, name := range model.ExcludedEvents {
 		excludedEventNamesArgs[i] = name
 	}
+
 	queryArgs := []interface{}{
 		projectID,
 		gorm.NowFunc().Unix(),
@@ -1548,6 +1538,12 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId 
 	}
 
 	defer rows.Close()
+
+	// Get Timeline Config For Event Properties
+	timelinesConfig, err := store.GetTimelinesConfig(projectID)
+	if err != nil {
+		log.WithError(err).Error("Failed to fetch timelines_config from project_settings.")
+	}
 
 	for rows.Next() {
 		var userActivity model.UserActivity
@@ -1580,10 +1576,6 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId 
 			}
 
 			// Filtered Properties
-			timelinesConfig, err := store.GetTimelinesConfig(projectID)
-			if err != nil {
-				log.WithError(err).Error("Failed to fetch timelines_config from project_settings.")
-			}
 			eventConfigProps := timelinesConfig.EventsConfig[userActivity.EventName]
 			if (*properties)[U.EP_IS_PAGE_VIEW] == true {
 				eventConfigProps = timelinesConfig.EventsConfig["PageView"]
@@ -1669,14 +1661,14 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 		accountDetails, status = store.AccountPropertiesForDomainsEnabledV2(projectID, id, groupName, timelinesConfig)
 	} else {
 		groupUserString, propertiesDecoded, params, status = store.AccountPropertiesForDomainsDisabledV1(projectID, id)
-		accountDetails = FormatAccountDetails(projectID, propertiesDecoded, groupName, accountDetails.HostName)
-		accountDetails.LeftPaneProps = GetLeftPanePropertiesFromConfig(timelinesConfig, model.PROFILE_TYPE_ACCOUNT, &propertiesDecoded)
-		accountDetails.Milestones = GetMilestonesFromConfig(timelinesConfig, model.PROFILE_TYPE_ACCOUNT, &propertiesDecoded)
+		accountDetails = FormatAccountDetails(projectID, propertiesDecoded, groupName, accountDetails.DomainName)
+		accountDetails.LeftPaneProps = FilterConfiguredProperties(timelinesConfig.AccountConfig.TableProps, &propertiesDecoded)
+		accountDetails.Milestones = FilterConfiguredProperties(timelinesConfig.AccountConfig.Milestones, &propertiesDecoded)
 	}
 
 	if C.IsDomainEnabled(projectID) && status == http.StatusNotFound {
 		accountDetails, propertiesDecoded, status = store.GetUserDetailsAssociatedToDomain(projectID, id)
-		accountDetails = FormatAccountDetails(projectID, propertiesDecoded, groupName, accountDetails.HostName)
+		accountDetails = FormatAccountDetails(projectID, propertiesDecoded, groupName, accountDetails.DomainName)
 		accountDetails.LeftPaneProps = make(map[string]interface{})
 		accountDetails.Milestones = make(map[string]interface{})
 
@@ -1687,12 +1679,11 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 	}
 
 	if model.IsDomainGroup(groupName) {
-		hostName, err := model.ConvertDomainIdToHostName(id)
-		if err != nil || hostName == "" {
+		domainName, err := model.ConvertDomainIdToHostName(id)
+		if err != nil || domainName == "" {
 			log.WithFields(logFields).WithError(err).Error("Couldn't translate ID to Hostname")
 		} else {
-			accountDetails.HostName = hostName
-			accountDetails.Name = hostName
+			accountDetails.DomainName = domainName
 		}
 
 	}
@@ -1706,7 +1697,8 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 	// Timeline Query
 	query := fmt.Sprintf(`SELECT COALESCE(JSON_EXTRACT_STRING(properties, '%s'), customer_user_id, id) AS user_name, %s
         COALESCE(customer_user_id, id) AS user_id, 
-        ISNULL(customer_user_id) AS is_anonymous 
+        ISNULL(customer_user_id) AS is_anonymous,
+		LAST(properties, last_event_at) as user_properties
     FROM users 
     WHERE project_id = ?
 	  AND (is_group_user = 0 OR is_group_user IS NULL)
@@ -1748,9 +1740,15 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 			userTimeline.UserActivities = activities
 		}
 
-		if userProperties, errCode := store.GetConfiguredPropertiesByUserID(projectID, userTimeline.UserId, userTimeline.IsAnonymous); errCode == http.StatusOK {
-			userTimeline.UserProperties = userProperties
+		// Get filtered user properties
+		if U.IsEmptyPostgresJsonb(userTimeline.UserProperties) {
+			log.WithField("properties", userTimeline.UserProperties).Error("Empty or nil properties for user.")
 		}
+		propertiesDecoded, err := U.DecodePostgresJsonb(userTimeline.UserProperties)
+		if err != nil {
+			log.WithFields(logFields).WithError(err).Error("Failed decoding user properties.")
+		}
+		userTimeline.FilteredUserProperties = FilterConfiguredProperties(timelinesConfig.UserConfig.TableProps, propertiesDecoded)
 
 		accountTimeline = append(accountTimeline, userTimeline)
 
@@ -1840,6 +1838,7 @@ func (store *MemSQL) GetAccountOverview(projectID int64, id, groupName string) (
 		log.WithFields(logFields).WithError(errGetScore).Error("Error retrieving account score")
 	} else {
 		overview.ScoresList = accountScore.Trend
+		overview.LastEventTS = accountScore.LastEventTimeStamp
 	}
 
 	// To Get Engagement Level And Score from Domain Properties Column
@@ -2027,7 +2026,7 @@ func (store *MemSQL) GetIntentTimeline(projectID int64, groupName string, id str
 	}
 
 	if model.IsDomainGroup(groupName) {
-		intentTimeline.AdditionalProp = "All"
+		intentTimeline.ExtraProp = "All"
 		groupNameIDMap, status := store.GetGroupNameIDMap(projectID)
 		if status != http.StatusFound {
 			return intentTimeline, fmt.Errorf("failed to retrieve GroupNameID map")
@@ -2047,9 +2046,9 @@ func (store *MemSQL) GetIntentTimeline(projectID int64, groupName string, id str
 		}
 	} else {
 		if groupDisplayName, exists := U.STANDARD_GROUP_DISPLAY_NAMES[groupName]; exists {
-			intentTimeline.AdditionalProp = groupDisplayName
+			intentTimeline.ExtraProp = groupDisplayName
 		} else {
-			intentTimeline.AdditionalProp = groupName
+			intentTimeline.ExtraProp = groupName
 		}
 		// Fetch user activities for the given account ID
 		intentActivities, err := store.GetUserActivities(projectID, id, model.COLUMN_NAME_ID)
@@ -2127,8 +2126,8 @@ func FetchAccountDetailsFromProps(projectID int64, groupName string, timelinesCo
 		}
 
 		// add name and hostname
-		if accountDetails.HostName == "" && accountDetails.Name == "" {
-			accountDetails = FormatAccountDetails(projectID, *props, groupName, accountDetails.HostName)
+		if accountDetails.DomainName == "" && accountDetails.Name == "" {
+			accountDetails = FormatAccountDetails(projectID, *props, groupName, accountDetails.DomainName)
 		}
 
 		// allow only source from groups: skip in case of eg source = 1
@@ -2258,11 +2257,11 @@ func (store *MemSQL) GetUserDetailsAssociatedToDomain(projectID int64, id string
 	}
 
 	// Fetching accounts associated to the domain
-	// SELECT domain_group.group_1_id AS host_name, users.properties AS properties FROM (SELECT group_1_id, id FROM users WHERE project_id = 1000000 AND source = 9
+	// SELECT domain_group.group_1_id AS domain_name, users.properties AS properties FROM (SELECT group_1_id, id FROM users WHERE project_id = 1000000 AND source = 9
 	// AND id = "aa5f9e4e-e516-481f-86cd-bd42debda12c") AS domain_group JOIN (SELECT group_1_user_id, properties FROM users WHERE project_id = 1000000 AND (is_group_user = 0 OR
 	// is_group_user IS NULL) AND group_1_user_id IS NOT NULL) AS users ON domain_group.id = users.group_1_user_id LIMIT 1;
 	db := C.GetServices().Db
-	query := fmt.Sprintf("SELECT domain_group.group_%d_id AS host_name, users.properties AS properties FROM "+
+	query := fmt.Sprintf("SELECT domain_group.group_%d_id AS domain_name, users.properties AS properties FROM "+
 		"(SELECT group_%d_id, id FROM users WHERE project_id = ? AND source = ? AND id = ?) AS domain_group JOIN "+
 		"(SELECT group_%d_user_id, properties FROM users WHERE project_id = ? AND (is_group_user = 0 OR is_group_user IS NULL) "+
 		"AND customer_user_id IS NOT NULL AND group_%d_user_id IS NOT NULL) AS users ON domain_group.id = users.group_%d_user_id LIMIT 1", domainGroup.ID,
@@ -2330,51 +2329,26 @@ func FormatAccountDetails(projectID int64, propertiesDecoded map[string]interfac
 	}
 
 	if hostName != "" {
-		accountDetails.HostName = hostName
+		accountDetails.DomainName = hostName
 	} else {
 		for _, prop := range hostNameProps {
 			if host, exists := (propertiesDecoded)[prop]; exists {
-				accountDetails.HostName = fmt.Sprintf("%s", host)
+				accountDetails.DomainName = fmt.Sprintf("%s", host)
 				break
 			}
 		}
 	}
 
-	if accountDetails.Name == "" && accountDetails.HostName != "" {
-		accountDetails.Name = accountDetails.HostName
+	if accountDetails.Name == "" && accountDetails.DomainName != "" {
+		accountDetails.Name = accountDetails.DomainName
 	}
 	return accountDetails
 }
 
-func GetLeftPanePropertiesFromConfig(timelinesConfig model.TimelinesConfig, profileType string, propertiesDecoded *map[string]interface{}) map[string]interface{} {
+func FilterConfiguredProperties(propsToFilter []string, propertiesDecoded *map[string]interface{}) map[string]interface{} {
 
 	filteredProperties := make(map[string]interface{})
-	var leftPaneProps []string
-
-	if model.IsUserProfiles(profileType) {
-		leftPaneProps = timelinesConfig.UserConfig.TableProps
-	} else if model.IsAccountProfiles(profileType) {
-		leftPaneProps = timelinesConfig.AccountConfig.TableProps
-	}
-	for _, prop := range leftPaneProps {
-		if value, exists := (*propertiesDecoded)[prop]; exists {
-			filteredProperties[prop] = value
-		}
-	}
-	return filteredProperties
-}
-
-func GetMilestonesFromConfig(timelinesConfig model.TimelinesConfig, profileType string, propertiesDecoded *map[string]interface{}) map[string]interface{} {
-
-	filteredProperties := make(map[string]interface{})
-	var milestones []string
-
-	if model.IsUserProfiles(profileType) {
-		milestones = timelinesConfig.UserConfig.Milestones
-	} else if model.IsAccountProfiles(profileType) {
-		milestones = timelinesConfig.AccountConfig.Milestones
-	}
-	for _, prop := range milestones {
+	for _, prop := range propsToFilter {
 		if value, exists := (*propertiesDecoded)[prop]; exists {
 			filteredProperties[prop] = value
 		}
@@ -2449,7 +2423,7 @@ func FormatAnalyzeResultForProfiles(result *model.QueryResult, profileType strin
 			if profile[1] != nil {
 				row.LastActivity = profile[1].(time.Time)
 			}
-			row.HostName = profile[2].(string)
+			row.DomainName = profile[2].(string)
 		}
 
 		profiles = append(profiles, row)
@@ -2616,7 +2590,7 @@ func (store *MemSQL) UpdateConfigForEvent(projectID int64, eventName string, upd
 	return http.StatusOK, nil
 }
 
-func (store *MemSQL) GetConfiguredPropertiesByUserID(projectID int64, id string, isAnonymous bool) (map[string]interface{}, int) {
+func (store *MemSQL) GetConfiguredUserPropertiesWithValues(projectID int64, id string, isAnonymous bool) (map[string]interface{}, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"id":         id,
@@ -2664,7 +2638,7 @@ func (store *MemSQL) GetConfiguredPropertiesByUserID(projectID int64, id string,
 	if err != nil {
 		log.WithField("status", err).WithError(err).Error("Failed to fetch timelines_config from project_settings.")
 	}
-	filteredProperties := GetLeftPanePropertiesFromConfig(timelinesConfig, model.PROFILE_TYPE_USER, propertiesDecoded)
+	filteredProperties := FilterConfiguredProperties(timelinesConfig.UserConfig.TableProps, propertiesDecoded)
 	return filteredProperties, http.StatusOK
 }
 
@@ -2743,11 +2717,11 @@ func removeEngagementColumns(existingColumns []string) []string {
 	return updatedColumns
 }
 
-func (store *MemSQL) GetTopEventsForADomain(projectID int64, domainID string) ([]model.TimelineEvent, int) {
+func (store *MemSQL) GetTopEventsForADomain(projectID int64, domainName string) ([]model.TimelineEvent, int) {
 	var eventsList []model.TimelineEvent
 	logFields := log.Fields{
 		"project_id": projectID,
-		"dom_id":     domainID,
+		"domain":     domainName,
 	}
 
 	domainGroup, errCode := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
@@ -2763,17 +2737,19 @@ func (store *MemSQL) GetTopEventsForADomain(projectID int64, domainID string) ([
 		events.timestamp,
 		events.properties,
 		COALESCE(domain_users.customer_user_id, domain_users.id) AS user_id,
-		domain_users.is_group_user
+		COALESCE(domain_users.name, domain_users.customer_user_id, domain_users.id) AS username,
+		domain_users.is_group_user,
+		ISNULL(domain_users.customer_user_id) AS is_anonymous_user
 	FROM events
 		JOIN (
 		SELECT id,
 			project_id,
 			customer_user_id,
+			JSON_EXTRACT_STRING(properties, '%s') AS name,
 			is_group_user
-		FROM users
+			FROM users
 		WHERE project_id = ?
-			AND group_%d_user_id = ?
-			AND last_event_at > ?
+			AND group_%d_user_id = (SELECT id FROM users WHERE project_id = ? AND group_%d_id = ? AND source = ? LIMIT 1)
 		ORDER BY last_event_at DESC
 		LIMIT 25
 		) AS domain_users ON events.user_id = domain_users.id
@@ -2781,9 +2757,8 @@ func (store *MemSQL) GetTopEventsForADomain(projectID int64, domainID string) ([
 		AND events.project_id = event_names.project_id
 	WHERE events.project_id = ?
 		AND event_names.name NOT IN (%s)
-		AND events.timestamp > ?
 	ORDER BY events.timestamp DESC
-	LIMIT 100;`, domainGroup.ID, eventNamesToExcludePlaceholders)
+	LIMIT 100;`, U.UP_NAME, domainGroup.ID, domainGroup.ID, eventNamesToExcludePlaceholders)
 
 	excludedEventNamesArgs := make([]interface{}, len(model.ExcludedEvents))
 	for i, name := range model.ExcludedEvents {
@@ -2791,12 +2766,12 @@ func (store *MemSQL) GetTopEventsForADomain(projectID int64, domainID string) ([
 	}
 	queryArgs := []interface{}{
 		projectID,
-		domainID,
-		model.FormatTimeToString(time.Unix(U.UnixTimeBeforeAWeek(), 0)),
+		projectID,
+		domainName,
+		model.UserSourceDomains,
 		projectID,
 	}
 	queryArgs = append(queryArgs, excludedEventNamesArgs...)
-	queryArgs = append(queryArgs, U.UnixTimeBeforeAWeek())
 
 	db := C.GetServices().Db
 	rows, err := db.Raw(queryStmt, queryArgs...).Rows()
@@ -2865,4 +2840,63 @@ func formatEventData(event *model.TimelineEvent, eventDisplaNames *map[string]st
 		event.Icon = model.SetEventIcon(event.Name)
 	}
 	event.Properties = GetFilteredEventProperties(event.Name, event.Type, properties, configProperties)
+}
+
+func (store *MemSQL) GetConfiguredEventPropertiesWithValues(projectID int64, eventID string, eventName string) (map[string]interface{}, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"id":         eventID,
+		"event_name": eventName,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || eventID == "" || eventName == "" {
+		logCtx.Error("Invalid values on arguments.")
+		return nil, http.StatusBadRequest
+	}
+
+	timelinesConfig, err := store.GetTimelinesConfig(projectID)
+	if err != nil {
+		log.WithField("status", err).WithError(err).Error("Failed to fetch timelines_config from project_settings.")
+	}
+	propertiesToFilter, exists := timelinesConfig.EventsConfig[eventName]
+
+	if !exists {
+		logCtx.Error("config empty for given event.")
+		return nil, http.StatusNotFound
+	}
+
+	var event model.Event
+	db := C.GetServices().Db
+	if err := db.Model(&model.Event{}).
+		Where("project_id = ? AND id = ?", projectID, eventID).
+		Select("properties").
+		Find(&event).
+		Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error("Failed to get properties of user.")
+		return nil, http.StatusInternalServerError
+	}
+
+	if U.IsEmptyPostgresJsonb(&event.Properties) {
+		logCtx.WithField("properties", event.Properties).Error("Empty or nil properties for user.")
+		return nil, http.StatusNotFound
+	}
+	propertiesDecoded, err := U.DecodePostgresJsonb(&event.Properties)
+	if err != nil {
+		log.WithFields(logFields).WithError(err).Error("Failed decoding user properties.")
+	}
+
+	filteredProperties := make(map[string]interface{})
+	for _, prop := range propertiesToFilter {
+		if value, exists := (*propertiesDecoded)[prop]; exists {
+			filteredProperties[prop] = value
+		}
+	}
+	return filteredProperties, http.StatusOK
 }

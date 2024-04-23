@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Input } from 'antd';
-import { SVG, Text } from '../factorsComponents';
-import { getUniqueItemsByKeyAndSearchTerm } from '../Profile/utils';
-import CustomCheckbox from './CustomCheckbox';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import VirtualList from 'rc-virtual-list';
 import { ReactSortable } from 'react-sortablejs';
+import { SVG, Text } from '../factorsComponents';
+import { getUniqueItemsByKeyAndSearchTerm } from '../Profile/utils';
+import CustomCheckbox from './CustomCheckbox';
 
 export default function SearchCheckList({
   placeholder,
@@ -29,9 +29,7 @@ export default function SearchCheckList({
     if (!disabledOptions?.length) return list;
     const disabledOptionsList =
       disabledOptions
-        .map((option) => {
-          return { name: option, isDisabled: true };
-        })
+        .map((option) => ({ name: option, isDisabled: true }))
         .filter((option) =>
           option?.name?.toLowerCase()?.includes(searchTerm?.toLowerCase())
         ) || [];
@@ -42,9 +40,8 @@ export default function SearchCheckList({
       getUniqueItemsByKeyAndSearchTerm(mapArray, searchTerm)
     )
   );
-
   useEffect(() => {
-    sortable &&
+    if (sortable)
       setSortableList(
         getListWithDisabledOptions(
           getUniqueItemsByKeyAndSearchTerm(mapArray, searchTerm)
@@ -66,14 +63,6 @@ export default function SearchCheckList({
   useEffect(() => {
     setSearchTerm('');
   }, [mapArray]);
-
-  useEffect(() => {
-    setSortableList(
-      getListWithDisabledOptions(
-        getUniqueItemsByKeyAndSearchTerm(mapArray, searchTerm)
-      )
-    );
-  }, [mapArray, searchTerm]);
 
   const sortableOptions = {
     animation: 150,
@@ -106,7 +95,7 @@ export default function SearchCheckList({
                 filter='.not-draggable'
                 {...sortableOptions}
               >
-                {sortableList?.map((item, index) => (
+                {sortableList?.map((item) => (
                   <div
                     key={item[titleKey]}
                     className={
@@ -139,7 +128,7 @@ export default function SearchCheckList({
                         key={item[titleKey]}
                         name={PropTextFormat(item[titleKey])}
                         checked={item[checkedKey]}
-                        onChange={onChange.bind(this, item)}
+                        onChange={() => onChange(item)}
                         draggable
                       />
                     )}
@@ -155,7 +144,7 @@ export default function SearchCheckList({
                 itemHeight={38}
                 itemKey={titleKey}
               >
-                {(item, index) => {
+                {(item) => {
                   if (item.isDisabled) {
                     return (
                       <div

@@ -909,6 +909,8 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(projectID i
 
 	msgPropMap := store.getMessageProperties(projectID, displayNamesEP, displayNamesUP, messageProperties, eventPropMap, updatedUserProps)
 
+	log.WithField("props", *updatedUserProps).Info("$$$$check here")
+	
 	if alert.EventLevel == model.EventLevelAccount && event.UserId != "" {
 		groupDomainUserID, _, _ := store.getDomainsGroupUserIDForUser(projectID, event.UserId)
 		msgPropMap[model.ETA_DOMAIN_GROUP_USER_ID] = groupDomainUserID

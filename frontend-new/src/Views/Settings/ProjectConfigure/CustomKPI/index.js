@@ -50,6 +50,7 @@ import {
 } from '../../../../utils/constants';
 import QueryBlock from './QueryBlock';
 import styles from './index.module.scss';
+import EmptyScreen from 'Components/EmptyScreen';
 
 const { Option } = Select;
 
@@ -1181,14 +1182,14 @@ function CustomKPI({
                   </Col>
                   <Col span={12}>
                     <div className='flex justify-end'>
-                      <Button 
+                      <Button
                         onClick={() => {
                           form.resetFields();
                           setPageMode('Create');
                         }}
                         type='primary'
                         icon={<SVG name={'plus'} color={'white'} size={16} />}
-                      > 
+                      >
                         Add New
                       </Button>
                     </div>
@@ -1225,14 +1226,22 @@ function CustomKPI({
                         </a>
                       </Text>
 
-                      <Table
-                        className='fa-table--basic mt-8'
-                        columns={columns}
-                        dataSource={tableData}
-                        pagination={false}
-                        loading={tableLoading}
-                        tableLayout='fixed'
-                      />
+                      {tableData.length > 0 ? (
+                        <Table
+                          className='fa-table--basic mt-8'
+                          columns={columns}
+                          dataSource={tableData}
+                          pagination={false}
+                          loading={tableLoading}
+                          tableLayout='fixed'
+                        />
+                      ) : (
+                        <EmptyScreen
+                          loading={tableLoading}
+                          title={`Define custom metrics to monitor conversion rates, track engagement metrics, and measure revenue targets tailored to your organization’s definitions.`}
+                          learnMore={'https://help.factors.ai/'}
+                        />
+                      )}
                     </div>
                   </Col>
                 </Row>

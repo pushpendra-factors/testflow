@@ -1,61 +1,256 @@
 import React, { useEffect } from 'react';
 import lazyWithRetry from 'Utils/lazyWithRetry';
-
-import DashboardTemplates from 'Views/DashboardTemplates/index';
-import AttributionSettings from 'Views/Settings/ProjectSettings/AttributionSettings';
-import BasicSettings from 'Views/Settings/ProjectSettings/BasicSettings';
-import SDKSettings from 'Views/Settings/ProjectSettings/SDKSettings';
-import UserSettings from 'Views/Settings/ProjectSettings/UserSettings';
-import IntegrationSettings from 'Views/Settings/ProjectSettings/IntegrationSettings';
-import Sharing from 'Views/Settings/ProjectSettings/Sharing';
-import Events from 'Views/Settings/ProjectConfigure/Events';
-import PropertySettings from 'Views/Settings/ProjectConfigure/PropertySettings';
-import ContentGroups from 'Views/Settings/ProjectConfigure/ContentGroups';
-import CustomKPI from 'Views/Settings/ProjectConfigure/CustomKPI';
-import Alerts from 'Views/Settings/ProjectSettings/Alerts';
-import UserProfiles from 'Components/Profile/UserProfiles';
-import AccountProfiles from 'Components/Profile/AccountProfiles';
-import Touchpoints from 'Views/Settings/ProjectConfigure/Touchpoints';
-import AccountDetails from 'Components/Profile/AccountProfiles/AccountDetails';
-import ContactDetails from 'Components/Profile/UserProfiles/ContactDetails';
 import withFeatureLockHOC from 'HOC/withFeatureLock';
 import { FEATURES } from 'Constants/plans.constants';
 import LockedStateComponent from 'Components/GenericComponents/LockedStateVideoComponent';
-import PricingComponent from 'Views/Settings/ProjectSettings/Pricing';
-import EngagementConfig from 'Views/Settings/ProjectConfigure/Engagement';
 import CommonLockedComponent from 'Components/GenericComponents/CommonLockedComponent';
-
-import WorkflowParagon from 'Views/Pages/WorkflowParagon';
 
 import { Switch, Redirect, Route } from 'react-router-dom';
 import PrivateRoute from 'Components/PrivateRoute';
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import { useDispatch } from 'react-redux';
 import { UPDATE_ALL_ROUTES } from 'Reducers/types';
-import ConfigurePlans from 'Views/Settings/ProjectSettings/ConfigurePlans';
 import { PathUrls } from './pathUrls';
 import LockedPathAnalysisImage from '../assets/images/locked_path_analysis.png';
 import LockedExplainImage from '../assets/images/locked_explain.png';
-import Onboarding from '../features/onboarding/ui';
 import { AdminLock, featureLock } from './feature';
 import LockedAttributionImage from '../assets/images/locked_attribution.png';
-import Checklist from '../features/Checklist';
 import { renderRoutes } from './utils';
 
+// Profile-Account
+const AccountDetails = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "profile-account" */ '../components/Profile/AccountProfiles/AccountDetails'
+    )
+);
+const AccountProfiles = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "profile-account" */ '../components/Profile/AccountProfiles'
+    )
+);
+
+// Profile-People
+const ContactDetails = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "profile-people" */ '../components/Profile/UserProfiles/ContactDetails'
+    )
+);
+const UserProfiles = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "profile-people" */ '../components/Profile/UserProfiles'
+    )
+);
+const VisitorIdentificationReportComponent = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "profile-people" */ '../features/6signal-report/ui'
+    )
+);
+const SixSignalReportRedirection = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "profile-people" */ '../features/6signal-report/ui/SixSignalRedirection'
+    )
+);
+
+// Dashboard
+const Dashboard = lazyWithRetry(
+  () => import(/* webpackChunkName: "dashboard" */ '../Views/Dashboard')
+);
+const PreBuildDashboardReport = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "dashboard" */ '../Views/PreBuildDashboard/ui/Report'
+    )
+);
+const CoreQueryNew = lazyWithRetry(
+  () => import(/* webpackChunkName: "dashboard" */ '../features/analyse')
+);
+const CoreQuery = lazyWithRetry(
+  () => import(/* webpackChunkName: "dashboard" */ '../Views/CoreQuery')
+);
+const PreBuildDashboard = lazyWithRetry(
+  () =>
+    import(/* webpackChunkName: "dashboard" */ '../Views/PreBuildDashboard/ui')
+);
+
+// Path Analysis
+const PathAnalysis = lazyWithRetry(
+  () => import(/* webpackChunkName: "path-analysis" */ '../Views/PathAnalysis')
+);
+const PathAnalysisReport = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "path-analysis" */ '../Views/PathAnalysis/PathAnalysisReport'
+    )
+);
+
+// Explain
+const FactorsInsightsNew = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "explain" */ '../Views/Factors/FactorsInsightsNew'
+    )
+);
+const Factors = lazyWithRetry(
+  () => import(/* webpackChunkName: "explain" */ '../Views/Factors')
+);
+const FactorsInsightsOld = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "explain" */ '../Views/Factors/FactorsInsightsOld'
+    )
+);
+
+// Attribution
+const Attribution = lazyWithRetry(
+  () =>
+    import(/* webpackChunkName: "Attribution" */ '../features/attribution/ui')
+);
+
+// Alerts
+const Alerts = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "Alerts" */ '../Views/Settings/ProjectSettings/Alerts'
+    )
+);
+
+// Settings
+const BasicSettings = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "settings" */ '../Views/Settings/ProjectSettings/BasicSettings'
+    )
+);
+const UserSettings = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "settings" */ '../Views/Settings/ProjectSettings/UserSettings'
+    )
+);
+const SDKSettings = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "settings" */ '../Views/Settings/ProjectSettings/SDKSettings'
+    )
+);
+const IntegrationSettings = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "settings" */ '../Views/Settings/ProjectSettings/IntegrationSettings'
+    )
+);
+const Sharing = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "settings" */ '../Views/Settings/ProjectSettings/Sharing'
+    )
+);
+const PricingComponent = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "settings" */ '../Views/Settings/ProjectSettings/Pricing'
+    )
+);
+
+// Configuration
+
+const Events = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "configuration" */ '../Views/Settings/ProjectConfigure/Events'
+    )
+);
+const PropertySettings = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "configuration" */ '../Views/Settings/ProjectConfigure/PropertySettings'
+    )
+);
+const ContentGroups = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "configuration" */ '../Views/Settings/ProjectConfigure/ContentGroups'
+    )
+);
+const CustomKPI = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "configuration" */ '../Views/Settings/ProjectConfigure/CustomKPI'
+    )
+);
+const EngagementConfig = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "configuration" */ '../Views/Settings/ProjectConfigure/Engagement'
+    )
+);
+const AttributionSettings = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "configuration" */ '../Views/Settings/ProjectSettings/AttributionSettings'
+    )
+);
+const ConfigurePlans = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "configuration-plan" */ '../Views/Settings/ProjectSettings/ConfigurePlans'
+    )
+);
 const ConfigurePlanAdmin = lazyWithRetry(
   () =>
     import(
+      /* webpackChunkName: "configuration-plan" */
       '../Views/Settings/ProjectSettings/ConfigurePlans/ConfigurePlanAdmin'
     )
 );
 
-const CoreQueryNew = lazyWithRetry(() => import('../features/analyse'));
-
-const FactorsInsightsNew = lazyWithRetry(
-  () => import('../Views/Factors/FactorsInsightsNew')
+const Touchpoints = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "configuration" */ '../Views/Settings/ProjectConfigure/Touchpoints'
+    )
 );
 
-const Attribution = lazyWithRetry(() => import('../features/attribution/ui'));
+// Shared-Components
+const componentsLib = lazyWithRetry(
+  () =>
+    import(/* webpackChunkName: "shared-component" */ '../Views/componentsLib')
+);
+
+const Checklist = lazyWithRetry(
+  () =>
+    import(/* webpackChunkName: "shared-component" */ '../features/Checklist')
+);
+
+const DashboardTemplates = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "shared-component" */ '../Views/DashboardTemplates/index'
+    )
+);
+
+// Paragon-workflow
+const WorkflowParagon = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "paragon-workflow" */ '../Views/Pages/WorkflowParagon'
+    )
+);
+
+// Onboarding
+const Onboarding = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "Onboarding" */ '../features/onboarding/ui/index'
+    )
+);
+
 const FeatureLockedAttributionComponent = withFeatureLockHOC(Attribution, {
   featureName: FEATURES.FEATURE_ATTRIBUTION,
   LockedComponent: () => (
@@ -67,7 +262,6 @@ const FeatureLockedAttributionComponent = withFeatureLockHOC(Attribution, {
   )
 });
 
-const PathAnalysis = lazyWithRetry(() => import('../Views/PathAnalysis'));
 const FeatureLockedPathAnalysis = withFeatureLockHOC(PathAnalysis, {
   featureName: FEATURES.FEATURE_PATH_ANALYSIS,
   LockedComponent: (props) => (
@@ -79,9 +273,7 @@ const FeatureLockedPathAnalysis = withFeatureLockHOC(PathAnalysis, {
     />
   )
 });
-const PathAnalysisReport = lazyWithRetry(
-  () => import('../Views/PathAnalysis/PathAnalysisReport')
-);
+
 const FeatureLockedPathAnalysisReport = withFeatureLockHOC(PathAnalysisReport, {
   featureName: FEATURES.FEATURE_PATH_ANALYSIS,
   LockedComponent: (props) => (
@@ -211,9 +403,7 @@ const FeatureLockedFactorsInsightsNew = withFeatureLockHOC(FactorsInsightsNew, {
     />
   )
 });
-const FactorsInsightsOld = lazyWithRetry(
-  () => import('../Views/Factors/FactorsInsightsOld')
-);
+
 const FeatureLockedFactorsInsightsOld = withFeatureLockHOC(FactorsInsightsOld, {
   featureName: FEATURES.FEATURE_EXPLAIN,
   LockedComponent: (props) => (
@@ -225,12 +415,7 @@ const FeatureLockedFactorsInsightsOld = withFeatureLockHOC(FactorsInsightsOld, {
     />
   )
 });
-const CoreQuery = lazyWithRetry(() => import('../Views/CoreQuery'));
-const Dashboard = lazyWithRetry(() => import('../Views/Dashboard'));
-const PreBuildDashboard = lazyWithRetry(
-  () => import('../Views/PreBuildDashboard/ui')
-);
-const Factors = lazyWithRetry(() => import('../Views/Factors'));
+
 const FeatureLockedFactors = withFeatureLockHOC(Factors, {
   featureName: FEATURES.FEATURE_EXPLAIN,
   LockedComponent: (props) => (
@@ -242,18 +427,6 @@ const FeatureLockedFactors = withFeatureLockHOC(Factors, {
     />
   )
 });
-const VisitorIdentificationReportComponent = lazyWithRetry(
-  () => import('../features/6signal-report/ui')
-);
-const SixSignalReportRedirection = lazyWithRetry(
-  () => import('../features/6signal-report/ui/SixSignalRedirection')
-);
-
-const componentsLib = lazyWithRetry(() => import('../Views/componentsLib'));
-
-const PreBuildDashboardReport = lazyWithRetry(
-  () => import('../Views/PreBuildDashboard/ui/Report')
-);
 
 const FeatureLockedPreBuildDashboard = withFeatureLockHOC(PreBuildDashboard, {
   featureName: FEATURES.FEATURE_WEB_ANALYTICS_DASHBOARD,
@@ -466,7 +639,7 @@ export const APP_LAYOUT_ROUTES = {
     Private: true
   },
   ProfileAccountsDetails: {
-    path: '/profiles/accounts/:id',
+    path: PathUrls.ProfileAccountDetailsURL,
     Component: AccountDetails,
     Private: true
   },

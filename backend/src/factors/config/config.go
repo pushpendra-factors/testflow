@@ -197,6 +197,7 @@ type Configuration struct {
 	RunAllAccountsMarkerProjectIDs     string
 	DisableAllAccountsMarkerProjectIDs string
 	RunForAllAccountsInHours           int
+	JobRunCountPerDayMarker            int
 	DomainsLimitAllRun                 int
 	BatchSizeDomains                   int
 	// Flag for enabling only the /mql routes for secondary env testing.
@@ -449,6 +450,7 @@ const (
 	HealthcheckDatabaseHealthPingID       = "8464d06b-418b-42d2-9201-b01dc744d283"
 	HealthcheckDatabaseHealthMemSQLPingID = "763baa99-61bf-4721-b293-e62eb1027987"
 	HealthcheckSDKHealthPingID            = "bb2c4757-9fa4-48eb-bd08-42a16996a61b"
+	HealthcheckFactorsDeanonAlertPingID   = "7ea00068-f971-4d03-b3b7-115f3708178b"
 )
 
 func PingHealthCheckBasedOnStatus(status map[string]interface{}, healthcheckPingID string) bool {
@@ -688,6 +690,9 @@ func LookbackForSegmentMarker() int {
 // Run marker for all accounts if marker_last_run_all_accounts is greater than given hours
 func TimeRangeForAllDomains() int {
 	return configuration.RunForAllAccountsInHours
+}
+func MarkerJobRunCountPerDay() int {
+	return configuration.JobRunCountPerDayMarker
 }
 func MarkerDomainLimitForAllRun() int {
 	return configuration.DomainsLimitAllRun

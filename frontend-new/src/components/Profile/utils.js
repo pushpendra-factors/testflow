@@ -45,7 +45,7 @@ export const groups = {
   Timeline: (item) =>
     MomentTz(item.timestamp * 1000)
       .startOf('day')
-      .format(' DD MMM YYYY ddd')
+      .format('ddd, DD MMM YYYY')
 };
 
 const getEntityName = (caller, grpn) => {

@@ -10,7 +10,6 @@ import {
 } from 'antd';
 import { bindActionCreators } from 'redux';
 import { connect, useSelector } from 'react-redux';
-import useKey from 'hooks/useKey';
 import { insertUrlParam } from 'Utils/global';
 import {
   PropTextFormat,
@@ -22,7 +21,8 @@ import { FEATURES, PLANS, PLANS_V0 } from 'Constants/plans.constants';
 import {
   getGroupProperties,
   getEventPropertiesV2,
-  getGroups
+  getGroups,
+  getUserPropertiesV2
 } from 'Reducers/coreQuery/middleware';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
@@ -30,6 +30,7 @@ import useFeatureLock from 'hooks/useFeatureLock';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 import logger from 'Utils/logger';
+import EmptyScreen from 'Components/EmptyScreen';
 import AccountOverview from './AccountOverview';
 import UpgradeModal from '../UpgradeModal';
 import { PathUrls } from '../../../routes/pathUrls';
@@ -45,30 +46,23 @@ import {
   setActivePageviewEvent
 } from '../../../reducers/timelines/middleware';
 import { udpateProjectSettings } from '../../../reducers/global';
-import { getHost, getPropType } from '../utils';
+import { eventsFormattedForGranularity, getHost, getPropType } from '../utils';
 import AccountTimelineBirdView from './AccountTimelineBirdView';
 import { Text, SVG } from '../../factorsComponents';
 import styles from './index.module.scss';
 import AccountTimelineTableView from './AccountTimelineTableView';
 import { GranularityOptions } from '../constants';
+import AccountsOverviewUpgrade from '../../../assets/images/illustrations/AccountsOverviewUpgrade.png';
 
 function AccountDetails({
-  accountDetails,
-  accountOverview,
-  activeProject,
-  groups,
   getGroups,
-  groupProperties,
   getGroupProperties,
-  currentProjectSettings,
   udpateProjectSettings,
   getProfileAccountDetails,
   getAccountOverview,
-  userPropertiesV2,
-  eventPropertiesV2,
   getEventPropertiesV2,
-  eventNamesMap,
-  setActivePageviewEvent
+  setActivePageviewEvent,
+  getUserPropertiesV2
 }) {
   const { TabPane } = Tabs;
 
@@ -83,11 +77,49 @@ function AccountDetails({
   const [filterProperties, setFilterProperties] = useState([]);
   const [propSelectOpen, setPropSelectOpen] = useState(false);
   const [tlConfig, setTLConfig] = useState({});
-  const [timelineViewMode, setTimelineViewMode] = useState('birdview');
+  const [timelineViewMode, setTimelineViewMode] = useState('');
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
   const [openPopover, setOpenPopover] = useState(false);
   const [requestedEvents, setRequestedEvents] = useState({});
   const [eventPropertiesType, setEventPropertiesType] = useState({});
+  const [userPropertiesType, setUserPropertiesType] = useState({});
+  const [eventDrawerVisible, setEventDrawerVisible] = useState(false);
+  const [birdviewFormatEvents, setBirdviewFormatEvents] = useState({});
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const yourParam = params.get('view');
+    setTimelineViewMode(yourParam || 'timeline');
+  }, [location]);
+
+  const handleOptionBackClick = useCallback(() => {
+    const path = location.state?.path || PathUrls.ProfileAccounts;
+    history.replace(path, {
+      fromDetails: true,
+      accountPayload: location.state?.accountPayload,
+      currentPage: location.state?.currentPage,
+      currentPageSize: location.state?.currentPageSize,
+      activeSorter: location.state?.activeSorter,
+      appliedFilters: location.state?.appliedFilters,
+      accountsTableRow: location.state?.accountsTableRow
+    });
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape' && eventDrawerVisible) {
+        setEventDrawerVisible(false);
+      } else if (event.key === 'Escape' && !eventDrawerVisible) {
+        handleOptionBackClick();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [eventDrawerVisible]);
 
   const handleOpenPopoverChange = (value) => {
     setOpenPopover(value);
@@ -97,7 +129,21 @@ function AccountDetails({
     FEATURES.FEATURE_ACCOUNT_SCORING
   );
 
-  const { groupPropNames } = useSelector((state) => state.coreQuery);
+  const { accountDetails, accountOverview } = useSelector(
+    (state) => state.timelines
+  );
+  const { active_project: activeProject, currentProjectSettings } = useSelector(
+    (state) => state.global
+  );
+  const {
+    groups,
+    groupProperties,
+    userPropertiesV2,
+    eventPropertiesV2,
+    groupPropNames,
+    eventNamesMap
+  } = useSelector((state) => state.coreQuery);
+
   const { plan } = useSelector((state) => state.featureConfig);
   const isFreePlan =
     plan?.name === PLANS.PLAN_FREE || plan?.name === PLANS_V0.PLAN_FREE;
@@ -106,15 +152,15 @@ function AccountDetails({
     const accountEvents = accountDetails.data?.events || [];
     const eventsArray = accountEvents
       .filter((event) => event.display_name !== 'Page View')
-      .map((event) => event.event_name);
+      .map((event) => event.name);
 
     const pageViewEvent = accountEvents.find(
       (event) => event.display_name === 'Page View'
     );
 
     if (pageViewEvent) {
-      eventsArray.push(pageViewEvent.event_name);
-      setActivePageviewEvent(pageViewEvent.event_name);
+      eventsArray.push(pageViewEvent.name);
+      setActivePageviewEvent(pageViewEvent.name);
     }
 
     return Array.from(new Set(eventsArray));
@@ -138,7 +184,7 @@ function AccountDetails({
     Object.values(eventPropertiesV2).forEach((propertyGroup) => {
       Object.values(propertyGroup || {}).forEach((arr) => {
         arr.forEach((property) => {
-          const [_, propName, category] = property;
+          const [, propName, category] = property;
           typeMap[propName] = category;
         });
       });
@@ -149,6 +195,20 @@ function AccountDetails({
   useEffect(() => {
     fetchEventPropertiesWithType();
   }, [uniqueEventNames, requestedEvents, activeProject?.id, eventPropertiesV2]);
+
+  useEffect(() => {
+    if (!userPropertiesV2) {
+      getUserPropertiesV2(activeProject?.id);
+    } else {
+      const typeMap = {};
+      Object.values(userPropertiesV2).forEach((arr) => {
+        arr.forEach(([, propName, category]) => {
+          typeMap[propName] = category;
+        });
+      });
+      setUserPropertiesType(typeMap);
+    }
+  }, [userPropertiesV2, activeProject?.id]);
 
   const titleIcon = useMemo(() => {
     if (location?.state?.accountPayload?.segment?.id) {
@@ -171,12 +231,10 @@ function AccountDetails({
   }, [location]);
 
   const activeId = useMemo(() => {
-    const urlSearchParams = new URLSearchParams(location.search);
-    // const params = Object.fromEntries(urlSearchParams.entries());
     const id = atob(location.pathname.split('/').pop());
     document.title = 'Accounts - FactorsAI';
     return id;
-  }, [location, timelineViewMode]);
+  }, [location]);
 
   useEffect(
     () => () => {
@@ -207,29 +265,24 @@ function AccountDetails({
     await getProfileAccountDetails(
       activeProject.id,
       activeId,
-      GROUP_NAME_DOMAINS,
-      currentProjectSettings.timelines_config
+      GROUP_NAME_DOMAINS
     );
   };
 
   useEffect(() => {
-    const shouldGetDetails =
-      activeProject?.id &&
-      activeId &&
-      activeId !== '' &&
-      currentProjectSettings?.timelines_config;
-
+    const shouldGetDetails = activeProject?.id && activeId && activeId !== '';
     if (shouldGetDetails) {
       getAccountDetails();
     }
-  }, [activeProject.id, activeId, currentProjectSettings?.timelines_config]);
+  }, [activeProject.id, activeId]);
 
   useEffect(() => {
     if (
       timelineViewMode === 'overview' &&
       activeId !== accountOverview?.data?.id
     ) {
-      getAccountOverview(activeProject.id, GROUP_NAME_DOMAINS, activeId);
+      if (!isScoringLocked)
+        getAccountOverview(activeProject.id, GROUP_NAME_DOMAINS, activeId);
     }
   }, [timelineViewMode, activeId]);
 
@@ -315,19 +368,6 @@ function AccountDetails({
     );
     setCheckListUserProps(userPropsWithEnableKey);
   }, [currentProjectSettings, userPropertiesV2]);
-
-  const handleOptionBackClick = useCallback(() => {
-    const path = location.state?.path || PathUrls.ProfileAccounts;
-    history.replace(path, {
-      fromDetails: true,
-      accountPayload: location.state?.accountPayload,
-      currentPage: location.state?.currentPage,
-      currentPageSize: location.state?.currentPageSize,
-      activeSorter: location.state?.activeSorter,
-      appliedFilters: location.state?.appliedFilters,
-      accountsTableRow: location.state?.accountsTableRow
-    });
-  }, []);
 
   const handleEventsChange = async (option) => {
     const { timelines_config } = currentProjectSettings;
@@ -475,7 +515,8 @@ function AccountDetails({
   );
 
   const renderHeader = () => {
-    const accountName = accountDetails?.data?.domain;
+    const accountName =
+      accountDetails?.data?.name || accountDetails?.data?.domain;
     return (
       <div className='fa-timeline--header'>
         <div className='flex items-center'>
@@ -628,9 +669,9 @@ function AccountDetails({
               extraClass='m-0 mr-1 py-2'
               weight='bold'
             >
-              {accountDetails?.data?.domain}
+              {accountDetails?.data?.name || accountDetails?.data?.domain}
             </Text>
-            <SVG name='ArrowUpRightSquare' />
+            <SVG name='ArrowUpRightSquare' size={16} />
           </a>
         </div>
       </div>
@@ -703,7 +744,7 @@ function AccountDetails({
 
   const getFilteredEvents = (events) => {
     if (isFreePlan) {
-      return events.filter((activity) => !activity.is_group_event);
+      return events.filter((activity) => !activity.is_group_user);
     }
     return events;
   };
@@ -712,29 +753,67 @@ function AccountDetails({
     <AccountOverview
       overview={accountOverview?.data || {}}
       loading={accountOverview?.isLoading}
+      top_engagement_signals={
+        accountDetails?.data?.leftpane_props?.$top_enagagement_signals
+      }
     />
   );
 
   const renderTimelineTableView = () => (
-    <AccountTimelineTableView
-      timelineEvents={getFilteredEvents(
-        activities
-          ?.filter((activity) => activity.enabled === true)
-          ?.slice(0, 1000) || []
-      )}
-      timelineUsers={getTimelineUsers('timeline')}
-      loading={accountDetails?.isLoading}
-      eventPropsType={eventPropertiesType}
-    />
+    <>
+      <div className='h-6' />
+      <AccountTimelineTableView
+        timelineEvents={getFilteredEvents(
+          activities
+            ?.filter((activity) => activity.enabled === true)
+            ?.slice(0, 1000) || []
+        )}
+        loading={accountDetails?.isLoading}
+        eventPropsType={eventPropertiesType}
+        userPropsType={userPropertiesType}
+        eventDrawerVisible={eventDrawerVisible}
+        setEventDrawerVisible={setEventDrawerVisible}
+      />
+    </>
   );
+
+  useEffect(() => {
+    if (!activities) return;
+    const events = getFilteredEvents(
+      activities?.filter((activity) => activity.enabled === true) || []
+    );
+    const data = eventsFormattedForGranularity(
+      events,
+      granularity,
+      collapseAll
+    );
+    document.title = 'Accounts - FactorsAI';
+    setBirdviewFormatEvents(data);
+  }, [activities, granularity]);
+
+  useEffect(() => {
+    const data = Object.keys(birdviewFormatEvents).reduce((acc, key) => {
+      acc[key] = Object.keys(birdviewFormatEvents[key]).reduce(
+        (userAcc, username) => {
+          userAcc[username] = {
+            ...birdviewFormatEvents[key][username],
+            collapsed:
+              collapseAll === undefined
+                ? birdviewFormatEvents[key][username].collapsed
+                : collapseAll
+          };
+          return userAcc;
+        },
+        {}
+      );
+      return acc;
+    }, {});
+    setBirdviewFormatEvents(data);
+  }, [collapseAll]);
 
   const renderBirdviewWithActions = () => (
     <div className='flex flex-col'>
-      <div
-        className={`timeline-actions ${
-          isFreePlan ? 'justify-between' : 'flex-row-reverse'
-        } `}
-      >
+      <div className={isFreePlan ? 'flex justify-between items-center' : ''}>
         {isFreePlan && (
           <div className='flex items-baseline flex-wrap'>
             <Text
@@ -756,18 +835,17 @@ function AccountDetails({
             </Text>
           </div>
         )}
-        <div className='timeline-actions__group'>
-          <div className='timeline-actions__group__collapse'>
+
+        <div className='tl-actions-row'>
+          <div className='collapse-btns'>
             <Button
-              className='collapse-btn collapse-btn--left'
-              type='text'
+              className='collapse-btns--btn'
               onClick={() => setCollapseAll(false)}
             >
               <SVG name='line_height' size={22} />
             </Button>
             <Button
-              className='collapse-btn collapse-btn--right'
-              type='text'
+              className='collapse-btns--btn'
               onClick={() => setCollapseAll(true)}
             >
               <SVG name='grip_lines' size={22} />
@@ -781,11 +859,7 @@ function AccountDetails({
             open={openPopover}
             onOpenChange={handleOpenPopoverChange}
           >
-            <Button
-              size='large'
-              className='fa-btn--custom mx-2 relative'
-              type='text'
-            >
+            <Button type='text'>
               <SVG name='activity_filter' />
             </Button>
           </Popover>
@@ -794,7 +868,7 @@ function AccountDetails({
             placement='bottomRight'
             trigger={['click']}
           >
-            <Button type='text' className='flex items-center'>
+            <Button type='text'>
               {granularity}
               <SVG name='caretDown' size={16} extraClass='ml-1' />
             </Button>
@@ -802,13 +876,10 @@ function AccountDetails({
         </div>
       </div>
       <AccountTimelineBirdView
-        timelineEvents={getFilteredEvents(
-          activities?.filter((activity) => activity.enabled === true) || []
-        )}
+        events={birdviewFormatEvents || {}}
+        setEvents={setBirdviewFormatEvents}
         timelineUsers={getTimelineUsers('birdview')}
-        collapseAll={collapseAll}
         setCollapseAll={setCollapseAll}
-        granularity={granularity}
         loading={accountDetails?.isLoading}
         propertiesType={eventPropertiesType}
         eventNamesMap={eventNamesMap}
@@ -825,7 +896,36 @@ function AccountDetails({
       tab={<span className='fa-activity-filter--tabname'>{tabName}</span>}
       key={key}
     >
-      {content}
+      {key === 'overview' && isScoringLocked ? (
+        <div className='overview-container'>
+          <EmptyScreen
+            upgradeScreen
+            image={AccountsOverviewUpgrade}
+            imageStyle={{ width: '600px', height: '450px' }}
+            title={
+              <div>
+                <Text type='title' level={3} weight='bold' extraClass='m-0'>
+                  Your plan doesn’t have this feature
+                </Text>
+                <Text type='title' level={7} extraClass='m-0'>
+                  This feature is not included in your current plan. Please
+                  upgrade to use this feature
+                </Text>
+              </div>
+            }
+            learnMore='https://help.factors.ai'
+            ActionButton={{
+              onClick: () => {
+                history.push('/settings/pricing?activeTab=upgrade');
+              },
+              text: 'Upgrade Now',
+              icon: null
+            }}
+          />
+        </div>
+      ) : (
+        content
+      )}
     </TabPane>
   );
 
@@ -838,12 +938,11 @@ function AccountDetails({
         activeKey={timelineViewMode}
         onChange={handleTabChange}
       >
-        {!isScoringLocked &&
-          renderTabPane({
-            key: 'overview',
-            tabName: 'Overview',
-            content: renderOverview()
-          })}
+        {renderTabPane({
+          key: 'overview',
+          tabName: 'Overview',
+          content: renderOverview()
+        })}
         {renderTabPane({
           key: 'timeline',
           tabName: 'Timeline',
@@ -858,36 +957,23 @@ function AccountDetails({
     </div>
   );
 
-  useKey(['Escape'], handleOptionBackClick);
-
   return (
-    <div>
+    <>
       <div className='fa-timeline'>
         {renderHeader()}
-        {renderLeftPane()}
-        {renderTimelineView()}
+        <div className='fa-timeline--content'>
+          {renderLeftPane()}
+          {renderTimelineView()}
+        </div>
       </div>
       <UpgradeModal
         visible={isUpgradeModalVisible}
         variant='timeline'
         onCancel={() => setIsUpgradeModalVisible(false)}
       />
-    </div>
+    </>
   );
 }
-
-const mapStateToProps = (state) => ({
-  activeProject: state.global.active_project,
-  currentProjectSettings: state.global.currentProjectSettings,
-  groups: state.coreQuery.groups,
-  accounts: state.timelines.accounts,
-  accountDetails: state.timelines.accountDetails,
-  accountOverview: state.timelines.accountOverview,
-  userPropertiesV2: state.coreQuery.userPropertiesV2,
-  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
-  groupProperties: state.coreQuery.groupProperties,
-  eventNamesMap: state.coreQuery.eventNamesMap
-});
 
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
@@ -896,6 +982,7 @@ const mapDispatchToProps = (dispatch) =>
       getGroupProperties,
       getAccountOverview,
       getEventPropertiesV2,
+      getUserPropertiesV2,
       getProfileAccountDetails,
       udpateProjectSettings,
       setActivePageviewEvent
@@ -903,4 +990,4 @@ const mapDispatchToProps = (dispatch) =>
     dispatch
   );
 
-export default connect(mapStateToProps, mapDispatchToProps)(AccountDetails);
+export default connect(null, mapDispatchToProps)(AccountDetails);

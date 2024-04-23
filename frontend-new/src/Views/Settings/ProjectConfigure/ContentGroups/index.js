@@ -19,6 +19,7 @@ import { MoreOutlined } from '@ant-design/icons';
 import ContentGroupForm from './ContentGroupForm';
 import { fetchContentGroup, deleteContentGroup } from 'Reducers/global';
 import ConfirmationModal from '../../../../components/ConfirmationModal';
+import EmptyScreen from 'Components/EmptyScreen';
 
 function ContentGroups({
   fetchContentGroup,
@@ -173,7 +174,7 @@ function ContentGroups({
                           setShowSmartForm(true);
                         }}
                         icon={<SVG name={'plus'} color={'white'} size={16} />}
-                      > 
+                      >
                         Add New
                       </Button>
                     </div>
@@ -201,18 +202,29 @@ function ContentGroups({
                         Compare the performance of different content groups,
                         identify optimization opportunities, and enhance your
                         content marketing efforts to drive better results.{' '}
-                        <a href='https://help.factors.ai/en/articles/7284125-content-groups' target='_blank'>
+                        <a
+                          href='https://help.factors.ai/en/articles/7284125-content-groups'
+                          target='_blank'
+                        >
                           Learn more
                         </a>
                       </Text>
 
-                      <Table
-                        className='fa-table--basic mt-8'
-                        columns={columns}
-                        dataSource={tableData}
-                        pagination={false}
-                        loading={tableLoading}
-                      />
+                      {tableData.length > 0 ? (
+                        <Table
+                          className='fa-table--basic mt-8'
+                          columns={columns}
+                          dataSource={tableData}
+                          pagination={false}
+                          loading={tableLoading}
+                        />
+                      ) : (
+                        <EmptyScreen
+                          title={`Create logical collections of related URLs, such as blog articles or product pages, to analyze their impact on leads, revenue, and pipeline stages.`}
+                          learnMore={'https://help.factors.ai/'}
+                          loading={tableLoading}
+                        />
+                      )}
                     </div>
                   </Col>
                 </Row>

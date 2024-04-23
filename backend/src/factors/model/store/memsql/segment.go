@@ -110,6 +110,9 @@ func (store *MemSQL) GetAllSegments(projectId int64) (map[string][]model.Segment
 		return nil, http.StatusBadRequest
 	}
 
+	lastRunTime, lastRunStatusCode := store.GetMarkerLastForAllAccounts(projectId)
+	// for case - segment is updated but all_run for the day is yet to run
+
 	db := C.GetServices().Db
 	var segments []model.Segment
 	err := db.Table("segments").Where("project_id = ?", projectId).Find(&segments).Error
@@ -119,6 +122,12 @@ func (store *MemSQL) GetAllSegments(projectId int64) (map[string][]model.Segment
 	}
 	allSegmentsMap := make(map[string][]model.Segment, 0)
 	for _, segment := range segments {
+
+		if lastRunStatusCode != http.StatusFound || segment.UpdatedAt.After(lastRunTime) {
+			segment.IsLongRunComplete = false
+		} else {
+			segment.IsLongRunComplete = true
+		}
 		if _, ok := allSegmentsMap[segment.Type]; !ok {
 			allSegmentsMap[segment.Type] = make([]model.Segment, 0)
 		}
@@ -176,6 +185,13 @@ func (store *MemSQL) GetSegmentById(projectId int64, segmentId string) (*model.S
 		logCtx.WithError(err).Error(
 			"Failed at getting segment on GetSegmentById.")
 		return nil, http.StatusInternalServerError
+	}
+
+	lastRunTime, lastRunStatusCode := store.GetMarkerLastForAllAccounts(projectId)
+	if lastRunStatusCode != http.StatusFound || segment.UpdatedAt.After(lastRunTime) {
+		segment.IsLongRunComplete = false
+	} else {
+		segment.IsLongRunComplete = true
 	}
 
 	return &segment, http.StatusFound

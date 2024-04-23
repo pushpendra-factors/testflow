@@ -125,11 +125,11 @@ function UserTimelineBirdview({
   const renderAdditionalDiv = (eventsCount, collapseState, onClick) =>
     eventsCount > 1 ? (
       collapseState ? (
-        <div className='timeline-events__num' onClick={onClick}>
+        <div className='birdview-events__num' onClick={onClick}>
           {`+${Number(eventsCount - 1)}`}
         </div>
       ) : (
-        <div className='timeline-events__num' onClick={onClick}>
+        <div className='birdview-events__num' onClick={onClick}>
           <CaretUpOutlined /> Show Less
         </div>
       )
@@ -139,7 +139,7 @@ function UserTimelineBirdview({
     !Object.entries(data).length ? (
       <NoDataWithMessage message='No Activity' />
     ) : (
-      <div className='table-scroll'>
+      <div className='birdview-container bordered-gray--bottom'>
         <table>
           <thead>
             <tr>
@@ -182,14 +182,14 @@ function UserTimelineBirdview({
                     }`}
                   >
                     <div
-                      className={`timeline-events user-pad ${
+                      className={`birdview-events user-pad ${
                         !showAll[index]
-                          ? 'timeline-events--collapsed'
-                          : 'timeline-events--expanded'
+                          ? 'birdview-events--collapsed'
+                          : 'birdview-events--expanded'
                       }`}
                     >
                       {eventsList?.map((event, ind) => (
-                        <div key={ind} className='timeline-events__event'>
+                        <div key={ind} className='birdview-events__event'>
                           {renderIcon(event)}
                           {renderInfoCard(event)}
                         </div>

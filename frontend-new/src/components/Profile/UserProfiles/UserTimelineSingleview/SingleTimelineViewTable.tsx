@@ -17,7 +17,7 @@ function SingleTimelineViewTable({
   const { eventNamesMap } = useSelector((state: any) => state.coreQuery);
 
   return (
-    <div className='table-scroll'>
+    <div className='birdview-container bordered-gray--bottom'>
       <table>
         <thead>
           <tr>

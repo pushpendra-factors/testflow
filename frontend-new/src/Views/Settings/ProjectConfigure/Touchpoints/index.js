@@ -15,21 +15,22 @@ import {
   notification,
   Tooltip
 } from 'antd';
-import TouchpointView from './TouchPointView';
-import MarketingInteractions from '../MarketingInteractions';
-import FAFilterSelect from '../../../../components/FaFilterSelect';
 import { setDisplayName } from 'Utils/dataFormatter';
-
 import {
   reverseOperatorMap,
   reverseDateOperatorMap
 } from 'Utils/operatorMapping';
-
 import { MoreOutlined } from '@ant-design/icons';
+import { data } from 'autoprefixer';
+import EmptyScreen from 'Components/EmptyScreen';
+import TouchpointView from './TouchPointView';
+import MarketingInteractions from '../MarketingInteractions';
+import FAFilterSelect from '../../../../components/FaFilterSelect';
+
 import { OTPService } from '../../../../reducers/touchpoints/services';
 import useService from '../../../../hooks/useService';
 import { Otp } from '../../../../reducers/touchpoints/classes';
-import { data } from 'autoprefixer';
+import EmailClicks from './EmailClicks/index';
 
 const { TabPane } = Tabs;
 
@@ -54,37 +55,31 @@ const Touchpoints = ({
 
   const columns = [
     {
-      title: tabNo === '2' ? 'Hubspot Object' : 'Salesforce Object',
+      title: tabNo === '3' ? 'Hubspot Object' : 'Salesforce Object',
       dataIndex: 'filters',
       key: 'filters',
-      render: (obj) => {
-        return renderObjects(obj);
-      }
+      render: (obj) => renderObjects(obj)
     },
     {
       title: 'Property Mapping',
       dataIndex: 'properties_map',
       key: 'properties_map',
-      render: (obj) => {
-        return renderPropertyMap(obj);
-      }
+      render: (obj) => renderPropertyMap(obj)
     },
     {
       title: '',
       dataIndex: 'id',
       key: 'id',
-      render: (obj) => {
-        return renderTableActions(obj);
-      }
+      render: (obj) => renderTableActions(obj)
     }
   ];
 
-  function callback(key) {
+  const changeTabNo = (key) => {
     setTabNo(key);
-  }
+  };
 
   useEffect(() => {
-    if (tabNo !== '1') {
+    if (tabNo !== '1' && tabNo !== '2') {
       getOtpObjects();
     }
   }, [activeProject, tabNo]);
@@ -130,29 +125,25 @@ const Touchpoints = ({
     return propMap;
   };
 
-  const menu = (index) => {
-    return (
-      <Menu>
-        <Menu.Item
-          key='0'
-          onClick={() => setTouchPointState({ state: 'edit', index: index })}
-        >
-          <a>Edit</a>
-        </Menu.Item>
-        <Menu.Item key='0' onClick={() => deleteTchPoint(index)}>
-          <a>Delete</a>
-        </Menu.Item>
-      </Menu>
-    );
-  };
+  const menu = (index) => (
+    <Menu>
+      <Menu.Item
+        key='0'
+        onClick={() => setTouchPointState({ state: 'edit', index })}
+      >
+        <a>Edit</a>
+      </Menu.Item>
+      <Menu.Item key='0' onClick={() => deleteTchPoint(index)}>
+        <a>Delete</a>
+      </Menu.Item>
+    </Menu>
+  );
 
-  const renderTableActions = (index) => {
-    return (
-      <Dropdown overlay={() => menu(index)} trigger={['hover']}>
-        <Button type='text' icon={<MoreOutlined />} />
-      </Dropdown>
-    );
-  };
+  const renderTableActions = (index) => (
+    <Dropdown overlay={() => menu(index)} trigger={['hover']}>
+      <Button type='text' icon={<MoreOutlined />} />
+    </Dropdown>
+  );
 
   const renderObjects = (obj) => {
     const filters = [];
@@ -175,150 +166,116 @@ const Touchpoints = ({
       }
     });
     return filters.map((filt) => (
-      <div className={`mt-2 max-w-xl overflow-hidden`}>
-        <FAFilterSelect
-          filter={filt}
-          disabled={true}
-          applyFilter={() => {}}
-        ></FAFilterSelect>
+      <div className='mt-2 max-w-xl overflow-hidden'>
+        <FAFilterSelect filter={filt} disabled applyFilter={() => {}} />
       </div>
     ));
   };
 
-  const renderPropertyMap = (obj) => {
-    return (
-      <Col>
-        {obj['$type'] && obj['$type']['va'] && (
-          <Row>
-            <Col span={8}>
-              <Row className={'relative justify-between break-words'}>
-                <Text
-                  level={7}
-                  type={'title'}
-                  extraClass={'m-0'}
-                  weight={'thin'}
-                >
-                  Type
-                </Text>
-                <SVG name={`ChevronRight`} />
-              </Row>
-            </Col>
-
-            <Col className={`fa-truncate-150 break-words`}>
-              <Text
-                level={7}
-                type={'title'}
-                extraClass={'ml-4'}
-                weight={'thin'}
-              >
-                {obj['$type']['va']}
+  const renderPropertyMap = (obj) => (
+    <Col>
+      {obj.$type && obj.$type.va && (
+        <Row>
+          <Col span={8}>
+            <Row className='relative justify-between break-words'>
+              <Text level={7} type='title' extraClass='m-0' weight='thin'>
+                Type
               </Text>
-            </Col>
-          </Row>
-        )}
+              <SVG name='ChevronRight' />
+            </Row>
+          </Col>
 
-        {obj['$source'] && obj['$source']['va'] && (
-          <Row>
-            <Col span={8}>
-              <Row className={'relative justify-between break-words'}>
-                <Text
-                  level={7}
-                  type={'title'}
-                  extraClass={'m-0'}
-                  weight={'thin'}
-                >
-                  Source
-                </Text>
-                <SVG name={`ChevronRight`} />
-              </Row>
-            </Col>
+          <Col className='fa-truncate-150 break-words'>
+            <Text level={7} type='title' extraClass='ml-4' weight='thin'>
+              {obj.$type.va}
+            </Text>
+          </Col>
+        </Row>
+      )}
 
-            <Col className={`fa-truncate-150 break-words`}>
-              <Text
-                level={7}
-                type={'title'}
-                extraClass={'ml-4'}
-                weight={'thin'}
-              >
-                {obj['$source']['va']}
+      {obj.$source && obj.$source.va && (
+        <Row>
+          <Col span={8}>
+            <Row className='relative justify-between break-words'>
+              <Text level={7} type='title' extraClass='m-0' weight='thin'>
+                Source
               </Text>
-            </Col>
-          </Row>
-        )}
+              <SVG name='ChevronRight' />
+            </Row>
+          </Col>
 
-        {obj['$campaign'] && obj['$campaign']['va'] && (
-          <Row>
-            <Col span={8}>
-              <Row className={'relative justify-between break-words'}>
-                <Text
-                  level={7}
-                  type={'title'}
-                  extraClass={'m-0'}
-                  weight={'thin'}
-                >
-                  Campaign
-                </Text>
-                <SVG name={`ChevronRight`} />
-              </Row>
-            </Col>
+          <Col className='fa-truncate-150 break-words'>
+            <Text level={7} type='title' extraClass='ml-4' weight='thin'>
+              {obj.$source.va}
+            </Text>
+          </Col>
+        </Row>
+      )}
 
-            <Col className={`fa-truncate-150 break-words`}>
-              <Text
-                level={7}
-                type={'title'}
-                extraClass={'ml-4'}
-                weight={'thin'}
-              >
-                {obj['$campaign']['va']}
+      {obj.$campaign && obj.$campaign.va && (
+        <Row>
+          <Col span={8}>
+            <Row className='relative justify-between break-words'>
+              <Text level={7} type='title' extraClass='m-0' weight='thin'>
+                Campaign
               </Text>
-            </Col>
-          </Row>
-        )}
+              <SVG name='ChevronRight' />
+            </Row>
+          </Col>
 
-        {obj['$channel'] && obj['$channel']['va'] && (
-          <Row>
-            <Col span={8}>
-              <Row className={'relative justify-between break-words'}>
-                <Text
-                  level={7}
-                  type={'title'}
-                  extraClass={'m-0'}
-                  weight={'thin'}
-                >
-                  Channel
-                </Text>
-                <SVG name={`ChevronRight`} />
-              </Row>
-            </Col>
+          <Col className='fa-truncate-150 break-words'>
+            <Text level={7} type='title' extraClass='ml-4' weight='thin'>
+              {obj.$campaign.va}
+            </Text>
+          </Col>
+        </Row>
+      )}
 
-            <Col className={`fa-truncate-150 break-words`}>
-              <Text
-                level={7}
-                type={'title'}
-                extraClass={'ml-4'}
-                weight={'thin'}
-              >
-                {obj['$channel']['va']}
+      {obj.$channel && obj.$channel.va && (
+        <Row>
+          <Col span={8}>
+            <Row className='relative justify-between break-words'>
+              <Text level={7} type='title' extraClass='m-0' weight='thin'>
+                Channel
               </Text>
-            </Col>
-          </Row>
-        )}
-      </Col>
-    );
-  };
+              <SVG name='ChevronRight' />
+            </Row>
+          </Col>
+
+          <Col className='fa-truncate-150 break-words'>
+            <Text level={7} type='title' extraClass='ml-4' weight='thin'>
+              {obj.$channel.va}
+            </Text>
+          </Col>
+        </Row>
+      )}
+    </Col>
+  );
 
   const renderTitle = () => {
     let title = null;
     if (touchPointState.state === 'list') {
       title = (
-        <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} id={'fa-at-text--page-title'}>
+        <Text
+          type='title'
+          level={3}
+          weight='bold'
+          extraClass='m-0'
+          id='fa-at-text--page-title'
+        >
           Touchpoints
         </Text>
       );
     }
     if (touchPointState.state === 'add') {
       title = (
-        <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} id={'fa-at-text--page-title'}>
+        <Text
+          type='title'
+          level={3}
+          weight='bold'
+          extraClass='m-0'
+          id='fa-at-text--page-title'
+        >
           Add new Touchpoint
         </Text>
       );
@@ -326,7 +283,13 @@ const Touchpoints = ({
 
     if (touchPointState.state === 'edit') {
       title = (
-        <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} id={'fa-at-text--page-title'}>
+        <Text
+          type='title'
+          level={3}
+          weight='bold'
+          extraClass='m-0'
+          id='fa-at-text--page-title'
+        >
           Edit Touchpoint
         </Text>
       );
@@ -337,15 +300,15 @@ const Touchpoints = ({
   const renderTitleActions = () => {
     let titleAction = null;
     if (touchPointState.state === 'list') {
-      if (tabNo !== '1') {
+      if (tabNo !== '1' && tabNo !== '2') {
         titleAction = (
           <Button
-            size={'large'}
+            size='large'
             onClick={() => {
               setTouchPointState({ state: 'add', index: 0 });
             }}
           >
-            <SVG name={'plus'} extraClass={'mr-2'} size={16} />
+            <SVG name='plus' extraClass='mr-2' size={16} />
             Add New
           </Button>
         );
@@ -382,7 +345,7 @@ const Touchpoints = ({
     otpService.removeTouchPoint(index).then((res) => {
       getOtpObjects();
     });
-    //Handle Error case
+    // Handle Error case
   };
 
   const setTouchPointObj = (tchObj, type) => {
@@ -396,7 +359,7 @@ const Touchpoints = ({
   };
 
   const onTchSave = (tchObj, index = -1) => {
-    if (tabNo !== '1') {
+    if (tabNo !== '1' && tabNo !== '2') {
       // Save OTP
       const otpObj = setTouchPointObj(tchObj, getCRMType());
       if (touchPointState.state === 'edit') {
@@ -416,45 +379,67 @@ const Touchpoints = ({
   };
 
   const getCRMType = () => {
-    if (tabNo === '2') return 'hubspot';
-    if (tabNo === '3') return 'salesforce';
+    if (tabNo === '3') return 'hubspot';
+    if (tabNo === '4') return 'salesforce';
     if (tabNo === '1') return 'digital';
+    if (tabNo === '2') return 'emailUTM';
   };
 
   const renderTouchPointContent = () => {
     let touchPointContent = null;
     if (touchPointState.state === 'list') {
       touchPointContent = (
-        <Tabs activeKey={`${tabNo}`} onChange={callback}>
+        <Tabs activeKey={`${tabNo}`} onChange={(key) => changeTabNo(key)}>
           <TabPane tab='Digital Marketing' key='1'>
             <MarketingInteractions />
           </TabPane>
+          <TabPane tab='Email tracking' key='2'>
+            <EmailClicks />
+          </TabPane>
 
-          <TabPane tab='Hubspot' key='2'>
-            <div className={`mb-10 pl-4 mt-10`}>
-              <Table
-                className='fa-table--basic mt-4'
-                columns={columns}
-                dataSource={touchPointsData.filter(
-                  (obj) => obj.crm_type === getCRMType()
-                )}
-                pagination={false}
-                loading={touchPointState.loading}
-              />
+          <TabPane tab='Hubspot' key='3'>
+            <div className='mb-10 mt-2'>
+              {touchPointsData.filter((obj) => obj.crm_type === getCRMType())
+                .length > 0 ? (
+                <Table
+                  className='fa-table--basic'
+                  columns={columns}
+                  dataSource={touchPointsData.filter(
+                    (obj) => obj.crm_type === getCRMType()
+                  )}
+                  pagination={false}
+                  loading={touchPointState.loading}
+                />
+              ) : (
+                <EmptyScreen
+                  learnMore='https://help.factors.ai/'
+                  loading={touchPointState.loading}
+                  title='Record offline touchpoints from HubSpot to attribute them accurately to leads, opportunities, and pipeline stages. Apply custom rules to define your touchpoints accurately.'
+                />
+              )}
             </div>
           </TabPane>
 
-          <TabPane tab='Salesforce' key='3'>
-            <div className={`mb-10 pl-4 mt-10`}>
-              <Table
-                className='fa-table--basic mt-4'
-                columns={columns}
-                dataSource={touchPointsData.filter(
-                  (obj) => obj.crm_type === getCRMType()
-                )}
-                pagination={false}
-                loading={touchPointState.loading}
-              />
+          <TabPane tab='Salesforce' key='4'>
+            <div className='mb-10 mt-2'>
+              {touchPointsData.filter((obj) => obj.crm_type === getCRMType())
+                .length > 0 ? (
+                <Table
+                  className='fa-table--basic'
+                  columns={columns}
+                  dataSource={touchPointsData.filter(
+                    (obj) => obj.crm_type === getCRMType()
+                  )}
+                  pagination={false}
+                  loading={touchPointState.loading}
+                />
+              ) : (
+                <EmptyScreen
+                  learnMore='https://help.factors.ai/'
+                  loading={touchPointState.loading}
+                  title='Record offline touchpoints from Salesforce to attribute them accurately to leads, opportunities, and pipeline stages. Apply custom rules to define your touchpoints accurately.'
+                />
+              )}
             </div>
           </TabPane>
         </Tabs>
@@ -486,37 +471,27 @@ const Touchpoints = ({
   };
 
   return (
-    <div className={'fa-container'}>
+    <div className='fa-container'>
       <Row gutter={[24, 24]} justify='center'>
         <Col span={22}>
           <Row>
             <Col span={12}>{renderTitle()}</Col>
             <Col span={12}>
-              <div className={'flex justify-end'}>{renderTitleActions()}</div>
+              <div className='flex justify-end'>{renderTitleActions()}</div>
             </Col>
           </Row>
-          <Row className={'mt-4'}>
+          <Row className='mt-4'>
             <Col span={24}>
-              <Text
-                type={'title'}
-                level={7}
-                color={'grey-2'}
-                extraClass={'m-0'}
-              >
+              <Text type='title' level={7} color='grey' extraClass='m-0'>
                 Effortlessly map and standardize your marketing parameters.
                 Connect and align UTMs and other parameters used across your
                 marketing efforts to a standardized set.
               </Text>
-              <Text
-                type={'title'}
-                level={7}
-                color={'grey-2'}
-                extraClass={'m-0 mt-2'}
-              >
+              <Text type='title' level={7} color='grey' extraClass='m-0 mt-2'>
                 Query and filter by different parameter values within Factors,
                 enabling seamless tracking and analysis of customer touchpoints
               </Text>
-              <div className={'mt-6'}>{renderTouchPointContent()}</div>
+              <div className='mt-6'>{renderTouchPointContent()}</div>
             </Col>
           </Row>
         </Col>

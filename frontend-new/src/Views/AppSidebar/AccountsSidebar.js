@@ -3,10 +3,12 @@ import { useDispatch, useSelector } from 'react-redux';
 import cx from 'classnames';
 import { Button } from 'antd';
 import noop from 'lodash/noop';
-import { SVG, Text } from 'Components/factorsComponents';
+import { SVG as Svg, Text } from 'Components/factorsComponents';
 import {
   setAccountPayloadAction,
-  setNewSegmentModeAction
+  setDrawerVisibleAction,
+  setNewSegmentModeAction,
+  toggleAccountsTab
 } from 'Reducers/accountProfilesView/actions';
 import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
 import { selectSegments } from 'Reducers/timelines/selectors';
@@ -14,12 +16,12 @@ import ControlledComponent from 'Components/ControlledComponent/ControlledCompon
 import { useHistory } from 'react-router-dom';
 import { reorderDefaultDomainSegmentsToTop } from 'Components/Profile/AccountProfiles/accountProfiles.helpers';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
+import { PathUrls } from 'Routes/pathUrls';
 import styles from './index.module.scss';
 import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSearch from './SidebarSearch';
 import { defaultSegmentIconsMapping } from './appSidebar.constants';
 import { getSegmentColorCode } from './appSidebar.helpers';
-import { PathUrls } from 'Routes/pathUrls';
 
 function NewSegmentItem() {
   return <SidebarMenuItem text='Untitled Segment 1' isActive onClick={noop} />;
@@ -35,6 +37,7 @@ function SegmentItem({ segment }) {
   const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
 
   const changeActiveSegment = () => {
+    dispatch(setDrawerVisibleAction(false));
     dispatch(setNewSegmentModeAction(false));
     dispatch(setAccountPayloadAction({ source: GROUP_NAME_DOMAINS, segment }));
     history.replace({ pathname: `/accounts/segments/${segment.id}` });
@@ -94,6 +97,7 @@ function AccountsSidebar() {
               searchText={searchText}
               setSearchText={setSearchText}
               placeholder='Search segment'
+              onFocusSearch={() => dispatch(setDrawerVisibleAction(false))}
             />
             <ControlledComponent controller={newSegmentMode}>
               <NewSegmentItem />
@@ -120,11 +124,12 @@ function AccountsSidebar() {
           )}
           onClick={() => {
             history.replace(PathUrls.ProfileAccounts);
+            dispatch(toggleAccountsTab('accounts'));
             dispatch(setNewSegmentModeAction(true));
             dispatch(setAccountPayloadAction({}));
           }}
         >
-          <SVG
+          <Svg
             name='plus'
             size={16}
             extraClass={styles.sidebar_action_button__content}

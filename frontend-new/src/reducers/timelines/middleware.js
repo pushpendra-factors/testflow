@@ -8,7 +8,10 @@ import {
   fetchSegments,
   updateSegment,
   deleteSegmentByID,
-  fetchAccountOverview
+  fetchAccountOverview,
+  fetchTop100Events,
+  fetchConfiguredUserProperties,
+  fetchConfiguredEventProperties
 } from '.';
 import { formatAccountTimeline, formatUsersTimeline } from './utils';
 import { deleteSegmentAction } from './actions';
@@ -21,10 +24,7 @@ export const getProfileAccounts =
         .then((response) => {
           const data = response.data?.map((account) => ({
             ...account,
-            identity: account.identity,
-            account: { name: account.name, host: account?.host_name },
-            tableProps: account.table_props,
-            lastActivity: account.last_activity
+            domain: { id: account.identity, name: account?.domain_name }
           }));
           resolve(
             dispatch({
@@ -47,18 +47,29 @@ export const getProfileAccounts =
   };
 
 export const getProfileAccountDetails =
-  (projectId, id, source, config) => (dispatch) => {
+  (projectId, id, source) => (dispatch) => {
     dispatch({ type: 'FETCH_PROFILE_ACCOUNT_DETAILS_LOADING' });
     return new Promise((resolve) => {
       fetchProfileAccountDetails(projectId, id, source)
         .then((response) => {
-          const data = formatAccountTimeline(response.data, config);
-          resolve(
-            dispatch({
-              type: 'FETCH_PROFILE_ACCOUNT_DETAILS_FULFILLED',
-              payload: data
-            })
-          );
+          const data = formatAccountTimeline(response.data);
+          const userPropertiesMap = {};
+          const eventPropertiesMap = {};
+          data.events.forEach((event) => {
+            eventPropertiesMap[event.id] = event.properties;
+          });
+          dispatch({
+            type: 'FETCH_PROFILE_ACCOUNT_DETAILS_FULFILLED',
+            payload: data
+          });
+          dispatch({
+            type: 'FETCH_USER_CONFIG_PROPERTIES_MAP_FULFILLED',
+            payload: userPropertiesMap
+          });
+          dispatch({
+            type: 'FETCH_EVENT_CONFIG_PROPERTIES_MAP_FULFILLED',
+            payload: eventPropertiesMap
+          });
         })
         .catch((err) => {
           logger.error(err);
@@ -224,3 +235,68 @@ export const setActivePageviewEvent = (eventName) => ({
   type: 'SET_PAGEVIEW',
   payload: eventName
 });
+
+export const getTop100Events = (projectID, domainName) => async (dispatch) => {
+  dispatch({ type: 'FETCH_TOP100_EVENTS_LOADING', domainName });
+  try {
+    const response = await fetchTop100Events(projectID, domainName);
+    const events = response.data.map((event) => ({
+      ...event,
+      username: event.username || event.user_id,
+      enabled: true
+    }));
+    const eventPropertiesMap = {};
+    events.forEach((event) => {
+      eventPropertiesMap[event.id] = event.properties;
+    });
+    dispatch({
+      type: 'FETCH_TOP100_EVENTS_FULFILLED',
+      payload: events || [],
+      domainName
+    });
+    dispatch({
+      type: 'FETCH_EVENT_CONFIG_PROPERTIES_MAP_FULFILLED',
+      payload: eventPropertiesMap
+    });
+  } catch (err) {
+    dispatch({ type: 'FETCH_TOP100_EVENTS_FAILED', domainName });
+    logger.error(err);
+  }
+};
+
+export const getConfiguredUserProperties =
+  (projectID, userID, isAnonymous) => (dispatch) =>
+    new Promise((resolve, reject) => {
+      fetchConfiguredUserProperties(projectID, userID, isAnonymous)
+        .then((response) => {
+          resolve(
+            dispatch({
+              type: 'FETCH_USER_CONFIG_PROPERTIES_FULFILLED',
+              payload: response.data,
+              userID
+            })
+          );
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });
+
+export const getConfiguredEventProperties =
+  (projectID, eventID, eventName) => (dispatch) =>
+    new Promise((resolve, reject) => {
+      fetchConfiguredEventProperties(projectID, eventID, eventName)
+        .then((response) => {
+          console.log('response--->', response);
+          resolve(
+            dispatch({
+              type: 'FETCH_EVENT_CONFIG_PROPERTIES_FULFILLED',
+              payload: response.data,
+              eventID
+            })
+          );
+        })
+        .catch((err) => {
+          reject(err);
+        });
+    });

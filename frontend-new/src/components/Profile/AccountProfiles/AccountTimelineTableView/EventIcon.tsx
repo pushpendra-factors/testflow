@@ -17,7 +17,13 @@ function EventIcon({ icon, size = 16 }: EventIconProps): JSX.Element {
 
   return (
     <div className='event-icon' style={styles as React.CSSProperties}>
-      <img src={`/assets/icons/${showIcon}.svg`} alt='' loading='lazy' />
+      <img
+        src={`/assets/icons/${showIcon}.svg`}
+        alt=''
+        loading='lazy'
+        width={size}
+        height={size}
+      />
     </div>
   );
 }

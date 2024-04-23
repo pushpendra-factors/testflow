@@ -113,11 +113,12 @@ type GroupEventsCountResult struct {
 }
 
 type PerAccountScore struct {
-	Id        string                 `json:"id"`
-	Score     float32                `json:"score"`
-	Timestamp string                 `json:"timestamp"`
-	Trend     map[string]float32     `json:"trend"`
-	Debug     map[string]interface{} `json:"debug"`
+	Id                 string                 `json:"id"`
+	Score              float32                `json:"score"`
+	Timestamp          string                 `json:"timestamp"`
+	Trend              map[string]float32     `json:"trend"`
+	LastEventTimeStamp string                 `json:"lastevent_ts"`
+	Debug              map[string]interface{} `json:"debug"`
 }
 
 type PerUserScoreOnDay struct {
@@ -157,10 +158,11 @@ type PerDayScore struct {
 }
 
 type LatestScore struct {
-	Date        int64                       `json:"date"`
-	EventsCount map[string]float64          `json:"events"`
-	Properties  map[string]map[string]int64 `json:"prop"`
-	TopEvents   map[string]float64
+	Date               int64                       `json:"date"`
+	EventsCount        map[string]float64          `json:"events"`
+	Properties         map[string]map[string]int64 `json:"prop"`
+	TopEvents          map[string]float64
+	LastEventTimeStamp string `json:"lastevent_ts"`
 }
 
 type DbUpdateAccScoring struct {

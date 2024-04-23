@@ -5,7 +5,7 @@ import { abbreviateNumber } from '../../utils/global';
 
 function Number({
   number,
-  className,
+  className = '',
   shortHand = false,
   suffix = '',
   prefix = ''
@@ -13,8 +13,8 @@ function Number({
   const finalVal = shortHand
     ? abbreviateNumber(number)
     : isArray(number)
-    ? number[0]
-    : number;
+      ? number[0]
+      : number;
 
   return (
     <span className={className} data-testid='number'>

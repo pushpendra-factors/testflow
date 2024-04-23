@@ -1,13 +1,14 @@
 import React from 'react';
-import { Text } from 'Components/factorsComponents';
+import { SVG, Text } from 'Components/factorsComponents';
 import MomentTz from 'Components/MomentTz';
 import isEqual from 'lodash/isEqual';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import truncateURL from 'Utils/truncateURL';
-import { Popover, Tag } from 'antd';
+import { Button, Popover, Tag, Tooltip } from 'antd';
 import { ACCOUNTS_TABLE_COLUMN_TYPES, COLUMN_TYPE_PROPS } from 'Utils/table';
-import { EngagementTag } from '../constants';
+import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
+import { EngagementTag, placeholderIcon } from '../constants';
 import {
   getHost,
   getPropType,
@@ -16,8 +17,6 @@ import {
   sortStringColumn
 } from '../utils';
 import styles from './index.module.scss';
-
-const placeholderIcon = '/assets/avatar/company-placeholder.png';
 
 export const defaultSegmentsList = [
   'In Hubspot',
@@ -28,21 +27,13 @@ export const defaultSegmentsList = [
 ];
 
 export const reorderDefaultDomainSegmentsToTop = (segments = []) => {
-  segments?.sort((a, b) => {
-    const aIsMatch = defaultSegmentsList.includes(a?.name);
-    const bIsMatch = defaultSegmentsList.includes(b?.name);
-
-    if (aIsMatch && !bIsMatch) {
-      return -1;
-    }
-    if (!aIsMatch && bIsMatch) {
-      return 1;
-    }
-
-    return 0;
-  });
-
-  return segments;
+  const defaultSegments = segments
+    .filter((segment) => defaultSegmentsList.includes(segment.name))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const createdSegments = segments
+    .filter((segment) => !defaultSegmentsList.includes(segment.name))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  return defaultSegments.concat(createdSegments);
 };
 
 export const getGroupList = (groupOptions) => {
@@ -100,7 +91,6 @@ const EngagementSignalTag = ({ eventName, score, displayNames }) => (
 );
 
 const getTablePropColumn = ({
-  headerClassStr,
   prop,
   groupPropNames,
   eventNames,
@@ -219,54 +209,64 @@ export const getColumns = ({
   eventNames,
   listProperties,
   defaultSorterInfo,
-  projectDomainsList
+  projectDomainsList,
+  onClickOpen,
+  onClickOpenNewTab
 }) => {
   const headerClassStr =
     'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
 
   const accountColumn = {
     title: <div className={headerClassStr}>Account Domain</div>,
-    dataIndex: 'account',
-    key: 'account',
+    dataIndex: 'domain',
+    key: 'domain',
     width: 264,
     type: 'string',
     fixed: 'left',
-    ellipsis: true,
     showSorterTooltip: null,
-    sorter: (a, b) => sortStringColumn(a.account.name, b.account.name),
-    render: (item) =>
+    sorter: (a, b) => sortStringColumn(a.domain.name, b.domain.name),
+    render: (domain) =>
       (
-        <div className='flex items-center' id={item.name}>
-          <img
-            src={`https://logo.clearbit.com/${getHost(item.host)}`}
-            onError={(e) => {
-              if (e.target.src !== placeholderIcon) {
-                e.target.src = placeholderIcon;
-              }
-            }}
-            alt=''
-            width='24'
-            height='24'
-            loading='lazy'
-          />
-          <span
-            style={{
-              textOverflow: 'ellipsis',
-              overflow: 'hidden',
-              whiteSpace: 'nowrap'
-            }}
-            className='ml-2'
-          >
-            <Text
-              type='title'
-              level={7}
-              extraClass='truncate'
-              truncate
-              charLimit={25}
+        <div className='flex items-center justify-between'>
+          <div className='inline-flex gap--8' id={domain.id}>
+            <img
+              src={`https://logo.clearbit.com/${getHost(domain.name)}`}
+              onError={(e) => {
+                if (e.target.src !== placeholderIcon) {
+                  e.target.src = placeholderIcon;
+                }
+              }}
+              alt=''
+              width='24'
+              height='24'
+              loading='lazy'
+            />
+            <TextWithOverflowTooltip text={domain.name} />
+          </div>
+          <div className='flex items-center'>
+            <Button
+              size='small'
+              onClick={(e) => {
+                e.stopPropagation();
+                onClickOpen(domain);
+              }}
+              className='mr-1 preview-btn'
             >
-              {item.name}
-            </Text>
-          </span>
+              Open
+            </Button>
+            <Tooltip title='Open in new tab'>
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClickOpenNewTab(domain);
+                }}
+                className='preview-btn'
+                size='small'
+              >
+                <SVG name='ArrowUpRightSquare' size='12' />
+              </Button>
+            </Tooltip>
+          </div>
         </div>
       ) || '-'
   };
@@ -284,8 +284,8 @@ export const getColumns = ({
 
   const lastActivityColumn = {
     title: <div className={headerClassStr}>Last Activity</div>,
-    dataIndex: 'lastActivity',
-    key: 'lastActivity',
+    dataIndex: 'last_activity',
+    key: 'last_activity',
     width: 224,
     type: 'datetime',
     align: 'left',
@@ -309,7 +309,7 @@ export const getColumns = ({
 
   if (!hasSorter) {
     columns.forEach((column) => {
-      if (['$engagement_level', 'lastActivity'].includes(column.key)) {
+      if (['$engagement_level', 'last_activity'].includes(column.key)) {
         column.defaultSortOrder = 'descend';
       }
     });

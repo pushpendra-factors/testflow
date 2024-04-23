@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ConnectedProps, connect, useSelector } from 'react-redux';
 import { SVG, Text } from 'Components/factorsComponents';
 import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
 import { ALPHANUMSTR, iconColors } from 'Components/Profile/constants';
@@ -7,12 +7,33 @@ import { propValueFormat } from 'Components/Profile/utils';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import { UserDetailsProps } from 'Components/Profile/types';
 import { Avatar, Button } from 'antd';
+import { bindActionCreators } from 'redux';
+import { getConfiguredUserProperties } from 'Reducers/timelines/middleware';
 
-function UserDetails({ user, onUpdate }: UserDetailsProps) {
-  const { userPropNames } = useSelector((state: any) => state.coreQuery);
-  const { currentProjectSettings } = useSelector((state: any) => state.global);
-
+function UserDetails({
+  user,
+  userPropsType,
+  onUpdate,
+  getConfiguredUserProperties
+}: ComponentProps) {
   const [sortableItems, setSortableItems] = useState<string[]>([]);
+
+  const { userPropNames } = useSelector((state: any) => state.coreQuery);
+  const { active_project: activeProject, currentProjectSettings } = useSelector(
+    (state: any) => state.global
+  );
+  const { userConfigProperties } = useSelector((state: any) => state.timelines);
+
+  const userProperties = useMemo(() => {
+    if (!user) return {};
+    return userConfigProperties[user.id] || {};
+  }, [user, userConfigProperties]);
+
+  useEffect(() => {
+    if (!user) return;
+    if (!userConfigProperties[user?.id])
+      getConfiguredUserProperties(activeProject.id, user.id, user.isAnonymous);
+  }, [activeProject, user, userConfigProperties]);
 
   const renderUsername = (userName: string, isAnon: boolean) => {
     if (isAnon) {
@@ -72,9 +93,9 @@ function UserDetails({ user, onUpdate }: UserDetailsProps) {
           />
         </div>
       </div>
-      <div>
+      <div className='event-drawer-items'>
         {sortableItems.map((property, index) => {
-          const propType = 'categorical';
+          const propType = userPropsType[property] || 'categorical';
           return (
             <div className='leftpane-prop justify-between'>
               <div className='flex items-center justify-start'>
@@ -84,7 +105,7 @@ function UserDetails({ user, onUpdate }: UserDetailsProps) {
                     level={8}
                     color='grey'
                     truncate
-                    charLimit={44}
+                    charLimit={40}
                     extraClass='m-0'
                   >
                     {userPropNames[property] || PropTextFormat(property)}
@@ -93,12 +114,12 @@ function UserDetails({ user, onUpdate }: UserDetailsProps) {
                     type='title'
                     level={7}
                     truncate
-                    charLimit={44}
+                    charLimit={36}
                     extraClass='m-0'
                   >
                     {propValueFormat(
                       property,
-                      user.properties?.[property],
+                      userProperties?.[property],
                       propType
                     ) || '-'}
                   </Text>
@@ -121,4 +142,16 @@ function UserDetails({ user, onUpdate }: UserDetailsProps) {
   );
 }
 
-export default UserDetails;
+const mapDispatchToProps = (dispatch: any) =>
+  bindActionCreators(
+    {
+      getConfiguredUserProperties
+    },
+    dispatch
+  );
+
+const connector = connect(null, mapDispatchToProps);
+type ReduxProps = ConnectedProps<typeof connector>;
+type ComponentProps = ReduxProps & UserDetailsProps;
+
+export default connector(UserDetails);
