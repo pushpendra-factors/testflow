@@ -142,6 +142,7 @@ func TestMain(m *testing.M) {
 		AllowedGoRoutines:                                   4,
 		AssociateDealToDomainByProjectID:                    "*",
 		ProcessOnlyAccountSegments:                          true,
+		UseOptimisedEventsQueryProjectIDs:                   "*",
 		ChargebeeApiKey:                                     *chargebeeApiKey,
 		ChargebeeSiteName:                                   *chargebeeSiteName,
 		AggrEventPropertyValuesCacheByProjectID:             "*",
