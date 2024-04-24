@@ -911,7 +911,7 @@ func buildAddJoinForEventAnalyticsGroupQuery(projectID int64, groupID, scopeGrou
 		if hasGlobalGroupPropertiesFilter || (isAccountSegment) {
 			groupUsersJoin := fmt.Sprintf(" LEFT JOIN users as user_groups on events.user_id = user_groups.id AND user_groups.project_id = ? LEFT JOIN "+
 				"users as group_users ON user_groups.group_%d_user_id = group_users.group_%d_user_id AND group_users.project_id = ? "+
-				"AND group_users.is_group_user = true", scopeGroupID, scopeGroupID)
+				"AND group_users.is_group_user = true AND group_users.is_deleted = false ", scopeGroupID, scopeGroupID)
 
 			jointStmnt = groupUsersJoin
 			params = append(params, projectID)
@@ -950,7 +950,7 @@ func buildAddJoinForEventAnalyticsGroupQuery(projectID int64, groupID, scopeGrou
 				"users AS user_groups ON users.customer_user_id = user_groups.customer_user_id AND "+
 				"user_groups.project_id = ? AND user_groups.group_%d_user_id IS NOT NULL AND user_groups.source = ? "+
 				"LEFT JOIN users AS group_users ON user_groups.group_%d_user_id = group_users.id AND group_users.project_id = ? AND "+
-				"group_users.source = ? ", scopeGroupID, scopeGroupID)
+				"group_users.source = ? AND group_users.is_deleted = false ", scopeGroupID, scopeGroupID)
 			return addSelect, []interface{}{projectID, projectID, model.GroupUserSource[source], projectID, model.GroupUserSource[source]}
 		}
 
@@ -1524,7 +1524,7 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 				termStmnt = termStmnt + " " + propertiesJoinStmnt
 				*qParams = append(*qParams, propertiesJoinParams...)
 			} else {
-				termStmnt = termStmnt + " " + "LEFT JOIN users AS group_users ON " + refStep + ".coal_group_user_id=group_users.id"
+				termStmnt = termStmnt + " " + "LEFT JOIN users AS group_users ON " + refStep + ".coal_group_user_id=group_users.id AND group_users.is_deleted = false "
 				// Using string format for project_id condition, as the value is from internal system.
 				termStmnt = termStmnt + " AND " + fmt.Sprintf("group_users.project_id = %d", projectID)
 			}

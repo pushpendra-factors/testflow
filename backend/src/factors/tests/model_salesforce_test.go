@@ -6530,3 +6530,129 @@ func TestSalesforceDeletedRecord(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, true, (*propertiesMap)["$salesforce_lead_isdeleted"])
 }
+
+func TestSalesforceDeleteRecordAnalytics(t *testing.T) {
+
+	project, _, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	accountCreateDate := U.TimeNowZ().AddDate(0, 0, -1)
+	var records []model.SalesforceRecord
+
+	account1 := map[string]interface{}{
+		"Id":               "1",
+		"Name":             "account_1",
+		"Website":          "abc.com",
+		"CreatedDate":      accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+	}
+
+	records = []model.SalesforceRecord{account1}
+	err = store.GetStore().BuildAndUpsertDocumentInBatch(project.ID, model.SalesforceDocumentTypeNameAccount, records)
+	assert.Nil(t, err)
+	account1 = map[string]interface{}{
+		"Id":               "2",
+		"Name":             "account_2",
+		"Website":          "abc.com",
+		"CreatedDate":      accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+	}
+
+	records = []model.SalesforceRecord{account1}
+	err = store.GetStore().BuildAndUpsertDocumentInBatch(project.ID, model.SalesforceDocumentTypeNameAccount, records)
+	assert.Nil(t, err)
+
+	enrichStatus, _ := IntSalesforce.Enrich(project.ID, 2, nil, 1, 0, 45, "")
+	assert.Len(t, enrichStatus, 1)
+
+	// event analytics
+	queryEventAnalytics := model.Query{
+		From: accountCreateDate.Unix() - 500,
+		To:   accountCreateDate.Unix() + 500,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       util.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_SALESFORCE_ACCOUNT,
+				Property:  "$salesforce_account_name",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		Class:           model.QueryClassInsights,
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+
+	result, errCode, _ := store.GetStore().Analyze(project.ID, queryEventAnalytics, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+
+	assert.Equal(t, "account_2", result.Rows[0][0])
+	assert.Equal(t, float64(1), result.Rows[0][1])
+
+	// funnel analytics
+	queryFunnelAnalytics := model.Query{
+		From: accountCreateDate.Unix() - 500,
+		To:   accountCreateDate.Unix() + 500,
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       util.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       util.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED,
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_SALESFORCE_ACCOUNT,
+				Property:  "$salesforce_account_name",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		Class:           model.QueryClassFunnel,
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+
+	result, errCode, _ = store.GetStore().Analyze(project.ID, queryFunnelAnalytics, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, "account_2", result.Rows[1][0])
+	assert.Equal(t, float64(1), result.Rows[1][1])
+	assert.Equal(t, float64(1), result.Rows[1][2])
+
+	account1 = map[string]interface{}{
+		"Id":               "2",
+		"Name":             "account_2",
+		"Website":          "abc.com",
+		"CreatedDate":      accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"LastModifiedDate": accountCreateDate.Format(model.SalesforceDocumentDateTimeLayout),
+		"IsDeleted":        true,
+	}
+
+	records = []model.SalesforceRecord{account1}
+	err = store.GetStore().BuildAndUpsertDocumentInBatch(project.ID, model.SalesforceDocumentTypeNameAccount, records)
+	assert.Nil(t, err)
+
+	enrichStatus, _ = IntSalesforce.Enrich(project.ID, 2, nil, 1, 0, 45, "")
+	assert.Len(t, enrichStatus, 1)
+
+	result, errCode, _ = store.GetStore().Analyze(project.ID, queryEventAnalytics, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, "account_1", result.Rows[0][0])
+	assert.Equal(t, float64(1), result.Rows[0][1])
+
+	result, errCode, _ = store.GetStore().Analyze(project.ID, queryFunnelAnalytics, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, "account_1", result.Rows[1][0])
+	assert.Equal(t, float64(1), result.Rows[1][1])
+	assert.Equal(t, float64(1), result.Rows[1][2])
+}
