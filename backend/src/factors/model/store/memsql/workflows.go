@@ -31,7 +31,7 @@ func (store *MemSQL) GetAllWorkflowTemplates() ([]model.AlertTemplate, int) {
 	return alertTemplates, http.StatusOK
 }
 
-func (store *MemSQL) GetAllWorklfowsByProject(projectID int64) ([]model.Workflow, int, error) {
+func (store *MemSQL) GetAllWorklfowsByProject(projectID int64) ([]model.WorkflowAlertBody, int, error) {
 	if projectID == 0 {
 		return nil, http.StatusBadRequest, fmt.Errorf("invalid parameter")
 	}
@@ -43,18 +43,29 @@ func (store *MemSQL) GetAllWorklfowsByProject(projectID int64) ([]model.Workflow
 
 	db := C.GetServices().Db
 	workflows := make([]model.Workflow, 0)
-
+	wfAlerts := make([]model.WorkflowAlertBody, 0)
 	err := db.Where("project_id = ?", projectID).Where("is_deleted = ?", false).
 		Order("created_at DESC").Limit(ListLimit).Find(&workflows).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
-			return workflows, http.StatusNotFound, err
+			return wfAlerts, http.StatusNotFound, err
 		}
 		log.WithError(err).Error("Failed to fetch rows of workflows")
 		return nil, http.StatusInternalServerError, err
 	}
 
-	return workflows, http.StatusFound, nil
+	for _, wf := range workflows {
+		var alert model.WorkflowAlertBody 
+		err := U.DecodePostgresJsonbToStructType(wf.AlertBody, &alert)
+		if err != nil {
+			log.WithError(err).Error("Failed to decode alert in the workflow object")
+			continue
+		}
+
+		wfAlerts = append(wfAlerts, alert)
+	}
+
+	return wfAlerts, http.StatusFound, nil
 }
 
 func (store *MemSQL) GetWorkflowById(projectID int64, id string) (*model.Workflow, int, error) {
