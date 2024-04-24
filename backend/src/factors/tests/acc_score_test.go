@@ -253,8 +253,9 @@ func TestAccScoreFilterCountAndScoreEvents(t *testing.T) {
 	e6 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$pageview_1", "et": 165120963, "ecd": 1, "epr": {"$browser": "Chrome",  "$channel": "Paid Search", "$city": "Queanbeyan", "$country": "Kenya"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
 	e7 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$form_submitted_1", "et": 165120963, "ecd": 1, "epr": {"$browser": "Chrome", "$channel": "Paid Search", "$city": "Queanbeyan", "$country": "Kenya"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
 	e8 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$session_3", "et": 165120963, "ecd": 1, "epr": {"$browser": "Chrome",  "$channel": "Paid Search", "$city": "Queanbeyan", "$country": "Brazil"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
+	e9 := string(`{"uid": "pp5", "ujt": 1651209638, "en": "$session_3", "et": 165120993, "ecd": 1, "epr": {"$browser": "Chrome",  "$channel": "Paid Search", "$city": "Queanbeyan", "$country": "India"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
 
-	ev := []string{e1, e2, e3, e4, e5, e6, e7, e8}
+	ev := []string{e1, e2, e3, e4, e5, e6, e7, e8, e9}
 	var events []*P.CounterEventFormat = make([]*P.CounterEventFormat, 0)
 
 	projectId := int64(0)
@@ -276,8 +277,9 @@ func TestAccScoreFilterCountAndScoreEvents(t *testing.T) {
 	w6 := M.AccEventWeight{WeightId: "7", Weight_value: 1.0, Is_deleted: false, EventName: "$session"}
 	w7 := M.AccEventWeight{WeightId: "8", Weight_value: 1.0, Is_deleted: false, EventName: "", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Kenya"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
 	w8 := M.AccEventWeight{WeightId: "9", Weight_value: 1.0, Is_deleted: false, EventName: "", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"Brazil"}, Operator: M.EqualsOpStr, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
+	w9 := M.AccEventWeight{WeightId: "10", Weight_value: 1.0, Is_deleted: false, EventName: "$session_3", Rule: []M.WeightKeyValueTuple{{Key: "$country", Value: []string{"India", "Sri Lanka", "Cambodia"}, Operator: M.InList, LowerBound: 0, UpperBound: 0, Type: "event", ValueType: "categorical"}}}
 
-	weightRules := []M.AccEventWeight{w0, w1, w2, w3, w4, w5, w6, w7, w8}
+	weightRules := []M.AccEventWeight{w0, w1, w2, w3, w4, w5, w6, w7, w8, w9}
 	finalWeights.WeightConfig = weightRules
 	finalWeights.SaleWindow = 10
 
@@ -289,8 +291,9 @@ func TestAccScoreFilterCountAndScoreEvents(t *testing.T) {
 	ev_r6 := []string{"8"}
 	ev_r7 := []string{"8"}
 	ev_r8 := []string{"9"}
+	ev_r9 := []string{"10"}
 
-	ev_rules := [][]string{ev_r1, ev_r2, ev_r3, ev_r4, ev_r5, ev_r6, ev_r7, ev_r8}
+	ev_rules := [][]string{ev_r1, ev_r2, ev_r3, ev_r4, ev_r5, ev_r6, ev_r7, ev_r8, ev_r9}
 	cr, err := T.DeduplicateWeights(finalWeights) //new ids will not be added, as weight id is already filled
 	assert.Nil(t, err)
 	for _, w := range cr.WeightConfig {
@@ -308,7 +311,9 @@ func TestAccScoreFilterCountAndScoreEvents(t *testing.T) {
 		assert.ElementsMatch(t, ids, ev_rules[idx], fmt.Sprintf("events :%d", idx))
 
 	}
-	assert.Equal(t, 6, len(weightmap))
+
+	// update the count  - if new filters are added
+	assert.Equal(t, 7, len(weightmap))
 
 	// score should be half on mid of sale window
 	current_time := time.Now()
@@ -320,7 +325,7 @@ func TestAccScoreFilterCountAndScoreEvents(t *testing.T) {
 	assert.Nil(t, err)
 	// expected counts map is all ones
 	//countsmap[id]count [1:1 2:1 3:2 4:1 7:2 8:3 9:1]
-	assert.Equal(t, account_score, float32(5.500), "score miscalculation")
+	assert.Equal(t, float32(6), account_score, "score miscalculation")
 	assert.Equal(t, decayValue, 0.5, "decay value miscalculation")
 
 	//last day goes to zero as decay is 1 .
