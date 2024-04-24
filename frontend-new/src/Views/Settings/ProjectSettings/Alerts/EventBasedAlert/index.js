@@ -134,7 +134,7 @@ const EventBasedAlert = ({
   eventPropNames,
   groupProperties,
   groupPropNames,
-  eventUserPropertiesV2,
+  userPropertiesV2,
   userPropNames,
   eventNamesSpecial,
   getGroupProperties,
@@ -416,8 +416,8 @@ const EventBasedAlert = ({
         }
       }
     } else {
-      for (const property in eventUserPropertiesV2) {
-        const nestedArrays = eventUserPropertiesV2[property];
+      for (const property in userPropertiesV2) {
+        const nestedArrays = userPropertiesV2[property];
         DDCategory = _.union(DDCategory, nestedArrays);
       }
     }
@@ -436,7 +436,7 @@ const EventBasedAlert = ({
     queries,
     eventPropertiesV2,
     groupProperties,
-    eventUserPropertiesV2,
+    userPropertiesV2,
     viewAlertDetails,
     alertState
   ]);
@@ -2263,7 +2263,7 @@ const mapStateToProps = (state) => ({
   eventPropertiesV2: state.coreQuery.eventPropertiesV2,
   eventPropNames: state.coreQuery.eventPropNames,
   groupPropNames: state.coreQuery.groupPropNames,
-  eventUserPropertiesV2: state.coreQuery.eventUserPropertiesV2,
+  userPropertiesV2: state.coreQuery.userPropertiesV2,
   userPropNames: state.coreQuery.userPropNames,
   eventNamesSpecial: state.coreQuery.eventNamesSpecial,
   groups: state.coreQuery.groups,

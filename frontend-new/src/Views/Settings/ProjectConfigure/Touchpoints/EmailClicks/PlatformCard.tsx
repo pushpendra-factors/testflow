@@ -91,24 +91,31 @@ const PlatformCard = ({ tags, selectedPlatform }: Props) => {
       <Alert
         message='If you have other UTM tags added in your link, separate these with ‘&’'
         type='info'
+        showIcon
       />
-      <Row className='m-0 mt-2'>
+      <Row className='m-0 mt-4'>
         <Col span={24}>
           <Text type='title' level={6} weight='bold' extraClass='m-0'>
             Example Links
           </Text>
-          <Text type='title' level={7} color='grey-2' extraClass='m-0'>
+          <Text type='title' level={7} color='grey-2' extraClass='m-0 mt-2'>
             If your link to your website is www.acme.com/pricing, add the UTM
             tag like so:
           </Text>
-          <Text type='title' level={7} color='grey' extraClass='m-0'>
-            www.acme.com/pricing?{tags?.[0]}={selectedTags}
+          <Text type='title' level={7} color='grey' extraClass='m-0 mt-2'>
+            www.acme.com/pricing
+            <span className={`${styles.textColor}`}>
+              ?{tags?.[0]}={selectedTags}
+            </span>
           </Text>
-          <Text type='title' level={7} color='grey-2' extraClass='m-0'>
+          <Text type='title' level={7} color='grey-2' extraClass='m-0 mt-2'>
             OR, if you have multiple UTM parameters
           </Text>
-          <Text type='title' level={7} color='grey' extraClass='m-0'>
-            www.acme.com/pricing?utm_source=email&{tags?.[0]}={selectedTags}
+          <Text type='title' level={7} color='grey' extraClass='m-0 mt-2'>
+            www.acme.com/pricing
+            <span className={`${styles.textColor}`}>
+              ?utm_source=email&{tags?.[0]}={selectedTags}
+            </span>
           </Text>
         </Col>
       </Row>
