@@ -90,28 +90,29 @@ func CreateAccountHandler(c *gin.Context) {
 		return
 	}
 
-	if accountPayload.Properties != nil {
+	accountPayload.Properties[U.UP_IS_OFFLINE] = true
 
-		accountPayload.Properties[U.UP_IS_OFFLINE] = true
+	accountPayloadJsonb, err := U.EncodeStructTypeToPostgresJsonb(accountPayload.Properties)
+	if err != nil {
+		logCtx.Error("Failed to check for  group user by group id.")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"Error": "Failed to check for  group user by group id.",
+		})
+		return
+	}
 
-		accountPayloadJsonb, err := U.EncodeStructTypeToPostgresJsonb(accountPayload.Properties)
-		if err != nil {
-			logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to check for  group user by group id.")
-			c.JSON(status, gin.H{
-				"Error": "Failed to check for  group user by group id.",
-			})
-			return
-		}
+	source := model.GetGroupUserSourceNameByGroupName(U.GROUP_NAME_DOMAINS)
 
-		source := model.GetGroupUserSourceNameByGroupName(U.GROUP_NAME_DOMAINS)
+	accountPayloadMaps, _ := U.DecodePostgresJsonb(accountPayloadJsonb)
 
-		accountPayloadMaps, _ := U.DecodePostgresJsonb(accountPayloadJsonb)
-
-		_, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, U.GROUP_NAME_DOMAINS, domainName, groupUserID, accountPayloadMaps, U.TimeNowUnix(), U.TimeNowUnix(), source)
-		if err != nil {
-			logCtx.WithField("err", err).
-				Error("Update user properties on track failed. DB update failed.")
-		}
+	_, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, U.GROUP_NAME_DOMAINS, domainName, groupUserID, accountPayloadMaps, U.TimeNowUnix(), U.TimeNowUnix(), source)
+	if err != nil {
+		logCtx.WithField("err", err).
+			Error("Update user properties on track failed. DB update failed.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"Error": "Update user properties on track failed. DB update failed.",
+		})
+		return
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
@@ -176,30 +177,31 @@ func UpdateAccountHandler(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{
 			"message": "Account not found.",
 		})
+		return
 	}
 
-	if accountPayload.Properties != nil {
+	accountPayload.Properties[U.UP_IS_OFFLINE] = true
 
-		accountPayload.Properties[U.UP_IS_OFFLINE] = true
+	accountPayloadJsonb, err := U.EncodeStructTypeToPostgresJsonb(accountPayload.Properties)
+	if err != nil {
+		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to check for  group user by group id.")
 
-		accountPayloadJsonb, err := U.EncodeStructTypeToPostgresJsonb(accountPayload.Properties)
-		if err != nil {
-			logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to check for  group user by group id.")
+		c.AbortWithError(http.StatusInternalServerError, errors.New("Failed to check for  group user by group id."))
 
-			c.AbortWithError(http.StatusBadRequest, errors.New("Failed to check for  group user by group id."))
+		return
+	}
 
-			return
-		}
+	source := model.GetGroupUserSourceNameByGroupName(U.GROUP_NAME_DOMAINS)
 
-		source := model.GetGroupUserSourceNameByGroupName(U.GROUP_NAME_DOMAINS)
+	accountPayloadMaps, _ := U.DecodePostgresJsonb(accountPayloadJsonb)
 
-		accountPayloadMaps, _ := U.DecodePostgresJsonb(accountPayloadJsonb)
+	_, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, U.GROUP_NAME_DOMAINS, domainName, groupUser.ID, accountPayloadMaps, U.TimeNowUnix(), U.TimeNowUnix(), source)
+	if err != nil {
+		logCtx.WithField("err", err).
+			Error("Update user properties on track failed. DB update failed.")
 
-		_, err = store.GetStore().CreateOrUpdateGroupPropertiesBySource(projectID, U.GROUP_NAME_DOMAINS, domainName, groupUser.ID, accountPayloadMaps, U.TimeNowUnix(), U.TimeNowUnix(), source)
-		if err != nil {
-			logCtx.WithField("err", err).
-				Error("Update user properties on track failed. DB update failed.")
-		}
+		c.AbortWithError(http.StatusInternalServerError, errors.New("Update user properties on track failed. DB update failed."))
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -262,14 +264,15 @@ func TrackAccountEventHandler(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{
 			"message": "Account not found.",
 		})
+		return
 	}
 
 	timestamp, _ := U.GetPropertyValueAsInt64(accountTrackPayload.Event["timestamp"])
 
 	accountPayloadJsonb, err := U.EncodeStructTypeToPostgresJsonb(accountTrackPayload.Event["properties"])
 	if err != nil {
-		logCtx.WithFields(log.Fields{"err_code": status}).Error("Failed to check for  group user by group id.")
-		c.AbortWithError(status, errors.New("Failed to check for  group user by group id."))
+		logCtx.Error("Failed to check for  group user by group id.")
+		c.AbortWithError(http.StatusInternalServerError, errors.New("Failed to check for  group user by group id."))
 		return
 	}
 
