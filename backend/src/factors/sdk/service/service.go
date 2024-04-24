@@ -89,6 +89,7 @@ func main() {
 	excludeBotIPV4AddressByRange := flag.String("exclude_bot_ip_by_range",
 		"", "CIDR ranges for excluding bot traffic.")
 
+	captureSourceInUsersTable := flag.String("capture_source_in_users_table", "", "")
 	deviceServiceUrl := flag.String("device_service_url", "http://0.0.0.0:3000/device_service", "URL for the device detection service")
 	enableDeviceServiceByProjectID := flag.String("enable_device_service_by_project_id", "", "")
 
@@ -139,6 +140,7 @@ func main() {
 		EnableDebuggingForIP:                        *enableDebuggingForIP,
 		BlockedIPProjectTokens:                      *blockedIPProjectTokens,
 		ExcludeBotIPV4AddressByRange:                *excludeBotIPV4AddressByRange,
+		CaptureSourceInUsersTable:                   *captureSourceInUsersTable,
 	}
 	C.InitConf(config)
 
