@@ -2,6 +2,8 @@ from googleads import oauth2
 
 from google.ads.googleads.client import GoogleAdsClient
 
+import time
+
 ADWORDS_CLIENT_USER_AGENT = "FactorsAI (https://www.factors.ai)"
 
 
@@ -27,5 +29,20 @@ class FetchService:
         }   
         if login_customer_id != None and login_customer_id != '':
             credentials["login_customer_id"] = login_customer_id
-        ads_client = GoogleAdsClient.load_from_dict(credentials)
-        return ads_client.get_service(service_name, version=self.NEW_VERSION)
+        
+        return self.get_service_with_retries(credentials, service_name)
+    
+    def get_service_with_retries(self, credentials, service_name):
+        ads_client = None
+        service = None
+        for retry in range(3):
+            try:
+                ads_client = GoogleAdsClient.load_from_dict(credentials)
+                service = ads_client.get_service(service_name, version=self.NEW_VERSION)
+                return service
+            except Exception as e:
+                if retry < 2:
+                    time.sleep(10*(retry+1))
+                else:
+                    raise Exception(str(e)) 
+        return service
