@@ -258,7 +258,7 @@ const EmailClicks = ({ activeProject, udpateProjectDetails }) => {
             </Text>
           </Col>
         </Row>
-        <Row className='mt-3'>
+        <Row className='mt-6'>
           <Col span={24}>
             <Text type='title' level={6} weight='bold' extraClass='m-0'>
               Map your UTM tags
@@ -270,7 +270,7 @@ const EmailClicks = ({ activeProject, udpateProjectDetails }) => {
           </Col>
         </Row>
 
-        <Row className='m-0'>
+        <Row className='m-0 mt-2'>
           <Col span={24}>
             <div className='mt-2'>
               <Table
@@ -282,9 +282,8 @@ const EmailClicks = ({ activeProject, udpateProjectDetails }) => {
             </div>
           </Col>
         </Row>
-        <Divider />
 
-        <Row className='mt-3'>
+        <Row className='mt-6'>
           <Col span={24}>
             <Text type='title' level={6} weight='bold' extraClass='m-0'>
               How to get contact’s email from links inside your emails
