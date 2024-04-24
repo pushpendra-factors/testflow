@@ -69,7 +69,11 @@ import RenameSegmentModal from './RenameSegmentModal';
 import DeleteSegmentModal from './DeleteSegmentModal';
 import SaveSegmentModal from './SaveSegmentModal';
 import UpgradeModal from '../UpgradeModal';
-import { defaultSegmentsList, getColumns } from './accountProfiles.helpers';
+import {
+  defaultSegmentsList,
+  getColumns,
+  renderValue
+} from './accountProfiles.helpers';
 import ProfilesWrapper from '../ProfilesWrapper';
 import NoDataWithMessage from '../MyComponents/NoDataWithMessage';
 import {
@@ -87,6 +91,7 @@ import {
 import {
   formatReqPayload,
   getFiltersRequestPayload,
+  getPropType,
   getSelectedFiltersFromQuery
 } from '../utils';
 import PropertyFilter from './PropertyFilter';
@@ -1110,20 +1115,28 @@ function AccountProfiles({
       const csvRows = [];
       const headers = selectedOptions.map(
         (propName) =>
-          downloadCSVOptions.find((elem) => elem.prop_name === propName)
-            ?.display_name
+          `"${
+            downloadCSVOptions.find((elem) => elem.prop_name === propName)
+              ?.display_name
+          }"`
       );
-      headers.unshift('Name');
+      headers.unshift('"Account Domain"');
       csvRows.push(headers.join(','));
 
       data.forEach((d) => {
-        const values = selectedOptions.map((elem) =>
-          elem === 'last_activity'
-            ? MomentTz(d.last_activity).format('DD MMM YYYY hh:mm A zz')
-            : d.table_props[elem] != null
-              ? `"${d.table_props[elem]}"`
-              : '-'
-        );
+        const values = selectedOptions.map((elem) => {
+          const propType = getPropType(tableColumnsList, elem);
+
+          return elem === 'last_activity'
+            ? d.last_activity?.replace('T', ' ').replace('Z', '')
+            : renderValue(
+                d.table_props[elem],
+                propType,
+                elem,
+                projectDomainsList,
+                true
+              );
+        });
         values.unshift(d.domain_name);
 
         csvRows.push(values);
