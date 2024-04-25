@@ -286,6 +286,7 @@ type Configuration struct {
 	BlockedIPList                                        []string
 	BlockedEmailDomainList                               []string
 	AllAccountsProjectId                                 string
+	TimelinesTablePropsQueryOpt                          string
 	MarkerPreviewAllAccountsProjectId                    string
 	BatchSizePreviewDomain                               int
 	AccountsToProcessForPreview                          int
@@ -2356,6 +2357,15 @@ func IsIPBlockingFeatureEnabled(token string) bool {
 // IsDomainEnabled - Checks if $domain is enabled for given project_id in all accounts
 func IsDomainEnabled(projectID int64) bool {
 	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllAccountsProjectId, "")
+	if allProjects || projectIDsMap[projectID] {
+		return true
+	}
+	return false
+}
+
+// IsTimelinesTablePropsOptEnabled - Checks if optimised query to fetch table properties in Timelines enabled
+func IsTimelinesTablePropsOptEnabled(projectID int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().TimelinesTablePropsQueryOpt, "")
 	if allProjects || projectIDsMap[projectID] {
 		return true
 	}
