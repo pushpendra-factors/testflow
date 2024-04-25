@@ -51,7 +51,7 @@ func CreateWorkflowHandler(c *gin.Context) (interface{}, int, string, string, bo
 		return nil, http.StatusBadRequest, INVALID_INPUT, ErrorMessages[INVALID_INPUT], true
 	}
 
-	var workflow model.Workflow
+	var workflow model.WorkflowAlertBody
 	r := c.Request
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&workflow); err != nil {
@@ -112,7 +112,7 @@ func EditWorkflowHandler(c *gin.Context) (interface{}, int, string, string, bool
 		return nil, http.StatusBadRequest, PROCESSING_FAILED, ErrorMessages[INVALID_INPUT], true
 	}
 
-	var workflow model.Workflow
+	var workflow model.WorkflowAlertBody
 	r := c.Request
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()

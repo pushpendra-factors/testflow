@@ -61,7 +61,6 @@ func (store *MemSQL) GetAllWorklfowsByProject(projectID int64) ([]model.Workflow
 			log.WithError(err).Error("Failed to decode alert in the workflow object")
 			continue
 		}
-
 		wfAlerts = append(wfAlerts, alert)
 	}
 
@@ -97,7 +96,7 @@ func (store *MemSQL) GetWorkflowById(projectID int64, id string) (*model.Workflo
 	return &workflow, http.StatusFound, nil
 }
 
-func (store *MemSQL) CreateWorkflow(projectID int64, agentID string, alertBody model.Workflow) (*model.Workflow, int, error) {
+func (store *MemSQL) CreateWorkflow(projectID int64, agentID string, alertBody model.WorkflowAlertBody) (*model.Workflow, int, error) {
 	if projectID == 0 || agentID == "" {
 		return nil, http.StatusBadRequest, fmt.Errorf("invalid parameter")
 	}
@@ -116,11 +115,17 @@ func (store *MemSQL) CreateWorkflow(projectID int64, agentID string, alertBody m
 	transTime := U.TimeNowZ()
 	id := U.GetUUID()
 
+	alertJson, err := U.EncodeStructTypeToPostgresJsonb(alertBody)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to encode workflow body")
+		return nil, http.StatusInternalServerError, err
+	}
+
 	workflow = model.Workflow{
 		ID:        id,
 		ProjectID: projectID,
-		Name:      alertBody.Name,
-		AlertBody: alertBody.AlertBody,
+		Name:      alertBody.Title,
+		AlertBody: alertJson,
 		CreatedBy: agentID,
 		CreatedAt: transTime,
 		UpdatedAt: transTime,
