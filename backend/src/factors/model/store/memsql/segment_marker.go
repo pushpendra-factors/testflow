@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -34,10 +35,57 @@ func EventsPerformedCheck(projectID int64, segmentId string, eventNameIDsMap map
 		params = append(params, userID)
 	}
 
+	var query string
+	var queryParams []interface{}
+	var err error
+
+	if C.MarkerEnableOptimisedEventsQuery(projectID) {
+		query, queryParams, err = eventsQueryOptimised(projectID, eventNameIDsMap, segmentQuery, userID, userIDString, params)
+	} else {
+		query, queryParams, err = eventsQuery(projectID, eventNameIDsMap, segmentQuery, userID, userIDString, params)
+	}
+
+	if err != nil {
+		return isMatched
+	}
+
+	startTime := time.Now().UnixMilli()
+
+	result, status := GetStore().CheckIfUserPerformedGivenEvents(query, queryParams)
+	if status != http.StatusFound {
+		log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "segment_id": segmentId}).
+			Error("Error while validating for performed events")
+	}
+
+	endTime := time.Now().UnixMilli()
+	timeTaken := endTime - startTime
+
+	if C.MarkerEnableOptimisedEventsQuery(projectID) && timeTaken > 100 {
+		log.WithFields(log.Fields{"project_id": projectID, "domain_id": userID, "segment_id": segmentId}).
+			Warn("Time taken for execution of optimized events query ", timeTaken)
+	}
+
+	if segmentQuery.EventsCondition == model.EventCondAllGivenEvent {
+		if len(result) == len(segmentQuery.EventsWithProperties) {
+			isMatched = true
+		}
+	} else {
+		if len(result) > 0 {
+			isMatched = true
+		}
+	}
+
+	return isMatched
+}
+
+func eventsQuery(projectID int64, eventNameIDsMap map[string]string, segmentQuery *model.Query, userID string,
+	userIDString string, qParams []interface{}) (string, []interface{}, error) {
 	query := fmt.Sprintf(`SELECT COUNT(event_name_id)
 	FROM events
 	WHERE project_id = ? AND %s
 	  AND (`, userIDString)
+
+	params := qParams
 
 	var eventStr string
 	for index, event := range segmentQuery.EventsWithProperties {
@@ -49,7 +97,7 @@ func EventsPerformedCheck(projectID int64, segmentId string, eventNameIDsMap map
 			if err != nil {
 				log.WithFields(log.Fields{"project_id": projectID, "user_id": userID}).WithError(err).
 					Error("Failed to build where condition for performed events check")
-				return isMatched
+				return query, []interface{}{}, err
 			}
 			if len(queryParams) > 0 {
 				queryStr = queryStr + " AND " + whereCond + ")"
@@ -69,23 +117,111 @@ func EventsPerformedCheck(projectID int64, segmentId string, eventNameIDsMap map
 
 	query = query + eventStr + " ) GROUP BY event_name_id;"
 
-	result, status := GetStore().CheckIfUserPerformedGivenEvents(query, params)
-	if status != http.StatusFound {
-		log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "segment_id": segmentId}).
-			Error("Error while validating for performed events")
+	return query, params, nil
+}
+
+// WITH selected_events AS
+//
+//	(SELECT event_name_id, JSON_INCLUDE_MASK(properties, '{"$hubspot_engagement_from":1}' ) as properties,
+//	JSON_INCLUDE_MASK(user_properties, '{"$hubspot_company_created":1}' ) as user_properties
+//	FROM events WHERE project_id='8000024'
+//	AND user_id IN ('378f220c-6311-40e8-bad0-88e939395ad1','778f9212-b0f2-4a5d-aa55-7db6af30938e',
+//	'ca1197ac-f5ce-4bb9-9599-a989b4c3d5bc')
+//	AND event_name_id IN ('6cc5ed17-09ff-4ee0-bdf1-844e97cfb27f','9fed79d3-1322-4393-a644-73c3e56826da')
+//	ORDER BY timestamp DESC LIMIT 100000)
+//
+// SELECT COUNT(event_name_id) FROM selected_events
+// WHERE (event_name_id='6cc5ed17-09ff-4ee0-bdf1-844e97cfb27f' AND
+// (JSON_EXTRACT_STRING(selected_events.properties, '$hubspot_engagement_from') = 'Somewhere')) OR
+// (event_name_id='9fed79d3-1322-4393-a644-73c3e56826da' AND
+// (JSON_EXTRACT_STRING(selected_events.user_properties, '$hubspot_company_created') = 'Heyflow' OR
+// JSON_EXTRACT_STRING(selected_events.user_properties, '$hubspot_company_created') = 'ChargeBee'))
+// GROUP BY event_name_id;
+
+func eventsQueryOptimised(projectID int64, eventNameIDsMap map[string]string, segmentQuery *model.Query, userID string,
+	userIDString string, params []interface{}) (string, []interface{}, error) {
+	query := `WITH selected_events AS 
+	(SELECT event_name_id`
+
+	var eventStr string
+	eventNameIDsParams := make([]interface{}, 0)
+	qParams := make([]interface{}, 0)
+	eventPropertiesFilter := map[string]int{}
+	userPropertiesFilter := map[string]int{}
+
+	for index, event := range segmentQuery.EventsWithProperties {
+
+		queryStr := "(event_name_id=?"
+		qParams = append(qParams, eventNameIDsMap[event.Name])
+		if len(event.Properties) > 0 {
+			whereCond, queryParams, err := buildWhereFromProperties(projectID, event.Properties, 0)
+			if err != nil {
+				log.WithFields(log.Fields{"project_id": projectID, "user_id": userID}).WithError(err).
+					Error("Failed to build where condition for performed events check")
+				return query, []interface{}{}, err
+			}
+			if len(queryParams) > 0 {
+				queryStr = queryStr + " AND " + whereCond + ")"
+				qParams = append(qParams, queryParams...)
+
+			}
+		} else {
+			queryStr = queryStr + ")"
+		}
+
+		eventNameIDsParams = append(eventNameIDsParams, eventNameIDsMap[event.Name])
+
+		for _, eventFilter := range event.Properties {
+			if eventFilter.Entity == model.PropertyEntityEvent {
+				eventPropertiesFilter[eventFilter.Property] = 1
+			} else if eventFilter.Entity == model.PropertyEntityUser {
+				userPropertiesFilter[eventFilter.Property] = 1
+			}
+		}
+
+		if index == 0 {
+			eventStr = queryStr
+			continue
+		}
+
+		eventStr = eventStr + " OR " + queryStr
 	}
 
-	if segmentQuery.EventsCondition == model.EventCondAllGivenEvent {
-		if len(result) == len(segmentQuery.EventsWithProperties) {
-			isMatched = true
+	// event props support
+	if len(eventPropertiesFilter) > 0 {
+		fieldsInclude, err := json.Marshal(eventPropertiesFilter)
+		if err != nil {
+			return query, params, err
 		}
-	} else {
-		if len(result) > 0 {
-			isMatched = true
-		}
+
+		query = query + fmt.Sprintf(", JSON_INCLUDE_MASK(properties, '%s' ) as properties", string(fieldsInclude))
 	}
 
-	return isMatched
+	// user props support
+	if len(userPropertiesFilter) > 0 {
+		fieldsInclude, err := json.Marshal(userPropertiesFilter)
+		if err != nil {
+			return query, params, err
+		}
+
+		query = query + fmt.Sprintf(", JSON_INCLUDE_MASK(user_properties, '%s' ) as user_properties", string(fieldsInclude))
+	}
+
+	eventStr = strings.ReplaceAll(eventStr, "events.", "selected_events.")
+
+	params = append(params, eventNameIDsParams)
+
+	query = query + ` FROM events WHERE project_id=? 
+	AND user_id IN (?) 
+	AND event_name_id IN (?)
+	ORDER BY timestamp DESC LIMIT 100000)
+	SELECT COUNT(event_name_id) FROM selected_events 
+	WHERE ` + eventStr +
+		` GROUP BY event_name_id;`
+
+	params = append(params, qParams...)
+
+	return query, params, nil
 }
 
 func IsRuleMatchedAllAccounts(projectID int64, segment model.Query, decodedProperties []map[string]interface{}, userArr []model.User,
