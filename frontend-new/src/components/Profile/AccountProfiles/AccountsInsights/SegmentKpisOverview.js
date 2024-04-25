@@ -78,7 +78,9 @@ function SegmentKpisOverview({ widget, dateRange }) {
           {widget.wids.map((queryMetric, index) => (
             <div
               key={queryMetric.id}
-              className='flex flex-1 items-center border-r flex-col gap-y-2'
+              className={cx('flex flex-1 items-center flex-col gap-y-2', {
+                'border-r': index === 0
+              })}
             >
               <div className='flex gap-x-3 items-center'>
                 <Svg

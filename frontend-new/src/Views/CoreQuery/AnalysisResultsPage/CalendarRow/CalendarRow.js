@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useContext } from 'react';
-import { Button, DatePicker } from 'antd';
+import { Button, DatePicker, Spin } from 'antd';
 import MomentTz from 'Components/MomentTz';
 import ControlledComponent from 'Components/ControlledComponent';
 import ChartConfigPopover from './ChartConfigPopover';
@@ -15,7 +15,7 @@ import {
   QUERY_TYPE_FUNNEL,
   QUERY_TYPE_ATTRIBUTION
 } from '../../../../utils/constants';
-import { SVG, Text, Spiner } from '../../../../components/factorsComponents';
+import { SVG, Text } from '../../../../components/factorsComponents';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
 import { isSeriesChart } from '../../../../utils/dataFormatter';
 import GranularityOptions from '../../../../components/GranularityOptions';
@@ -51,7 +51,10 @@ function CalendarRow({
   } = useContext(CoreQueryContext);
 
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const isYearPickerEnabled = (queryType == QUERY_TYPE_KPI || queryType ==  QUERY_TYPE_EVENT || queryType == QUERY_TYPE_FUNNEL)
+  const isYearPickerEnabled =
+    queryType == QUERY_TYPE_KPI ||
+    queryType == QUERY_TYPE_EVENT ||
+    queryType == QUERY_TYPE_FUNNEL;
 
   const setDateRange = useCallback(
     (range) => {
@@ -120,7 +123,7 @@ function CalendarRow({
             onRemoveClick={resetComparisonData}
           />
         </div>
-        {comparisonData.loading && <Spiner size='small' />}
+        {comparisonData.loading && <Spin size='small' />}
       </div>
     );
   };
@@ -208,7 +211,7 @@ function CalendarRow({
           onSelect={setDateRange}
           comparison_supported={comparisonSupported}
           handleCompareWithClick={handleCompareWithClick}
-          withoutYesterday={queryType===QUERY_TYPE_ATTRIBUTION}
+          withoutYesterday={queryType === QUERY_TYPE_ATTRIBUTION}
         />
       </div>
     );
