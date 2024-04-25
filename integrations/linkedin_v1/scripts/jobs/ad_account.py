@@ -13,13 +13,13 @@ class AdAccountJob:
     
     def execute(self):
         metadata = LinkedinApiService.get_instance().get_ad_account_data(self.linkedin_setting)
-        GoogleStorage.get_instance().write(str(metadata), "daily", DATA_STATE_RAW, 
-                                           timestamp, self.linkedin_setting.project_id, 
-                                           self.linkedin_setting.ad_account, AD_ACCOUNT)
 
         timestamp = int(datetime.now().strftime('%Y%m%d'))
         if self.input_timestamp != None:
             timestamp = self.input_timestamp
+        GoogleStorage.get_instance().write(str(metadata), "daily", DATA_STATE_RAW, 
+                                           timestamp, self.linkedin_setting.project_id, 
+                                           self.linkedin_setting.ad_account, AD_ACCOUNT)
         
         DataService.get_instance().add_linkedin_documents(
                         self.linkedin_setting.project_id, self.linkedin_setting.ad_account,
