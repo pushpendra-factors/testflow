@@ -289,7 +289,7 @@ export const getColumns = ({
     width: 224,
     type: 'datetime',
     align: 'left',
-    sorter: (a, b) => sortStringColumn(a.lastActivity, b.lastActivity),
+    sorter: (a, b) => sortStringColumn(a.last_activity, b.last_activity),
     render: (item) => MomentTz(item).fromNow()
   };
 

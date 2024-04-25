@@ -676,7 +676,7 @@ function AccountDetails({
         </div>
       </div>
 
-      <div className='props'>
+      <div className='props scroll-shadows'>
         {listLeftPaneProps(accountDetails.data.leftpane_props)}
       </div>
       {!currentProjectSettings?.timelines_config?.account_config?.table_props ||

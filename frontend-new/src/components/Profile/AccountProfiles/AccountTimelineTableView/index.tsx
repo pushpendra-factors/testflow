@@ -19,7 +19,8 @@ function AccountTimelineTableView({
   eventDrawerVisible,
   setEventDrawerVisible,
   hasScrollAction,
-  setScrollPercent
+  setScrollPercent,
+  isPreview
 }: AccountTimelineTableViewProps) {
   const [formattedData, setFormattedData] = useState<{
     [key: string]: NewEvent[];
@@ -77,8 +78,8 @@ function AccountTimelineTableView({
       <div
         ref={scrollContainerRef}
         className={`timeline-table-container bordered-gray--bottom ${
-          extraClass || ''
-        }`}
+          isPreview ? 'preview-height' : ''
+        } ${extraClass || ''}`}
       >
         <table>
           <tbody>

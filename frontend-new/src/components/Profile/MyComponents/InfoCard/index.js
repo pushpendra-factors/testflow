@@ -35,7 +35,12 @@ function InfoCard({
           text={eventPropNames[key] || PropTextFormat(key)}
           extraClass='prop'
         />
-        <div className='value'>{urlTruncatedValue}</div>
+        <TextWithOverflowTooltip
+          text={urlTruncatedValue}
+          tooltipText={propertyValue}
+          extraClass='value'
+          maxLines={3}
+        />
       </div>
     );
   };
@@ -61,7 +66,7 @@ function InfoCard({
         )}
         <div className='source-icon'>{icon}</div>
       </div>
-      <div className='properties-section'>
+      <div className='properties-section scroll-shadows'>
         {(
           currentProjectSettings?.timelines_config?.events_config?.[
             eventSource === 'Page View' ? 'PageView' : eventName
