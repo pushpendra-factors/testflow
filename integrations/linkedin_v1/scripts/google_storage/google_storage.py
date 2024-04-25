@@ -31,7 +31,6 @@ class GoogleStorage:
         GoogleStorage.__instance = self
 
     # Overriding the previously present file.
-    @classmethod
     def write(self, input_string, job_type, data_state, timestamp, project_id, customer_acc_id, doc_type):
         if self.is_local_run:
             return
