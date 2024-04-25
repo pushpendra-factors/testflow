@@ -627,7 +627,7 @@ const CoreQuery = () => {
       }
 
       if (dateRange) {
-        coreQueryState.queryOptions.date_range = dateRange;
+        qState.queryOptions.date_range = dateRange;
       }
 
       qState.loading = false;
