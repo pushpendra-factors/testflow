@@ -163,7 +163,16 @@ func evalProperty(properties map[string]interface{}, propFilter M.WeightKeyValue
 					return true
 				}
 			}
+		} else if propFilter.Operator == model.InList {
+			propval := U.GetPropertyValueAsString(propvalKey)
+			_, inListok := propFilterMap[propval]
+			return inListok
+		} else if propFilter.Operator == model.NotInList {
+			propval := U.GetPropertyValueAsString(propvalKey)
+			_, inListok := propFilterMap[propval]
+			return !inListok
 		}
+
 	} else if propFilter.ValueType == U.PropertyTypeNumerical {
 
 		if propFilter.Operator == model.EqualsOp {
@@ -232,6 +241,33 @@ func evalProperty(properties map[string]interface{}, propFilter M.WeightKeyValue
 			if !(propval >= propFilter.LowerBound && propval <= propFilter.UpperBound) {
 				return true
 			}
+		}
+
+	} else if propFilter.ValueType == U.PropertyTypeDateTime {
+		// expecting all date time values in int64
+
+		if propFilter.Operator == model.BetweenStr {
+
+			propval, err := U.GetPropertyValueAsInt64(propvalKey)
+			if err != nil {
+				log.WithField("key", propvalKey).Error("Unable to decode property key")
+				return false
+			}
+			if propval >= int64(propFilter.LowerBound) && propval <= int64(propFilter.UpperBound) {
+				return true
+			}
+			return false
+		} else if propFilter.Operator == model.NotInBetweenStr {
+
+			propval, err := U.GetPropertyValueAsInt64(propvalKey)
+			if err != nil {
+				log.WithField("key", propvalKey).Error("Unable to decode property key")
+				return false
+			}
+			if !(propval >= int64(propFilter.LowerBound) && propval <= int64(propFilter.UpperBound)) {
+				return true
+			}
+			return false
 		}
 
 	}
