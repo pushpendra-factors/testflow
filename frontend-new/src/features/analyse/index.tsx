@@ -732,7 +732,7 @@ const CoreQuery = () => {
     if (qState.queryType === QUERY_TYPE_EVENT) {
       runQuery(qState.queryOptions.date_range);
     } else if (qState.queryType === QUERY_TYPE_FUNNEL) {
-      runFunnelQuery(true, qState.queryOptions.date_range, isCompareDate);
+      runFunnelQuery(false, qState.queryOptions.date_range, isCompareDate);
     }
   };
 
@@ -936,7 +936,7 @@ const CoreQuery = () => {
           qState.showResult = true;
           qState.loading = true;
           setLoading(true);
-          configActionsOnRunningQuery(false, qState);
+          // configActionsOnRunningQuery(false, qState);
           qState.requestQuery = query;
           qState.resultState = { ...qState.resultState, loading: true };
           qState.querySaved = {};
@@ -945,7 +945,11 @@ const CoreQuery = () => {
 
         const res = await getFunnelData(active_project.id, query, null, true);
 
-        const queryToAdd = getQueryFromHashId();
+        let queryToAdd = getQueryFromHashId();
+        if (!isQuerySaved) {
+          queryToAdd.query = query;
+        }
+
         createFunnelStateFromResult(queryToAdd, res, dateRange);
       } catch (err) {
         logger.error(err);
