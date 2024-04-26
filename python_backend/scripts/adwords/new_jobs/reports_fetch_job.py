@@ -75,7 +75,7 @@ class ReportsFetch(BaseJob):
     def extract_task(self):
         # timeout this function after 15 mins
         signal.signal(signal.SIGALRM, self.handle)
-        signal.alarm(900)
+        signal.alarm(1200)
         # 
         self.log_status_of_job("extract", "started", self._next_timestamp)
         records_metric, latency_metric = 0, 0

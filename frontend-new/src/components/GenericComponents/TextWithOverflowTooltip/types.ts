@@ -3,4 +3,6 @@ export interface TextWithTooltipProps {
   tooltipText?: string;
   extraClass?: string;
   disabled?: boolean;
+  maxLines?: number;
+  color?: string;
 }

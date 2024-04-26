@@ -299,7 +299,9 @@ function Properties({
                     />
                   ) : (
                     <EmptyScreen
-                      learnMore={'https://help.factors.ai/'}
+                      learnMore={
+                        'https://help.factors.ai/en/articles/7284109-custom-properties'
+                      }
                       loading={tableLoading}
                       title={`Group ad campaigns by themes to understand how your investment in these advertising campaigns are paying off. Such as grouping campaigns containing ‘search’ in their name into 'Search Campaigns'.`}
                     />

@@ -123,6 +123,11 @@ function AccountDrawer({
     }
   }, [userPropertiesV2, activeProject?.id]);
 
+  const showMoreButton = useMemo(
+    () => accountPreview?.[domain]?.events?.length > 99 && scrollPercent > 99,
+    [accountPreview, domain, scrollPercent]
+  );
+
   return (
     <Drawer
       title={
@@ -182,18 +187,18 @@ function AccountDrawer({
           setEventDrawerVisible={setEventDrawerVisible}
           hasScrollAction
           setScrollPercent={setScrollPercent}
+          isPreview
         />
-        {accountPreview?.[domain]?.events?.length > 0 &&
-          scrollPercent > 100 - 200 / accountPreview[domain].events.length && (
-            <div className='see-more-section'>
-              <Button onClick={onClickMore}>
-                <div className='inline-flex gap--4'>
-                  <SVG name='expand' />
-                  Open to see more
-                </div>
-              </Button>
-            </div>
-          )}
+        {showMoreButton && (
+          <div className='see-more-section'>
+            <Button onClick={onClickMore}>
+              <div className='inline-flex gap--4'>
+                <SVG name='expand' />
+                Open to see more
+              </div>
+            </Button>
+          </div>
+        )}
       </div>
     </Drawer>
   );

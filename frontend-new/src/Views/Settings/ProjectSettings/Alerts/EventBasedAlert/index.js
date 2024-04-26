@@ -92,7 +92,6 @@ import { getSegmentColorCode } from 'Views/AppSidebar/appSidebar.helpers';
 import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
 import cx from 'classnames';
 import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
-import { WhiteListedAccounts } from 'Routes/constants';
 import {
   getMsgPayloadMapping,
   dummyPayloadValue,
@@ -135,7 +134,7 @@ const EventBasedAlert = ({
   eventPropNames,
   groupProperties,
   groupPropNames,
-  eventUserPropertiesV2,
+  userPropertiesV2,
   userPropNames,
   eventNamesSpecial,
   getGroupProperties,
@@ -417,8 +416,8 @@ const EventBasedAlert = ({
         }
       }
     } else {
-      for (const property in eventUserPropertiesV2) {
-        const nestedArrays = eventUserPropertiesV2[property];
+      for (const property in userPropertiesV2) {
+        const nestedArrays = userPropertiesV2[property];
         DDCategory = _.union(DDCategory, nestedArrays);
       }
     }
@@ -437,7 +436,7 @@ const EventBasedAlert = ({
     queries,
     eventPropertiesV2,
     groupProperties,
-    eventUserPropertiesV2,
+    userPropertiesV2,
     viewAlertDetails,
     alertState
   ]);
@@ -1585,49 +1584,41 @@ const EventBasedAlert = ({
           </div>
         </Col>
       </Row>
-      {WhiteListedAccounts.includes(agent_details?.email) && (
-        <>
-          <Row className='mt-4 mb-1'>
-            <Col span={18}>
-              <Text type='title' level={7} extraClass='m-0'>
-                Do this
-              </Text>
-            </Col>
-          </Row>
-          <Row>
-            <Col span={22}>
-              <Select
-                showSearch
-                style={{ minWidth: 350 }}
-                className='fa-select'
-                placeholder='Select segment type'
-                optionFilterProp='children'
-                onChange={onChangeSegmentType}
-                filterOption={(input, option) =>
-                  option.props.children
-                    .toLowerCase()
-                    .indexOf(input.toLowerCase()) >= 0
-                }
-                value={segmentType}
-              >
-                {activeGrpBtn === 'users' ? (
-                  <Option value='action_event'>Performs an event</Option>
-                ) : (
-                  <>
-                    <Option value='action_event'>Performs an event</Option>
-                    <Option value='action_segment_entry'>
-                      Enter the segment
-                    </Option>
-                    <Option value='action_segment_exit'>
-                      Exit the segment
-                    </Option>
-                  </>
-                )}
-              </Select>
-            </Col>
-          </Row>{' '}
-        </>
-      )}
+      <Row className='mt-4 mb-1'>
+        <Col span={18}>
+          <Text type='title' level={7} extraClass='m-0'>
+            Do this
+          </Text>
+        </Col>
+      </Row>
+      <Row>
+        <Col span={22}>
+          <Select
+            showSearch
+            style={{ minWidth: 350 }}
+            className='fa-select'
+            placeholder='Select segment type'
+            optionFilterProp='children'
+            onChange={onChangeSegmentType}
+            filterOption={(input, option) =>
+              option.props.children
+                .toLowerCase()
+                .indexOf(input.toLowerCase()) >= 0
+            }
+            value={segmentType}
+          >
+            {activeGrpBtn === 'users' ? (
+              <Option value='action_event'>Performs an event</Option>
+            ) : (
+              <>
+                <Option value='action_event'>Performs an event</Option>
+                <Option value='action_segment_entry'>Enter the segment</Option>
+                <Option value='action_segment_exit'>Exit the segment</Option>
+              </>
+            )}
+          </Select>
+        </Col>
+      </Row>
       {segmentType !== 'action_event' ? (
         <>
           <Row className='mt-4'>
@@ -2272,7 +2263,7 @@ const mapStateToProps = (state) => ({
   eventPropertiesV2: state.coreQuery.eventPropertiesV2,
   eventPropNames: state.coreQuery.eventPropNames,
   groupPropNames: state.coreQuery.groupPropNames,
-  eventUserPropertiesV2: state.coreQuery.eventUserPropertiesV2,
+  userPropertiesV2: state.coreQuery.userPropertiesV2,
   userPropNames: state.coreQuery.userPropNames,
   eventNamesSpecial: state.coreQuery.eventNamesSpecial,
   groups: state.coreQuery.groups,

@@ -219,7 +219,7 @@ const Slack = ({
                                         weight={'regular'}
                                         extraClass={'m-0'}
                                     >
-                                        Have you conneted with Slack
+                                        Have you connected with Slack
                                     </Text>
                                     <Button type={'link'} loading={loading} onClick={()=>refreshSlackDetails()} icon={<SVG name={'ArrowRotateRight'} size={16} />} className='fa-button-ghost ml-2'>
                                         Refresh to check

@@ -35,44 +35,52 @@ function InfoCard({
           text={eventPropNames[key] || PropTextFormat(key)}
           extraClass='prop'
         />
-        <div className='value'>{urlTruncatedValue}</div>
+        <TextWithOverflowTooltip
+          text={urlTruncatedValue}
+          tooltipText={propertyValue}
+          extraClass='value'
+          maxLines={3}
+        />
       </div>
     );
   };
 
   const popoverContent = (
-    <div className='fa-popupcard'>
-      <div className='top-section mb-2'>
+    <>
+      <div className='event-name-section'>
         {title ? (
           <div className='heading-with-sub'>
-            <div className='sub'>{PropTextFormat(eventSource)}</div>
+            <div className='sub-heading truncate'>
+              {PropTextFormat(eventSource)}
+            </div>
             <TextWithOverflowTooltip
               text={eventType === 'FE' ? eventName : title}
-              extraClass='main'
+              extraClass='main truncate'
             />
           </div>
         ) : (
           <TextWithOverflowTooltip
             text={PropTextFormat(eventSource)}
-            extraClass='heading'
+            extraClass='heading truncate'
           />
         )}
         <div className='source-icon'>{icon}</div>
       </div>
-
-      {(
-        currentProjectSettings?.timelines_config?.events_config?.[
-          eventSource === 'Page View' ? 'PageView' : eventName
-        ] || []
-      ).map((key) => renderPropRow(key, properties[key]))}
-    </div>
+      <div className='properties-section scroll-shadows'>
+        {(
+          currentProjectSettings?.timelines_config?.events_config?.[
+            eventSource === 'Page View' ? 'PageView' : eventName
+          ] || []
+        ).map((key) => renderPropRow(key, properties[key]))}
+      </div>
+    </>
   );
 
   return (
     <Popover
       key={title}
       content={popoverContent}
-      overlayClassName='fa-infocard--wrapper'
+      overlayClassName='infocard-popover'
       placement='rightBottom'
       trigger={trigger}
     >

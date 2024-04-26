@@ -202,7 +202,9 @@ function Events({
                           ) : (
                             <EmptyScreen
                               title={`Set up unique touch points on your website that track user interactions that go beyond what's automatically tracked by Factors. For example, you can track signups, form submissions, lifecycle stage changes, or other specific actions.`}
-                              learnMore={'https://help.factors.ai/'}
+                              learnMore={
+                                'https://help.factors.ai/en/articles/7284092-custom-events'
+                              }
                               loading={loading}
                             />
                           )}

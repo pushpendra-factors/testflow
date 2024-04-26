@@ -89,8 +89,6 @@ func WorkerForSfOtp(projectID, startTime, endTime int64, backfillEnabled bool, w
 		}
 		for _, eventName := range AllowedSfEventTypeForOTP {
 
-			logCtx.WithField("timeRange", timeRange).WithField("eventName", eventName).Info("processing with events for")
-
 			eventDetails, err := store.GetStore().GetEventNameIDFromEventName(eventName, project.ID)
 			if err != nil {
 				logCtx.WithField("error", err).Error("Failed to get event Name")
@@ -125,7 +123,6 @@ func RunSFOfflineTouchPointRuleForCampaignMember(project *model.Project, otpRule
 		return
 	}
 	if len(eventsIds) == 0 {
-		logCtx.Warn("no event found")
 		return
 	}
 
@@ -149,7 +146,6 @@ func RunSFOfflineTouchPointRuleForTasks(project *model.Project, otpRules *[]mode
 		return
 	}
 	if len(eventsIds) == 0 {
-		logCtx.Warn("no event found")
 		return
 	}
 
@@ -172,7 +168,6 @@ func RunSFOfflineTouchPointRuleForEvents(project *model.Project, otpRules *[]mod
 		return
 	}
 	if len(eventsIds) == 0 {
-		logCtx.Warn("no event found")
 		return
 	}
 

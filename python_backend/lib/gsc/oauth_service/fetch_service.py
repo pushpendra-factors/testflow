@@ -35,11 +35,17 @@ class FetchService:
     def handle_request_with_retries(self, url, params):
         r = None
         for retry in range(3):
-            r = requests.post(url, data=params)
-            if r.status_code == 400 and r.json()['error'] == 'invalid_grant':
+            try:
+                r = requests.post(url, data=params)
+                if r.status_code == 400 and r.json()['error'] == 'invalid_grant':
                     return r
-            if r.status_code == 500:
-                    time.sleep(2)
+                if r.status_code == 500:
+                    time.sleep(10*(retry+1))
                     continue
-            return r
+                return r
+            except Exception as e:
+                if retry < 2:
+                    time.sleep(10*(retry+1))
+                else:
+                    raise Exception(str(e)) 
         return r
