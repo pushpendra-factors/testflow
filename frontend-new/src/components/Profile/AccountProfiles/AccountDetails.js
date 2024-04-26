@@ -913,7 +913,7 @@ function AccountDetails({
                 </Text>
               </div>
             }
-            learnMore='https://help.factors.ai'
+            learnMore='https://www.youtube.com/watch?v=sbgrCYaAnwQ'
             ActionButton={{
               onClick: () => {
                 history.push('/settings/pricing?activeTab=upgrade');
