@@ -105,7 +105,9 @@ type Reveal struct {
 			Domain string `json:"domain"`
 		} `json:"parent"`
 	} `json:"company"`
-	ConfidenceScore int `json:"confidence_score,omitempty"`
+	ConfidenceScore int    `json:"confidence_score,omitempty"`
+	Role            string `json:"role"`
+	Seniority       string `json:"seniority"`
 }
 
 func ExecuteClearBitEnrichV1(projectId int64, clearbitKey string, properties *U.PropertiesMap, clientIP string, resultChannel chan ResultChannel, logCtx *log.Entry) {
@@ -138,6 +140,8 @@ func EnrichmentUsingclearBit(projectId int64, clearbitKey string, properties *U.
 		return "", err
 	}
 	FillEnrichmentPropertiesForClearbit(results, properties)
+
+	log.WithFields(log.Fields{"project_id": projectId, "role": results.Role, "seniority": results.Seniority, "Domain": results.Domain, "geo": results.Company.Geo.Country}).Info("Clearbit response analysis")
 
 	return results.Domain, nil
 }
