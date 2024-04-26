@@ -1068,24 +1068,31 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 	// grouping tableProps by prefix
 	tablePropsMap := propsMapGroupingByName(tableProps)
 
-	// Fetching accounts associated to the domain
-	// SELECT group_6_user_id as identity, properties, source FROM `users`  WHERE (project_id='15000001' AND source!='9' AND
-	// is_group_user=1 AND group_6_user_id IN ('4f88f40d-c571-4bee-b456-298c533d7ef9', 'ed68f40d-c571-4bee-b456-298c533d7ef9'));
-	var userDetails []model.User
+	propString := fetchTablePropsForDomainsOptimised(projectID, tablePropsMap)
+	userDetails := []model.User{}
 	db := C.GetServices().Db
-	err := db.Table("users").Select(fmt.Sprintf("group_%d_user_id as id, properties, source", domainGroupID)).
-		Where(fmt.Sprintf("project_id=? AND source!=? AND %s %s group_%d_user_id ", isGroupUserString, isNullCheck, domainGroupID)+" IN (?)",
-			projectID, model.UserSourceDomains, domainIDs).Find(&userDetails).Error
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to get accounts associated to domains.")
-		return nil, http.StatusInternalServerError
+
+	_, domainPropsExists := tablePropsMap[model.GROUP_NAME_DOMAINS]
+
+	// only run the query when any table property belong to groups other than $domains
+	if len(tablePropsMap) > 1 || !domainPropsExists {
+		err := db.Table("users").Select(fmt.Sprintf("group_%d_user_id as id, "+propString+", source", domainGroupID)).
+			Where(fmt.Sprintf("project_id=? AND source!=? AND %s %s group_%d_user_id ", isGroupUserString, isNullCheck, domainGroupID)+" IN (?)",
+				projectID, model.UserSourceDomains, domainIDs).Find(&userDetails).Error
+		if err != nil {
+			logCtx.WithError(err).Error("Failed to get accounts associated to domains.")
+			return nil, http.StatusInternalServerError
+		}
 	}
 
-	// fetch all domain properties
-	domainDetails, status := store.GetDomainPropertiesByID(projectID, domainIDs)
+	// only run the query when any table property belong to $domains
+	if domainPropsExists {
+		// fetch all domain properties
+		domainDetails, status := store.GetDomainPropertiesByID(projectID, domainIDs)
 
-	if status == http.StatusFound && len(domainDetails) > 0 {
-		userDetails = append(userDetails, domainDetails...)
+		if status == http.StatusFound && len(domainDetails) > 0 {
+			userDetails = append(userDetails, domainDetails...)
+		}
 	}
 
 	// map for inList and NotInList
@@ -1153,6 +1160,44 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 		profiles[index].Properties = propsEncoded
 	}
 	return profiles, http.StatusOK
+}
+
+// Fetching accounts associated to the domain
+
+// SELECT group_6_user_id as identity, JSON_INCLUDE_MASK(properties, '{"$6Signal_name":1,"$6Signal_industry":1,
+// "$6Signal_employee_range":1, "$6Signal_annual_revenue":1, "$6Signal_region":1, "$salesforce_account_name":1}"
+//AS properties, source FROM `users`  WHERE (project_id='15000001' AND source!='9' AND
+// is_group_user=1 AND group_6_user_id IN ('4f88f40d-c571-4bee-b456-298c533d7ef9', 'ed68f40d-c571-4bee-b456-298c533d7ef9'));
+
+func fetchTablePropsForDomainsOptimised(projectID int64, tablePropsMap map[string][]string) string {
+
+	propString := "properties"
+
+	if !C.IsTimelinesTablePropsOptEnabled(projectID) {
+		return propString
+	}
+
+	tablePropsToFetch := make(map[string]int)
+
+	for groupName, propNameList := range tablePropsMap {
+		if groupName == model.GROUP_NAME_DOMAINS {
+			continue
+		}
+		for _, propName := range propNameList {
+			tablePropsToFetch[propName] = 1
+		}
+	}
+
+	if len(tablePropsToFetch) > 0 {
+		fieldsInclude, err := json.Marshal(tablePropsToFetch)
+		if err != nil {
+			return propString
+		}
+
+		propString = fmt.Sprintf("JSON_INCLUDE_MASK(properties, '%s') as properties", string(fieldsInclude))
+	}
+
+	return propString
 }
 
 // select id, properties, source from users where project_id=2 and source = 9
