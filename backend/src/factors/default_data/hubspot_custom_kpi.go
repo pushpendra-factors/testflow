@@ -130,10 +130,11 @@ var defaultHubspotCustomKPIs = []model.CustomMetric{
 		ObjectType:  model.HubspotContactsDisplayCategory,
 	},
 	{
-		Name:        model.HubspotClosedRate,
-		Description: "For segment level KPIs (HubSpot)",
-		TypeOfQuery: 2,
-		ObjectType:  model.HubspotDealsDisplayCategory,
+		Name:            model.HubspotClosedRate,
+		Description:     "For segment level KPIs (HubSpot)",
+		TypeOfQuery:     2,
+		ObjectType:      model.HubspotDealsDisplayCategory,
+		DisplayResultAs: model.MetricsPercentageType,
 	},
 }
 
