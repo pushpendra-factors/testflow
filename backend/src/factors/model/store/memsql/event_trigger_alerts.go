@@ -354,6 +354,12 @@ func (store *MemSQL) isValidEventTriggerAlertBody(projectID int64, agentID strin
 		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
 		return false, http.StatusBadRequest, errMsg
 	}
+	if isEmptyPostgresJsonb(alert.MessageProperty) {
+		errMsg := "Please add at least 1 property to send in the alert"
+		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
+		return false, http.StatusBadRequest, errMsg
+	}
+
 	if duplicateMessagePropertiesPresent(alert.MessageProperty) {
 		errMsg := "Duplicate properties are selected in the alert configuration. Please remove them before saving."
 		logCtx.WithError(fmt.Errorf(errMsg)).Error("alert body validation failure")
@@ -910,11 +916,11 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(projectID i
 	msgPropMap := store.getMessageProperties(projectID, displayNamesEP, displayNamesUP, messageProperties, eventPropMap, updatedUserProps)
 
 	log.WithField("props", *updatedUserProps).Info("$$$$check here")
-	
+
 	if alert.EventLevel == model.EventLevelAccount && event.UserId != "" {
 		groupDomainUserID, _, _ := store.getDomainsGroupUserIDForUser(projectID, event.UserId)
 		msgPropMap[model.ETA_DOMAIN_GROUP_USER_ID] = groupDomainUserID
-		
+
 		// for hubspot company url
 		if hsUrl, exists := (*updatedUserProps)[U.ENRICHED_HUBSPOT_COMPANY_OBJECT_URL]; exists {
 			msgPropMap[model.ETA_ENRICHED_HUBSPOT_COMPANY_OBJECT_URL] = hsUrl
