@@ -473,6 +473,7 @@ func (store *MemSQL) GetUsersAssociatedToDomainList(projectID int64, domainGroup
   WHERE 
 	project_id = ? 
 	AND source != ? 
+	AND is_deleted = false
 	AND group_%d_user_id = ?
 	%s;`, domainGroupID, userStmnt)
 
@@ -510,7 +511,7 @@ func (store *MemSQL) GetDomainDetailsByID(projectID int64, id string, domGroupID
 
 	var user model.User
 
-	query := fmt.Sprintf(`SELECT id, properties, is_group_user, source, last_event_at%s FROM users WHERE project_id = ? AND id = ? AND source = ? LIMIT 1;`, grpCol)
+	query := fmt.Sprintf(`SELECT id, properties, is_group_user, source, last_event_at%s FROM users WHERE project_id = ? AND id = ? AND source = ? AND is_deleted = false LIMIT 1;`, grpCol)
 
 	db := C.GetServices().Db
 	err := db.Raw(query, queryParams...).Scan(&user).Error
@@ -542,6 +543,7 @@ func (store *MemSQL) GetAllDomainsByProjectID(projectID int64, domainGroupID int
 	project_id = ? 
 	AND group_%d_user_id IS NOT NULL 
 	AND source != ?
+	AND is_deleted = false
   GROUP BY 
 	group_%d_user_id 
   ORDER BY MAX(properties_updated_timestamp) DESC
@@ -584,7 +586,7 @@ func getLatestDomainsByProjectIDQuery(projectID int64, domainGroupID int, limitV
 
 	if len(searchFilter) > 0 {
 		whereForSearchFilters, searchFiltersParams := SearchFilterForAllAccounts(searchFilter, domainGroupID)
-		query := fmt.Sprintf(`SELECT id FROM users WHERE project_id = ? AND source = ? %s 
+		query := fmt.Sprintf(`SELECT id FROM users WHERE project_id = ? AND source = ? AND is_deleted = false %s 
 		LIMIT %d;`, whereForSearchFilters, limitVal)
 		queryParams = append(queryParams, searchFiltersParams...)
 
@@ -614,6 +616,7 @@ func getLatestDomainsByProjectIDQuery(projectID int64, domainGroupID int, limitV
 	project_id = ? 
 	AND group_%d_user_id IS NOT NULL 
 	AND source != ? 
+	AND is_deleted = false
 	AND last_event_at IS NOT NULL %s
   GROUP BY 
 	group_%d_user_id 
@@ -689,6 +692,7 @@ func (store *MemSQL) GetLatestUpatedDomainsByProjectID(projectID int64, domainGr
 	project_id = ? 
 	AND source != ? 
 	AND properties_updated_timestamp > ?
+	AND is_deleted = false
 	AND group_%d_user_id IS NOT NULL
   GROUP BY group_%d_user_id
   LIMIT 
@@ -814,6 +818,7 @@ func (store *MemSQL) GetNonGroupUsersUpdatedAtGivenHour(projectID int64, fromTim
 	  is_group_user IS NULL 
 	  OR is_group_user = 0
 	) 
+	AND is_deleted = false
 	AND last_event_at IS NOT NULL 
 	AND last_event_at >= ?
   LIMIT 
