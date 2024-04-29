@@ -29,7 +29,7 @@ type Workflow struct {
 	ProjectID      int64           `json:"project_id"`
 	Name           string          `json:"name"`
 	AlertBody      *postgres.Jsonb `json:"alert_body"`
-	InternalStatus bool            `json:"internal_status"`
+	InternalStatus string            `json:"internal_status"`
 	CreatedAt      time.Time       `json:"created_at"`
 	UpdatedAt      time.Time       `json:"updated_at"`
 	CreatedBy      string          `json:"created_by"`
@@ -40,7 +40,7 @@ type WorkflowDisplayableInfo struct {
 	ID        string          `json:"id"`
 	Title     string          `json:"title"`
 	AlertBody *postgres.Jsonb `json:"alert_body"`
-	Status    bool            `json:"status"`
+	Status    string            `json:"status"`
 	CreatedAt time.Time       `json:"created_at"`
 }
 
