@@ -20,7 +20,7 @@ export const removeDuplicateAndEmptyKeys = (obj) => {
 };
 
 export const blackListedCategories = [
-  'Hubspot Contacts',
+  // 'Hubspot Contacts',
   'Salesforce Users',
   'LeadSquared Person',
   'Marketo Person',
