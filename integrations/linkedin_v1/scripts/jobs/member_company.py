@@ -8,6 +8,7 @@ from cache.member_company_info import MemberCompany
 from metrics_aggregator.metrics_aggregator import MetricsAggregator
 from util.linkedin_api_service import LinkedinApiService
 from data_service.data_service import DataService
+from google_storage.google_storage import GoogleStorage
 
 class MemberCompanyJob:
     linkedin_setting = None
@@ -68,6 +69,9 @@ class MemberCompanyJob:
                 company_insights = self.linkedin_api_service_obj.extract_company_insights_for_all_campaigns(
                                                                 self.linkedin_setting, timestamp, timestamp,
                                                                 self.campaign_info.keys())
+                GoogleStorage.get_instance().write(str(company_insights), self.metrics_aggregator_obj.job_type, DATA_STATE_RAW, 
+                                           timestamp, self.linkedin_setting.project_id, 
+                                           self.linkedin_setting.ad_account, MEMBER_COMPANY_INSIGHTS)
                 # rename variable
                 non_present_ids = U.get_non_present_ids(company_insights, self.member_company_cache.get_member_company_ids())
 
@@ -79,6 +83,9 @@ class MemberCompanyJob:
                 enriched_company_insights = DataTransformation.enrich_dependencies_to_company_insights_v1(company_insights, 
                                                                     self.member_company_cache.member_company_map,
                                                                     self.campaign_group_info, self.campaign_info)
+                GoogleStorage.get_instance().write(str(enriched_company_insights), self.metrics_aggregator_obj.job_type, DATA_STATE_TRANSFORMED, 
+                                           timestamp, self.linkedin_setting.project_id, 
+                                           self.linkedin_setting.ad_account, MEMBER_COMPANY_INSIGHTS)
 
                 self.data_service_obj.insert_insights(MEMBER_COMPANY_INSIGHTS, self.linkedin_setting.project_id, 
                                 self.linkedin_setting.ad_account, enriched_company_insights, timestamp, SYNC_STATUS_T0)

@@ -111,7 +111,7 @@ function EngagementConfig({
 
   const showSuccessMessage = ({ title, description }) => {
     notification.success({
-      title,
+      message: title,
       description,
       duration: 3
     });

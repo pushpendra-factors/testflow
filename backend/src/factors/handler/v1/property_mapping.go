@@ -57,7 +57,7 @@ func CreatePropertyMapping(c *gin.Context) (interface{}, int, string, string, bo
 	request.ProjectID = projectID
 	request.Name = U.CreatePropertyNameFromDisplayName(request.DisplayName)
 	request.DataType = properties[0].DataType
-	request.SectionBitMap, errMsg = model.GenerateSectionBitMapFromProperties(properties)
+	request.SectionBitMap, errMsg = store.GetStore().GenerateSectionBitMapFromProperties(properties, projectID)
 	if errMsg != "" {
 		return nil, http.StatusBadRequest, INVALID_INPUT, errMsg, true
 	}
@@ -128,7 +128,7 @@ func GetCommonPropertyMappings(c *gin.Context) (interface{}, int, string, string
 		logCtx.Warnf("Error during display category extraction. %v", err)
 		return nil, http.StatusBadRequest, INVALID_INPUT, "Error during display category extraction.", true
 	}
-	sectionBitMap, errMsg := model.GenerateSectionBitMap(displayCategories)
+	sectionBitMap, errMsg := store.GetStore().GenerateSectionBitMap(displayCategories, projectID)
 	if errMsg != "" {
 		logCtx.Warnf("Error during section bit map creation. %v", err)
 		return nil, http.StatusBadRequest, INVALID_INPUT, "Error during section bit map creation.", true

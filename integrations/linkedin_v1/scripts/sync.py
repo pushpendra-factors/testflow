@@ -59,7 +59,7 @@ if __name__ == '__main__':
 
     input_start_timestamp = options.input_start_timestamp
     input_end_timestamp = options.input_end_timestamp
-    globalObject = GlobalObjects(options.data_service_host)
+    globalObject = GlobalObjects(options.env, options.data_service_host)
     data_service_obj = DataService.get_instance()
     metrics_aggregator_obj = MetricsAggregator.get_instance()
 

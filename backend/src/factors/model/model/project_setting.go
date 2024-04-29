@@ -400,8 +400,8 @@ func GetProjectSDKAPIAndAssetURL(projectID int64) (string, string) {
 	// Todo: The selected URL for each project has to be persisted.
 	// Any change to availableHashes will change the SDK code for a project, if not persisted.
 	availableHashes := []string{
-		"b3mxnuvcer",
-		"dyh8ken8pc",
+		"slashmultiple",
+		"bitsfact",
 	}
 
 	index := (int(projectID) % len(availableHashes))

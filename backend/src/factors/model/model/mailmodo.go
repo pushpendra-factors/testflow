@@ -28,7 +28,6 @@ type MailmodoGetContactDetailsAPIResponse struct {
 	ContactIdentifier      string   `json:"contactIdentifier"`
 	Email                  string   `json:"email"`
 	Blocked                bool     `json:"blocked"`
-	BlockedReason          string   `json:"blockedReason"`
 	Unsubscribed           bool     `json:"unsubscribed"`
 	UnsubscribedReason     string   `json:"unsubscribedReason"`
 	UnsubscribedEmailTypes []string `json:"unsubscribedEmailTypes"`

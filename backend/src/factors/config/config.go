@@ -196,6 +196,7 @@ type Configuration struct {
 	ProcessOnlyAccountSegments         bool
 	RunAllAccountsMarkerProjectIDs     string
 	DisableAllAccountsMarkerProjectIDs string
+	UseOptimisedEventsQueryProjectIDs  string
 	RunForAllAccountsInHours           int
 	JobRunCountPerDayMarker            int
 	DomainsLimitAllRun                 int
@@ -285,6 +286,7 @@ type Configuration struct {
 	BlockedIPList                                        []string
 	BlockedEmailDomainList                               []string
 	AllAccountsProjectId                                 string
+	TimelinesTablePropsQueryOpt                          string
 	MarkerPreviewAllAccountsProjectId                    string
 	BatchSizePreviewDomain                               int
 	AccountsToProcessForPreview                          int
@@ -2361,6 +2363,15 @@ func IsDomainEnabled(projectID int64) bool {
 	return false
 }
 
+// IsTimelinesTablePropsOptEnabled - Checks if optimised query to fetch table properties in Timelines enabled
+func IsTimelinesTablePropsOptEnabled(projectID int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().TimelinesTablePropsQueryOpt, "")
+	if allProjects || projectIDsMap[projectID] {
+		return true
+	}
+	return false
+}
+
 // IsMarkerPreviewEnabled - Checks if marker is enabled for all accounts preview
 func IsMarkerPreviewEnabled(projectID int64) bool {
 	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().MarkerPreviewAllAccountsProjectId, "")
@@ -2405,6 +2416,15 @@ func AllAccountsRuntMarker(projectID int64) bool {
 // DisableAccountsRuntMarker - Checks if segment marker is to not be run for all $domains for given project
 func DisableAccountsRuntMarker(projectID int64) bool {
 	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().DisableAllAccountsMarkerProjectIDs, "")
+	if allProjects || projectIDsMap[projectID] {
+		return true
+	}
+	return false
+}
+
+// UseOptimisedEventsQueryProjectIDs - Checks if segment marker should use optimised query for event filters check for given project
+func MarkerEnableOptimisedEventsQuery(projectID int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UseOptimisedEventsQueryProjectIDs, "")
 	if allProjects || projectIDsMap[projectID] {
 		return true
 	}

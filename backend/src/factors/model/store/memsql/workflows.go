@@ -31,7 +31,7 @@ func (store *MemSQL) GetAllWorkflowTemplates() ([]model.AlertTemplate, int) {
 	return alertTemplates, http.StatusOK
 }
 
-func (store *MemSQL) GetAllWorklfowsByProject(projectID int64) ([]model.Workflow, int, error) {
+func (store *MemSQL) GetAllWorklfowsByProject(projectID int64) ([]model.WorkflowDisplayableInfo, int, error) {
 	if projectID == 0 {
 		return nil, http.StatusBadRequest, fmt.Errorf("invalid parameter")
 	}
@@ -43,18 +43,29 @@ func (store *MemSQL) GetAllWorklfowsByProject(projectID int64) ([]model.Workflow
 
 	db := C.GetServices().Db
 	workflows := make([]model.Workflow, 0)
-
+	wfAlerts := make([]model.WorkflowDisplayableInfo, 0)
 	err := db.Where("project_id = ?", projectID).Where("is_deleted = ?", false).
 		Order("created_at DESC").Limit(ListLimit).Find(&workflows).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
-			return workflows, http.StatusNotFound, err
+			return wfAlerts, http.StatusNotFound, err
 		}
 		log.WithError(err).Error("Failed to fetch rows of workflows")
 		return nil, http.StatusInternalServerError, err
 	}
 
-	return workflows, http.StatusFound, nil
+	for _, wf := range workflows {
+		wfInfo := model.WorkflowDisplayableInfo{
+			ID: wf.ID,
+			Title: wf.Name,
+			AlertBody: wf.AlertBody,
+			Status: wf.InternalStatus,
+			CreatedAt: wf.CreatedAt,
+		}	
+		wfAlerts = append(wfAlerts, wfInfo)
+	}
+
+	return wfAlerts, http.StatusFound, nil
 }
 
 func (store *MemSQL) GetWorkflowById(projectID int64, id string) (*model.Workflow, int, error) {
@@ -86,7 +97,7 @@ func (store *MemSQL) GetWorkflowById(projectID int64, id string) (*model.Workflo
 	return &workflow, http.StatusFound, nil
 }
 
-func (store *MemSQL) CreateWorkflow(projectID int64, agentID string, alertBody model.Workflow) (*model.Workflow, int, error) {
+func (store *MemSQL) CreateWorkflow(projectID int64, agentID string, alertBody model.WorkflowAlertBody) (*model.Workflow, int, error) {
 	if projectID == 0 || agentID == "" {
 		return nil, http.StatusBadRequest, fmt.Errorf("invalid parameter")
 	}
@@ -105,11 +116,17 @@ func (store *MemSQL) CreateWorkflow(projectID int64, agentID string, alertBody m
 	transTime := U.TimeNowZ()
 	id := U.GetUUID()
 
+	alertJson, err := U.EncodeStructTypeToPostgresJsonb(alertBody)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to encode workflow body")
+		return nil, http.StatusInternalServerError, err
+	}
+
 	workflow = model.Workflow{
 		ID:        id,
 		ProjectID: projectID,
-		Name:      alertBody.Name,
-		AlertBody: alertBody.AlertBody,
+		Name:      alertBody.Title,
+		AlertBody: alertJson,
 		CreatedBy: agentID,
 		CreatedAt: transTime,
 		UpdatedAt: transTime,
