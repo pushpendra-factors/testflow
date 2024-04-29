@@ -197,6 +197,7 @@ func main() {
 	blockedIPList := flag.String("blocked_IP_list", "", "List containing all the blocked IP address")
 	blockedEmailDomainList := flag.String("blocked_email_domain_list", "", "List containing all blocked email domains")
 	allAccountsProjectId := flag.String("all_accounts_project_id", "", "List of projectIds to enable domain.")
+	timelinesTablePropsQueryOpt := flag.String("timelines_table_props_query_opt", "", "List of projectIds to enable timelines table props optimised query.")
 	markerPreviewAllAccountsProjectId := flag.String("marker_preview_all_accounts_project_id", "", "List of projectIds to enable preview using marker.")
 	batchSizePreviewDomain := flag.Int("batch_size_preview_domain", 100, "Batch size for goroutines to process domains for preview using marker.")
 	accountsToProcessForPreview := flag.Int("accounts_to_process_for_preview", 5000, "No of domains to process domains for preview using marker per run.")
@@ -367,6 +368,7 @@ func main() {
 		BlockedIPList:                                  C.GetBlockedIPFromStringListAsString(*blockedIPList),
 		BlockedEmailDomainList:                         C.GetBlockedEmailDomainFromStringListAsString(*blockedEmailDomainList),
 		AllAccountsProjectId:                           *allAccountsProjectId,
+		TimelinesTablePropsQueryOpt:                    *timelinesTablePropsQueryOpt,
 		MarkerPreviewAllAccountsProjectId:              *markerPreviewAllAccountsProjectId,
 		BatchSizePreviewDomain:                         *batchSizePreviewDomain,
 		AccountsToProcessForPreview:                    *accountsToProcessForPreview,

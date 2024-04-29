@@ -531,7 +531,7 @@ const Alerts = ({
       </div>
       <div className='flex justify-center text-center py-3'>
         <Text type='title' level={7} color='grey-2' extraClass='m-0'>
-          Setup alerts to get notified about prospect activity on your messaging apps <br /> like Slack and Team to never miss out on a high intent lead.
+          Setup alerts to get notified about prospect activity on your messaging apps <br /> like Slack and Teams to never miss out on a high intent lead.
         </Text>
        
       </div>

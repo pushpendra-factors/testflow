@@ -82,17 +82,6 @@
   font-size: 14px;
 }
 
-.fa-infocard--wrapper {
-  @extend .fa-activity--filter;
-
-  .ant-popover-inner {
-    width: 470px;
-    padding: 16px 24px;
-    border: 1px solid #f7f5f8;
-    border-radius: 8px;
-  }
-}
-
 .fa-timeline {
   position: relative;
   height: calc(100vh - 56px);
@@ -128,6 +117,7 @@
   padding: 0;
   border-right: 1px solid #e7e9ed;
   height: calc(100vh - 56px);
+  z-index: 15;
 
   .header {
     position: sticky;
@@ -168,9 +158,15 @@
   .props {
     margin: 0;
     padding: 8px 0;
-    background: #fff;
     max-height: calc(100% - 336px);
     overflow-y: scroll;
+
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   .add-prop-btn {
@@ -532,17 +528,6 @@
     z-index: 1;
     left: 8px;
   }
-
-  // &::after {
-  //     content: '';
-  //     position: absolute;
-  //     width: 2px;
-  //     background: #BAE7FF;
-  //     top: -16px;
-  //     bottom: 0;
-  //     left: 0;
-  //     margin-left: -1px;
-  // }
 
   .timestamp {
     position: absolute;
@@ -947,6 +932,13 @@
   max-height: calc(100vh - 208px);
   overflow-y: scroll;
 
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
   .overview {
     display: flex;
     flex-direction: column;
@@ -1055,6 +1047,10 @@
 .timeline-table-container {
   max-height: calc(100vh - 232px);
   overflow-y: scroll;
+
+  &.preview-height {
+    max-height: calc(100vh - 176px);
+  }
 
   table {
     border-collapse: separate;
@@ -1199,7 +1195,18 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+
+  &--multiline {
+    @extend .text-with-tooltip;
+    white-space: normal;
+    --max-lines: 2;
+    max-height: var(--max-lines);
+    display: -webkit-box;
+    -webkit-line-clamp: var(--max-lines);
+    -webkit-box-orient: vertical;
+  }
 }
+
 
 .fa-account-drawer--right {
   &.ant-drawer {
@@ -1213,6 +1220,10 @@
   .ant-drawer-header {
     padding: 12px 24px;
   }
+
+  .ant-drawer-body {
+    padding: 16px 24px;
+  }
 }
 
 .event-infocard--row {
@@ -1222,6 +1233,7 @@
 
   .prop {
     color: $fa-color--mono-4;
+    line-height: 24px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1232,7 +1244,7 @@
 
   .value {
     color: $fa-color--mono-5;
-    word-break: break-all;
+    line-height: 24px;
     text-align: right;
     max-width: 60%;
   }
@@ -1241,6 +1253,13 @@
 .event-drawer-items {
   max-height: calc(100vh - 312px);
   overflow-y: scroll;
+
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .see-more-section {
@@ -1250,7 +1269,9 @@
   align-items: center;
   justify-content: center;
   padding: 12px 0;
-  box-shadow: 0px -16px 24px 24px rgba(255, 255, 255, 1);
+  box-shadow: 0px -16px 32px 16px rgba(255, 255, 255, 1);
+  bottom: 56px;
+  background: white;
 }
 
 .bordered-gray {
@@ -1273,4 +1294,89 @@
   &--bottom {
     border-bottom: 1px solid #e7e9ed;
   }
+}
+
+.infocard-popover {
+  .ant-popover-arrow {
+    display: none;
+  }
+
+  .ant-popover-inner {
+    width: 448px;
+    padding: 16px 24px;
+    border: 1px solid #f7f5f8;
+    border-radius: 8px;
+
+    .ant-popover-inner-content {
+      padding: 0;
+    }
+  }
+}
+
+.event-name-section {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  padding: 8px;
+  padding-right: 0;
+
+  .heading {
+    width: 320px;
+    font-weight: 600;
+    font-size: 16px;
+    line-height: 24px;
+  }
+
+  .heading-with-sub {
+    width: 320px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+
+    .sub-heading {
+      font-weight: 500;
+      font-size: 10px;
+      line-height: 16px;
+    }
+
+    .main {
+      font-weight: 600;
+      font-size: 16px;
+      line-height: 24px;
+    }
+  }
+
+  .source-icon {
+    height: 40px;
+    width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f6f6f6;
+    border: 1px solid;
+    border-color: #fafafa;
+    border-radius: 50%;
+  }
+}
+
+.properties-section {
+  overflow-y: scroll;
+  max-height: 240px;
+  padding: 0 8px;
+}
+
+.scroll-shadows {
+  scrollbar-width: thin;
+  background: linear-gradient(to top, white, white),
+    linear-gradient(to top, white, white),
+    linear-gradient(to top, rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0)),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0));
+  background-position: bottom center, top center, bottom center, top center;
+  background-color: white;
+  background-repeat: no-repeat;
+  background-size: 100% 16px, 100% 16px, 100% 8px, 100% 8px;
+  background-attachment: local, local, scroll, scroll;
 }

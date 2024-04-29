@@ -47,6 +47,8 @@ func main() {
 		"Project Id to run all accounts marker for. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
 	disableAllAccountsMarkerProjectIDs := flag.String("disable_all_accounts_marker_project_ids", "",
 		"Project Id to disable all accounts run for marker. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
+	useOptimisedEventsQueryProjectIDs := flag.String("use_optimised_events_query_project_ids", "",
+		"Project Id to enable optimised query for event based filters check. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
 	runForAllAccountsInHours := flag.Int("run_for_all_accounts_in_hours", 24, "Run domains where marker_last_run_all_accounts is greater than given hours")
 	jobRunCount := flag.Int("job_run_count", 40, "Total number of runs per day")
 
@@ -98,6 +100,7 @@ func main() {
 		ProcessOnlyAccountSegments:         *processOnlyAccountSegments,
 		RunAllAccountsMarkerProjectIDs:     *runAllAccountsMarkerProjectIDs,
 		DisableAllAccountsMarkerProjectIDs: *disableAllAccountsMarkerProjectIDs,
+		UseOptimisedEventsQueryProjectIDs:  *useOptimisedEventsQueryProjectIDs,
 		RunForAllAccountsInHours:           *runForAllAccountsInHours,
 		JobRunCountPerDayMarker:            *jobRunCount,
 		BatchSizeDomains:                   *batchSizeDomains,

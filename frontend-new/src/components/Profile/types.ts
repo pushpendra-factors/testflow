@@ -46,6 +46,7 @@ export interface CustomStyles {
   '--bg-color'?: string;
   '--border-color'?: string;
   '--icon-size'?: string;
+  '--max-lines'?: number;
 }
 
 export interface UsernameWithIconProps {
@@ -123,6 +124,7 @@ export interface AccountTimelineTableViewProps {
   setEventDrawerVisible: (value: boolean) => void;
   hasScrollAction: boolean;
   setScrollPercent: (value: number) => void;
+  isPreview: boolean;
 }
 export interface EventDetailsProps {
   event: NewEvent;

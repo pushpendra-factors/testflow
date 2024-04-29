@@ -1108,6 +1108,8 @@ type Model interface {
 	GetPropertyMappingByProjectIDAndName(projectID int64, name string) (*model.PropertyMapping, string, int)
 	GetPropertyMappingsByProjectId(projectID int64) ([]*model.PropertyMapping, string, int)
 	GetPropertyMappingsByProjectIdAndSectionBitMap(projectID int64, sectionBitMap int64) ([]*model.PropertyMapping, string, int)
+	GenerateSectionBitMapFromProperties(properties []model.Property, projectID int64) (int64, string)
+	GenerateSectionBitMap(displayCategories []string, projectID int64) (int64, string)
 	DeletePropertyMappingByID(projectID int64, id string) int
 
 	//account scoring
@@ -1161,9 +1163,9 @@ type Model interface {
 
 	//Workflows
 	GetAllWorkflowTemplates() ([]model.AlertTemplate, int)
-	GetAllWorklfowsByProject(projectID int64) ([]model.Workflow, int, error)
+	GetAllWorklfowsByProject(projectID int64) ([]model.WorkflowDisplayableInfo, int, error)
 	GetWorkflowById(projectID int64, id string) (*model.Workflow, int, error)
-	CreateWorkflow(projectID int64, agentID string, alertBody model.Workflow) (*model.Workflow, int, error)
+	CreateWorkflow(projectID int64, agentID string, alertBody model.WorkflowAlertBody) (*model.Workflow, int, error)
 	UpdateWorkflow(projectID int64, id, agentID string, alertBody model.Workflow) (*model.Workflow, int, error)
 	DeleteWorkflow(projectID int64, id, agentID string) (int, error)
 }

@@ -732,7 +732,7 @@ func buildAddJoinForFunnelAllAccountsFunnelStep(projectID int64, queryGroupByPro
 	if hasGlobalGroupByProperties {
 		globalGroupIDColumns, globalGroupSource := model.GetDomainsAsscocaitedGroupSourceANDColumnIDs(nil, userGroupProps)
 		joinStmnt = fmt.Sprintf(" LEFT JOIN users AS group_users on %s.coal_group_user_id = group_users.group_%d_user_id "+
-			"AND group_users.project_id = ? AND  group_users.is_group_user = true AND group_users.source IN ( %s ) AND ( %s )",
+			"AND group_users.project_id = ? AND  group_users.is_group_user = true AND group_users.source IN ( %s ) AND ( %s ) AND group_users.is_deleted = false ",
 			refStep, scopeGroupID, globalGroupSource, globalGroupIDColumns)
 	}
 
@@ -763,7 +763,7 @@ func buildAddJoinForFunnelGroup(projectID int64, groupID, scopeGroupID int, isSc
 		if hasGlobalGroupPropertiesFilter {
 			globalGroupIDColumns, globalGroupSource := model.GetDomainsAsscocaitedGroupSourceANDColumnIDs(filteredGlobalGroupPropertiesFilter, nil)
 			jointStmnt := fmt.Sprintf(" LEFT JOIN users as user_groups on events.user_id = user_groups.id AND user_groups.project_id = ? LEFT JOIN "+
-				"users as group_users ON user_groups.group_%d_user_id = group_users.group_%d_user_id AND group_users.project_id = ? "+
+				"users as group_users ON user_groups.group_%d_user_id = group_users.group_%d_user_id AND group_users.project_id = ? AND group_users.is_deleted = false "+
 				"AND group_users.is_group_user = true AND group_users.source IN ( %s ) AND ( %s )", scopeGroupID, scopeGroupID, globalGroupSource,
 				globalGroupIDColumns)
 
@@ -790,7 +790,7 @@ func buildAddJoinForFunnelGroup(projectID int64, groupID, scopeGroupID int, isSc
 				"users AS user_groups ON users.customer_user_id = user_groups.customer_user_id AND "+
 				"user_groups.project_id = ? AND user_groups.group_%d_user_id IS NOT NULL AND user_groups.source = ? "+
 				"LEFT JOIN users AS group_users ON COALESCE(user_groups.group_%d_user_id, users.group_%d_user_id) = group_users.id AND group_users.project_id = ? AND "+
-				"group_users.source = ? ", scopeGroupID, scopeGroupID, scopeGroupID)
+				"group_users.source = ? AND group_users.is_deleted = false ", scopeGroupID, scopeGroupID, scopeGroupID)
 			return addSelect, []interface{}{projectID, projectID, model.GroupUserSource[source], projectID, model.GroupUserSource[source]}
 		}
 

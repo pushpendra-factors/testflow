@@ -9,6 +9,8 @@ from metrics_aggregator.metrics_aggregator import MetricsAggregator
 from data_service.data_service import DataService
 from util.linkedin_api_service import LinkedinApiService
 from cache.member_company_info import MemberCompany
+from google_storage.google_storage import GoogleStorage
+
 class WeeklyMemberCompanyJob:
     sync_status = 0
     timestamp_range = []
@@ -24,6 +26,7 @@ class WeeklyMemberCompanyJob:
         self.data_service_obj = DataService.get_instance()
         self.linkedin_api_service_obj =  LinkedinApiService.get_instance()
         self.member_company_cache = MemberCompany.get_instance()
+
     
     def handle(signum, frame):
         raise Exception("Function timeout after 20 mins")
@@ -40,6 +43,7 @@ class WeeklyMemberCompanyJob:
         company_insights = self.linkedin_api_service_obj.extract_company_insights_for_all_campaign_groups(self.linkedin_setting, 
                                                                     start_timestamp, end_timestamp,
                                                                     self.campaign_group_cache.get_campaign_group_ids())
+        
         non_present_ids = U.get_non_present_ids(company_insights, self.member_company_cache.get_member_company_ids())
 
         self.member_company_cache.fetch_and_update_non_present_org_data_to_cache(
@@ -79,6 +83,10 @@ class WeeklyMemberCompanyJob:
         company_insights = self.linkedin_api_service_obj.extract_company_insights_for_all_campaigns(self.linkedin_setting, 
                                                                     start_timestamp, end_timestamp,
                                                                     self.campaign_cache.get_campaign_ids())
+        # writing to google cloud
+        GoogleStorage.get_instance().write(str(company_insights), self.metrics_aggregator_obj.job_type, DATA_STATE_RAW, 
+                                           start_timestamp, self.linkedin_setting.project_id, 
+                                           self.linkedin_setting.ad_account, MEMBER_COMPANY_INSIGHTS)
         non_present_ids = U.get_non_present_ids(company_insights, self.member_company_cache.get_member_company_ids())
 
         self.member_company_cache.fetch_and_update_non_present_org_data_to_cache(
@@ -98,6 +106,10 @@ class WeeklyMemberCompanyJob:
         for timestamp, records in distributed_records_map_with_timestamp.items():
             # Events job should not be run at the same time as this job
             # because deletion and reading could happen at the same time
+            # writing to google cloud
+            GoogleStorage.get_instance().write(str(records), self.metrics_aggregator_obj.job_type, DATA_STATE_TRANSFORMED, 
+                                           timestamp, self.linkedin_setting.project_id, 
+                                           self.linkedin_setting.ad_account, MEMBER_COMPANY_INSIGHTS)
             self.data_service_obj.delete_linkedin_documents_for_doc_type_and_timestamp(
                                                         self.linkedin_setting.project_id,
                                                         self.linkedin_setting.ad_account, MEMBER_COMPANY_INSIGHTS,
