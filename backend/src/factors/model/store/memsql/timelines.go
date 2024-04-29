@@ -1539,11 +1539,11 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId 
         FROM events 
         WHERE project_id=? AND timestamp <= ? 
         AND user_id IN (
-            SELECT id FROM users WHERE project_id=? AND %s = ?
+            SELECT id FROM users WHERE project_id=? AND %s = ? ORDER BY last_event_at DESC LIMIT 100
         ) AND event_name_id NOT IN (
             SELECT id FROM event_names WHERE project_id=? AND name IN (%s)
         ) 
-        LIMIT 5000) AS events1 
+        ORDER BY timestamp DESC LIMIT 5000) AS events1 
     LEFT JOIN event_names
     ON events1.event_name_id=event_names.id 
     WHERE event_names.project_id=?;`, userId, eventNamesToExcludePlaceholders)
@@ -1748,6 +1748,7 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
     WHERE project_id = ?
 	  AND (is_group_user = 0 OR is_group_user IS NULL)
 	  AND (%s)
+	  AND last_event_at IS NOT NULL
     GROUP BY user_id 
     ORDER BY last_event_at DESC 
     LIMIT 26;`, U.UP_NAME, selectStrAdditionalProp, groupUserString)
