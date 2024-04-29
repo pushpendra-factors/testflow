@@ -1163,7 +1163,7 @@ type Model interface {
 
 	//Workflows
 	GetAllWorkflowTemplates() ([]model.AlertTemplate, int)
-	GetAllWorklfowsByProject(projectID int64) ([]model.WorkflowAlertBody, int, error)
+	GetAllWorklfowsByProject(projectID int64) ([]model.WorkflowDisplayableInfo, int, error)
 	GetWorkflowById(projectID int64, id string) (*model.Workflow, int, error)
 	CreateWorkflow(projectID int64, agentID string, alertBody model.WorkflowAlertBody) (*model.Workflow, int, error)
 	UpdateWorkflow(projectID int64, id, agentID string, alertBody model.Workflow) (*model.Workflow, int, error)
