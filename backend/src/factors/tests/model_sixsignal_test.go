@@ -100,11 +100,11 @@ func TestSixSignalMonthlyMetering(t *testing.T) {
 			"a2.com", " ", "abc2.com", "abc.com"}
 		for _, v := range domainList {
 			if v != "" {
-				err := model.SetSixSignalMonthlyUniqueEnrichmentCount(project.ID, v, U.TimeZoneStringIST)
+				err := model.SetFactorsDeanonMonthlyUniqueEnrichmentCount(project.ID, v, U.TimeZoneStringIST)
 				assert.Nil(t, err)
 			}
 		}
-		count, err := model.GetSixSignalMonthlyUniqueEnrichmentCount(project.ID, monthYear)
+		count, err := model.GetFactorsDeanonMonthlyUniqueEnrichmentCount(project.ID, monthYear)
 		fmt.Println(count)
 		assert.Nil(t, err)
 		assert.NotNil(t, count)

@@ -435,21 +435,21 @@ func CheckFactorsDeanonymisationAlertForRecentProjects(projectId int64) (float64
 	eightDaysAgoUint64, _ := strconv.ParseUint(eightDaysAgoDate, 10, 64)
 
 	// Fetching total api count for n-1 and n-8
-	yesterdayTotalApiCount, err := model.GetSixSignalAPITotalHitCountCacheResult(projectId, yesterdayUint64)
+	yesterdayTotalApiCount, err := model.GetFactorsDeanonAPITotalHitCountResult(projectId, yesterdayUint64)
 	if err != nil {
 		return 0, 0, err
 	}
-	eightDaysAgoTotalApiCount, err := model.GetSixSignalAPITotalHitCountCacheResult(projectId, eightDaysAgoUint64)
+	eightDaysAgoTotalApiCount, err := model.GetFactorsDeanonAPITotalHitCountResult(projectId, eightDaysAgoUint64)
 	if err != nil {
 		return 0, 0, err
 	}
 
 	// Fetching successful(domain is present) api count for n-1 and n-8
-	yesterdaySuccessfulApiCount, err := model.GetSixSignalAPICountCacheResult(projectId, yesterdayUint64)
+	yesterdaySuccessfulApiCount, err := model.GetFactorsDeanonAPICountResult(projectId, yesterdayUint64)
 	if err != nil {
 		return 0, 0, err
 	}
-	eightDaysAgoSuccessfulApiCount, err := model.GetSixSignalAPICountCacheResult(projectId, eightDaysAgoUint64)
+	eightDaysAgoSuccessfulApiCount, err := model.GetFactorsDeanonAPICountResult(projectId, eightDaysAgoUint64)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -475,11 +475,11 @@ func CheckFactorsDeanonymisationAlertForOlderProjects(projectId int64) (float64,
 		// Subtract i days from the current date
 		date, _ := strconv.ParseUint(currentDate.AddDate(0, 0, -i).Format(util.DATETIME_FORMAT_YYYYMMDD), 10, 64)
 
-		totalApiCount, err := model.GetSixSignalAPITotalHitCountCacheResult(projectId, date)
+		totalApiCount, err := model.GetFactorsDeanonAPITotalHitCountResult(projectId, date)
 		if err != nil {
 			return 0, 0, err
 		}
-		successfulApiCount, err := model.GetSixSignalAPICountCacheResult(projectId, date)
+		successfulApiCount, err := model.GetFactorsDeanonAPICountResult(projectId, date)
 		if err != nil {
 			return 0, 0, err
 		}

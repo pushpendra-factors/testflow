@@ -182,7 +182,7 @@ func AccountLimitCountIncrementForTesting(projectId int64, count int) {
 	i := 0
 	for i <= count {
 		val := util.RandomString(i + 5)
-		err := model.SetSixSignalMonthlyUniqueEnrichmentCount(projectId, val, util.TimeZoneStringIST)
+		err := model.SetFactorsDeanonMonthlyUniqueEnrichmentCount(projectId, val, util.TimeZoneStringIST)
 		if err != nil {
 			fmt.Println("Error in adding domain to redis key")
 		}
@@ -192,7 +192,7 @@ func AccountLimitCountIncrementForTesting(projectId int64, count int) {
 
 func DeleteAlertAndAccLimitRedisKeyAfterTesting(projectId int64, exhaustType string, logCtx *log.Entry) {
 	alertKey, _ := factors_deanon.GetAccountLimitEmailAlertCacheKey(projectId, 10, exhaustType, util.TimeZoneStringIST, logCtx)
-	limitKey, _ := model.GetSixSignalMonthlyUniqueEnrichmentKey(projectId, util.GetCurrentMonthYear(util.TimeZoneStringIST))
+	limitKey, _ := model.GetFactorsDeanonMonthlyUniqueEnrichmentKey(projectId, util.GetCurrentMonthYear(util.TimeZoneStringIST))
 	var keys []*cacheRedis.Key
 	keys = append(keys, alertKey, limitKey)
 

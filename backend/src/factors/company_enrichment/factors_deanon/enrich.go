@@ -112,18 +112,18 @@ func (fd *FactorsDeanon) Meter(projectId int64, domain string, logCtx *log.Entry
 	}
 
 	//Unique Domain metering for calendar month
-	err := model.SetSixSignalMonthlyUniqueEnrichmentCount(projectId, domain, timeZone)
+	err := model.SetFactorsDeanonMonthlyUniqueEnrichmentCount(projectId, domain, timeZone)
 	if err != nil {
 		logCtx.Error("SetSixSignalMonthlyUniqueEnrichmentCount Failed.")
 	}
 
 	if domain != "" {
 		// Successful domain enrichment count for each day
-		model.SetSixSignalAPICountCacheResult(projectId, U.TimeZoneStringIST)
+		model.SetFactorsDeanonAPICountResult(projectId, U.TimeZoneStringIST)
 	}
 
 	// Total successful API calls for a day
-	model.SetSixSignalAPITotalHitCountCacheResult(projectId, U.TimeZoneStringIST)
+	model.SetFactorsDeanonAPITotalHitCountResult(projectId, U.TimeZoneStringIST)
 
 }
 
