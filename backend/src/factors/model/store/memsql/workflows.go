@@ -31,7 +31,7 @@ func (store *MemSQL) GetAllWorkflowTemplates() ([]model.AlertTemplate, int) {
 	return alertTemplates, http.StatusOK
 }
 
-func (store *MemSQL) GetAllWorklfowsByProject(projectID int64) ([]model.WorkflowAlertBody, int, error) {
+func (store *MemSQL) GetAllWorklfowsByProject(projectID int64) ([]model.WorkflowDisplayableInfo, int, error) {
 	if projectID == 0 {
 		return nil, http.StatusBadRequest, fmt.Errorf("invalid parameter")
 	}
@@ -43,7 +43,7 @@ func (store *MemSQL) GetAllWorklfowsByProject(projectID int64) ([]model.Workflow
 
 	db := C.GetServices().Db
 	workflows := make([]model.Workflow, 0)
-	wfAlerts := make([]model.WorkflowAlertBody, 0)
+	wfAlerts := make([]model.WorkflowDisplayableInfo, 0)
 	err := db.Where("project_id = ?", projectID).Where("is_deleted = ?", false).
 		Order("created_at DESC").Limit(ListLimit).Find(&workflows).Error
 	if err != nil {
@@ -55,13 +55,14 @@ func (store *MemSQL) GetAllWorklfowsByProject(projectID int64) ([]model.Workflow
 	}
 
 	for _, wf := range workflows {
-		var alert model.WorkflowAlertBody 
-		err := U.DecodePostgresJsonbToStructType(wf.AlertBody, &alert)
-		if err != nil {
-			log.WithError(err).Error("Failed to decode alert in the workflow object")
-			continue
-		}
-		wfAlerts = append(wfAlerts, alert)
+		wfInfo := model.WorkflowDisplayableInfo{
+			ID: wf.ID,
+			Title: wf.Name,
+			AlertBody: wf.AlertBody,
+			Status: wf.InternalStatus,
+			CreatedAt: wf.CreatedAt,
+		}	
+		wfAlerts = append(wfAlerts, wfInfo)
 	}
 
 	return wfAlerts, http.StatusFound, nil

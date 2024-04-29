@@ -25,14 +25,23 @@ type WorkflowStaticDataFields struct {
 }
 
 type Workflow struct {
+	ID             string          `json:"id"`
+	ProjectID      int64           `json:"project_id"`
+	Name           string          `json:"name"`
+	AlertBody      *postgres.Jsonb `json:"alert_body"`
+	InternalStatus bool            `json:"internal_status"`
+	CreatedAt      time.Time       `json:"created_at"`
+	UpdatedAt      time.Time       `json:"updated_at"`
+	CreatedBy      string          `json:"created_by"`
+	IsDeleted      bool            `gorm:"not null;default:false" json:"is_deleted"`
+}
+
+type WorkflowDisplayableInfo struct {
 	ID        string          `json:"id"`
-	ProjectID int64           `json:"project_id"`
-	Name      string          `json:"name"`
+	Title     string          `json:"title"`
 	AlertBody *postgres.Jsonb `json:"alert_body"`
+	Status    bool            `json:"status"`
 	CreatedAt time.Time       `json:"created_at"`
-	UpdatedAt time.Time       `json:"updated_at"`
-	CreatedBy string          `json:"created_by"`
-	IsDeleted bool            `gorm:"not null;default:false" json:"is_deleted"`
 }
 
 type WorkflowAlertBody struct {
