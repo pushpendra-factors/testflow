@@ -1346,6 +1346,9 @@ func addFilterEventsWithPropsQueryV2(projectId int64, qStmnt *string, qParams *[
 
 		if model.IsUserProfiles(caller) {
 			eventsWrapSelect = eventsWrapSelect + ", users.updated_at, users.last_event_at, users.is_group_user, users.source"
+			if !strings.Contains(eventsWrapSelect, "users.is_deleted") {
+				eventsWrapSelect = eventsWrapSelect + ", users.is_deleted"
+			}
 		}
 
 		domainGroupID := model.GetQueryDomainGroupID(addSelecStmnt)
