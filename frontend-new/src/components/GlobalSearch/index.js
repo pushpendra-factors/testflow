@@ -113,7 +113,10 @@ const Part1GlobalSearch = ({
                 }}
               >
                 <div className={styles['create-new-items']} tabIndex={0}>
-                  <div className={styles['create-new-item-icon']}>
+                  <div
+                    className={styles['create-new-item-icon']}
+                    style={{ backgroundColor: eachItem.bgColor }}
+                  >
                     {eachItem.icon}
                   </div>
                   {eachItem.name}
@@ -146,7 +149,7 @@ const Part1GlobalSearch = ({
                 {' '}
                 <div className={styles['reports-new-container']}>
                   {queries.map((eachItem, eachIndex) => {
-                    const queryType = getQueryType(eachItem.type);
+                    const queryType = getQueryType(eachItem.query);
                     const queryTypeName = {
                       events: 'events_cq',
                       funnel: 'funnels_cq',
@@ -175,7 +178,7 @@ const Part1GlobalSearch = ({
                           tabIndex={0}
                         >
                           <div className={styles['reports-new-item-icon']}>
-                            <SVG name={svgName} size={20} color='blue' />
+                            <SVG name={svgName} size={20} />
                           </div>
                           {eachItem.title}
                         </div>
@@ -305,7 +308,13 @@ const Part2GlobalSearch = ({
                   }}
                   tabIndex={0}
                 >
-                  {eachItem.icon}
+                  <div
+                    className={styles['icon']}
+                    style={{ backgroundColor: eachItem.bgColor }}
+                  >
+                    {eachItem.icon}
+                  </div>
+
                   <div>
                     <Text
                       level={6}
@@ -379,7 +388,7 @@ const Part2GlobalSearch = ({
                         }
                       }}
                     >
-                      <SVG name={svgName} size={20} color='blue' />
+                      <SVG name={svgName} size={20} />
                       {eachItem.title}
                     </div>
                   );
@@ -678,22 +687,25 @@ const GlobalSearch = () => {
           name: 'KPIs',
           fullName: 'KPI Report',
           description: 'Measure performance over time',
-          icon: <SVG name='KPI_cq' size={20} color='blue' />,
-          path: `/analyse/${QUERY_TYPE_KPI}`
+          icon: <SVG name='KPI_cq' size={20} color='#FF7A45' />,
+          path: `/analyse/${QUERY_TYPE_KPI}`,
+          bgColor: '#FFF2E8'
         },
         {
           name: 'Funnels',
           fullName: 'Funnel Report',
           description: 'Track how users navigate',
-          icon: <SVG name='Funnels_cq' size={20} color='blue' />,
-          path: `/analyse/${QUERY_TYPE_FUNNEL}`
+          icon: <SVG name='funnels_cq' size={20} color='#F759AB' />,
+          path: `/analyse/${QUERY_TYPE_FUNNEL}`,
+          bgColor: '#FFF0F6'
         },
         {
           name: 'Events',
           fullName: 'Event Report',
           description: 'Track and chart events',
-          icon: <SVG name='Events_cq' size={20} color='blue' />,
-          path: `/analyse/${QUERY_TYPE_EVENT}`
+          icon: <SVG name='events_cq' size={20} />,
+          path: `/analyse/${QUERY_TYPE_EVENT}`,
+          bgColor: '#F0F5FF'
         },
         // {
         //   name: 'Attribution',
@@ -706,22 +718,25 @@ const GlobalSearch = () => {
           name: 'Profiles',
           fullName: 'Profiles Report',
           description: 'Slice and dice your visitors',
-          icon: <SVG name='Profiles_cq' size={20} color='blue' />,
-          path: `/analyse/${QUERY_TYPE_PROFILE}`
+          icon: <SVG name='profiles_cq' size={20} />,
+          path: `/analyse/${QUERY_TYPE_PROFILE}`,
+          bgColor: '#FFF7E6'
         },
         {
           name: 'Path Analysis',
           fullName: 'Path Analysis Report',
           description: 'See winning and influential paths',
-          icon: <SVG name='PathAnalysis' size={20} color='blue' />,
-          path: '/path-analysis'
+          icon: <SVG name='PathAnalysis' size={20} color='#5CDBD3' />,
+          path: '/path-analysis',
+          bgColor: '#E6FFFB'
         },
         {
           name: 'Explain',
           fullName: 'Explain',
           description: 'Use AI to explain your marketing efforts ',
-          icon: <SVG name='Explain' size={20} color='blue' />,
-          path: '/explain'
+          icon: <SVG name='Explain' size={20} color='#D3ADF7' />,
+          path: '/explain',
+          bgColor: '#F9F0FF'
         },
         {
           name: 'Website visitors identification',

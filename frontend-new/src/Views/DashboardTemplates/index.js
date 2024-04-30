@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useHistory, useLocation } from 'react-router-dom';
 import { SVG, Text } from '../../components/factorsComponents';
 import SelectTemplates from './SelectTemplates';
@@ -12,12 +12,15 @@ import {
   NEW_DASHBOARD_TEMPLATES_MODAL_OPEN,
   UPDATE_PICKED_FIRST_DASHBOARD_TEMPLATE
 } from 'Reducers/types';
-
+import EmptyScreen from 'Components/EmptyScreen';
+import { PlayCircleFilled } from '@ant-design/icons';
+import { Button, Modal } from 'antd';
+import HowToCreateDashboardWebM from './../../assets/images/illustrations/HowToCreateDashboard.webm';
 function DashboardTemplates() {
   const dispatch = useDispatch();
   const history = useHistory();
   const { state } = useLocation();
-  const [addDashboardModal, setaddDashboardModal] = useState(false);
+  const [howToModal, setHowToModal] = useState(false);
   const [showTemplates, setShowTemplates] = useState(
     state?.fromSelectTemplateBtn ? true : false
   );
@@ -63,6 +66,10 @@ function DashboardTemplates() {
       id: BUILD_CONFIG.firstTimeDashboardTemplates?.allpaidmarketing
     }
   ];
+  const handleOpenTemplateModal = useCallback(() => {
+    dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_OPEN });
+  }, []);
+
   return (
     <>
       {/* {showTemplates && (
@@ -73,7 +80,80 @@ function DashboardTemplates() {
           />
         </div>
       )} */}
-      <div
+      <EmptyScreen
+        image={
+          <SVG
+            name={'selectTemplatesBackgroundChart'}
+            height='160'
+            width='250'
+          />
+        }
+        title={
+          <Text
+            type={'title'}
+            level={4}
+            weight={'bold'}
+            color={'grey-2'}
+            extraClass={'m-0'}
+          >
+            Organise your reports into dashboards
+          </Text>
+        }
+        description={
+          <>
+            <span>Create a dashboard to add reports to it</span>
+            <br />
+            <div className='pt-4'>
+              <span>
+                {' '}
+                <Link type='link' onClick={() => setHowToModal(true)}>
+                  <PlayCircleFilled /> How to create a dashboard?
+                </Link>{' '}
+                <Modal
+                  visible={howToModal}
+                  onCancel={() => setHowToModal(false)}
+                  footer={null}
+                  width={'60vw'}
+                  className='fa-modal--regular'
+                >
+                  <Text
+                    type={'title'}
+                    level={5}
+                    weight={'bold'}
+                    extraClass={'mb-4'}
+                  >
+                    Create a dashboard or scratch or start with a template
+                  </Text>
+                  <video
+                    autoPlay
+                    loop
+                    style={{
+                      height: '100%',
+                      width: '100%',
+                      objectFit: 'cover',
+                      clipPath: 'inset(1px 1px)',
+                      borderRadius: '16px'
+                    }}
+                  >
+                    <source src={HowToCreateDashboardWebM} type='video/webm' />
+                  </video>
+                </Modal>
+              </span>
+            </div>
+          </>
+        }
+        ActionButton={{
+          text: 'New Dashboard',
+          props: { type: 'dashed', size: 'large', style: { width: 232 } },
+          onClick: handleOpenTemplateModal,
+          tooltip: {
+            title:
+              'You can start creating dashboard from a blank slate or choose from our curated template list',
+            placement: 'bottom'
+          }
+        }}
+      />
+      {/* <div
         className={`flex justify-center flex-col items-center m-auto ${styles.contentClass}`}
       >
         <div className='text-center'>
@@ -152,7 +232,7 @@ function DashboardTemplates() {
             Dashboard Basics
           </Link>
         </div>
-      </div>
+      </div> */}
       <AddDashboard />
     </>
   );

@@ -37,7 +37,9 @@ import ShareToSlackModal from 'Components/ShareToSlackModal/ShareToSlackModal';
 import ShareToEmailModal from 'Components/ShareToEmailModal/ShareToEmailModal';
 import { featureLock } from 'Routes/feature';
 import useAgentInfo from 'hooks/useAgentInfo';
-
+import EmptyScreen from 'Components/EmptyScreen';
+import NewReportButton from '../NewReportButton';
+import EmptyDraftScreen from './../../../assets/images/illustrations/EmptyDraftScreen.png';
 const columns = [
   {
     title: 'Type',
@@ -469,7 +471,22 @@ const SavedQueriesTable = ({
       setAllChannels(allArr);
     }
   }, [activeProject, agent_details, slack]);
-
+  if (data && data.length <= 0) {
+    return (
+      <EmptyScreen
+        image={<img src={EmptyDraftScreen} width={182} />}
+        title='A place for your ad-hoc queries 📝'
+        description='Save any ad-hoc under drafts to access later'
+        ActionButton={{
+          text: 'New Report',
+          onClick: () => {},
+          component: (
+            <NewReportButton showSavedReport={false} placement='bottom' />
+          )
+        }}
+      />
+    );
+  }
   return (
     <>
       <Table
