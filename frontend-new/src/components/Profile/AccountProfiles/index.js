@@ -953,7 +953,7 @@ function AccountProfiles({
         displayTableProps,
         groupPropNames,
         eventNames,
-        tableColumnsList,
+        listProperties: tableColumnsList,
         defaultSorterInfo,
         projectDomainsList,
         onClickOpen,
