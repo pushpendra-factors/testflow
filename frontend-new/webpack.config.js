@@ -225,7 +225,7 @@ module.exports = {
         )
       },
       {
-        test: /\.(eot|woff|woff2|ttf|svg|png|jpg|jpeg|gif)(\?\S*)?$/,
+        test: /\.(eot|woff|woff2|ttf|svg|png|jpg|jpeg|gif|webm)(\?\S*)?$/,
         use: [
           {
             loader: 'url-loader',

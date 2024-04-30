@@ -65,7 +65,6 @@ function ProjectDropdown({
   const [deleteDashboardModal, showDeleteDashboardModal] = useState(false);
   const [dashboardDeleteApi, setDashboardDeleteApi] = useState(false);
 
-  const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
   const dispatch = useDispatch();
 
   const { dashboard_id } = useParams();
@@ -321,15 +320,6 @@ function ProjectDropdown({
         }
         onError={FaErrorLog}
       >
-        {isReportsModalOpen === true ? (
-          <ExistingReportsModal
-            isReportsModalOpen={isReportsModalOpen}
-            setIsReportsModalOpen={setIsReportsModalOpen}
-          />
-        ) : (
-          ''
-        )}
-
         <div className='flex items-start justify-between'>
           <div className='flex flex-col items-start'>
             <div className='flex items-center'>
@@ -356,10 +346,7 @@ function ProjectDropdown({
             </Text>
           </div>
           <div className='flex items-center'>
-            <NewReportButton
-              showSavedReport
-              setIsReportsModalOpen={setIsReportsModalOpen}
-            />
+            <NewReportButton showSavedReport />
             {additionalActions()}
           </div>
         </div>
@@ -373,7 +360,6 @@ function ProjectDropdown({
             oldestRefreshTime={oldestRefreshTime}
             handleRefreshClick={handleRefreshClick}
           />
-
           <SortableCards
             durationObj={durationObj}
             setwidgetModal={handleToggleWidgetModal}

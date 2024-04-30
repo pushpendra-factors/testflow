@@ -1,8 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Text, SVG } from '../../../components/factorsComponents';
-import { Row, Col, Input, Button } from 'antd';
-import { DeleteOutlined } from '@ant-design/icons';
+import { Row, Col, Input, Button, Dropdown, Menu, Popover } from 'antd';
+import {
+  CaretDownFilled,
+  DeleteOutlined,
+  LockFilled,
+  LockOutlined,
+  UnlockFilled,
+  UnlockOutlined
+} from '@ant-design/icons';
 import useAutoFocus from 'hooks/useAutoFocus';
+import TextArea from 'antd/lib/input/TextArea';
 // const { Option } = Select;
 
 function AddDashboardTab({
@@ -16,11 +24,32 @@ function AddDashboardTab({
   showDeleteModal
 }) {
   const inputComponentRef = useAutoFocus();
-
+  const items = (
+    <Menu className='rounded' style={{ width: 200, padding: '10px 0' }}>
+      <Menu.Item
+        className='p-2'
+        key='0'
+        onClick={() => setDashboardType('pr')}
+        style={{ padding: '10px' }}
+        icon={<LockFilled />}
+      >
+        Private
+      </Menu.Item>
+      <Menu.Item
+        className='p-2'
+        key='1'
+        onClick={() => setDashboardType('pv')}
+        style={{ padding: '10px' }}
+        icon={<UnlockFilled />}
+      >
+        Public
+      </Menu.Item>
+    </Menu>
+  );
   return (
     <>
       <Row className={'pt-4'} gutter={[24, 24]}>
-        <Col span={12}>
+        <Col span={24}>
           <Text type={'title'} level={7} extraClass={'m-0'}>
             Title
           </Text>
@@ -33,26 +62,42 @@ function AddDashboardTab({
             ref={inputComponentRef}
           />
         </Col>
-        <Col span={12}>
+        <Col span={24}>
           <Text type={'title'} level={7} extraClass={'m-0'}>
             Description (Optional)
           </Text>
-          <Input
+          <TextArea
             onChange={(e) => setDescription(e.target.value)}
             value={description}
             className={'fa-input'}
             size={'large'}
             placeholder='Description (Optional)'
+            style={{ resize: 'none' }}
           />
         </Col>
       </Row>
-      <Row className={'pt-2'} gutter={[24, 4]}>
-        <Col span={24}>
-          <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0'}>
-            Who can access this dashboard ?
-          </Text>
-        </Col>
-        <Col span={24}>
+      <Row
+        className={
+          'p-2 mt-2 flex justify-between w-full rounded-md items-center'
+        }
+        style={{ border: '1px solid #f5f5f5' }}
+      >
+        <Text type={'title'} level={6} extraClass={'m-0'}>
+          Who can access this dashboard ?
+        </Text>
+        <Dropdown overlay={() => items} placement='bottom' trigger='click'>
+          <Button
+            type='text'
+            icon={dashboardType === 'pr' ? <LockFilled /> : <UnlockFilled />}
+            prefix={<CaretDownFilled />}
+            className='items-center'
+          >
+            {dashboardType === 'pr' ? 'Private' : 'Public'}
+            <CaretDownFilled />
+          </Button>
+        </Dropdown>
+
+        {/* <Col span={12}>
           <Row gutter={[24, 4]}>
             <Col span={12}>
               <div
@@ -133,7 +178,7 @@ function AddDashboardTab({
               </div>
             </Col>
           </Row>
-        </Col>
+        </Col> */}
       </Row>
       {editDashboard ? (
         <div className='pt-2'>
