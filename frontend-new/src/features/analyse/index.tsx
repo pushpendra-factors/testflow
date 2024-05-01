@@ -276,6 +276,8 @@ const CoreQuery = () => {
     queryState.queryType = QUERY_TYPE_FUNNEL;
     if (isSavedQuery) {
       queryState.querySaved = { name: queryToAdd.title, id: queryToAdd.id };
+    } else {
+      queryState.querySaved = {};
     }
 
     queryState.requestQuery = queryToAdd?.query;
