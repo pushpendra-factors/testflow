@@ -24,10 +24,6 @@ import { useHistory, useLocation, useParams } from 'react-router-dom';
 import SearchCheckList from 'Components/SearchCheckList';
 import { formatUserPropertiesToCheckList } from 'Reducers/timelines/utils';
 import {
-  selectAccountPayload,
-  selectActiveTab
-} from 'Reducers/accountProfilesView/selectors';
-import {
   setAccountPayloadAction,
   setActiveDomainAction,
   setDrawerVisibleAction,
@@ -40,7 +36,7 @@ import RangeNudge from 'Components/GenericComponents/RangeNudge';
 import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
 import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
 import { selectGroupsList } from 'Reducers/groups/selectors';
-import { fetchProfileAccounts, fetchSegmentById } from 'Reducers/timelines';
+import { fetchProfileAccounts } from 'Reducers/timelines';
 import { downloadCSV } from 'Utils/csv';
 import { PathUrls } from 'Routes/pathUrls';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
@@ -96,6 +92,7 @@ import AccountsInsights from './AccountsInsights/AccountsInsights';
 import AccountDrawer from './AccountDrawer';
 import InsightsWrapper from './InsightsWrapper';
 import styles from './index.module.scss';
+import { INITIAL_ACCOUNT_PAYLOAD } from 'Reducers/accountProfilesView';
 
 function AccountProfiles({
   createNewSegment,
@@ -133,6 +130,7 @@ function AccountProfiles({
   // Search Bar
   const [searchBarOpen, setSearchBarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const searchAccountsInputRef = useAutoFocus(searchBarOpen);
 
   // Column Selector
   const [showTableColumnsDD, setShowTableColumnsDD] = useState(false);
@@ -156,17 +154,15 @@ function AccountProfiles({
   // Preview
   const [processedDomains, setProcessedDomains] = useState(new Set());
 
-  const onDrawerClose = () => {
+  const handleDrawerClose = () => {
     dispatch(setDrawerVisibleAction(false));
   };
 
   useEffect(() => {
-    if (filtersExpanded) onDrawerClose();
+    if (filtersExpanded) handleDrawerClose();
   }, [filtersExpanded]);
 
-  const activeTab = useSelector((state) => selectActiveTab(state));
-
-  const { accounts } = useSelector((state) => state.timelines);
+  const { accounts, segments } = useSelector((state) => state.timelines);
 
   const {
     active_project: activeProject,
@@ -178,41 +174,128 @@ function AccountProfiles({
     (state) => state.coreQuery
   );
 
-  const { sixSignalInfo } = useSelector((state) => state.featureConfig);
-
   const {
+    activeTab,
+    accountPayload,
     newSegmentMode,
     filtersDirty: areFiltersDirty,
     preview
   } = useSelector((state) => state.accountProfilesView);
 
-  const groupsList = useSelector((state) => selectGroupsList(state));
-
-  const accountPayload = useSelector((state) => selectAccountPayload(state));
+  const { sixSignalInfo } = useSelector((state) => state.featureConfig);
 
   const { isFeatureLocked: isScoringLocked } = useFeatureLock(
     FEATURES.FEATURE_ACCOUNT_SCORING
   );
 
-  const searchAccountsInputRef = useAutoFocus(searchBarOpen);
+  const groupsList = useSelector((state) => selectGroupsList(state));
 
   const setAccountPayload = (payload) => {
     dispatch(setAccountPayloadAction(payload));
-    if (payload.segment?.id) {
+    if (payload?.segment?.id) {
       dispatch(setNewSegmentModeAction(false));
     }
   };
 
-  const getAccountPayload = async () => {
-    if (segmentID && !accountPayload.isUnsaved) {
-      const response = await fetchSegmentById(activeProject.id, segmentID);
-      if (segmentID === accountPayload?.segment?.id) {
-        return { ...accountPayload, segment: response.data };
-      }
-      return { source: GROUP_NAME_DOMAINS, segment: response.data };
+  useEffect(() => {
+    if (location.pathname === PathUrls.ProfileAccounts && !newSegmentMode) {
+      setAccountPayload(INITIAL_ACCOUNT_PAYLOAD);
     }
-    return accountPayload;
+  }, [location.pathname]);
+
+  const getAccountPayload = () => {
+    if (newSegmentMode) {
+      return {};
+    }
+
+    if (accountPayload.isUnsaved) {
+      return accountPayload;
+    }
+
+    if (!segmentID) {
+      return INITIAL_ACCOUNT_PAYLOAD;
+    }
+
+    const defaultSegment = segments[GROUP_NAME_DOMAINS].find(
+      (item) => item.id === segmentID
+    );
+
+    if (segmentID === accountPayload?.segment?.id) {
+      return { ...accountPayload, segment: defaultSegment };
+    }
+
+    return {
+      source: GROUP_NAME_DOMAINS,
+      segment: defaultSegment
+    };
   };
+
+  const runInit = async () => {
+    const payload = getAccountPayload();
+    if (!_.isEqual(payload, accountPayload)) {
+      setAccountPayload(payload);
+    }
+  };
+
+  useEffect(() => {
+    runInit();
+  }, [segmentID, segments, accountPayload]);
+
+  const getAccounts = useCallback(
+    async (payload) => {
+      try {
+        setDefaultSorterInfo({ key: '$engagement_level', order: 'descend' });
+        const reqPayload = formatReqPayload(payload);
+        const response = await getProfileAccounts(activeProject.id, reqPayload);
+
+        if (response.type === 'FETCH_PROFILE_ACCOUNTS_FAILED') {
+          if (response.error.status === 400) {
+            setErrMsg('400 Bad Request');
+          } else if (response.error.status === 500) {
+            setErrMsg(
+              'The server encountered an internal error and could not complete your request'
+            );
+          }
+        } else if (response.type === 'FETCH_PROFILE_ACCOUNTS_FULFILLED') {
+          if (response.status === 200 && response.payload.length === 0) {
+            setErrMsg('No accounts found');
+          }
+        }
+      } catch (err) {
+        logger.error(err);
+      }
+    },
+    [accountPayload, activeProject.id]
+  );
+
+  useEffect(() => {
+    const shouldCache = location?.state?.fromDetails;
+    if (shouldCache) {
+      if (!location.state.accountPayload) {
+        setAccountPayload({ source: GROUP_NAME_DOMAINS });
+      } else {
+        const {
+          currentPage: cachedCurrentPage,
+          currentPageSize: cachedCurrentPageSize,
+          activeSorter,
+          accountPayload: payload
+        } = location.state;
+        setCurrentPage(cachedCurrentPage);
+        setCurrentPageSize(cachedCurrentPageSize);
+        setDefaultSorterInfo(activeSorter);
+        setAccountPayload(payload);
+        dispatch(setNewSegmentModeAction(false));
+      }
+      const updatedLocationState = { ...location.state, fromDetails: false };
+      history.replace(location.pathname, updatedLocationState);
+    } else if (
+      !segmentID ||
+      segmentID === accountPayload?.segment?.id ||
+      !accountPayload.segment?.id
+    ) {
+      getAccounts(accountPayload);
+    }
+  }, [segmentID, accountPayload]);
 
   useEffect(() => {
     if (activeProject?.id) {
@@ -221,15 +304,6 @@ function AccountProfiles({
       getSavedSegments(activeProject.id);
     }
   }, [activeProject?.id]);
-
-  const runInit = async () => {
-    const payload = await getAccountPayload();
-    if (!_.isEqual(payload, accountPayload)) setAccountPayload(payload);
-  };
-
-  useEffect(() => {
-    runInit();
-  }, [segmentID, accountPayload]);
 
   useEffect(() => {
     const filteredDomainProps = (
@@ -429,58 +503,9 @@ function AccountProfiles({
       });
   }, [accountPayload?.segment, activeProject.id]);
 
-  const getAccounts = useCallback(
-    async (payload) => {
-      try {
-        setDefaultSorterInfo({ key: '$engagement_level', order: 'descend' });
-        const reqPayload = formatReqPayload(payload);
-        const response = await getProfileAccounts(activeProject.id, reqPayload);
-
-        if (response.type === 'FETCH_PROFILE_ACCOUNTS_FAILED') {
-          if (response.error.status === 400) {
-            setErrMsg('400 Bad Request');
-          } else if (response.error.status === 500) {
-            setErrMsg(
-              'The server encountered an internal error and could not complete your request'
-            );
-          }
-        } else if (response.type === 'FETCH_PROFILE_ACCOUNTS_FULFILLED') {
-          if (response.status === 200 && response.payload.length === 0) {
-            setErrMsg('No accounts found');
-          }
-        }
-      } catch (err) {
-        logger.error(err);
-      }
-    },
-    [accountPayload, activeProject.id]
-  );
-
-  useEffect(() => {
-    const shouldCache = location?.state?.fromDetails;
-    if (shouldCache) {
-      if (!location.state.accountPayload) {
-        setAccountPayload({ source: GROUP_NAME_DOMAINS });
-      } else {
-        setCurrentPage(location.state.currentPage);
-        setCurrentPageSize(location.state.currentPageSize);
-        setDefaultSorterInfo(location.state.activeSorter);
-        setAccountPayload(location.state.accountPayload);
-        dispatch(setNewSegmentModeAction(false));
-      }
-      const updatedLocationState = { ...location.state, fromDetails: false };
-      history.replace(location.pathname, { ...updatedLocationState });
-    } else if (
-      (segmentID && segmentID === accountPayload?.segment?.id) ||
-      !segmentID ||
-      (accountPayload.segment && !accountPayload.segment?.id)
-    ) {
-      getAccounts(accountPayload);
-    }
-  }, [segmentID, accountPayload]);
+  const activeID = useMemo(() => segmentID || 'default', [segmentID]);
 
   const tableData = useMemo(() => {
-    const activeID = segmentID || 'default';
     const sortedData = accounts.data[activeID]?.sort(
       (a, b) => new Date(b.last_activity) - new Date(a.last_activity)
     );
@@ -925,7 +950,7 @@ function AccountProfiles({
     setCurrentPage(pageParams.current);
     setCurrentPageSize(pageParams.pageSize);
     setDefaultSorterInfo({ key: sorter.columnKey, order: sorter.order });
-    onDrawerClose();
+    handleDrawerClose();
   };
 
   const onClickOpen = (domain) => {
@@ -1255,7 +1280,7 @@ function AccountProfiles({
         <ControlledComponent
           controller={
             !accounts.isLoading &&
-            accounts.data?.[segmentID || 'default']?.length > 0 &&
+            accounts.data?.[activeID]?.length > 0 &&
             (!newSegmentMode || areFiltersDirty)
           }
         >
@@ -1276,16 +1301,16 @@ function AccountProfiles({
         <ControlledComponent
           controller={
             !accounts.isLoading &&
-            (!accounts.data[segmentID || 'default'] ||
-              accounts.data[segmentID || 'default'].length === 0) &&
+            (!accounts.data[activeID] ||
+              accounts.data[activeID].length === 0) &&
             (!newSegmentMode || areFiltersDirty)
           }
         >
           <NoDataWithMessage
             message={
               isOnboarded(currentProjectSettings)
-                ? !accounts.data[segmentID || 'default'] ||
-                  accounts.data[segmentID || 'default'].length === 0
+                ? !accounts.data[activeID] ||
+                  accounts.data[activeID].length === 0
                   ? 'No Accounts found'
                   : errMsg
                 : 'Onboarding not completed'
@@ -1342,7 +1367,7 @@ function AccountProfiles({
       <AccountDrawer
         domain={preview.domain.name}
         visible={preview.drawerVisible}
-        onClose={onDrawerClose}
+        onClose={handleDrawerClose}
         onClickMore={() => onClickOpen(preview.domain)}
         onClickOpenNewtab={() => onClickOpenNewTab(preview.domain)}
       />

@@ -10,14 +10,12 @@ import ControlledComponent from 'Components/ControlledComponent/ControlledCompon
 import { PathUrls } from 'Routes/pathUrls';
 import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
 import {
-  setAccountPayloadAction,
   setDrawerVisibleAction,
   setNewSegmentModeAction,
   toggleAccountsTab
 } from 'Reducers/accountProfilesView/actions';
 import { selectTimelinePayload } from 'Reducers/userProfilesView/selectors';
 import { setTimelinePayloadAction } from 'Reducers/userProfilesView/actions';
-import { INITIAL_ACCOUNT_PAYLOAD } from 'Reducers/accountProfilesView';
 import { checkMatchPath } from './appSidebar.helpers';
 import SidebarMenuItem from './SidebarMenuItem';
 import styles from './index.module.scss';
@@ -64,7 +62,6 @@ function AppSidebar() {
 
   const changeAccountPayload = () => {
     dispatch(setDrawerVisibleAction(false));
-    dispatch(setAccountPayloadAction(INITIAL_ACCOUNT_PAYLOAD));
     dispatch(setNewSegmentModeAction(false));
     dispatch(toggleAccountsTab('accounts'));
     history.replace(PathUrls.ProfileAccounts);

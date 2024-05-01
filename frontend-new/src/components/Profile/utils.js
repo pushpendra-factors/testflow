@@ -259,6 +259,13 @@ export const getPropType = (propsList, searchProp) => {
   return propType;
 };
 
+export const timestampInSeconds = (timestamp) => {
+  if (timestamp.toString().length > 10) {
+    return Math.floor(timestamp / 1000);
+  }
+  return timestamp;
+};
+
 export const propValueFormat = (searchKey, value, type) => {
   if (!value) return '-';
 
@@ -268,9 +275,10 @@ export const propValueFormat = (searchKey, value, type) => {
   const isDurationMilliseconds = searchKey?.includes('durationmilliseconds');
   const isTimestamp = searchKey?.includes('timestamp');
 
-  const formatDatetime = (value) => {
+  const formatDatetime = (timestamp) => {
+    const valueInSeconds = timestampInSeconds(timestamp);
     const dateFormat = isDate ? 'DD MMM YYYY' : 'DD MMM YYYY, hh:mm A zz';
-    return MomentTz(value * 1000).format(dateFormat);
+    return MomentTz(valueInSeconds * 1000).format(dateFormat);
   };
 
   const formatNumerical = (value) => {

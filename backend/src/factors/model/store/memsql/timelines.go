@@ -1743,14 +1743,15 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 	query := fmt.Sprintf(`SELECT COALESCE(JSON_EXTRACT_STRING(properties, '%s'), customer_user_id, id) AS user_name, %s
         COALESCE(customer_user_id, id) AS user_id, 
         ISNULL(customer_user_id) AS is_anonymous,
-		LAST(properties, last_event_at) as user_properties
-    FROM users 
+		properties AS user_properties,
+        MAX(last_event_at) AS user_last_event_at
+		FROM users 
     WHERE project_id = ?
 	  AND (is_group_user = 0 OR is_group_user IS NULL)
 	  AND (%s)
 	  AND last_event_at IS NOT NULL
     GROUP BY user_id 
-    ORDER BY last_event_at DESC 
+    ORDER BY user_last_event_at DESC 
     LIMIT 26;`, U.UP_NAME, selectStrAdditionalProp, groupUserString)
 
 	// Get Timeline for <=25 users
