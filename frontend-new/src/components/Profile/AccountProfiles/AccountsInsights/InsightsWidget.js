@@ -8,7 +8,7 @@ import {
   selectInsightsCompareSegmentBySegmentId
 } from 'Reducers/accountProfilesView/selectors';
 import { fetchInsights } from 'Reducers/accountProfilesView/services';
-import { Text } from 'Components/factorsComponents';
+import { SVG, Text } from 'Components/factorsComponents';
 import ControlledComponent from 'Components/ControlledComponent';
 import { selectSegments } from 'Reducers/timelines/selectors';
 import {
@@ -144,7 +144,7 @@ function InsightsWidget({ widget, dateRange, onEditMetricClick }) {
     [segments, comparedSegmentId]
   );
 
-  const isLoading =
+  const curIsLoading =
     insights.loading === true ||
     (insights.completed !== true && insights.error !== true);
 
@@ -153,6 +153,9 @@ function InsightsWidget({ widget, dateRange, onEditMetricClick }) {
   const compareData =
     comparedSegmentId == null ? compareInsights : comparedSegmentInsights;
 
+  const isLoading = compareData.loading || curIsLoading;
+  const isCompleted = !isLoading && insights.completed && compareData.completed;
+
   const compareInsightsDataByKey = getInsightsDataByKey(compareData);
 
   const showComparisonData = compareData.completed === true;
@@ -160,6 +163,13 @@ function InsightsWidget({ widget, dateRange, onEditMetricClick }) {
   return (
     <div className='flex flex-col border rounded-lg'>
       <div className='p-4 border-b flex gap-x-3'>
+        <ControlledComponent controller={widget.name === 'marketing'}>
+          <SVG name='analysis' size={24} color='#73D13D' />
+        </ControlledComponent>
+        <ControlledComponent controller={widget.name === 'sales'}>
+          <SVG name='lightBulbOn' size={24} color='#FFC53D' />
+        </ControlledComponent>
+
         <Text
           level={6}
           extraClass='mb-0'
@@ -171,14 +181,14 @@ function InsightsWidget({ widget, dateRange, onEditMetricClick }) {
         </Text>
       </div>
       <div
-        className={cx('p-4 flex', styles['min-h-48'], {
+        className={cx('flex py-8', styles['min-h-48'], {
           'items-center justify-center': isLoading
         })}
       >
         <ControlledComponent controller={isLoading}>
           <Spin size='small' />
         </ControlledComponent>
-        <ControlledComponent controller={insights.completed === true}>
+        <ControlledComponent controller={isCompleted}>
           {widget.wids.map((queryMetric, index) => (
             <QueryMetric
               key={queryMetric.id}

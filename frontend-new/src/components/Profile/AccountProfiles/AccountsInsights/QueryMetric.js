@@ -57,10 +57,10 @@ function QueryMetric({
     <div
       key={queryMetric.id}
       className={cx(
-        'flex w-1/4 items-center justify-center flex-col gap-y-4',
+        'flex w-1/4 px-4 items-center justify-center flex-col gap-y-4',
         styles['metric-container'],
         {
-          'border-r pr-2': index !== totalWidgets - 1
+          'border-r': index !== totalWidgets - 1
         }
       )}
     >
@@ -86,7 +86,7 @@ function QueryMetric({
         <Text
           extraClass='mb-0'
           type='title'
-          level={1}
+          level={2}
           weight='bold'
           color='character-primary'
         >
@@ -133,12 +133,14 @@ function QueryMetric({
                   : 0
               }
             />
-            <div className={cx('flex gap-x-1 items-center justify-center')}>
+            <div
+              className={cx('flex gap-x-1 items-center justify-center w-full')}
+            >
               <Text
                 type='title'
                 level={8}
                 extraClass={cx('mb-0 truncate', {
-                  [styles['max-w-80']]: comparedSegmentId != null
+                  [styles['max-w-100']]: comparedSegmentId != null
                 })}
                 color='character-secondary'
               >
@@ -175,12 +177,14 @@ function QueryMetric({
         >
           <div className='flex flex-col items-center w-full'>
             <ComparePercent value={0} />
-            <div className={cx('flex gap-x-1 items-center justify-center')}>
+            <div
+              className={cx('flex gap-x-1 items-center justify-center w-full')}
+            >
               <Text
                 type='title'
                 level={8}
                 extraClass={cx('mb-0 truncate', {
-                  [styles['max-w-80']]: comparedSegmentId != null
+                  [styles['max-w-100']]: comparedSegmentId != null
                 })}
                 color='character-secondary'
               >

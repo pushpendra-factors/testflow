@@ -81,11 +81,11 @@ function EditMetricModal({
       visible={visible}
       onOk={handleOk}
       onCancel={onCancel}
-      width={834}
+      width={600}
       isLoading={isLoading}
     >
       <div className='flex flex-col gap-y-6'>
-        <div className='flex flex-col gap-y-2'>
+        <div className='flex flex-col'>
           <Text
             type='title'
             extraClass='mb-0'
