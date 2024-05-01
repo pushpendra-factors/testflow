@@ -66,8 +66,10 @@ function SegmentKpisOverview({ widget, dateRange }) {
     <div
       className={cx(
         'flex flex-col gap-y-2 border rounded-lg py-8 px-4 items-center',
-        styles['min-h-48'],
-        { 'items-center justify-center': isLoading }
+        {
+          'items-center justify-center': isLoading,
+          [styles['min-h-48']]: isLoading
+        }
       )}
     >
       <ControlledComponent controller={isLoading}>
@@ -101,7 +103,7 @@ function SegmentKpisOverview({ widget, dateRange }) {
               <Text
                 extraClass='mb-0'
                 type='title'
-                level={1}
+                level={2}
                 weight='bold'
                 color='character-primary'
               >
@@ -119,7 +121,8 @@ function SegmentKpisOverview({ widget, dateRange }) {
           color='character-secondary'
           level={8}
         >
-          These numbers are real-time
+          These metrics show the current state and are independent of the date
+          range
         </Text>
       </ControlledComponent>
     </div>
