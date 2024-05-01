@@ -122,12 +122,12 @@ func InitAppRoutes(r *gin.Engine) {
 	shareRouteGroup.Use(mid.ValidateAccessToSharedEntity(M.ShareableURLEntityTypeQuery))
 	shareRouteGroup.Use(mid.LogAuditMid())
 
-	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/query", mid.RequestRateLimiterMiddleware("QUERY_V1", 50, 60), responseWrapper(EventsQueryHandler))
-	shareRouteGroup.POST("/:project_id/query", mid.RequestRateLimiterMiddleware("QUERY", 50, 60), responseWrapper(QueryHandler))
-	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/attribution/query", mid.RequestRateLimiterMiddleware("ATTRIBUTION_QUERY_V1", 10, 60), responseWrapper(V1.AttributionHandlerV1))
-	shareRouteGroup.POST("/:project_id/attribution/query", mid.RequestRateLimiterMiddleware("ATTRIBUTION_QUERY", 50, 60), responseWrapper(AttributionHandler))
-	shareRouteGroup.POST("/:project_id/profiles/query", mid.RequestRateLimiterMiddleware("PROFILES_QUERY", 50, 60), responseWrapper(ProfilesQueryHandler))
-	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/query", mid.RequestRateLimiterMiddleware("KPI_QUERY", 50, 60), responseWrapper(V1.ExecuteKPIQueryHandler))
+	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/query", mid.RequestRateLimiterMiddleware("QUERY_V1", 200, 60), responseWrapper(EventsQueryHandler))
+	shareRouteGroup.POST("/:project_id/query", mid.RequestRateLimiterMiddleware("QUERY", 200, 60), responseWrapper(QueryHandler))
+	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/attribution/query", mid.RequestRateLimiterMiddleware("ATTRIBUTION_QUERY_V1", 200, 60), responseWrapper(V1.AttributionHandlerV1))
+	shareRouteGroup.POST("/:project_id/attribution/query", mid.RequestRateLimiterMiddleware("ATTRIBUTION_QUERY", 200, 60), responseWrapper(AttributionHandler))
+	shareRouteGroup.POST("/:project_id/profiles/query", mid.RequestRateLimiterMiddleware("PROFILES_QUERY", 200, 60), responseWrapper(ProfilesQueryHandler))
+	shareRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/kpi/query", mid.RequestRateLimiterMiddleware("KPI_QUERY", 200, 60), responseWrapper(V1.ExecuteKPIQueryHandler))
 
 	// Predefined dashboards and queries
 	// shareRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/predefined_dashboards", )
