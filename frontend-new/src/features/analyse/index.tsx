@@ -268,12 +268,16 @@ const CoreQuery = () => {
   const createFunnelStateFromResult = (
     queryToAdd: (typeof savedQueries)[0],
     resultState?: ResultState | null,
-    dateRange?: any | null
+    dateRange?: any | null,
+    isSavedQuery = true
   ) => {
     const equivalentQuery = getStateQueryFromRequestQuery(queryToAdd?.query);
     const queryState = new CoreQueryState();
     queryState.queryType = QUERY_TYPE_FUNNEL;
-    queryState.querySaved = { name: queryToAdd.title, id: queryToAdd.id };
+    if (isSavedQuery) {
+      queryState.querySaved = { name: queryToAdd.title, id: queryToAdd.id };
+    }
+
     queryState.requestQuery = queryToAdd?.query;
     queryState.showResult = true;
     queryState.loading = false;
@@ -950,7 +954,7 @@ const CoreQuery = () => {
           queryToAdd.query = query;
         }
 
-        createFunnelStateFromResult(queryToAdd, res, dateRange);
+        createFunnelStateFromResult(queryToAdd, res, dateRange, false);
       } catch (err) {
         logger.error(err);
         setLoading(false);
