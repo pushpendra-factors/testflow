@@ -1098,7 +1098,7 @@ func buildUniqueUsersFunnelQuery(projectId int64, q model.Query, groupIds []int,
 		bucketedFromName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys :=
 			appendNumericalBucketingSteps(isAggregateOnProperty, &qStmnt, &qParams, q.GroupByProperties,
 				stepFunnelName, stepTimeSelect, false,
-				strings.Join(funnelCountAliases, ", "))
+				strings.Join(funnelCountAliases, ", "), &q)
 		aggregateSelectKeys = bucketedSelectKeys
 		aggregateFromName = bucketedFromName
 		aggregateGroupBys = strings.Join(bucketedGroupBys, ", ")
@@ -1493,7 +1493,7 @@ func buildUniqueUsersFunnelQueryV2(projectId int64, q model.Query, groupIds []in
 		bucketedFromName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys :=
 			appendNumericalBucketingSteps(isAggregateOnProperty, &qStmnt, &qParams, q.GroupByProperties,
 				stepFunnelName, stepTimeSelect, false,
-				strings.Join(funnelCountAliases, ", "))
+				strings.Join(funnelCountAliases, ", "), &q)
 		aggregateSelectKeys = bucketedSelectKeys
 		aggregateFromName = bucketedFromName
 		aggregateGroupBys = strings.Join(bucketedGroupBys, ", ")
@@ -1845,7 +1845,7 @@ func buildUniqueUsersFunnelQueryV3(projectId int64, q model.Query, groupIds []in
 		bucketedFromName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys :=
 			appendNumericalBucketingSteps(isAggregateOnProperty, &qStmnt, &qParams, q.GroupByProperties,
 				stepFunnelName, stepTimeSelect, false,
-				strings.Join(funnelCountAliases, ", "))
+				strings.Join(funnelCountAliases, ", "), &q)
 		aggregateSelectKeys = bucketedSelectKeys
 		aggregateFromName = bucketedFromName
 		aggregateGroupBys = strings.Join(bucketedGroupBys, ", ")

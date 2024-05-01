@@ -1021,7 +1021,7 @@ func isGroupByTypeWithBuckets(groupProps []model.QueryGroupByProperty) bool {
 }
 
 func appendNumericalBucketingSteps(isAggregateOnProperty bool, qStmnt *string, qParams *[]interface{}, groupProps []model.QueryGroupByProperty, refStepName, eventNameSelect string,
-	isGroupByTimestamp bool, additionalSelectKeys string) (bucketedStepName, aggregateSelectKeys string, aggregateGroupBys, aggregateOrderBys []string) {
+	isGroupByTimestamp bool, additionalSelectKeys string, query *model.Query) (bucketedStepName, aggregateSelectKeys string, aggregateGroupBys, aggregateOrderBys []string) {
 	logFields := log.Fields{
 		"q_stmnt":                qStmnt,
 		"q_params":               qParams,
@@ -1104,7 +1104,12 @@ func appendNumericalBucketingSteps(isAggregateOnProperty bool, qStmnt *string, q
 	if len(boundStepNames) > 0 {
 		bucketedSelect = bucketedSelect + ", " + strings.Join(boundStepNames, ", ")
 	}
-	bucketedSelect = bucketedSelect + " WHERE " + strings.Join(bucketedNumericValueFilter, " AND ")
+
+	if query != nil && query.EventsCondition == model.EventCondEachGivenEvent && len(query.EventsWithProperties) > 1 {
+		bucketedSelect = bucketedSelect + " WHERE " + strings.Join(bucketedNumericValueFilter, " OR ")
+	} else {
+		bucketedSelect = bucketedSelect + " WHERE " + strings.Join(bucketedNumericValueFilter, " AND ")
+	}
 
 	*qStmnt = joinWithComma(*qStmnt, as(bucketedStepName, bucketedSelect))
 	return
