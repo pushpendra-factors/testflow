@@ -126,8 +126,14 @@ func CompareFilters(segmentQuery model.Query, payloadQuery model.Query) bool {
 	additionalFiltersExist := false
 
 	if len(segmentQuery.GlobalUserProperties) != len(payloadQuery.GlobalUserProperties) ||
-		len(segmentQuery.EventsWithProperties) != len(payloadQuery.EventsWithProperties) ||
-		segmentQuery.EventsCondition != payloadQuery.EventsCondition {
+		len(segmentQuery.EventsWithProperties) != len(payloadQuery.EventsWithProperties) {
+		return true
+	}
+
+	// comparing event conditions
+	if (segmentQuery.EventsCondition != payloadQuery.EventsCondition) &&
+		((segmentQuery.EventsCondition == "" && payloadQuery.EventsCondition != model.EventCondAnyGivenEvent) ||
+			(segmentQuery.EventsCondition == model.EventCondAnyGivenEvent && payloadQuery.EventsCondition != "")) {
 		return true
 	}
 
