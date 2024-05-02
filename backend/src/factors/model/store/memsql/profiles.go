@@ -239,9 +239,6 @@ func (store *MemSQL) buildAllUsersQuery(projectID int64, query model.ProfileQuer
 		finalSQLStmnt = stepSqlStmnt
 	}
 
-	if projectID == 2 && query.SegmentID != "" && query.SegmentID == "191e3d76-d5b4-45cb-b106-58e834047727" {
-		log.WithField("params", params).WithField("finalSQLStmnt", finalSQLStmnt).Warn("Query for debugging Segment level KPI")
-	}
 	return finalSQLStmnt, params, nil
 }
 
