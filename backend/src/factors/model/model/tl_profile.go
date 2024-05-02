@@ -118,6 +118,7 @@ type UserTimeline struct {
 	FilteredUserProperties map[string]interface{} `json:"properties"`
 	ExtraProp              string                 `json:"extra_prop"`
 	UserActivities         []UserActivity         `json:"user_activities"`
+	UserLastEventAt        time.Time              `json:"-"`
 }
 
 // Constants

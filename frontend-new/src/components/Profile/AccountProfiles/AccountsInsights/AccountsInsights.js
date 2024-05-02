@@ -169,13 +169,15 @@ export default function AccountsInsights() {
             last7daysPicker={false}
             last28daysPicker={false}
           />
-          <div className='flex items-center gap-x-2'>
+          <div className='flex items-center gap-x-1'>
             <Svg name='pieChart' color='#8C8C8C' />
-            <Text type='title' color='black' extraClass='mb-0' level={7}>
-              {accountPayload.segment.name}
-            </Text>
-            <Svg name='compare' color='#8C8C8C' />
-            <SegmentCompareDropdown />
+            <div className='flex items-center gap-x-3'>
+              <Text type='title' color='black' extraClass='mb-0' level={7}>
+                {accountPayload.segment.name}
+              </Text>
+              <Svg name='compare' color='#8C8C8C' />
+              <SegmentCompareDropdown />
+            </div>
           </div>
         </div>
         <ControlledComponent controller={accountsAnalysisWidget != null}>

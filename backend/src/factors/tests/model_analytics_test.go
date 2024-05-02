@@ -11311,3 +11311,89 @@ func TestAllAccountDomainProperties(t *testing.T) {
 	assert.Equal(t, "abc2.com", result.Rows[1][0])
 	assert.Equal(t, float64(1), result.Rows[1][1])
 }
+
+func TestAnalyticsMultipleEventsBucketing(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitSDKServiceRoutes(r)
+	H.InitAppRoutes(r)
+	uri := "/sdk/event/track"
+
+	_, status := store.GetStore().CreateGroup(project.ID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+	_, status = store.GetStore().CreateOrGetGroupByName(project.ID, model.GROUP_NAME_HUBSPOT_COMPANY, model.AllowedGroupNames)
+	assert.Equal(t, http.StatusCreated, status)
+
+	users := []string{}
+	for i := 0; i < 20; i++ {
+		properties := postgres.Jsonb{[]byte(fmt.Sprintf(`{"user_no":"w%d","%s":%d}`, i, U.UP_HOUR_OF_FIRST_EVENT, i))}
+		userWeb, errCode := store.GetStore().CreateUser(&model.User{ProjectId: project.ID, Properties: properties,
+			Source: model.GetRequestSourcePointer(model.UserSourceWeb)})
+		assert.Equal(t, http.StatusCreated, errCode)
+		users = append(users, userWeb)
+	}
+
+	startTime := U.TimeNowZ()
+	for i := range users {
+		payload := fmt.Sprintf(`{"event_name": "www.xyz.com", "user_id": "%s", "timestamp": %d,"event_properties":{"event_id":%d}}`,
+			users[i], startTime.Add(-10*time.Minute).Unix(), 1)
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+	}
+
+	for i := range users {
+		payload := fmt.Sprintf(`{"event_name": "www.xyz2.com", "user_id": "%s", "timestamp": %d,"event_properties":{"event_id":%d}}`,
+			users[i], startTime.Add(-9*time.Minute).Unix()+100, 2)
+		w := ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.Token})
+		assert.Equal(t, http.StatusOK, w.Code)
+	}
+
+	for i := range users {
+		groupProperties := &U.PropertiesMap{U.SIX_SIGNAL_DOMAIN: fmt.Sprintf("abc%d.com", i), U.SIX_SIGNAL_REGION: "A"}
+		status = SDK.TrackUserAccountGroup(project.ID, users[i], model.GROUP_NAME_SIX_SIGNAL, groupProperties, util.TimeNowUnix())
+		assert.Equal(t, http.StatusOK, status)
+	}
+
+	query := model.Query{
+		From: startTime.Add(-10 * time.Minute).Unix(),
+		To:   startTime.Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
+				Name:       "www.xyz.com",
+				Properties: []model.QueryProperty{},
+			},
+			model.QueryEventWithProperties{
+				Name:       "www.xyz2.com",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			model.QueryGroupByProperty{
+				Entity:         model.PropertyEntityUser,
+				Property:       U.UP_HOUR_OF_FIRST_EVENT,
+				EventName:      "www.xyz.com",
+				EventNameIndex: 1,
+				GroupByType:    model.GroupByTypeWithBuckets,
+				Type:           U.PropertyTypeNumerical,
+			},
+
+			model.QueryGroupByProperty{
+				Entity:         model.PropertyEntityUser,
+				Property:       U.UP_HOUR_OF_FIRST_EVENT,
+				EventName:      "www.xyz2.com",
+				EventNameIndex: 2,
+				GroupByType:    model.GroupByTypeWithBuckets,
+				Type:           U.PropertyTypeNumerical,
+			},
+		},
+		Class: model.QueryClassEvents,
+
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+
+	result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.True(t, len(result.Rows) > 3)
+}

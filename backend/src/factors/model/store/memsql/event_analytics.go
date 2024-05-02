@@ -1572,10 +1572,10 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 		var bucketedGroupBys, bucketedOrderBys []string
 		if scopeGroupID > 0 {
 			bucketedStepName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys = appendNumericalBucketingSteps(isAggregateOnProperty,
-				&termStmnt, qParams, query.GroupByProperties, unionStepName, eventName, isGroupByTimestamp, "event_user_id, coal_group_user_id")
+				&termStmnt, qParams, query.GroupByProperties, unionStepName, eventName, isGroupByTimestamp, "event_user_id, coal_group_user_id", query)
 		} else {
 			bucketedStepName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys = appendNumericalBucketingSteps(isAggregateOnProperty,
-				&termStmnt, qParams, query.GroupByProperties, unionStepName, eventName, isGroupByTimestamp, "event_user_id, coal_user_id")
+				&termStmnt, qParams, query.GroupByProperties, unionStepName, eventName, isGroupByTimestamp, "event_user_id, coal_user_id", query)
 		}
 
 		aggregateFromStepName = bucketedStepName
@@ -2639,7 +2639,7 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID int64, q model.Query,
 			isAggregateOnProperty = true
 		}
 		bucketedStepName, aggregateSelectKeys, aggregateGroupBys, aggregateOrderBys := appendNumericalBucketingSteps(isAggregateOnProperty,
-			&qStmnt, &qParams, q.GroupByProperties, withUsersStepName, eventNameSelect, isGroupByTimestamp, "event_user_id")
+			&qStmnt, &qParams, q.GroupByProperties, withUsersStepName, eventNameSelect, isGroupByTimestamp, "event_user_id", &q)
 		aggregateGroupBys = append(aggregateGroupBys, eventNameSelect)
 		aggregateSelectKeys = eventNameSelect + ", " + aggregateSelectKeys
 		aggregateSelect = aggregateSelect + aggregateSelectKeys
@@ -3094,7 +3094,7 @@ func addEventCountAggregationQuery(projectID int64, query *model.Query, qStmnt *
 			isAggregateOnProperty = true
 		}
 		bucketedStepName, bucketedSelectKeys, bucketedGroupBys, bucketedOrderBys := appendNumericalBucketingSteps(isAggregateOnProperty,
-			&termStmnt, qParams, query.GroupByProperties, unionStepName, eventName, isGroupByTimestamp, "event_id")
+			&termStmnt, qParams, query.GroupByProperties, unionStepName, eventName, isGroupByTimestamp, "event_id", query)
 		aggregateFromStepName = bucketedStepName
 		aggregateSelectKeys = bucketedSelectKeys
 		aggregateGroupBys = strings.Join(bucketedGroupBys, ", ")

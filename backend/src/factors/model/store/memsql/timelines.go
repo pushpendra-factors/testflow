@@ -128,9 +128,9 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 
 	var whereStmt string
 	if isUserProperty {
-		whereStmt = fmt.Sprintf("WHERE users.project_id=? %s %s", isGroupUserStmt, sourceStmt) // Common String for Queries
+		whereStmt = fmt.Sprintf("WHERE users.project_id=? AND users.is_deleted = 0 %s %s", isGroupUserStmt, sourceStmt) // Common String for Queries
 	} else {
-		whereStmt = fmt.Sprintf("WHERE project_id=? %s %s", isGroupUserStmt, sourceStmt) // Common String for Queries
+		whereStmt = fmt.Sprintf("WHERE project_id=? AND is_deleted = 0 %s %s", isGroupUserStmt, sourceStmt) // Common String for Queries
 	}
 	// Get min and max updated_at after ordering as part of optimisation.
 	limitVal := 100000
@@ -1077,7 +1077,7 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 	// only run the query when any table property belong to groups other than $domains
 	if len(tablePropsMap) > 1 || !domainPropsExists {
 		err := db.Table("users").Select(fmt.Sprintf("group_%d_user_id as id, "+propString+", source", domainGroupID)).
-			Where(fmt.Sprintf("project_id=? AND source!=? AND %s %s group_%d_user_id ", isGroupUserString, isNullCheck, domainGroupID)+" IN (?)",
+			Where(fmt.Sprintf("project_id=? AND source!=? AND is_deleted=0 AND %s %s group_%d_user_id ", isGroupUserString, isNullCheck, domainGroupID)+" IN (?)",
 				projectID, model.UserSourceDomains, domainIDs).Find(&userDetails).Error
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get accounts associated to domains.")
@@ -1206,7 +1206,7 @@ func (store *MemSQL) GetDomainPropertiesByID(projectID int64, domainIDs []string
 	var domainsDetail []model.User
 	db := C.GetServices().Db
 	err := db.Table("users").Select("id, properties, source").
-		Where("project_id=? AND source=? AND id IN (?)",
+		Where("project_id=? AND source=? AND is_deleted=false AND id IN (?)",
 			projectID, model.UserSourceDomains, domainIDs).Find(&domainsDetail).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
@@ -1539,11 +1539,11 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId 
         FROM events 
         WHERE project_id=? AND timestamp <= ? 
         AND user_id IN (
-            SELECT id FROM users WHERE project_id=? AND %s = ?
+            SELECT id FROM users WHERE project_id=? AND %s = ? ORDER BY last_event_at DESC LIMIT 100
         ) AND event_name_id NOT IN (
             SELECT id FROM event_names WHERE project_id=? AND name IN (%s)
         ) 
-        LIMIT 5000) AS events1 
+        ORDER BY timestamp DESC LIMIT 5000) AS events1 
     LEFT JOIN event_names
     ON events1.event_name_id=event_names.id 
     WHERE event_names.project_id=?;`, userId, eventNamesToExcludePlaceholders)
@@ -1743,13 +1743,15 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 	query := fmt.Sprintf(`SELECT COALESCE(JSON_EXTRACT_STRING(properties, '%s'), customer_user_id, id) AS user_name, %s
         COALESCE(customer_user_id, id) AS user_id, 
         ISNULL(customer_user_id) AS is_anonymous,
-		LAST(properties, last_event_at) as user_properties
-    FROM users 
+		properties AS user_properties,
+        MAX(last_event_at) AS user_last_event_at
+		FROM users 
     WHERE project_id = ?
 	  AND (is_group_user = 0 OR is_group_user IS NULL)
 	  AND (%s)
+	  AND last_event_at IS NOT NULL
     GROUP BY user_id 
-    ORDER BY last_event_at DESC 
+    ORDER BY user_last_event_at DESC 
     LIMIT 26;`, U.UP_NAME, selectStrAdditionalProp, groupUserString)
 
 	// Get Timeline for <=25 users
@@ -2342,7 +2344,7 @@ func (store *MemSQL) GetAccountsAssociatedToDomain(projectID int64, id string, d
 	var accountGroupDetails []model.User
 	db := C.GetServices().Db
 	err := db.Table("users").Select("id, source, properties").
-		Where("project_id=? AND source!=? AND is_group_user=1 AND "+fmt.Sprintf("group_%d_user_id", domainGroupId)+"=?", projectID, model.UserSourceDomains, id).Find(&accountGroupDetails).Error
+		Where("project_id=? AND source!=? AND is_group_user=1 AND is_deleted = false AND "+fmt.Sprintf("group_%d_user_id", domainGroupId)+"=?", projectID, model.UserSourceDomains, id).Find(&accountGroupDetails).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get groups.")
 		return []model.User{}, http.StatusInternalServerError

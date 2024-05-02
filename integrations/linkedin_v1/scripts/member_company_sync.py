@@ -119,7 +119,7 @@ if __name__ == '__main__':
             sync_info_with_type = data_service_obj.get_last_sync_info_for_company_data(
                                                     linkedin_setting, input_start_timestamp, 
                                                                         input_end_timestamp)
-            if linkedin_setting.project_id in options.new_change_project_ids:
+            if options.new_change_project_ids == "*" or linkedin_setting.project_id in options.new_change_project_ids:
                 sync_company_data_v1(options, linkedin_setting, sync_info_with_type, input_start_timestamp, input_end_timestamp)
             else:
                 sync_company_data(options, linkedin_setting, sync_info_with_type, input_start_timestamp, input_end_timestamp)
