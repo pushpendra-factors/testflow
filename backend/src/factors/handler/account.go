@@ -275,9 +275,19 @@ func TrackAccountEventHandler(c *gin.Context) {
 		c.AbortWithError(http.StatusInternalServerError, errors.New("Failed to check for  group user by group id."))
 		return
 	}
+	eventName := &model.EventName{
+		ProjectId: projectID,
+		Name:      U.GetPropertyValueAsString(accountTrackPayload.Event["name"]),
+		Type:      model.TYPE_USER_CREATED_EVENT_NAME,
+	}
+	eventDetails, eventNameErrCode := store.GetStore().CreateOrGetEventName(eventName)
 
-	eventDetails, _ := store.GetStore().GetEventNameIDFromEventName(U.GetPropertyValueAsString(accountTrackPayload.Event["name"]), projectID)
+	if eventNameErrCode != http.StatusCreated && eventNameErrCode != http.StatusConflict &&
+		eventNameErrCode != http.StatusFound {
 
+		c.AbortWithError(eventNameErrCode, errors.New("Tracking failed. Creating event_name failed."))
+		return
+	}
 	createdEvent, errCode := store.GetStore().CreateEvent(&model.Event{
 		ProjectId:   projectID,
 		EventNameId: eventDetails.ID,
