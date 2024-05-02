@@ -134,7 +134,7 @@ func (store *MemSQL) GetWidgetGroupAndWidgetsForConfig(projectID int64) ([]model
 	db := C.GetServices().Db
 
 	var widgetGroups []model.WidgetGroup
-	err := db.Order("display_name desc").Where("project_id = ?", projectID).Find(&widgetGroups).Error
+	err := db.Order("display_name asc").Where("project_id = ?", projectID).Find(&widgetGroups).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			logCtx.WithError(err).WithField("projectID", projectID).Warn("Failed while retrieving widget groups.")

@@ -64,10 +64,11 @@ var defaultSalesforceCustomKPIs = []model.CustomMetric{
 		ObjectType:  model.SalesforceOpportunitiesDisplayCategory,
 	},
 	{
-		Name:        model.SalesforceClosedRate,
-		Description: "For segment level KPIs (Salesforce)",
-		TypeOfQuery: 2,
-		ObjectType:  model.SalesforceOpportunitiesDisplayCategory,
+		Name:            model.SalesforceClosedRate,
+		Description:     "For segment level KPIs (Salesforce)",
+		TypeOfQuery:     2,
+		ObjectType:      model.SalesforceOpportunitiesDisplayCategory,
+		DisplayResultAs: model.MetricsPercentageType,
 	},
 }
 

@@ -15,7 +15,9 @@ function recreate_sql_db() {
     mysql -h $VM_HOST  --port 3306  -u root -pdbfactors123 -e "DROP DATABASE IF EXISTS factors;"
     drop_status=$?
     
-    mysql -h $VM_HOST --port 3306  -u root -pdbfactors123 -e "CREATE DATABASE factors;"
+    # Create schema 
+    mysql -h $VM_HOST --port 3306  -u root -pdbfactors123 < "1_create_schema.sql"
+    sleep 15
     create_status=$?
     
     if [ $drop_status -eq 0 ] && [ $create_status -eq 0 ]; then
@@ -48,10 +50,6 @@ else
 fi
 
 if [ "$RECOPY_DB_DATA" = true ]; then
-     # Create schema 
-    mysql -h $VM_HOST --port 3306  -u root -pdbfactors123 < "1_create_schema.sql"
-
-    sleep 15
 
     mysqldump  -u $DB_USER_NAME -h $DB_HOST -p$DB_PASSWORD factors projects --where="id=$PROJECT_ID" | mysql -h $VM_HOST --port 3306 -u root -pdbfactors123 -D factors
 
@@ -80,6 +78,10 @@ if [ "$RECOPY_DB_DATA" = true ]; then
     mysqldump -u $DB_USER_NAME  -h $DB_HOST -p$DB_PASSWORD factors users --where="project_id=$PROJECT_ID" | mysql -h $VM_HOST --port 3306 -u root -pdbfactors123 -D factors
 
     mysqldump -u $DB_USER_NAME  -h $DB_HOST -p$DB_PASSWORD factors event_trigger_alerts factors_goals factors_tracked_events factors_tracked_user_properties  --where="project_id=$PROJECT_ID" | mysql -h $VM_HOST --port 3306 -u root -pdbfactors123 -D factors
+
+    mysqldump -u $DB_USER_NAME  -h $DB_HOST -p$DB_PASSWORD factors dashboard_folders workflows widget_groups website_aggregation --where="project_id=$PROJECT_ID" | mysql -h $VM_HOST --port 3306 -u root -pdbfactors123 -D factors
+    
+    mysqldump -u $DB_USER_NAME  -h $DB_HOST -p$DB_PASSWORD factors alert_templates | mysql -h $VM_HOST --port 3306 -u root -pdbfactors123 -D factors
 
     wait -f
 fi

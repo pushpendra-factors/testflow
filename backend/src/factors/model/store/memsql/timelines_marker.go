@@ -126,8 +126,14 @@ func CompareFilters(segmentQuery model.Query, payloadQuery model.Query) bool {
 	additionalFiltersExist := false
 
 	if len(segmentQuery.GlobalUserProperties) != len(payloadQuery.GlobalUserProperties) ||
-		len(segmentQuery.EventsWithProperties) != len(payloadQuery.EventsWithProperties) ||
-		segmentQuery.EventsCondition != payloadQuery.EventsCondition {
+		len(segmentQuery.EventsWithProperties) != len(payloadQuery.EventsWithProperties) {
+		return true
+	}
+
+	// comparing event conditions
+	if (segmentQuery.EventsCondition != payloadQuery.EventsCondition) &&
+		((segmentQuery.EventsCondition == "" && payloadQuery.EventsCondition != model.EventCondAnyGivenEvent) ||
+			(segmentQuery.EventsCondition == model.EventCondAnyGivenEvent && payloadQuery.EventsCondition != "")) {
 		return true
 	}
 
@@ -263,6 +269,7 @@ func (store *MemSQL) GetDomainsListFromMarker(projectID int64, payload model.Tim
 		  AND is_group_user = 1 
 		  AND source = ? 
 		  AND group_%d_id IS NOT NULL %s
+		  AND is_deleted = false 
 		LIMIT 
 		  100000
 	  ) 
@@ -282,6 +289,7 @@ func (store *MemSQL) GetDomainsListFromMarker(projectID int64, payload model.Tim
 			users.project_id = ? 
 			AND users.source != ? 
 			AND last_event_at IS NOT NULL
+			AND is_deleted = false
 		) AS users ON step_0.identity = users.group_%d_user_id 
 	  GROUP BY 
 		identity 

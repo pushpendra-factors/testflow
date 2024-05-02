@@ -89,7 +89,10 @@ function ReportContent({
 
   const chartType = useMemo(() => {
     let chrtTypes = chartTypes;
-    if (queryType === QUERY_TYPE_EVENT && coreQueryReducerState?.chartTypes) {
+    if (
+      (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_FUNNEL) &&
+      coreQueryReducerState?.chartTypes
+    ) {
       chrtTypes = coreQueryReducerState?.chartTypes;
     }
 
