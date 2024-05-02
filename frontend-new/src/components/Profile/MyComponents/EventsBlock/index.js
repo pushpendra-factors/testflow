@@ -83,15 +83,6 @@ function EventsBlock({
   const [showGroups, setShowGroups] = useState([]);
   const [orFilterIndex, setOrFilterIndex] = useState(-1);
 
-  const operatorProps = isEngagementConfig
-    ? {
-        categorical: DEFAULT_OPERATOR_PROPS.categorical.filter((item) =>
-          ENGAGEMENT_SUPPORTED_OPERATORS.includes(item)
-        ),
-        numerical: DEFAULT_OPERATOR_PROPS.numerical
-      }
-    : DEFAULT_OPERATOR_PROPS;
-
   useEffect(() => {
     let showOpts = [];
     if (groupAnalysis === 'users') {
@@ -167,7 +158,7 @@ function EventsBlock({
       Object.keys(properties || {}).forEach((key) => {
         if (properties[key]) {
           filteredProps[key] = properties[key].filter((item) =>
-            ['categorical', 'numerical'].includes(item?.[2])
+            ['categorical', 'numerical', 'datetime'].includes(item?.[2])
           );
         }
       });
@@ -199,7 +190,7 @@ function EventsBlock({
       if (scope === 'group' && eventGroup && groupProperties[eventGroup]) {
         assignFilterProps[eventGroup] = isEngagementConfig
           ? groupProperties[eventGroup]?.filter((item) =>
-              ['categorical', 'numerical'].includes(item?.[2])
+              ['categorical', 'numerical', 'datetime'].includes(item?.[2])
             )
           : groupProperties[eventGroup];
         assignFilterProps.user = {};
@@ -235,8 +226,10 @@ function EventsBlock({
       }
     };
 
-    let listGroups = [...showGroups];
-    let othersIndex = listGroups.findIndex((group) => group.label === 'Others');
+    const listGroups = [...showGroups];
+    const othersIndex = listGroups.findIndex(
+      (group) => group.label === 'Others'
+    );
 
     if (othersIndex === -1) {
       listGroups.push({
@@ -245,7 +238,7 @@ function EventsBlock({
         values: [customEvent]
       });
     } else {
-      let allEventsIndex = listGroups[othersIndex].values.findIndex(
+      const allEventsIndex = listGroups[othersIndex].values.findIndex(
         (event) => event.value === customEvent.value
       );
 
@@ -314,7 +307,6 @@ function EventsBlock({
   };
   const selectEventFilter = (ind) => (
     <FilterWrapper
-      operatorsMap={operatorProps}
       viewMode={viewMode}
       filterProps={filterProps}
       projectID={activeProject?.id}
@@ -391,7 +383,6 @@ function EventsBlock({
               <div className='flex flex-row'>
                 <div key={ind}>
                   <FilterWrapper
-                    operatorsMap={operatorProps}
                     viewMode={viewMode}
                     index={ind}
                     filter={filter}
@@ -415,7 +406,6 @@ function EventsBlock({
               {ind === orFilterIndex && (
                 <div key='init'>
                   <FilterWrapper
-                    operatorsMap={operatorProps}
                     viewMode={viewMode}
                     filterProps={filterProps}
                     projectID={activeProject?.id}
@@ -440,7 +430,6 @@ function EventsBlock({
             <div className='fa--query_block--filters flex flex-col'>
               <div key={ind}>
                 <FilterWrapper
-                  operatorsMap={operatorProps}
                   viewMode={viewMode}
                   index={ind}
                   filter={filtersGr[0]}
@@ -459,7 +448,6 @@ function EventsBlock({
               </div>
               <div key={ind + 1}>
                 <FilterWrapper
-                  operatorsMap={operatorProps}
                   viewMode={viewMode}
                   index={ind + 1}
                   filter={filtersGr[1]}
