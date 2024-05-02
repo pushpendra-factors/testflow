@@ -199,6 +199,7 @@ func (store *MemSQL) buildInternalQueryGroupForDerivedKPIs(kpiQueryGroup model.K
 			}
 
 			internalKPIQueryGroup.DisplayResultAs = derivedMetric.DisplayResultAs
+			internalKPIQueryGroup.SegmentID = kpiQueryGroup.SegmentID
 			for internalIndex, internalQuery := range internalKPIQueryGroup.Queries {
 				internalKPIQueryGroup.Queries[internalIndex].Filters = append(internalQuery.Filters, query.Filters...)
 				internalKPIQueryGroup.Queries[internalIndex].GroupBy = query.GroupBy
@@ -207,6 +208,7 @@ func (store *MemSQL) buildInternalQueryGroupForDerivedKPIs(kpiQueryGroup model.K
 				internalKPIQueryGroup.Queries[internalIndex].Timezone = query.Timezone
 				internalKPIQueryGroup.Queries[internalIndex].GroupByTimestamp = query.GroupByTimestamp
 				internalKPIQueryGroup.Queries[internalIndex].LimitNotApplicable = query.LimitNotApplicable
+				internalKPIQueryGroup.Queries[internalIndex].SegmentID = kpiQueryGroup.SegmentID
 			}
 
 			hashCode, err := query.GetQueryCacheHashString()
