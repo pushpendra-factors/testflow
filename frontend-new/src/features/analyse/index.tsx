@@ -45,6 +45,7 @@ import {
   SET_COMPARISON_SUPPORTED,
   SET_SAVED_QUERY_SETTINGS,
   UPDATE_CHART_TYPES,
+  UPDATE_CORE_QUERY_REDUCER,
   UPDATE_PIVOT_CONFIG
 } from 'Views/CoreQuery/constants';
 import {
@@ -85,6 +86,7 @@ import PageSuspenseLoader from 'Components/SuspenseLoaders/PageSuspenseLoader';
 import SaveQuery from 'Components/SaveQuery';
 import { getChartChangedKey } from 'Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
 import _ from 'lodash';
+import { CoreQueryContext } from 'Context/CoreQueryContext';
 
 const CoreQuery = () => {
   // Query params
@@ -170,6 +172,13 @@ const CoreQuery = () => {
 
   const getQueryFromHashId = () =>
     savedQueries?.find((quer: any) => quer.id_text === query_id);
+
+  const updateCoreQueryReducer = useCallback((payload) => {
+    localDispatch({
+      type: UPDATE_CORE_QUERY_REDUCER,
+      payload
+    });
+  }, []);
 
   const updateEventFunnelsState = useCallback(
     (
@@ -361,6 +370,7 @@ const CoreQuery = () => {
       type: UPDATE_PIVOT_CONFIG,
       payload: { ...DEFAULT_PIVOT_CONFIG }
     });
+
     dispatch({ type: SET_SAVED_QUERY_SETTINGS, payload: EMPTY_OBJECT });
 
     if (resultState) {
@@ -511,18 +521,25 @@ const CoreQuery = () => {
   }));
 
   const renderQueryComposerNew = () => (
-    <div
-      className={`query_card_cont ${
-        queryOpen ? `query_card_open` : `query_card_close`
-      }`}
-      onClick={() => !queryOpen && setQueryOpen(true)}
+    <CoreQueryContext.Provider
+      value={{
+        coreQueryState: coreQueryReducerState,
+        updateCoreQueryReducer: updateCoreQueryReducer
+      }}
     >
-      <div className='query_composer'>{renderComposer()}</div>
-      <Button size='large' className='query_card_expand'>
-        <SVG name='expand' size={20} />
-        Expand
-      </Button>
-    </div>
+      <div
+        className={`query_card_cont ${
+          queryOpen ? `query_card_open` : `query_card_close`
+        }`}
+        onClick={() => !queryOpen && setQueryOpen(true)}
+      >
+        <div className='query_composer'>{renderComposer()}</div>
+        <Button size='large' className='query_card_expand'>
+          <SVG name='expand' size={20} />
+          Expand
+        </Button>
+      </div>
+    </CoreQueryContext.Provider>
   );
 
   const updateLocalReducer = useCallback((type, payload) => {
@@ -801,6 +818,8 @@ const CoreQuery = () => {
 
   const setQueryOptions = (opts: {} | any) => {
     const qState = _.cloneDeep(coreQueryState);
+
+    qState.queryOptions = opts;
     if (opts?.globalFilters) {
       qState.queryOptions.globalFilters = opts.globalFilters;
     }
