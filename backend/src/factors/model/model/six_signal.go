@@ -313,7 +313,9 @@ func GetFactorsDeanonAlertRedisResult() (int64, error) {
 	}
 
 	redisRes, err := cacheRedis.GetPersistent(key)
-	if err != nil {
+	if err == redis.ErrNil {
+		return result, nil
+	} else if err != nil {
 		return result, err
 	}
 
