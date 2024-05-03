@@ -3529,6 +3529,8 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 							GroupName: "$hubspot_company",
 						},
 					},
+					FrequencyOperator: model.GreaterThanOrEqualOpStr,
+					Frequency:         "1",
 				},
 			},
 			Caller: "account_profiles",

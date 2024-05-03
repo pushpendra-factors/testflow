@@ -1022,7 +1022,7 @@ type Model interface {
 	ExecuteAccountAnalyticsQuery(projectID int64, reqID string, accountAnalyticsQuery model.AccountAnalyticsQuery) (model.QueryResult, int)
 
 	// segment_marker
-	CheckIfUserPerformedGivenEvents(queryStr string, params []interface{}) ([]int, int)
+	CheckIfUserPerformedGivenEvents(qprojectID int64, userID string, ueryStr string, params []interface{}) (map[string]int, int)
 	FetchAssociatedSegmentsFromUsers(projectID int64) (int, []model.User, []map[string]interface{})
 
 	// Ads import

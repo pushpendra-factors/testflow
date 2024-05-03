@@ -569,12 +569,14 @@ type QueryGroupByProperty struct {
 }
 
 type QueryEventWithProperties struct {
-	Name          string          `json:"na"`
-	AliasName     string          `json:"an"`
-	GroupAnalysis string          `json:"grpa"`
-	Properties    []QueryProperty `json:"pr"`
-	EventNameIDs  []interface{}   `json:"-"`
-	From          int64           `json:"fr"`
+	Name              string          `json:"na"`
+	AliasName         string          `json:"an"`
+	GroupAnalysis     string          `json:"grpa"`
+	Properties        []QueryProperty `json:"pr"`
+	EventNameIDs      []interface{}   `json:"-"`
+	From              int64           `json:"fr"`
+	FrequencyOperator string          `json:"freqOp"`
+	Frequency         string          `json:"freq"`
 }
 
 func (ewp *QueryEventWithProperties) TransformDateTypeFilters(timezoneString U.TimeZoneString) error {
