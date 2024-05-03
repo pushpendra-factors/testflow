@@ -319,7 +319,7 @@ func GetFactorsDeanonAlertRedisResult() (int64, error) {
 
 	err = json.Unmarshal([]byte(redisRes), &result)
 	if err != nil {
-		log.Warn("Error decoding redis result %v", result)
+		log.Warn("Error decoding redis result ", result)
 		return result, err
 	}
 	return result, nil
