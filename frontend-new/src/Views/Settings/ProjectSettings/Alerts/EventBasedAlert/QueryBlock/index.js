@@ -77,7 +77,17 @@ function QueryBlock({
       const groupOpts = eventOptionsSpecial?.filter(
         (item) => !blackListedCategories?.includes(item?.label)
       );
-      showOpts = groupOpts;
+
+      const filteredData = groupOpts?.map((group) => {
+        if (group?.icon === 'hubspot_contacts') {
+          const values = group?.values?.filter(
+            (vl) => vl?.[1] === '$hubspot_form_submission'
+          );
+          group.values = values;
+        }
+        return group;
+      });
+      showOpts = filteredData;
     }
 
     showOpts = showOpts?.map((opt) => ({
