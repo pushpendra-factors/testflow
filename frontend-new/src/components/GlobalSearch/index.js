@@ -774,7 +774,7 @@ const GlobalSearch = () => {
     let analyseQueryParamsPath = '/analyse';
     if (query?.query?.query_group?.[0]?.cl === 'events') {
       analyseQueryParamsPath = `${analyseQueryParamsPath}/events/${query.id_text}`;
-    } else if (query?.query?.cl === 'funnel' && featureLock(email)) {
+    } else if (query?.query?.cl === 'funnel') {
       analyseQueryParamsPath =
         analyseQueryParamsPath + '/funnel/' + query.id_text;
     }
