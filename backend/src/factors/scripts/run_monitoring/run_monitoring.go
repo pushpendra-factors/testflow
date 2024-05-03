@@ -211,7 +211,7 @@ func main() {
 	}
 
 	C.PingHealthcheckForSuccess(healthcheckPingID, monitoringPayload)
-	
+
 	if !healthCheckFailurePinged {
 		C.PingHealthcheckForSuccess(C.HealthcheckSDKHealthPingID, "sdk health check success")
 	}
@@ -352,19 +352,24 @@ func RunFactorsDeanonEnrichmentCheck() {
 
 	var factorsDeanonAlertMap map[int64]map[string]float64
 	var err error
-	factorsDeanonAlertLastRun, _ := model.GetFactorsDeanonAlertRedisResult()
+	factorsDeanonAlertLastRun, err := model.GetFactorsDeanonAlertRedisResult()
+	if err != nil {
+		log.Error("Failed to get factors deanon last run.")
+		return
+	}
 	if time.Now().Unix()-factorsDeanonAlertLastRun > 24*60*60 {
 		factorsDeanonAlertMap, err = MonitorFactorsDeanonDailyEnrichment()
 		if err != nil {
-			log.Error("Failed to run factors deanon enrichment check %v", time.Now())
+			log.Error("Failed to run factors deanon enrichment check ", time.Now())
 			return
 		}
 		if len(factorsDeanonAlertMap) > 0 {
 			C.PingHealthcheckForFailure(C.HealthcheckFactorsDeanonAlertPingID, factorsDeanonAlertMap)
-			return
 		}
 		model.SetFactorsDeanonAlertRedisResult(time.Now().Unix())
+		C.PingHealthcheckForSuccess(C.HealthcheckFactorsDeanonAlertPingID, factorsDeanonAlertLastRun)
 	}
+
 }
 
 // MonitorFactorsDeanonDailyEnrichment fetches the project ids of the projects on paid plan and get the required metrics for each projects.
