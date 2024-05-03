@@ -8,7 +8,7 @@ import truncateURL from 'Utils/truncateURL';
 import { Button, Popover, Tag, Tooltip } from 'antd';
 import { ACCOUNTS_TABLE_COLUMN_TYPES, COLUMN_TYPE_PROPS } from 'Utils/table';
 import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
-import { EngagementTag, placeholderIcon } from '../constants';
+import { EngagementTag, headerClassStr, placeholderIcon } from '../constants';
 import {
   getHost,
   getPropType,
@@ -220,9 +220,6 @@ export const getColumns = ({
   onClickOpen,
   onClickOpenNewTab
 }) => {
-  const headerClassStr =
-    'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
-
   const accountColumn = {
     title: <div className={headerClassStr}>Account Domain</div>,
     dataIndex: 'domain',

@@ -21,8 +21,8 @@ import { bindActionCreators } from 'redux';
 import { updateAccountScores } from 'Reducers/timelines';
 import { fetchProjectSettings } from 'Reducers/global';
 import { fetchEventNames, getGroups } from 'Reducers/coreQuery/middleware';
-import { EngagementTag } from 'Components/Profile/constants.ts';
-import { InfoCircleFilled, InfoCircleOutlined } from '@ant-design/icons';
+import { headerClassStr } from 'Components/Profile/constants';
+import { InfoCircleFilled } from '@ant-design/icons';
 import SaleWindowModal from './SaleWindowModal';
 import EngagementModal from './EngagementModal';
 
@@ -81,8 +81,6 @@ function EngagementConfig({
     getGroups(activeProject?.id);
   }, [activeProject?.id]);
 
-  const headerClassStr =
-    'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
   const columns = [
     {
       title: <div className={headerClassStr}>Engagement Signals</div>,

@@ -993,11 +993,11 @@ type Model interface {
 	GetPreviewDomainsListByProjectIdPerRun(projectID int64, payload model.TimelinePayload, domainGroupID int,
 		eventNameIDsMap map[string]string, userCount *int64, domainIDList []string, limitAcc int, fileValuesMap map[string]map[string]bool) ([]model.Profile, int, string)
 	// segment
-	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)
+	CreateSegment(projectId int64, segment *model.SegmentPayload) (model.Segment, int, error)
 	GetAllSegments(projectId int64) (map[string][]model.Segment, int)
 	GetSegmentByName(projectId int64, name string) (*model.Segment, int)
 	GetSegmentById(projectId int64, segmentId string) (*model.Segment, int)
-	UpdateSegmentById(projectId int64, id string, segmentPayload model.SegmentPayload) (error, int)
+	UpdateSegmentById(projectId int64, id string, segmentPayload model.SegmentPayload) (int, error)
 	IsDuplicateSegmentNameCheck(projectID int64, name string) bool
 	DeleteSegmentById(projectId int64, segmentId string) (int, error)
 	CreateDefaultSegment(projectID int64, entity string, isGroup bool) (int, error)
