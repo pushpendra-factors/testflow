@@ -24,15 +24,13 @@ func CreateSegmentHandler(c *gin.Context) {
 
 	if projectID == 0 {
 		logCtx.Error("Creation of Segment failed. Invalid project.")
-		c.AbortWithStatusJSON(http.StatusBadRequest, &model.SegmentResponse{
-			Error: "Segment Creation failed. Invalid project."})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Segment Creation failed. Invalid project."})
 		return
 	}
 
 	if r.Body == nil {
 		logCtx.Error("Invalid request. Request body unavailable.")
-		c.AbortWithStatusJSON(http.StatusBadRequest, &model.SegmentResponse{
-			Error: "Segment Creation failed. Missing request body."})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Segment Creation failed. Missing request body."})
 		return
 	}
 
@@ -40,19 +38,20 @@ func CreateSegmentHandler(c *gin.Context) {
 	var request model.SegmentPayload
 	if err := decoder.Decode(&request); err != nil {
 		logCtx.WithError(err).Error("Segment creation failed. JSON Decoding failed.")
-		c.AbortWithStatusJSON(http.StatusBadRequest, &model.SegmentResponse{
-			Error: "Segment creation failed. Invalid payload."})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Segment creation failed. Invalid payload."})
 		return
 	}
 
-	status, err := store.GetStore().CreateSegment(projectID, &request)
+	segment, status, err := store.GetStore().CreateSegment(projectID, &request)
 	if err != nil {
-		c.AbortWithStatusJSON(status, &model.SegmentResponse{Error: err.Error()})
+		c.AbortWithStatusJSON(status, gin.H{"error": err.Error()})
 		return
 	}
-
-	c.JSON(status, &model.SegmentResponse{Message: "Segment creation successful."})
-	return
+	response := gin.H{
+		"message": "Segment Creation Seccessful",
+		"segment": segment,
+	}
+	c.JSON(status, response)
 }
 
 func GetSegmentsHandler(c *gin.Context) (interface{}, int, string, string, bool) {
@@ -65,12 +64,12 @@ func GetSegmentsHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		return "", http.StatusBadRequest, "", "invalid project_id", true
 	}
 
-	segment, status := store.GetStore().GetAllSegments(projectId)
+	segments, status := store.GetStore().GetAllSegments(projectId)
 	if status != http.StatusFound {
 		return "", http.StatusBadRequest, "", "Failed to get segments", true
 	}
 
-	return segment, http.StatusFound, "", "", false
+	return segments, http.StatusFound, "", "", false
 }
 
 func GetSegmentByIdHandler(c *gin.Context) (interface{}, int, string, string, bool) {
@@ -128,10 +127,10 @@ func UpdateSegmentHandler(c *gin.Context) {
 		return
 	}
 
-	err, errCode := store.GetStore().UpdateSegmentById(projectID, id, *params)
-	if errCode != http.StatusOK {
+	status, err := store.GetStore().UpdateSegmentById(projectID, id, *params)
+	if err != nil {
 		logCtx.Errorln("Updating Segment failed")
-		c.AbortWithStatus(http.StatusInternalServerError)
+		c.AbortWithStatus(status)
 		return
 	}
 	response := make(map[string]interface{})
@@ -147,8 +146,7 @@ func DeleteSegmentByIdHandler(c *gin.Context) {
 	})
 	if projectId == 0 {
 		logCtx.Error("Deletion of Segment failed. Invalid project_id.")
-		c.AbortWithStatusJSON(http.StatusBadRequest, &model.SegmentResponse{
-			Error: "Segment deletion failed. Invalid project_id."})
+		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
@@ -159,20 +157,18 @@ func DeleteSegmentByIdHandler(c *gin.Context) {
 	})
 	if id == "" {
 		logCtx.Error("Deletion of Segment failed. Invalid id.")
-		c.AbortWithStatusJSON(http.StatusBadRequest, &model.SegmentResponse{
-			Error: "Segment deletion failed. Invalid id."})
+		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
 
 	status, err := store.GetStore().DeleteSegmentById(projectId, id)
 	if status != http.StatusOK {
-		logCtx.Error("Deletion of Segment failed.")
-		c.AbortWithStatusJSON(status, &model.SegmentResponse{
-			Error: err.Error()})
+		logCtx.Error(err)
+		c.AbortWithStatus(status)
 		return
 	}
 
-	c.JSON(http.StatusOK, &model.SegmentResponse{Message: "Segment deletion successful."})
+	c.JSON(http.StatusOK, gin.H{"message": "Segment deletion successful."})
 	return
 }
 
