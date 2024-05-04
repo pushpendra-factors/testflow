@@ -450,16 +450,24 @@ func deleteEventsAndUpdateAccountPropertiesBasedOnType(projectID int64, timestam
 		return errMsg, http.StatusInternalServerError
 	}
 
-	var syncStatus syncWorkerStatus
+	// var syncStatus syncWorkerStatus
+	// for _, batch := range batchedUserInfo {
+	// 	var wg sync.WaitGroup
+	// 	for _, user := range batch {
+	// 		wg.Add(1)
+	// 		go deleteEventsAndUpdateAccountPropertiesForUser(projectID, user, userIDToUserInfoForDeleteAndUpdate[user.ID], imprEventNameID, clickEventNameID, &wg, &syncStatus)
+	// 	}
+	// 	wg.Wait()
+	// 	if syncStatus.HasFailure {
+	// 		return syncStatus.ErrMsg, syncStatus.StatusCode
+	// 	}
+	// }
 	for _, batch := range batchedUserInfo {
-		var wg sync.WaitGroup
 		for _, user := range batch {
-			wg.Add(1)
-			go deleteEventsAndUpdateAccountPropertiesForUser(projectID, user, userIDToUserInfoForDeleteAndUpdate[user.ID], imprEventNameID, clickEventNameID, &wg, &syncStatus)
-		}
-		wg.Wait()
-		if syncStatus.HasFailure {
-			return syncStatus.ErrMsg, syncStatus.StatusCode
+			errMsg, errCode := deleteEventsAndUpdateAccountProperties(projectID, user, userIDToUserInfoForDeleteAndUpdate[user.ID], imprEventNameID, clickEventNameID)
+			if errMsg != "" {
+				return errMsg, errCode
+			}
 		}
 	}
 
