@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
@@ -19,12 +20,66 @@ import (
 func EventsPerformedCheck(projectID int64, segmentId string, eventNameIDsMap map[string]string,
 	segmentQuery *model.Query, userID string, isAllAccounts bool, userArray []model.User) bool {
 
+	// to be removed, default value true to all the events
+	for index := range segmentQuery.EventsWithProperties {
+		segmentQuery.EventsWithProperties[index].IsEventPerformed = true
+	}
+
 	isMatched := false
+
+	var didEventPresent, didNotDoEventPresent bool
+	var didEventCount, didNotEventCount int
+
+	for _, event := range segmentQuery.EventsWithProperties {
+		if event.IsEventPerformed {
+			didEventCount = didEventCount + 1
+		} else {
+			didNotEventCount = didNotEventCount + 1
+		}
+	}
+
+	if didEventCount > 0 {
+		didEventPresent = true
+	}
+	if didNotEventCount > 0 {
+		didNotDoEventPresent = true
+	}
+
+	if didEventPresent {
+		isMatched = didEventQuery(projectID, segmentId, eventNameIDsMap, segmentQuery,
+			userID, isAllAccounts, userArray, didEventCount)
+
+		if segmentQuery.EventsCondition == model.EventCondAnyGivenEvent && isMatched {
+			// if any event condition satisfies, return
+			return isMatched
+		} else if segmentQuery.EventsCondition == model.EventCondAllGivenEvent && !isMatched {
+			// if any event condition does not satisfies, return
+			return isMatched
+		}
+	}
+
+	// return if not exist
+	if !didNotDoEventPresent {
+		return isMatched
+	}
+
+	// already returned in case of any (positive) and all (negative) case
+	isMatched = didNotEventQuery(projectID, segmentId, eventNameIDsMap, segmentQuery,
+		userID, isAllAccounts, userArray, didNotEventCount)
+
+	return isMatched
+}
+
+func didEventQuery(projectID int64, segmentId string, eventNameIDsMap map[string]string,
+	segmentQuery *model.Query, userID string, isAllAccounts bool, userArray []model.User, didEventCount int) bool {
+	isMatched := false
+
 	var userIDString string
 	params := []interface{}{projectID}
+	didEvent := true
 
 	if isAllAccounts {
-		userIDS := userIdsList(*segmentQuery, userArray)
+		userIDS := userIdsList(*segmentQuery, userArray, didEvent)
 		if len(userIDS) == 0 {
 			return isMatched
 		}
@@ -40,9 +95,9 @@ func EventsPerformedCheck(projectID int64, segmentId string, eventNameIDsMap map
 	var err error
 
 	if C.MarkerEnableOptimisedEventsQuery(projectID) {
-		query, queryParams, err = eventsQueryOptimised(projectID, eventNameIDsMap, segmentQuery, userID, userIDString, params)
+		query, queryParams, err = eventsQueryOptimised(projectID, eventNameIDsMap, segmentQuery, userID, userIDString, params, didEvent)
 	} else {
-		query, queryParams, err = eventsQuery(projectID, eventNameIDsMap, segmentQuery, userID, userIDString, params)
+		query, queryParams, err = eventsQuery(projectID, eventNameIDsMap, segmentQuery, userID, userIDString, params, didEvent)
 	}
 
 	if err != nil {
@@ -66,7 +121,7 @@ func EventsPerformedCheck(projectID int64, segmentId string, eventNameIDsMap map
 	}
 
 	if segmentQuery.EventsCondition == model.EventCondAllGivenEvent {
-		if len(result) == len(segmentQuery.EventsWithProperties) {
+		if len(result) == didEventCount {
 			isMatched = true
 		}
 	} else {
@@ -114,6 +169,47 @@ func EventsPerformedCheck(projectID int64, segmentId string, eventNameIDsMap map
 
 	return isMatched
 }
+func didNotEventQuery(projectID int64, segmentId string, eventNameIDsMap map[string]string,
+	segmentQuery *model.Query, userID string, isAllAccounts bool, userArray []model.User, didNotEventCount int) bool {
+	isMatched := false
+
+	var userIDString string
+	params := []interface{}{projectID}
+	didEvent := false
+
+	if isAllAccounts {
+		userIDS := userIdsList(*segmentQuery, userArray, didEvent)
+		if len(userIDS) == 0 {
+			return isMatched
+		}
+		userIDString = "user_id IN (?)"
+		params = append(params, userIDS)
+	} else {
+		userIDString = "user_id=?"
+		params = append(params, userID)
+	}
+
+	query, queryParams, err := eventsQuery(projectID, eventNameIDsMap, segmentQuery, userID, userIDString, params, didEvent)
+
+	if err != nil {
+		return isMatched
+	}
+
+	result, status := GetStore().CheckIfUserPerformedGivenEvents(projectID, userID, query, queryParams)
+	if status == http.StatusInternalServerError {
+		log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "segment_id": segmentId}).
+			Error("Error while validating for did not performed events")
+	}
+
+	// if any record found, then return false for all_events
+	// if len of result less than didNotEventCount, return true for any_events
+	if (segmentQuery.EventsCondition == model.EventCondAnyGivenEvent && len(result) < didNotEventCount) ||
+		(segmentQuery.EventsCondition == model.EventCondAllGivenEvent && len(result) == 0) {
+		isMatched = true
+	}
+
+	return isMatched
+}
 
 // SELECT COUNT(event_name_id), event_name_id FROM events
 // WHERE project_id = '15000001' AND user_id='4cf0f3f9-b708-4c32-a8ca-b90af412fa55'
@@ -123,7 +219,7 @@ func EventsPerformedCheck(projectID int64, segmentId string, eventNameIDsMap map
 // (event_name_id='dd092c62-b2f0-4f2a-b780-ffc158d0f4b9') ) GROUP BY event_name_id;
 
 func eventsQuery(projectID int64, eventNameIDsMap map[string]string, segmentQuery *model.Query, userID string,
-	userIDString string, qParams []interface{}) (string, []interface{}, error) {
+	userIDString string, qParams []interface{}, didEvent bool) (string, []interface{}, error) {
 	query := fmt.Sprintf(`SELECT COUNT(event_name_id), event_name_id
 	FROM events
 	WHERE project_id = ? AND %s
@@ -132,7 +228,11 @@ func eventsQuery(projectID int64, eventNameIDsMap map[string]string, segmentQuer
 	params := qParams
 
 	var eventStr string
-	for index, event := range segmentQuery.EventsWithProperties {
+	firstEventFound := true
+	for _, event := range segmentQuery.EventsWithProperties {
+		if event.IsEventPerformed != didEvent {
+			continue
+		}
 
 		queryStr := "(event_name_id=?"
 		params = append(params, eventNameIDsMap[event.Name])
@@ -159,8 +259,9 @@ func eventsQuery(projectID int64, eventNameIDsMap map[string]string, segmentQuer
 			queryStr = queryStr + ")"
 		}
 
-		if index == 0 {
+		if firstEventFound {
 			eventStr = queryStr
+			firstEventFound = !firstEventFound
 			continue
 		}
 		eventStr = eventStr + " OR " + queryStr
@@ -190,7 +291,7 @@ func eventsQuery(projectID int64, eventNameIDsMap map[string]string, segmentQuer
 // GROUP BY event_name_id;
 
 func eventsQueryOptimised(projectID int64, eventNameIDsMap map[string]string, segmentQuery *model.Query, userID string,
-	userIDString string, params []interface{}) (string, []interface{}, error) {
+	userIDString string, params []interface{}, didEvent bool) (string, []interface{}, error) {
 	query := `WITH selected_events AS 
 	(SELECT event_name_id`
 
@@ -201,7 +302,11 @@ func eventsQueryOptimised(projectID int64, eventNameIDsMap map[string]string, se
 	userPropertiesFilter := map[string]int{}
 
 	timestampRequired := false
-	for index, event := range segmentQuery.EventsWithProperties {
+	firstEventFound := true
+	for _, event := range segmentQuery.EventsWithProperties {
+		if didEvent != event.IsEventPerformed {
+			continue
+		}
 
 		queryStr := "(event_name_id=?"
 		qParams = append(qParams, eventNameIDsMap[event.Name])
@@ -238,8 +343,9 @@ func eventsQueryOptimised(projectID int64, eventNameIDsMap map[string]string, se
 			}
 		}
 
-		if index == 0 {
+		if firstEventFound {
 			eventStr = queryStr
+			firstEventFound = !firstEventFound
 			continue
 		}
 
@@ -387,6 +493,9 @@ func (store *MemSQL) CheckIfUserPerformedGivenEvents(projectID int64, userID str
 	}
 
 	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return map[string]int{}, http.StatusNotFound
+		}
 		log.WithFields(logFields).WithError(err).Error("Error fetching records")
 		return map[string]int{}, http.StatusInternalServerError
 	}
@@ -409,8 +518,8 @@ func (store *MemSQL) CheckIfUserPerformedGivenEvents(projectID int64, userID str
 	return results, http.StatusFound
 }
 
-func userIdsList(query model.Query, userArray []model.User) []string {
-	groupIDs := GetEventGroupIds(query)
+func userIdsList(query model.Query, userArray []model.User, didEventsList bool) []string {
+	groupIDs := GetEventGroupIds(query, didEventsList)
 	userIDsMap := userIdMap(userArray)
 
 	isGroupAdded := make(map[int]bool)
@@ -442,9 +551,12 @@ func userIdMap(userArray []model.User) map[int][]string {
 	return userIdMap
 }
 
-func GetEventGroupIds(query model.Query) []int {
+func GetEventGroupIds(query model.Query, didEventsList bool) []int {
 	groupIds := make([]int, 0)
 	for _, event := range query.EventsWithProperties {
+		if event.IsEventPerformed != didEventsList {
+			continue
+		}
 		groupName := U.GetGroupNameFromGroupEventName(event.Name)
 		if groupName != "" {
 			groupIds = append(groupIds, model.GroupUserSource[groupName])
