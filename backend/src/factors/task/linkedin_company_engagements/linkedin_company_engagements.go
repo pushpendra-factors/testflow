@@ -279,6 +279,7 @@ func updateAccountLevelPropertiesForGroupUser(projectID int64, groupName string,
 
 	groupUser, errCode := store.GetStore().GetGroupUserByGroupID(projectID, groupName, groupID)
 	if errCode != http.StatusFound {
+		log.WithFields(log.Fields{"project_id": projectID, "group_name": groupName, "group_id": groupID}).Error("Ashhar_1 - Failed to get existing group user")
 		return "Failed to get existing group user", errCode
 	}
 	existingProperties, err := U.DecodePostgresJsonb(&groupUser.Properties)
