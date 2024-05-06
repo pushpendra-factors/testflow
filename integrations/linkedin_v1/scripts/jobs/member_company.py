@@ -1,3 +1,5 @@
+import logging as log
+import traceback
 import signal
 from util.util import Util as U
 from constants.constants import *
@@ -83,6 +85,8 @@ class MemberCompanyJob:
                 self.data_service_obj.insert_insights(MEMBER_COMPANY_INSIGHTS, self.linkedin_setting.project_id, 
                                 self.linkedin_setting.ad_account, enriched_company_insights, timestamp, SYNC_STATUS_T0)
         except Exception as e:
+            log.warning(str(e))
+            traceback.print_tb(e.__traceback__)
             self.metrics_aggregator_obj.update_stats(self.linkedin_setting.project_id, self.linkedin_setting.ad_account, 
                                                             MEMBER_COMPANY_INSIGHTS, 0, 'failed', str(e))
         self.metrics_aggregator_obj.update_stats(self.linkedin_setting.project_id, self.linkedin_setting.ad_account,
