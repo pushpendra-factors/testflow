@@ -577,6 +577,7 @@ type QueryEventWithProperties struct {
 	From              int64           `json:"fr"`
 	FrequencyOperator string          `json:"freqOp"`
 	Frequency         string          `json:"freq"`
+	IsEventPerformed  bool            `json:"iep"`
 }
 
 func (ewp *QueryEventWithProperties) TransformDateTypeFilters(timezoneString U.TimeZoneString) error {

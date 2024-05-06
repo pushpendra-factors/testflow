@@ -3531,6 +3531,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 					},
 					FrequencyOperator: model.GreaterThanOrEqualOpStr,
 					Frequency:         "1",
+					IsEventPerformed:  true,
 				},
 			},
 			Caller: "account_profiles",
@@ -3561,8 +3562,14 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 			Class:           "events",
 			EventsWithProperties: []model.QueryEventWithProperties{
 				{
-					Name:          U.EVENT_NAME_SESSION,
-					GroupAnalysis: "Others",
+					Name:             U.EVENT_NAME_SESSION,
+					GroupAnalysis:    "Others",
+					IsEventPerformed: true,
+				},
+				{
+					Name:             U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+					GroupAnalysis:    "Hubspot Company",
+					IsEventPerformed: false,
 				},
 			},
 			Caller: "account_profiles",
@@ -3656,11 +3663,13 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 							GroupName: "event",
 						},
 					},
+					IsEventPerformed: true,
 				},
 				{
-					Name:          U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
-					GroupAnalysis: "Hubspot Companies",
-					From:          U.TimeNowZ().AddDate(0, 0, -1).Unix(),
+					Name:             U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+					GroupAnalysis:    "Hubspot Companies",
+					From:             U.TimeNowZ().AddDate(0, 0, -1).Unix(),
+					IsEventPerformed: true,
 					Properties: []model.QueryProperty{
 						{
 							Type:      "categorical",
