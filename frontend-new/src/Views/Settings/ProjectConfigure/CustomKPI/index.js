@@ -1900,8 +1900,12 @@ function CustomKPI({
                                 </div>
                               </Col>
                               <Col>
-                                <Button className='mr-2' type='link' disabled>
-                                  {_.startCase(item?.me[0])}
+                                <Button
+                                  className='mr-2 capitalize'
+                                  type='link'
+                                  disabled
+                                >
+                                  {item?.me[0]}
                                 </Button>
                               </Col>
                               <Col>
