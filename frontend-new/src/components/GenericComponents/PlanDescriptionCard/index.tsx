@@ -35,11 +35,6 @@ function PlanDescriptionCard({
             <Tag color='orange'>Current Plan</Tag>
           </div>
         )}
-        {!isPlanActive && isRecommendedPlan && (
-          <div className={styles.reccommendationTag}>
-            <Tag color='orange'>Recommended plan</Tag>
-          </div>
-        )}
         <div className='flex gap-2 items-center mt-2'>
           <SVG name={planIcon} size='28' color={planIconColor} />
           <Text
