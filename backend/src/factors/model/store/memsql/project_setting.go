@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -1099,10 +1100,23 @@ func (store *MemSQL) GetFacebookEnabledIDsAndProjectSettings() ([]int64, []model
 		log.WithError(err).Error("Failed to get facebook enabled project settings for sync info.")
 		return facebookIDs, facebookProjectSettings, http.StatusInternalServerError
 	}
-	for _, facebookProjectSetting := range facebookProjectSettings {
+	projectIdsMap, err := store.GetAllProjectIDsMapWithFeatureEnabled(model.FEATURE_FACEBOOK)
+	if err != nil {
+		log.WithError(err).Error("Failed to get facebook feature enabled projects for sync info.")
+		return facebookIDs, facebookProjectSettings, http.StatusInternalServerError
+	}
+
+	finalSettings := make([]model.FacebookProjectSettings, 0)
+	for _, setting := range facebookProjectSettings {
+		if _, exists := projectIdsMap[setting.ProjectId]; exists {
+			finalSettings = append(finalSettings, setting)
+		}
+	}
+
+	for _, facebookProjectSetting := range finalSettings {
 		facebookIDs = append(facebookIDs, facebookProjectSetting.ProjectId)
 	}
-	return facebookIDs, facebookProjectSettings, http.StatusOK
+	return facebookIDs, finalSettings, http.StatusOK
 }
 
 func (store *MemSQL) GetFacebookEnabledIDsAndProjectSettingsForProject(projectIDs []int64) ([]int64, []model.FacebookProjectSettings, int) {
@@ -1120,10 +1134,22 @@ func (store *MemSQL) GetFacebookEnabledIDsAndProjectSettingsForProject(projectID
 		log.WithError(err).Error("Failed to get facebook enabled project settings for sync info.")
 		return facebookIDs, facebookProjectSettings, http.StatusInternalServerError
 	}
-	for _, facebookProjectSetting := range facebookProjectSettings {
+	projectIdsMap, err := store.GetAllProjectIDsMapWithFeatureEnabled(model.FEATURE_FACEBOOK)
+	if err != nil {
+		log.WithError(err).Error("Failed to get facebook feature enabled projects for sync info.")
+		return facebookIDs, facebookProjectSettings, http.StatusInternalServerError
+	}
+
+	finalSettings := make([]model.FacebookProjectSettings, 0)
+	for _, setting := range facebookProjectSettings {
+		if _, exists := projectIdsMap[setting.ProjectId]; exists {
+			finalSettings = append(finalSettings, setting)
+		}
+	}
+	for _, facebookProjectSetting := range finalSettings {
 		facebookIDs = append(facebookIDs, facebookProjectSetting.ProjectId)
 	}
-	return facebookIDs, facebookProjectSettings, http.StatusOK
+	return facebookIDs, finalSettings, http.StatusOK
 }
 
 func (store *MemSQL) GetLinkedinEnabledProjectSettings() ([]model.LinkedinProjectSettings, int) {
@@ -1137,7 +1163,20 @@ func (store *MemSQL) GetLinkedinEnabledProjectSettings() ([]model.LinkedinProjec
 		log.WithError(err).Error("Failed to get linkedin enabled project settings for sync info.")
 		return linkedinProjectSettings, http.StatusInternalServerError
 	}
-	return linkedinProjectSettings, http.StatusOK
+	projectIdsMap, err := store.GetAllProjectIDsMapWithFeatureEnabled(model.FEATURE_LINKEDIN)
+	if err != nil {
+		log.WithError(err).Error("Failed to get linkedin feature enabled projects for sync info.")
+		return linkedinProjectSettings, http.StatusInternalServerError
+	}
+
+	finalSettings := make([]model.LinkedinProjectSettings, 0)
+	for _, setting := range linkedinProjectSettings {
+		projectID, _ := strconv.ParseInt(setting.ProjectId, 10, 64)
+		if _, exists := projectIdsMap[projectID]; exists {
+			finalSettings = append(finalSettings, setting)
+		}
+	}
+	return finalSettings, http.StatusOK
 }
 func (store *MemSQL) GetLinkedinEnabledProjectSettingsForProjects(projectIDs []string) ([]model.LinkedinProjectSettings, int) {
 	logFields := log.Fields{
@@ -1153,7 +1192,20 @@ func (store *MemSQL) GetLinkedinEnabledProjectSettingsForProjects(projectIDs []s
 		log.WithError(err).Error("Failed to get linkedin enabled project settings for sync info.")
 		return linkedinProjectSettings, http.StatusInternalServerError
 	}
-	return linkedinProjectSettings, http.StatusOK
+	projectIdsMap, err := store.GetAllProjectIDsMapWithFeatureEnabled(model.FEATURE_LINKEDIN)
+	if err != nil {
+		log.WithError(err).Error("Failed to get linkedin feature enabled projects for sync info.")
+		return linkedinProjectSettings, http.StatusInternalServerError
+	}
+
+	finalSettings := make([]model.LinkedinProjectSettings, 0)
+	for _, setting := range linkedinProjectSettings {
+		projectID, _ := strconv.ParseInt(setting.ProjectId, 10, 64)
+		if _, exists := projectIdsMap[projectID]; exists {
+			finalSettings = append(finalSettings, setting)
+		}
+	}
+	return finalSettings, http.StatusOK
 }
 
 func (store *MemSQL) GetG2EnabledProjectSettings() ([]model.G2ProjectSettings, int) {
@@ -1167,7 +1219,19 @@ func (store *MemSQL) GetG2EnabledProjectSettings() ([]model.G2ProjectSettings, i
 		log.WithError(err).Error("Failed to get g2 enabled project settings for sync info.")
 		return g2ProjectSettings, http.StatusInternalServerError
 	}
-	return g2ProjectSettings, http.StatusOK
+	projectIdsMap, err := store.GetAllProjectIDsMapWithFeatureEnabled(model.FEATURE_G2)
+	if err != nil {
+		log.WithError(err).Error("Failed to get g2 feature enabled projects for sync info.")
+		return g2ProjectSettings, http.StatusInternalServerError
+	}
+
+	finalSettings := make([]model.G2ProjectSettings, 0)
+	for _, setting := range g2ProjectSettings {
+		if _, exists := projectIdsMap[setting.ProjectID]; exists {
+			finalSettings = append(finalSettings, setting)
+		}
+	}
+	return finalSettings, http.StatusOK
 }
 
 func (store *MemSQL) GetG2EnabledProjectSettingsForProjects(projectIDs []int64) ([]model.G2ProjectSettings, int) {
@@ -1184,7 +1248,19 @@ func (store *MemSQL) GetG2EnabledProjectSettingsForProjects(projectIDs []int64) 
 		log.WithError(err).Error("Failed to get g2 enabled project settings for sync info.")
 		return g2ProjectSettings, http.StatusInternalServerError
 	}
-	return g2ProjectSettings, http.StatusOK
+	projectIdsMap, err := store.GetAllProjectIDsMapWithFeatureEnabled(model.FEATURE_G2)
+	if err != nil {
+		log.WithError(err).Error("Failed to get g2 feature enabled projects for sync info.")
+		return g2ProjectSettings, http.StatusInternalServerError
+	}
+
+	finalSettings := make([]model.G2ProjectSettings, 0)
+	for _, setting := range g2ProjectSettings {
+		if _, exists := projectIdsMap[setting.ProjectID]; exists {
+			finalSettings = append(finalSettings, setting)
+		}
+	}
+	return finalSettings, http.StatusOK
 }
 
 // GetArchiveEnabledProjectIDs Returns list of project ids which have archive enabled.

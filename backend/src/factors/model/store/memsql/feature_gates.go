@@ -5,9 +5,10 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Not in use
@@ -260,6 +261,32 @@ func (store *MemSQL) GetAllProjectsWithFeatureEnabled(featureName string, includ
 	}
 	return projectIdsArray, nil
 
+}
+func (store *MemSQL) GetAllProjectIDsMapWithFeatureEnabled(featureName string) (map[int64]bool, error) {
+	var enabledProjectIds []int64 = make([]int64, 0)
+
+	projectIDs, errCode := store.GetAllProjectIDs()
+	if errCode != http.StatusFound {
+		err := fmt.Errorf("failed to get all projects ids to query feature enabled flag")
+		log.WithField("err_code", err).Error(err)
+		return make(map[int64]bool), err
+	}
+	for _, projectId := range projectIDs {
+		available, err := store.GetFeatureStatusForProjectV2(projectId, featureName, false)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectId, "feature": featureName}).WithError(err).Error("failed to get feature status for project ID ")
+			return make(map[int64]bool), err
+		}
+		if available {
+			enabledProjectIds = append(enabledProjectIds, projectId)
+		}
+	}
+
+	projectIDsMap := make(map[int64]bool)
+	for _, projectID := range enabledProjectIds {
+		projectIDsMap[projectID] = true
+	}
+	return projectIDsMap, nil
 }
 
 func (store *MemSQL) GetProjectsArrayWithFeatureEnabledFromProjectIdFlag(stringProjectsIDs, featureName string) ([]int64, error) {
