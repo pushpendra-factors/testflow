@@ -59,6 +59,9 @@ func main() {
 	analyzeIntervalInMins := flag.Int("analyze_tables_interval", 45,
 		"Runs analyze for table, if not analyzed in given interval.")
 
+	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
+	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
+
 	flag.Parse()
 
 	defaultAppName := "monitoring_job"
@@ -87,9 +90,11 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore: *primaryDatastore,
-		QueueRedisHost:   *queueRedisHost,
-		QueueRedisPort:   *queueRedisPort,
+		PrimaryDatastore:    *primaryDatastore,
+		QueueRedisHost:      *queueRedisHost,
+		QueueRedisPort:      *queueRedisPort,
+		RedisHostPersistent: *redisHostPersistent,
+		RedisPortPersistent: *redisPortPersistent,
 
 		EnableSDKAndIntegrationRequestQueueDuplication: *enableSDKAndIntegrationRequestQueueDuplication,
 		DuplicateQueueRedisHost:                        *duplicateQueueRedisHost,
@@ -97,6 +102,7 @@ func main() {
 	}
 
 	C.InitConf(config)
+	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	err := C.InitDB(*config)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to initalize db.")
