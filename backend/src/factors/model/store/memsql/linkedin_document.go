@@ -747,7 +747,7 @@ func (store *MemSQL) GetCampaignGroupInfoForGivenTimerange(campaignGroupInfoRequ
 	logCtx := log.WithFields(logFields)
 	db := C.GetServices().Db
 	projectID, adAccountID, startTime, endTime := campaignGroupInfoRequestPayload.ProjectID, campaignGroupInfoRequestPayload.CustomerAdAccountID, campaignGroupInfoRequestPayload.StartTimestamp, campaignGroupInfoRequestPayload.EndTimestamp
-	unixForStartTime := U.GetBeginningoftheDayEpochForDateAndTimezone(startTime, "UTC") * 1000
+	unixForStartTime := (U.GetBeginningoftheDayEpochForDateAndTimezone(startTime, "UTC") - (30 * 86400)) * 1000
 	linkedinDocuments := make([]model.LinkedinDocument, 0)
 
 	query := campaignGroupInfoFetchStr
@@ -775,7 +775,7 @@ func (store *MemSQL) GetCampaignInfoForGivenTimerange(campaignInfoRequestPayload
 	logCtx := log.WithFields(logFields)
 	db := C.GetServices().Db
 	projectID, adAccountID, startTime, endTime := campaignInfoRequestPayload.ProjectID, campaignInfoRequestPayload.CustomerAdAccountID, campaignInfoRequestPayload.StartTimestamp, campaignInfoRequestPayload.EndTimestamp
-	unixForStartTime := U.GetBeginningoftheDayEpochForDateAndTimezone(startTime, "UTC") * 1000
+	unixForStartTime := (U.GetBeginningoftheDayEpochForDateAndTimezone(startTime, "UTC") - (30 * 86400)) * 1000
 	linkedinDocuments := make([]model.LinkedinDocument, 0)
 
 	query := campaignInfoFetchStr

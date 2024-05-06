@@ -93,3 +93,9 @@ class MemberCompanyJobRunner:
             traceback.print_tb(e.__traceback__)
             self.metrics_aggregator_obj.update_stats(self.linkedin_setting.project_id, self.linkedin_setting.ad_account, 
                                                             e.doc_type, e.request_count, 'failed', e.message)
+            
+        except Exception as e:
+            log.warning(str(e))
+            traceback.print_tb(e.__traceback__)
+            self.metrics_aggregator_obj.update_stats(self.linkedin_setting.project_id, self.linkedin_setting.ad_account, 
+                                                            MEMBER_COMPANY_INSIGHTS, 0, 'failed', str(e))
