@@ -59,7 +59,7 @@ func CreateWorkflowHandler(c *gin.Context) (interface{}, int, string, string, bo
 		return nil, http.StatusBadRequest, INVALID_INPUT, ErrorMessages[INVALID_INPUT], true
 	}
 
-	obj, errCode, err := store.GetStore().CreateWorkflow(projectID, agentID, workflow)
+	obj, errCode, err := store.GetStore().CreateWorkflow(projectID, agentID, "", workflow)
 	if err != nil {
 		c.AbortWithStatusJSON(errCode, gin.H{"error": err.Error()})
 		return nil, errCode, PROCESSING_FAILED, err.Error(), true
@@ -120,7 +120,7 @@ func EditWorkflowHandler(c *gin.Context) (interface{}, int, string, string, bool
 		return nil, http.StatusBadRequest, PROCESSING_FAILED, ErrorMessages[PROCESSING_FAILED], true
 	}
 
-	newWorkflow, errCode, err := store.GetStore().CreateWorkflow(projectID, agentID, workflow)
+	newWorkflow, errCode, err := store.GetStore().CreateWorkflow(projectID, agentID, id, workflow)
 	if err != nil {
 		log.WithError(err).Error("Failed to edit workflow.")
 		return nil, errCode, PROCESSING_FAILED, "Failed to edit workflow.", true

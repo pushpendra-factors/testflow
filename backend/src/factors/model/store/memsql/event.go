@@ -472,42 +472,8 @@ func (store *MemSQL) CreateEvent(event *model.Event) (*model.Event, int) {
 	model.SetCacheUserLastEvent(event.ProjectId, event.UserId,
 		&model.CacheEvent{ID: event.ID, Timestamp: event.Timestamp})
 
-	eventNameId := event.EventNameId
-
-	alerts, eventName, updatedUserProps, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, eventNameId, event.UserId, &event.Properties, event.UserProperties, nil, false)
-	if ErrCode == http.StatusFound && alerts != nil {
-		// log.WithFields(log.Fields{"project_id": event.ProjectId,
-		// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
-
-		for _, alert := range *alerts {
-			success := store.CacheEventTriggerAlert(&alert, event, eventName, updatedUserProps)
-			if !success {
-				log.WithFields(log.Fields{"project_id": event.ProjectId,
-					"event_trigger_alert": alert}).Error("Caching alert failure")
-			}
-		}
-	}
-
-	//Check for alerts set on All Page view event
-	eventPropMap, err := U.DecodePostgresJsonbAsPropertiesMap(eventPropsJSONb)
-	if err == nil {
-		if (*eventPropMap)[U.EP_IS_PAGE_VIEW] == true {
-			eventNameId = ""
-			alerts, eventName, updatedUserProps, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, eventNameId, event.UserId, &event.Properties, event.UserProperties, nil, false)
-			if ErrCode == http.StatusFound && alerts != nil {
-				// log.WithFields(log.Fields{"project_id": event.ProjectId,
-				// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
-
-				for _, alert := range *alerts {
-					success := store.CacheEventTriggerAlert(&alert, event, eventName, updatedUserProps)
-					if !success {
-						log.WithFields(log.Fields{"project_id": event.ProjectId,
-							"event_trigger_alert": alert}).Error("Caching alert failure")
-					}
-				}
-			}
-		}
-	}
+	//Check for all event and workflow based alerts
+	store.checkAndCacheIfAnyEventBasedOWorkflowsSetForTheCurrentEvent(event, nil, false)
 
 	return event, http.StatusCreated
 }
@@ -889,45 +855,11 @@ func (store *MemSQL) updateEventPropertiesWithTransaction(projectId int64, id, u
 		store.addEventDetailsToCache(projectId, &model.Event{EventNameId: event.EventNameId, Properties: *updatedPropertiesOnlyJsonBlob}, true)
 	}
 
+	updatedEvent := model.Event{}
+	updatedEvent = *event
+	updatedEvent.Properties = *updatedPostgresJsonb
 	//log.Info("EventTriggerAlerts match function trigger point.")
-	alerts, eventName, updatedUserProps, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, event.EventNameId, event.UserId, updatedPostgresJsonb, event.UserProperties, updatedPropertiesOnlyJsonBlob, true)
-	if ErrCode == http.StatusFound && alerts != nil {
-		// log.WithFields(log.Fields{"project_id": event.ProjectId,
-		// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
-
-		updatedEvent := model.Event{}
-		updatedEvent = *event
-		updatedEvent.Properties = *updatedPostgresJsonb
-		for _, alert := range *alerts {
-			success := store.CacheEventTriggerAlert(&alert, &updatedEvent, eventName, updatedUserProps)
-			if !success {
-				log.WithFields(log.Fields{"project_id": event.ProjectId,
-					"event_trigger_alert": alert}).Error("Caching alert failure")
-			}
-		}
-	}
-
-	//Check for alerts set on All Page View event
-	if updatedProperties[U.EP_IS_PAGE_VIEW] == true {
-		eventNameId := ""
-
-		alerts, eventName, updatedUserProps, ErrCode := store.MatchEventTriggerAlertWithTrackPayload(event.ProjectId, eventNameId, event.UserId, updatedPostgresJsonb, event.UserProperties, updatedPropertiesOnlyJsonBlob, true)
-		if ErrCode == http.StatusFound && alerts != nil {
-			// log.WithFields(log.Fields{"project_id": event.ProjectId,
-			// 	"event_trigger_alerts": *alerts}).Info("EventTriggerAlert found. Caching Alert.")
-
-			updatedEvent := model.Event{}
-			updatedEvent = *event
-			updatedEvent.Properties = *updatedPostgresJsonb
-			for _, alert := range *alerts {
-				success := store.CacheEventTriggerAlert(&alert, &updatedEvent, eventName, updatedUserProps)
-				if !success {
-					log.WithFields(log.Fields{"project_id": event.ProjectId,
-						"event_trigger_alert": alert}).Error("Caching alert failure")
-				}
-			}
-		}
-	}
+	store.checkAndCacheIfAnyEventBasedOWorkflowsSetForTheCurrentEvent(&updatedEvent, updatedPropertiesOnlyJsonBlob, true)
 
 	return http.StatusAccepted
 }
