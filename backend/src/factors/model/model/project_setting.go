@@ -397,18 +397,8 @@ func GetHubspotCustomIdentificationFieldByProjectID(projectID int64) string {
 }
 
 func GetProjectSDKAPIAndAssetURL(projectID int64) (string, string) {
-	// Todo: The selected URL for each project has to be persisted.
-	// Any change to availableHashes will change the SDK code for a project, if not persisted.
-	availableHashes := []string{
-		"slashmultiple",
-		"bitsfact",
-	}
-
-	index := (int(projectID) % len(availableHashes))
-	hash := availableHashes[index]
-
-	assetURL := "https://asset." + hash + ".com/" + hash + ".js"
-	apiURL := "https://api." + hash + ".com"
+	assetURL := "https://app.factors.ai/assets/factors.js"
+	apiURL := "https://api.factors.ai"
 
 	return assetURL, apiURL
 }
