@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	C "factors/config"
 	slack "factors/integration/slack"
@@ -18,9 +19,10 @@ import (
 )
 
 type oauthState struct {
-	ProjectID int64   `json:"project_id"`
-	AgentUUID *string `json:"agent_uuid"`
-	Source    int     `json:"source"`
+	ProjectID   int64   `json:"project_id"`
+	AgentUUID   *string `json:"agent_uuid"`
+	Source      int     `json:"source"`
+	RandomState string  `json:"randomState"`
 }
 
 func SlackAuthRedirectHandler(c *gin.Context) {
@@ -32,8 +34,9 @@ func SlackAuthRedirectHandler(c *gin.Context) {
 		return
 	}
 	state := oauthState{
-		ProjectID: projectId,
-		AgentUUID: &currentAgentUUID,
+		ProjectID:   projectId,
+		AgentUUID:   &currentAgentUUID,
+		RandomState: U.RandomLowerAphaNumString(20),
 	}
 
 	source := c.Query("source")
@@ -42,31 +45,35 @@ func SlackAuthRedirectHandler(c *gin.Context) {
 		state.Source = 2
 	}
 
-	enOAuthState, err := json.Marshal(state)
+	randAuthState, err := json.Marshal(state)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 
-	randState := U.RandomLowerAphaNumString(10)
-	slack.SetCacheForSlackAuthRandomState(projectId, currentAgentUUID, randState)
+	slack.SetCacheForSlackAuthRandomState(projectId, currentAgentUUID, state.RandomState)
 
-	redirectURL := GetSlackAuthorisationURL(C.GetSlackClientID(), url.QueryEscape(string(enOAuthState)), randState)
+	redirectURL := GetSlackAuthorisationURL(C.GetSlackClientID(), url.QueryEscape(base64.StdEncoding.EncodeToString(randAuthState)))
 	c.JSON(http.StatusOK, gin.H{"redirectURL": redirectURL})
 }
-func GetSlackAuthorisationURL(clientID string, identity string, authRandomState string) string {
-	url := fmt.Sprintf(`https://slack.com/oauth/v2/authorize?client_id=%s&scope=channels:read,chat:write,chat:write.public,im:read,users:read,users:read.email&user_scope=channels:read,chat:write,groups:read,mpim:read,users:read,users:read.email&state=%s&identity=%s`, clientID, authRandomState, identity)
+func GetSlackAuthorisationURL(clientID string, state string) string {
+	url := fmt.Sprintf(`https://slack.com/oauth/v2/authorize?client_id=%s&scope=channels:read,chat:write,chat:write.public,im:read,users:read,users:read.email&user_scope=channels:read,chat:write,groups:read,mpim:read,users:read,users:read.email&state=%s`, clientID, state)
 	return url
 }
 func SlackCallbackHandler(c *gin.Context) {
 	var oauthState oauthState
-	state := c.Query("state")
-	identity := c.Query("identity")
+	enState := c.Query("state")
 
-	err := json.Unmarshal([]byte(identity), &oauthState)
-	log.WithField("oauthState", oauthState).WithField("all_params", c.Request.URL.Query()).Info("SlackCallbackHandler url")
+	state, err := base64.StdEncoding.DecodeString(enState)
+	if err != nil {
+		redirectURL := buildRedirectURL("fail to decode state", 0)
+		c.Redirect(http.StatusInternalServerError, redirectURL)
+	}
 
-	if err != nil || oauthState.ProjectID == 0 || *oauthState.AgentUUID == "" {
+	err = json.Unmarshal([]byte(state), &oauthState)
+	log.WithField("state", state).WithField("all_params", c.Request.URL.Query()).Info("SlackCallbackHandler url")
+
+	if err != nil || oauthState.ProjectID == 0 || *oauthState.AgentUUID == "" || *&oauthState.RandomState == "" {
 		redirectURL := buildRedirectURL("invalid values in state", oauthState.Source)
 		c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	}
@@ -76,7 +83,7 @@ func SlackCallbackHandler(c *gin.Context) {
 		return
 	}
 
-	if stateFromCache != state {
+	if stateFromCache != *&oauthState.RandomState {
 		log.Error("Failed to get auth code")
 		redirectURL := buildRedirectURL("AUTH_ERROR", oauthState.Source)
 		c.Redirect(http.StatusUnauthorized, redirectURL)
