@@ -99,8 +99,9 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 	}
 	log.Warn("Kark5")
 
-	for _, configFunction := range resultantResultConfigFunctions {
+	for counter, configFunction := range resultantResultConfigFunctions {
 		currentConfig, errCode := configFunction(projectID, reqID, includeDerivedKPIs)
+		log.WithField("counter", counter).Warn("kark5-counter")
 		if errCode != http.StatusOK {
 			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during fetch of KPI Config Data.", true
 		}
