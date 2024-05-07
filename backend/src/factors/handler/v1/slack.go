@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	C "factors/config"
 	slack "factors/integration/slack"
@@ -18,9 +19,10 @@ import (
 )
 
 type oauthState struct {
-	ProjectID int64   `json:"project_id"`
-	AgentUUID *string `json:"agent_uuid"`
-	Source    int     `json:"source"`
+	ProjectID   int64   `json:"project_id"`
+	AgentUUID   *string `json:"agent_uuid"`
+	Source      int     `json:"source"`
+	RandomState string  `json:"randomState"`
 }
 
 func SlackAuthRedirectHandler(c *gin.Context) {
@@ -32,8 +34,9 @@ func SlackAuthRedirectHandler(c *gin.Context) {
 		return
 	}
 	state := oauthState{
-		ProjectID: projectId,
-		AgentUUID: &currentAgentUUID,
+		ProjectID:   projectId,
+		AgentUUID:   &currentAgentUUID,
+		RandomState: U.RandomLowerAphaNumString(20),
 	}
 
 	source := c.Query("source")
@@ -42,12 +45,15 @@ func SlackAuthRedirectHandler(c *gin.Context) {
 		state.Source = 2
 	}
 
-	enOAuthState, err := json.Marshal(state)
+	randAuthState, err := json.Marshal(state)
 	if err != nil {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
-	redirectURL := GetSlackAuthorisationURL(C.GetSlackClientID(), url.QueryEscape(string(enOAuthState)))
+
+	slack.SetCacheForSlackAuthRandomState(projectId, currentAgentUUID, state.RandomState)
+
+	redirectURL := GetSlackAuthorisationURL(C.GetSlackClientID(), url.QueryEscape(base64.StdEncoding.EncodeToString(randAuthState)))
 	c.JSON(http.StatusOK, gin.H{"redirectURL": redirectURL})
 }
 func GetSlackAuthorisationURL(clientID string, state string) string {
@@ -56,11 +62,29 @@ func GetSlackAuthorisationURL(clientID string, state string) string {
 }
 func SlackCallbackHandler(c *gin.Context) {
 	var oauthState oauthState
-	state := c.Query("state")
-	err := json.Unmarshal([]byte(state), &oauthState)
-	if err != nil || oauthState.ProjectID == 0 || *oauthState.AgentUUID == "" {
+	enState := c.Query("state")
+
+	state, err := base64.StdEncoding.DecodeString(enState)
+	if err != nil {
+		redirectURL := buildRedirectURL("fail to decode state", 0)
+		c.Redirect(http.StatusInternalServerError, redirectURL)
+	}
+
+	err = json.Unmarshal([]byte(state), &oauthState)
+	if err != nil || oauthState.ProjectID == 0 || *oauthState.AgentUUID == "" || *&oauthState.RandomState == "" {
 		redirectURL := buildRedirectURL("invalid values in state", oauthState.Source)
 		c.Redirect(http.StatusPermanentRedirect, redirectURL)
+	}
+
+	stateFromCache, errCode := slack.GetCacheSlackAuthRandomState(*&oauthState.ProjectID, *oauthState.AgentUUID)
+	if errCode != http.StatusFound {
+		return
+	}
+
+	if stateFromCache != *&oauthState.RandomState {
+		log.Error("Failed to get auth code")
+		redirectURL := buildRedirectURL("AUTH_ERROR", oauthState.Source)
+		c.Redirect(http.StatusUnauthorized, redirectURL)
 	}
 
 	code := c.Query("code")
