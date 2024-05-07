@@ -1090,7 +1090,6 @@ type Model interface {
 
 	// Feature Gates
 	GetAllProjectsWithFeatureEnabled(featureName string, includeProjectSettings bool) ([]int64, error)
-	GetAllProjectIDsMapWithFeatureEnabled(featureName string) (map[int64]bool, error)
 	GetFeaturesForProject(projectID int64) (model.FeatureGate, error)
 	UpdateStatusForFeature(projectID int64, featureName string, updateValue int) (int, error)
 	GetFeatureStatusForProject(projectID int64, featureName string) (int, error)
