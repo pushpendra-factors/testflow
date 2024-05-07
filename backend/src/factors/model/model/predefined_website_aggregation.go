@@ -4,26 +4,25 @@ import (
 	U "factors/util"
 )
 
-
 const (
 
 	// Widget names
-	PredefWidWebsiteOverview    = "website_traffic_overview"
-	PredefWidUtmParams      	= "web_traffic_by_UTM_parameters"
-	PredefWidpageUrl        	= "website_sessions_by_page_URL"
-	PredefWidPageView       	= "top_pages_visited_by_page_URL"
-	PredefWidGeography      	= "website_sessions_by_geography"
-	PredefWidTechnographics 	= "website_sessions_by_browser"
-	PredefWidFirmographics  	= "website_sessions_by_company_firmographics"
+	PredefWidWebsiteOverview = "website_traffic_overview"
+	PredefWidUtmParams       = "web_traffic_by_UTM_parameters"
+	PredefWidpageUrl         = "website_sessions_by_page_URL"
+	PredefWidPageView        = "top_pages_visited_by_page_URL"
+	PredefWidGeography       = "website_sessions_by_geography"
+	PredefWidTechnographics  = "website_sessions_by_browser"
+	PredefWidFirmographics   = "website_sessions_by_company_firmographics"
 
 	// Widget Display Names
-	PredefWidDispWebsiteOverview	= "Website traffic overview"
-	PredefWidDispUtmParams      	= "Web traffic by UTM parameters"
-	PredefWidDispPageUrl       		= "Website sessions by page URL"
-	PredefWidDispPageView       	= "Top pages visited by page URL"
-	PredefWidDispGeography      	= "Website sessions by geography"
-	PredefWidDispTechnographics 	= "Website sessions by browser"
-	PredefWidDispFirmographics  	= "Website sessions by company firmographics"
+	PredefWidDispWebsiteOverview = "Website traffic overview"
+	PredefWidDispUtmParams       = "Web traffic by UTM parameters"
+	PredefWidDispPageUrl         = "Website sessions by page URL"
+	PredefWidDispPageView        = "Top pages visited by page URL"
+	PredefWidDispGeography       = "Website sessions by geography"
+	PredefWidDispTechnographics  = "Website sessions by browser"
+	PredefWidDispFirmographics   = "Website sessions by company firmographics"
 
 	PredefEventTypeSession   = "session"
 	PredefEventTypePageViews = "page_view"
@@ -47,6 +46,7 @@ const (
 	// GroupByProperties or Global Filters for page
 	PredefPropSource              = "source"
 	PredefPropMedium              = "medium"
+	PredefPropChannel             = "channel"
 	PredefPropCampaign            = "campaign"
 	PredefPropLandingPageURl      = "landing_page_url"
 	PredefPropReferrerUrl         = "referrer_url"
@@ -68,6 +68,7 @@ const (
 	PredefPropDispSource              = "Source"
 	PredefPropDispMedium              = "Medium"
 	PredefPropDispCampaign            = "Campaign"
+	PredefPropDispChannel             = "Channel"
 	PredefPropDispLandingPageURl      = "Landing Page URL"
 	PredefPropDispReferrerUrl         = "Referrer URL"
 	PredefPropDispExitPage            = "Exit page"
@@ -85,10 +86,9 @@ const (
 	PredefPropDisp6SignalRevenueRange = "Company revenue range"
 
 	// Internal Group by
-	PredefPropEventName 	= "event_name"
+	PredefPropEventName     = "event_name"
 	PredefPropLatestPageUrl = "latest_page_url"
 )
-
 
 // During website_aggregation, we fetch the properties from events table. Here source represent the details of properties in events table.
 // Predefined website aggregation is mostly for session based properties. Hence the source is defined against session data.
@@ -124,7 +124,7 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 			{Name: PredefAvgSessionDuration, DisplayName: PredefDispAvgSessionDuration, InternalEventType: PredefEventTypeSession, Type: MetricsDateType},
 		},
 		GroupBy: []PredefinedGroupBy{},
-		Setting: ChartSetting{ Type: ChartTypeLineChart, Presentation: PresentationTypeChart },
+		Setting: ChartSetting{Type: ChartTypeLineChart, Presentation: PresentationTypeChart},
 	},
 	{
 		InternalID:  2,
@@ -137,8 +137,9 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 			{Name: PredefPropSource, DisplayName: PredefPropDispSource},
 			{Name: PredefPropMedium, DisplayName: PredefPropDispMedium},
 			{Name: PredefPropCampaign, DisplayName: PredefPropDispCampaign},
+			{Name: PredefPropChannel, DisplayName: PredefPropDispChannel},
 		},
-		Setting: ChartSetting{ Type: ChartTypeBarChart, Presentation: PresentationTypeChart },
+		Setting: ChartSetting{Type: ChartTypeBarChart, Presentation: PresentationTypeChart},
 	},
 	{
 		InternalID:  3,
@@ -223,16 +224,16 @@ var PredefinedDashboardUnitsPosition = map[string]map[string]int{
 }
 
 var MapOfPredefPropertyNameToProperties = map[string]PredefinedDashboardProperty{
-	predefinedWebsiteAggregationProperties[0].Name: predefinedWebsiteAggregationProperties[0],
-	predefinedWebsiteAggregationProperties[1].Name: predefinedWebsiteAggregationProperties[1],
-	predefinedWebsiteAggregationProperties[2].Name: predefinedWebsiteAggregationProperties[2],
-	predefinedWebsiteAggregationProperties[3].Name: predefinedWebsiteAggregationProperties[3],
-	predefinedWebsiteAggregationProperties[4].Name: predefinedWebsiteAggregationProperties[4],
-	predefinedWebsiteAggregationProperties[5].Name: predefinedWebsiteAggregationProperties[5],
-	predefinedWebsiteAggregationProperties[6].Name: predefinedWebsiteAggregationProperties[6],
-	predefinedWebsiteAggregationProperties[7].Name: predefinedWebsiteAggregationProperties[7],
-	predefinedWebsiteAggregationProperties[8].Name: predefinedWebsiteAggregationProperties[8],
-	predefinedWebsiteAggregationProperties[9].Name: predefinedWebsiteAggregationProperties[9],
+	predefinedWebsiteAggregationProperties[0].Name:  predefinedWebsiteAggregationProperties[0],
+	predefinedWebsiteAggregationProperties[1].Name:  predefinedWebsiteAggregationProperties[1],
+	predefinedWebsiteAggregationProperties[2].Name:  predefinedWebsiteAggregationProperties[2],
+	predefinedWebsiteAggregationProperties[3].Name:  predefinedWebsiteAggregationProperties[3],
+	predefinedWebsiteAggregationProperties[4].Name:  predefinedWebsiteAggregationProperties[4],
+	predefinedWebsiteAggregationProperties[5].Name:  predefinedWebsiteAggregationProperties[5],
+	predefinedWebsiteAggregationProperties[6].Name:  predefinedWebsiteAggregationProperties[6],
+	predefinedWebsiteAggregationProperties[7].Name:  predefinedWebsiteAggregationProperties[7],
+	predefinedWebsiteAggregationProperties[8].Name:  predefinedWebsiteAggregationProperties[8],
+	predefinedWebsiteAggregationProperties[9].Name:  predefinedWebsiteAggregationProperties[9],
 	predefinedWebsiteAggregationProperties[10].Name: predefinedWebsiteAggregationProperties[10],
 	predefinedWebsiteAggregationProperties[11].Name: predefinedWebsiteAggregationProperties[11],
 }
@@ -353,7 +354,7 @@ var PredefWebMetricToInternalTransformations = map[string][]PredefWebsiteAggrega
 }
 
 var MapOfPredefWebsiteAggregGroupByExternalToInternal = map[string]string{
-	PredefPropTopPage: PredefPropEventName,
+	PredefPropTopPage:  PredefPropEventName,
 	PredefPropExitPage: PredefPropLatestPageUrl,
 }
 
