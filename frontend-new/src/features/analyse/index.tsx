@@ -16,6 +16,7 @@ import {
   fetchQueries,
   getEventsData,
   getFunnelData,
+  getKPIData,
   updateQuery
 } from 'Reducers/coreQuery/services';
 import { EMPTY_ARRAY, EMPTY_OBJECT, generateRandomKey } from 'Utils/global';
@@ -50,6 +51,7 @@ import {
 import {
   formatApiData,
   getFunnelQuery,
+  getKPIStateFromRequestQuery,
   getQuery,
   getStateQueryFromRequestQuery,
   isComparisonEnabled
@@ -85,6 +87,7 @@ import PageSuspenseLoader from 'Components/SuspenseLoaders/PageSuspenseLoader';
 import SaveQuery from 'Components/SaveQuery';
 import { getChartChangedKey } from 'Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
 import _ from 'lodash';
+import KPIComposer from 'Components/KPIComposer';
 
 const CoreQuery = () => {
   // Query params
@@ -106,6 +109,9 @@ const CoreQuery = () => {
   const [savedQueryModal, setSavedQueryModal] = useState(false);
 
   const [loading, setLoading] = useState(true);
+
+  const [selectedMainCategory, setSelectedMainCategory] = useState(false);
+  const [KPIConfigProps, setKPIConfigProps] = useState([]);
 
   // Local states
   const [coreQueryState, setCoreQueryState] = useState<CoreQueryState>(
@@ -152,6 +158,8 @@ const CoreQuery = () => {
         createStateFromResult(queryToAdd);
       } else if (query_type === QUERY_TYPE_FUNNEL) {
         createFunnelStateFromResult(queryToAdd);
+      } else if (query_type === QUERY_TYPE_KPI) {
+        createKPIStateFromResult(queryToAdd);
       }
     }
   }, [query_id, query_type, savedQueries, location]);
@@ -167,6 +175,36 @@ const CoreQuery = () => {
       setCoreQueryState(qState);
     }
   }, [groupBy]);
+
+  useEffect(() => {
+    setKPIConfigProps(findKPIitem(selectedMainCategory?.group));
+  }, [selectedMainCategory]);
+
+  const KPI_config = useSelector((state) => state.kpi.config);
+
+  const findKPIitem = useCallback(
+    (groupName) => {
+      const KPIlist = KPI_config || [];
+      const selGroup = KPIlist.find(
+        (item) => item.display_category === groupName
+      );
+
+      const DDvalues = selGroup?.properties?.map((item) => {
+        if (item == null) return null;
+        const ddName = item.display_name ? item.display_name : item.name;
+        const ddtype =
+          selGroup?.category === 'channels' ||
+          selGroup?.category === 'custom_channels'
+            ? item.object_type
+            : item.entity
+              ? item.entity
+              : item.object_type;
+        return [ddName, item.name, item.data_type, ddtype, item.category];
+      });
+      return DDvalues;
+    },
+    [KPI_config]
+  );
 
   const getQueryFromHashId = () =>
     savedQueries?.find((quer: any) => quer.id_text === query_id);
@@ -263,6 +301,131 @@ const CoreQuery = () => {
   const setAppliedBreakdowns = (breakdown: any, qState: CoreQueryState) => {
     const newAppliedBreakdown = [...breakdown.event, ...breakdown.global];
     qState.appliedBreakdown = newAppliedBreakdown;
+  };
+
+  const createKPIStateFromResult = (
+    queryToAdd: (typeof savedQueries)[0],
+    resultState?: ResultState | null,
+    dateRange?: any | null,
+    isSavedQuery = true
+  ) => {
+    const equivalentQuery = getKPIStateFromRequestQuery(queryToAdd?.query);
+    const queryState = new CoreQueryState();
+    queryState.queryType = QUERY_TYPE_KPI;
+    if (isSavedQuery) {
+      queryState.querySaved = { name: queryToAdd.title, id: queryToAdd.id };
+    } else {
+      queryState.querySaved = {};
+    }
+
+    queryState.requestQuery = queryToAdd?.query;
+    queryState.showResult = true;
+    queryState.loading = false;
+    setLoading(false);
+    queryState.queries = equivalentQuery.events;
+    if (queryState.queryType === QUERY_TYPE_KPI) {
+      queryState.appliedQueries = queryState.queries.map((q) => {
+        const category = KPI_config.find(
+          (elem) =>
+            elem.category === q.category && q.group === elem.display_category
+        );
+        const metric = category?.metrics.find((m) => m.name === q.metric);
+        return {
+          ...q,
+          metricType: metric?.type != null ? metric.type : q.metricType
+        };
+      });
+      // updateAppliedBreakdown();
+    }
+    queryState.queryOptions = getQueryOptionsFromEquivalentQuery(
+      queryState.queryOptions,
+      equivalentQuery
+    );
+
+    if (dateRange) {
+      queryState.queryOptions.date_range = dateRange;
+    }
+
+    queryState.breakdownType = REVERSE_USER_TYPES[queryState.requestQuery.ec];
+
+    // if (queryState.requestQuery) {
+    //   updateEventFunnelsState(
+    //     equivalentQuery,
+    //     location?.state?.navigatedFromDashboard,
+    //     queryState
+    //   );
+    //   if (queryState.requestQuery.length === 1) {
+    //     dispatch({
+    //       type: SET_PERFORMANCE_CRITERIA,
+    //       payload: REVERSE_USER_TYPES[queryState.requestQuery.ec]
+    //     });
+    //     dispatch({
+    //       type: SET_SHOW_CRITERIA,
+    //       payload: TOTAL_USERS_CRITERIA
+    //     });
+    //   } else {
+    //     dispatch({
+    //       type: SET_PERFORMANCE_CRITERIA,
+    //       payload: EACH_USER_TYPE
+    //     });
+    //     if (queryState.requestQuery.length === 2) {
+    //       dispatch({
+    //         type: SET_SHOW_CRITERIA,
+    //         payload:
+    //           queryState.requestQuery.ty === TYPE_EVENTS_OCCURRENCE
+    //             ? TOTAL_EVENTS_CRITERIA
+    //             : TOTAL_USERS_CRITERIA
+    //       });
+    //     }
+    //     // else if (queryState.requestQuery.query.length === 3) {
+    //     //   dispatch({
+    //     //     type: SET_SHOW_CRITERIA,
+    //     //     payload: ACTIVE_USERS_CRITERIA
+    //     //   });
+    //     // }
+    //     else {
+    //       dispatch({
+    //         type: SET_SHOW_CRITERIA,
+    //         payload: FREQUENCY_CRITERIA
+    //       });
+    //     }
+    //   }
+    // }
+
+    dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
+    dispatch({
+      type: SET_COMPARISON_SUPPORTED,
+      payload: isComparisonEnabled(
+        queryState.queryType,
+        equivalentQuery.events,
+        equivalentQuery.breakdown,
+        models
+      )
+    });
+
+    setAppliedBreakdowns(equivalentQuery.breakdown, queryState);
+
+    // updateAppliedBreakdown();
+    dispatch({
+      type: UPDATE_PIVOT_CONFIG,
+      payload: { ...DEFAULT_PIVOT_CONFIG }
+    });
+    dispatch({ type: SET_SAVED_QUERY_SETTINGS, payload: EMPTY_OBJECT });
+
+    if (resultState) {
+      queryState.resultState = {
+        ...INITIAL_RESULT_STATE,
+        data: resultState.data.result || resultState.data,
+        status: resultState.status
+      };
+      // updateResultState();
+      // updateResultFromSavedQuery(resultState, queryState);
+    }
+    if (location?.state?.navigatedResultState && !resultState) {
+      queryState.resultState = location.state.navigatedResultState;
+    }
+
+    setCoreQueryState(queryState);
   };
 
   const createFunnelStateFromResult = (
@@ -494,6 +657,15 @@ const CoreQuery = () => {
         getEventsData(active_project.id, null, null, false, query_id).then(
           (res) => {
             createStateFromResult(queryToAdd, res);
+          },
+          (err) => {
+            logger.error(err);
+          }
+        );
+      } else if (query_type === QUERY_TYPE_KPI) {
+        getKPIData(active_project.id, null, null, false, query_id).then(
+          (res) => {
+            createKPIStateFromResult(queryToAdd, res);
           },
           (err) => {
             logger.error(err);
@@ -990,6 +1162,23 @@ const CoreQuery = () => {
         />
       );
     }
+    if (coreQueryState.queryType === QUERY_TYPE_KPI) {
+      return (
+        <KPIComposer
+          queries={coreQueryState.queries}
+          setQueries={setQueries}
+          eventChange={queryChange}
+          queryType={coreQueryState.queryType}
+          queryOptions={coreQueryState.queryOptions}
+          setQueryOptions={setQueryOptions}
+          handleRunQuery={handleRunQuery}
+          selectedMainCategory={selectedMainCategory}
+          setSelectedMainCategory={setSelectedMainCategory}
+          KPIConfigProps={KPIConfigProps}
+          setKPIConfigProps={setKPIConfigProps}
+        />
+      );
+    }
   };
 
   const renderSpinner = () => {
@@ -1127,6 +1316,7 @@ const CoreQuery = () => {
   );
 
   const renderReportContent = () => {
+    // if (coreQueryState.queryType === QUERY_TYPE_KPI) return null;
     return (
       <ReportContent
         coreQueryReducerState={coreQueryReducerState}
