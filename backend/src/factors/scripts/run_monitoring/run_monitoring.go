@@ -360,7 +360,7 @@ func RunFactorsDeanonEnrichmentCheck() {
 	var err error
 	factorsDeanonAlertLastRun, err := model.GetFactorsDeanonAlertRedisResult()
 	if err != nil {
-		log.Error("Failed to get factors deanon last run.")
+		log.WithError(err).Error("failed to get factors deanon last run")
 		return
 	}
 	if time.Now().Unix()-factorsDeanonAlertLastRun > 24*60*60 {
