@@ -21,6 +21,12 @@ import PlatformCard from './PlatformCard.tsx';
 
 const { confirm } = Modal;
 
+const UTM_Mapping = {
+  utm_mapping: {
+    $ep_email: ['$qp_utm_email']
+  }
+};
+
 const EmailClicks = ({ activeProject, udpateProjectDetails }) => {
   const [newKey, setNewKey] = useState<null>(null);
   const [dataSource, setDataSource] = useState<null>(null);
@@ -54,7 +60,11 @@ const EmailClicks = ({ activeProject, udpateProjectDetails }) => {
     if (activeProject) {
       if (activeProject?.interaction_settings) {
         setUTM(activeProject?.interaction_settings?.utm_mapping);
+      } else {
+        setUTM(UTM_Mapping?.utm_mapping);
       }
+    } else {
+      setUTM(UTM_Mapping?.utm_mapping);
     }
   }, [activeProject]);
 
