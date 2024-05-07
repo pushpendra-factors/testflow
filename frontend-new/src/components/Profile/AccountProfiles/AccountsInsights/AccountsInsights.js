@@ -207,6 +207,7 @@ export default function AccountsInsights() {
           savedMetric={editWidget.q_me}
           onSave={handleSave}
           isLoading={editMetricStatus.loading}
+          metricDataType={editWidget.q_me_ty}
         />
       </div>
     );
