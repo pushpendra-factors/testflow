@@ -1498,7 +1498,7 @@ CREATE TABLE `website_aggregation` (
   `max_updated_at` datetime(6) DEFAULT NULL,
   SORT KEY `project_id_website_aggregation` (`project_id`,`event_type`,`timestamp_at_day`)
   , SHARD KEY () 
-) AUTOSTATS_CARDINALITY_MODE=INCREMENTAL AUTOSTATS_HISTOGRAM_MODE=CREATE AUTOSTATS_SAMPLING=ON SQL_MODE='STRICT_ALL_TABLES'
+) AUTOSTATS_CARDINALITY_MODE=INCREMENTAL AUTOSTATS_HISTOGRAM_MODE=CREATE AUTOSTATS_SAMPLING=ON SQL_MODE='STRICT_ALL_TABLES';
 
 CREATE TABLE IF NOT EXISTS alert_templates (
     v TEXT NOT NULL,
@@ -1525,7 +1525,7 @@ CREATE TABLE IF NOT EXISTS widget_groups (
     SHARD KEY (project_id),
     KEY (project_id, id) USING HASH,
     UNIQUE KEY unique_widget_groups_project_id_name_idx(project_id, display_name) USING HASH
-)
+);
 
 CREATE TABLE IF NOT EXISTS workflows (
     id TEXT NOT NULL,

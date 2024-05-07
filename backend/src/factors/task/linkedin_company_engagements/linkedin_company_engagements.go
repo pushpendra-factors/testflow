@@ -219,7 +219,11 @@ func createGroupUserAndEventsForDomainDataV2(projectID int64, eventNameViewedAD 
 	if userID != userIDToUpdate {
 		log.WithFields(log.Fields{"projectID": projectID, "userID": userID, "userIDToUpdate": userIDToUpdate}).Info("Different user ID updated")
 	}
-	errMsg, errCode = updateAccountLevelPropertiesForGroupUser(projectID, U.GROUP_NAME_LINKEDIN_COMPANY, domainData.Domain, userIDToUpdate, impr_diff, clicks_diff)
+	groupID := U.GetDomainGroupDomainName(projectID, domainData.Domain)
+	if groupID == "" {
+		return "Failed to get domain for raw domain", http.StatusNotImplemented
+	}
+	errMsg, errCode = updateAccountLevelPropertiesForGroupUser(projectID, U.GROUP_NAME_LINKEDIN_COMPANY, groupID, userIDToUpdate, impr_diff, clicks_diff)
 	if errMsg != "" {
 		logCtx.Error(errMsg)
 		return errMsg, errCode
@@ -271,14 +275,11 @@ func createOrUpdateEventFromDomainDataV2(projectID int64, userID string, eventNa
 	return "", http.StatusOK
 }
 
-func updateAccountLevelPropertiesForGroupUser(projectID int64, groupName string, domainName string, groupUserID string, impr_diff float64, clicks_diff float64) (string, int) {
-	groupID := U.GetDomainGroupDomainName(projectID, domainName)
-	if groupID == "" {
-		return "", http.StatusNotImplemented
-	}
+func updateAccountLevelPropertiesForGroupUser(projectID int64, groupName string, groupID string, groupUserID string, impr_diff float64, clicks_diff float64) (string, int) {
 
 	groupUser, errCode := store.GetStore().GetGroupUserByGroupID(projectID, groupName, groupID)
 	if errCode != http.StatusFound {
+		log.WithFields(log.Fields{"project_id": projectID, "group_name": groupName, "group_id": groupID, "groupUserID": groupUserID}).Error("Ashhar_1 - Failed to get existing group user")
 		return "Failed to get existing group user", errCode
 	}
 	existingProperties, err := U.DecodePostgresJsonb(&groupUser.Properties)
@@ -450,16 +451,24 @@ func deleteEventsAndUpdateAccountPropertiesBasedOnType(projectID int64, timestam
 		return errMsg, http.StatusInternalServerError
 	}
 
-	var syncStatus syncWorkerStatus
+	// var syncStatus syncWorkerStatus
+	// for _, batch := range batchedUserInfo {
+	// 	var wg sync.WaitGroup
+	// 	for _, user := range batch {
+	// 		wg.Add(1)
+	// 		go deleteEventsAndUpdateAccountPropertiesForUser(projectID, user, userIDToUserInfoForDeleteAndUpdate[user.ID], imprEventNameID, clickEventNameID, &wg, &syncStatus)
+	// 	}
+	// 	wg.Wait()
+	// 	if syncStatus.HasFailure {
+	// 		return syncStatus.ErrMsg, syncStatus.StatusCode
+	// 	}
+	// }
 	for _, batch := range batchedUserInfo {
-		var wg sync.WaitGroup
 		for _, user := range batch {
-			wg.Add(1)
-			go deleteEventsAndUpdateAccountPropertiesForUser(projectID, user, userIDToUserInfoForDeleteAndUpdate[user.ID], imprEventNameID, clickEventNameID, &wg, &syncStatus)
-		}
-		wg.Wait()
-		if syncStatus.HasFailure {
-			return syncStatus.ErrMsg, syncStatus.StatusCode
+			errMsg, errCode := deleteEventsAndUpdateAccountProperties(projectID, user, userIDToUserInfoForDeleteAndUpdate[user.ID], imprEventNameID, clickEventNameID)
+			if errMsg != "" {
+				return errMsg, errCode
+			}
 		}
 	}
 
@@ -579,7 +588,11 @@ func createGroupUserAndEventsForDomainDataV3(projectID int64, eventNameViewedAD 
 	if userID != userIDToUpdate {
 		log.WithFields(log.Fields{"projectID": projectID, "userID": userID, "userIDToUpdate": userIDToUpdate}).Info("Different user ID updated")
 	}
-	errMsg, errCode = updateAccountLevelPropertiesForGroupUser(projectID, U.GROUP_NAME_LINKEDIN_COMPANY, domainData.Domain, userIDToUpdate, impr_diff, clicks_diff)
+	groupID := U.GetDomainGroupDomainName(projectID, domainData.Domain)
+	if groupID == "" {
+		return "Failed to get domain for raw domain", http.StatusNotImplemented
+	}
+	errMsg, errCode = updateAccountLevelPropertiesForGroupUser(projectID, U.GROUP_NAME_LINKEDIN_COMPANY, groupID, userIDToUpdate, impr_diff, clicks_diff)
 	if errMsg != "" {
 		logCtx.Error(errMsg)
 		return errMsg, errCode

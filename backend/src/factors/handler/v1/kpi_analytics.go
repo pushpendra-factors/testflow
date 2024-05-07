@@ -61,7 +61,6 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 	}
 
 	includeDerivedKPIsString := c.Query("include_derived_kpis")
-	log.WithField("includeDerivedKPIsString", includeDerivedKPIsString).Warn("QueryParam")
 	includeDerivedKPIs := false
 
 	if includeDerivedKPIsString != "" {

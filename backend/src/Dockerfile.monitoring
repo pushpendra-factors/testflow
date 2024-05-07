@@ -8,5 +8,8 @@ RUN go build -o $GOPATH/bin/monitoring $GOPATH/src/factors/scripts/run_monitorin
 FROM alpine:3.7
 ENV GOLANG_PROTOBUF_REGISTRATION_CONFLICT=ignore
 RUN apk update && apk add ca-certificates && rm -rf /var/cache/apk/*
+# Fixes: time.LoadLocation(ZONE_NAME) error, zoneinfo.zip no such file or directory.
+ADD https://github.com/golang/go/raw/master/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinfo.zip
+
 COPY --from=builder /go/bin/monitoring /go/bin/monitoring
 ENTRYPOINT ["/go/bin/monitoring"]

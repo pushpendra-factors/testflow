@@ -185,10 +185,10 @@ function InsightsWidget({ widget, dateRange, onEditMetricClick }) {
           'items-center justify-center': isLoading
         })}
       >
-        <ControlledComponent controller={isLoading}>
+        <ControlledComponent controller={Boolean(isLoading) === true}>
           <Spin size='small' />
         </ControlledComponent>
-        <ControlledComponent controller={isCompleted}>
+        <ControlledComponent controller={Boolean(isCompleted) === true}>
           {widget.wids.map((queryMetric, index) => (
             <QueryMetric
               key={queryMetric.id}

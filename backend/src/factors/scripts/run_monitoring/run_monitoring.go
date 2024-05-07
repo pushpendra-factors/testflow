@@ -59,6 +59,9 @@ func main() {
 	analyzeIntervalInMins := flag.Int("analyze_tables_interval", 45,
 		"Runs analyze for table, if not analyzed in given interval.")
 
+	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
+	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
+
 	flag.Parse()
 
 	defaultAppName := "monitoring_job"
@@ -87,9 +90,11 @@ func main() {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore: *primaryDatastore,
-		QueueRedisHost:   *queueRedisHost,
-		QueueRedisPort:   *queueRedisPort,
+		PrimaryDatastore:    *primaryDatastore,
+		QueueRedisHost:      *queueRedisHost,
+		QueueRedisPort:      *queueRedisPort,
+		RedisHostPersistent: *redisHostPersistent,
+		RedisPortPersistent: *redisPortPersistent,
 
 		EnableSDKAndIntegrationRequestQueueDuplication: *enableSDKAndIntegrationRequestQueueDuplication,
 		DuplicateQueueRedisHost:                        *duplicateQueueRedisHost,
@@ -97,6 +102,7 @@ func main() {
 	}
 
 	C.InitConf(config)
+	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 	err := C.InitDB(*config)
 	if err != nil {
 		log.WithError(err).Fatal("Failed to initalize db.")
@@ -211,7 +217,7 @@ func main() {
 	}
 
 	C.PingHealthcheckForSuccess(healthcheckPingID, monitoringPayload)
-	
+
 	if !healthCheckFailurePinged {
 		C.PingHealthcheckForSuccess(C.HealthcheckSDKHealthPingID, "sdk health check success")
 	}
@@ -352,19 +358,24 @@ func RunFactorsDeanonEnrichmentCheck() {
 
 	var factorsDeanonAlertMap map[int64]map[string]float64
 	var err error
-	factorsDeanonAlertLastRun, _ := model.GetFactorsDeanonAlertRedisResult()
+	factorsDeanonAlertLastRun, err := model.GetFactorsDeanonAlertRedisResult()
+	if err != nil {
+		log.WithError(err).Error("failed to get factors deanon last run")
+		return
+	}
 	if time.Now().Unix()-factorsDeanonAlertLastRun > 24*60*60 {
 		factorsDeanonAlertMap, err = MonitorFactorsDeanonDailyEnrichment()
 		if err != nil {
-			log.Error("Failed to run factors deanon enrichment check %v", time.Now())
+			log.Error("Failed to run factors deanon enrichment check ", time.Now())
 			return
 		}
 		if len(factorsDeanonAlertMap) > 0 {
 			C.PingHealthcheckForFailure(C.HealthcheckFactorsDeanonAlertPingID, factorsDeanonAlertMap)
-			return
 		}
 		model.SetFactorsDeanonAlertRedisResult(time.Now().Unix())
+		C.PingHealthcheckForSuccess(C.HealthcheckFactorsDeanonAlertPingID, factorsDeanonAlertLastRun)
 	}
+
 }
 
 // MonitorFactorsDeanonDailyEnrichment fetches the project ids of the projects on paid plan and get the required metrics for each projects.

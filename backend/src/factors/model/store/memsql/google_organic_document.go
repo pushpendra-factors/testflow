@@ -124,7 +124,6 @@ func (store *MemSQL) GetAllGoogleOrganicLastSyncInfoForAllProjects() ([]model.Go
 	if errCode != http.StatusOK {
 		return []model.GoogleOrganicLastSyncInfo{}, errCode
 	}
-	log.Info("All settings ", googleOrganicSettings)
 
 	return sanitizedLastSyncInfosGoogleOrganic(googleOrganicLastSyncInfos, googleOrganicSettings)
 }
