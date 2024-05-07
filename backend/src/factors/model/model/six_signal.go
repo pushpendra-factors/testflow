@@ -300,8 +300,9 @@ func SetSixSignalMonthlyUniqueEnrichmentCount(projectId int64, value string, tim
 }
 
 func GetFactorsDeanonAlertRedisKey() (*cacheRedis.Key, error) {
-	prefix := "factorsDeanon:internal:alerts"
-	return cacheRedis.NewKeyWithOnlyPrefix(prefix)
+	prefix := "factorsDeanon:monitoring"
+	agent := "internal"
+	return cacheRedis.NewKeyWithAgentUID(agent, prefix, "")
 }
 
 func GetFactorsDeanonAlertRedisResult() (int64, error) {
