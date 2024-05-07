@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import MomentTz from 'Components/MomentTz';
 import { PropTextFormat } from 'Utils/dataFormatter';
 import { useSelector } from 'react-redux';
@@ -33,26 +33,23 @@ function TableRow({ event, eventPropsType = {}, onEventClick }: TableRowProps) {
       ? `${eventPropNames[propertyName] || PropTextFormat(propertyName)}:`
       : null;
 
-  const renderPropertyValue = () => {
+  const { propertyValue, propertyValueTooltip } = useMemo(() => {
     if (!hasEventProperties) {
-      return null;
+      return { propertyValue: null, propertyValueTooltip: null };
     }
 
-    const propertyValue = event?.properties?.[propertyName];
+    const propValue = event?.properties?.[propertyName];
     const propType = eventPropsType[propertyName];
-    const formattedValue = propValueFormat(
-      propertyName,
-      propertyValue,
-      propType
-    );
+    const formattedValue = propValueFormat(propertyName, propValue, propType);
 
-    return truncateURL(formattedValue, projectDomainsList) || formattedValue;
-  };
+    const truncatedValue =
+      truncateURL(formattedValue, projectDomainsList) || formattedValue;
 
-  const renderPropValTooltip = () =>
-    event?.display_name === 'Page View'
-      ? event?.name
-      : Object.entries(event?.properties || {})?.[0]?.[1];
+    return {
+      propertyValue: truncatedValue,
+      propertyValueTooltip: formattedValue
+    };
+  }, [event]);
 
   return (
     <tr
@@ -76,8 +73,8 @@ function TableRow({ event, eventPropsType = {}, onEventClick }: TableRowProps) {
       <td className='fixed-cell properties-cell'>
         <div className='propkey'>{renderPropertyName()}</div>
         <TextWithOverflowTooltip
-          text={renderPropertyValue()}
-          tooltipText={renderPropValTooltip()}
+          text={propertyValue}
+          tooltipText={propertyValueTooltip}
           extraClass='propvalue'
         />
       </td>

@@ -629,6 +629,7 @@ func (store *MemSQL) GetAdwordsLastSyncInfoForProject(projectID int64) ([]model.
 	}
 
 	return store.sanitizedLastSyncInfos(adwordsLastSyncInfos, adwordsSettings)
+
 }
 
 // GetAllAdwordsLastSyncInfoForAllProjects - @TODO Kark v1

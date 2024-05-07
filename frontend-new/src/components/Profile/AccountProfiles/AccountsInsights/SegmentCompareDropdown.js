@@ -51,6 +51,7 @@ function SegmentCompareDropdown() {
       style={{
         width: '320px'
       }}
+      allowClear
     />
   );
 }

@@ -22,7 +22,8 @@ import { fetchWeeklyIngishtsMetaData } from 'Reducers/insights';
 import {
   QUERY_TYPE_ATTRIBUTION,
   QUERY_TYPE_EVENT,
-  apiChartAnnotations
+  apiChartAnnotations,
+  QUERY_TYPE_FUNNEL
 } from 'Utils/constants';
 import { CoreQueryContext } from '../../contexts/CoreQueryContext';
 import SaveQueryModal from './saveQueryModal';
@@ -373,6 +374,8 @@ function SaveQuery({
 
           if (queryType === QUERY_TYPE_EVENT && res?.data?.id_text) {
             history.replace(`/analyse/events/${res.data.id_text}`);
+          } else if (queryType === QUERY_TYPE_FUNNEL && res?.data?.id_text) {
+            history.replace(`/analyse/funnel/${res.data.id_text}`);
           }
 
           // if (queryType === QUERY_TYPE_FUNNEL && res?.data?.id_text) {
