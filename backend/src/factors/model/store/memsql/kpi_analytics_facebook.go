@@ -21,17 +21,12 @@ func (store *MemSQL) GetKPIConfigsForFacebook(projectID int64, reqID string, inc
 	if len(settings) == 0 {
 		return nil, http.StatusOK
 	}
-	log.Warn("kark5-facebook-2")
 	config := model.KpiFacebookConfig
 	facebookObjectsAndProperties := store.buildObjectAndPropertiesForFacebook(projectID, model.ObjectsForFacebook)
-	log.Warn("kark5-facebook-3")
 	config["properties"] = model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(facebookObjectsAndProperties, "Facebook")
-	log.Warn("kark5-facebook-4")
 
 	rMetrics := model.GetKPIMetricsForFacebook()
-	log.Warn("kark5-facebook-5")
 	rMetrics = append(rMetrics, store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, model.FacebookDisplayCategory, includeDerivedKPIs)...)
-	log.Warn("kark5-facebook-6")
 
 	config["metrics"] = rMetrics
 	return config, http.StatusOK

@@ -61,13 +61,11 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 	}
 
 	includeDerivedKPIsString := c.Query("include_derived_kpis")
-	log.WithField("includeDerivedKPIsString", includeDerivedKPIsString).Warn("QueryParam")
 	includeDerivedKPIs := false
 
 	if includeDerivedKPIsString != "" {
 		includeDerivedKPIs, _ = strconv.ParseBool(includeDerivedKPIsString)
 	}
-	log.Warn("Kark3")
 
 	storeSelected := store.GetStore()
 	resultantResultConfigFunctions := make([]func(int64, string, bool) (map[string]interface{}, int), 0)
@@ -90,18 +88,15 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 	configFunctionsForCustomAds := []func(int64, string, bool) ([]map[string]interface{}, int){
 		storeSelected.GetKPIConfigsForCustomAds,
 	}
-	log.Warn("Kark4")
 
 	resultantResultConfigFunctions = append(resultantResultConfigFunctions, configForStaticSubSectionsFunctions...)
 
 	if includeDerivedKPIs {
 		resultantResultConfigFunctions = append(resultantResultConfigFunctions, storeSelected.GetKPIConfigsForPageViews)
 	}
-	log.Warn("Kark5")
 
-	for counter, configFunction := range resultantResultConfigFunctions {
+	for _, configFunction := range resultantResultConfigFunctions {
 		currentConfig, errCode := configFunction(projectID, reqID, includeDerivedKPIs)
-		log.WithField("counter", counter).Warn("kark5-counter")
 		if errCode != http.StatusOK {
 			return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during fetch of KPI Config Data.", true
 		}
@@ -109,7 +104,6 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 			resultantConfigs = append(resultantConfigs, currentConfig)
 		}
 	}
-	log.Warn("Kark6")
 
 	for _, configFunction := range configFunctionsForCustomAds {
 		currentConfigs, errCode := configFunction(projectID, reqID, includeDerivedKPIs)
@@ -120,14 +114,12 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 			resultantConfigs = append(resultantConfigs, currentConfigs...)
 		}
 	}
-	log.Warn("Kark7")
 
 	// for custom events
 	currentConfig, errCode := storeSelected.GetKPIConfigsForCustomEvents(projectID, model.EventsBasedDisplayCategory, includeDerivedKPIs)
 	if errCode != http.StatusOK {
 		return nil, http.StatusInternalServerError, PROCESSING_FAILED, "Error during fetch of KPI Custom Config Data.", true
 	}
-	log.Warn("Kark8")
 	if currentConfig != nil {
 		resultantConfigs = append(resultantConfigs, currentConfig)
 	}
@@ -141,7 +133,6 @@ func GetKPIConfigHandler(c *gin.Context) (interface{}, int, string, string, bool
 			resultantConfigs = append(resultantConfigs, currentConfig)
 		}
 	}
-	log.Warn("Kark9")
 
 	return resultantConfigs, http.StatusOK, "", "", false
 }

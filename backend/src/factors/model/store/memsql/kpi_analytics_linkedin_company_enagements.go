@@ -25,16 +25,11 @@ func (store *MemSQL) GetKPIConfigsForLinkedinCompanyEngagements(projectID int64,
 		return nil, http.StatusOK
 	}
 	config := model.KpiLinkedinCompanyEngagementsConfig
-	log.Warn("kark5-linkedin")
 	linkedinObjectsAndProperties := store.buildObjectAndPropertiesForLinkedinCompanyEngagements(projectID, model.ObjectsForLinkedinCompany)
-	log.Warn("kark5-linkedin-2")
 	config["properties"] = model.TransformLinkedinChannelsPropertiesConfigToKpiPropertiesConfig(linkedinObjectsAndProperties)
-	log.Warn("kark5-linkedin-3")
 
 	rMetrics := model.GetKPIMetricsForLinkedin()
-	log.Warn("kark5-linkedin-4")
 	rMetrics = append(rMetrics, store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, model.LinkedinCompanyEngagementsDisplayCategory, includeDerivedKPIs)...)
-	log.Warn("kark5-linkedin-5")
 
 	config["metrics"] = rMetrics
 	return config, http.StatusOK
