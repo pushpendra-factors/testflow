@@ -63,7 +63,7 @@ func SlackCallbackHandler(c *gin.Context) {
 	state := c.Query("state")
 	identity := c.Query("identity")
 
-	err := json.Unmarshal([]byte(identity), &identity)
+	err := json.Unmarshal([]byte(identity), &oauthState)
 	if err != nil || oauthState.ProjectID == 0 || *oauthState.AgentUUID == "" {
 		redirectURL := buildRedirectURL("invalid values in state", oauthState.Source)
 		c.Redirect(http.StatusPermanentRedirect, redirectURL)
