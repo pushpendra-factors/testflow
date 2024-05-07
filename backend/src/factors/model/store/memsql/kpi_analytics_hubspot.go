@@ -68,7 +68,6 @@ func (store *MemSQL) getConfigForSpecificHubspotCategory(projectID int64, reqID 
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	rMetrics := store.GetCustomMetricAndDerivedMetricByProjectIdAndDisplayCategory(projectID, displayCategory, includeDerivedKPIs)
-	log.Warn("kark5-hubspot")
 
 	return map[string]interface{}{
 		"category":         model.ProfileCategory,
@@ -92,7 +91,6 @@ func (store *MemSQL) getPropertiesForHubspotByDisplayCategory(projectID int64, r
 			Error("Invalid category on getPropertiesForHubspotByDisplayCategory.")
 		return finalProperties
 	}
-	log.Warn("kark5-hubspot-1")
 	return finalProperties
 }
 

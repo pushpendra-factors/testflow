@@ -23,11 +23,8 @@ func (store *MemSQL) GetKPIConfigsForWebsiteSessions(projectID int64, reqID stri
 	rProperties = model.MergeKPIPropertiesByConsiderElementsInFirst(rProperties, standardUserProperties)
 	config["properties"] = rProperties
 
-	log.Warn("kark5-session")
 	rMetrics := model.GetStaticallyDefinedMetricsForDisplayCategory(model.WebsiteSessionDisplayCategory)
-	log.Warn("kark5-session-1")
 	rMetrics = append(rMetrics, store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, model.WebsiteSessionDisplayCategory, includeDerivedKPIs)...)
-	log.Warn("kark5-session-2")
 
 	config["metrics"] = rMetrics
 	return config, http.StatusOK
