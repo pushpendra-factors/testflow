@@ -23,10 +23,14 @@ func (store *MemSQL) GetKPIConfigsForAdwords(projectID int64, reqID string, incl
 	}
 	config := model.KpiAdwordsConfig
 	adwordsObjectsAndProperties := store.buildObjectAndPropertiesForAdwords(projectID, model.ObjectsForAdwords)
+	log.Warn("kark5-adwords")
 	config["properties"] = model.TransformChannelsPropertiesConfigToKpiPropertiesConfig(adwordsObjectsAndProperties, "Adwords")
+	log.Warn("kark5-adwords-1")
 
 	rMetrics := model.GetKPIMetricsForAdwords()
+	log.Warn("kark5-adwords-2")
 	rMetrics = append(rMetrics, store.GetDerivedKPIMetricsByProjectIdAndDisplayCategory(projectID, model.GoogleAdsDisplayCategory, includeDerivedKPIs)...)
+	log.Warn("kark5-adwords-3")
 
 	config["metrics"] = rMetrics
 	return config, http.StatusOK
