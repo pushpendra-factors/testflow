@@ -47,20 +47,37 @@ func SlackAuthRedirectHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
-	redirectURL := GetSlackAuthorisationURL(C.GetSlackClientID(), url.QueryEscape(string(enOAuthState)))
+
+	randState := U.RandomLowerAphaNumString(10)
+	slack.SetCacheForSlackAuthRandomState(projectId, currentAgentUUID, randState)
+
+	redirectURL := GetSlackAuthorisationURL(C.GetSlackClientID(), url.QueryEscape(string(enOAuthState)), randState)
 	c.JSON(http.StatusOK, gin.H{"redirectURL": redirectURL})
 }
-func GetSlackAuthorisationURL(clientID string, state string) string {
-	url := fmt.Sprintf(`https://slack.com/oauth/v2/authorize?client_id=%s&scope=channels:read,chat:write,chat:write.public,im:read,users:read,users:read.email&user_scope=channels:read,chat:write,groups:read,mpim:read,users:read,users:read.email&state=%s`, clientID, state)
+func GetSlackAuthorisationURL(clientID string, identity string, authRandomState string) string {
+	url := fmt.Sprintf(`https://slack.com/oauth/v2/authorize?client_id=%s&scope=channels:read,chat:write,chat:write.public,im:read,users:read,users:read.email&user_scope=channels:read,chat:write,groups:read,mpim:read,users:read,users:read.email&state=%s&identity=%s`, clientID, authRandomState, identity)
 	return url
 }
 func SlackCallbackHandler(c *gin.Context) {
 	var oauthState oauthState
 	state := c.Query("state")
-	err := json.Unmarshal([]byte(state), &oauthState)
+	identity := c.Query("identity")
+
+	err := json.Unmarshal([]byte(identity), &identity)
 	if err != nil || oauthState.ProjectID == 0 || *oauthState.AgentUUID == "" {
 		redirectURL := buildRedirectURL("invalid values in state", oauthState.Source)
 		c.Redirect(http.StatusPermanentRedirect, redirectURL)
+	}
+
+	stateFromCache, errCode := slack.GetCacheSlackAuthRandomState(*&oauthState.ProjectID, *oauthState.AgentUUID)
+	if errCode != http.StatusFound {
+		return
+	}
+
+	if stateFromCache != state {
+		log.Error("Failed to get auth code")
+		redirectURL := buildRedirectURL("AUTH_ERROR", oauthState.Source)
+		c.Redirect(http.StatusUnauthorized, redirectURL)
 	}
 
 	code := c.Query("code")
