@@ -36,7 +36,11 @@ import RangeNudge from 'Components/GenericComponents/RangeNudge';
 import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
 import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
 import { selectGroupsList } from 'Reducers/groups/selectors';
-import { fetchProfileAccounts } from 'Reducers/timelines';
+import {
+  fetchProfileAccounts,
+  updateTableProperties,
+  updateTablePropertiesForSegment
+} from 'Reducers/timelines';
 import { downloadCSV } from 'Utils/csv';
 import { PathUrls } from 'Routes/pathUrls';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
@@ -97,6 +101,7 @@ import AccountsInsights from './AccountsInsights/AccountsInsights';
 import AccountDrawer from './AccountDrawer';
 import InsightsWrapper from './InsightsWrapper';
 import styles from './index.module.scss';
+import { PROFILE_TYPE_ACCOUNT } from '../constants';
 
 function AccountProfiles({
   createNewSegment,
@@ -265,7 +270,6 @@ function AccountProfiles({
       ),
     [currentProjectSettings, sixSignalInfo?.limit, sixSignalInfo?.usage]
   );
-
 
   const setAccountPayload = (payload) => {
     dispatch(setAccountPayloadAction(payload));
@@ -622,41 +626,33 @@ function AccountProfiles({
   };
 
   const applyTableProps = async () => {
+    const newTableProps =
+      selectedTableColumnsList
+        ?.filter(({ enabled }) => enabled)
+        ?.map(({ prop_name }) => prop_name)
+        ?.filter((entry) => entry !== '' && entry !== undefined) || [];
+
     if (accountPayload?.segment?.id?.length) {
-      const newTableProps =
-        selectedTableColumnsList
-          ?.filter(({ enabled }) => enabled)
-          ?.map(({ prop_name }) => prop_name)
-          ?.filter((entry) => entry !== '' && entry !== undefined) || [];
+      const response = await updateTablePropertiesForSegment(
+        activeProject.id,
+        segmentID,
+        newTableProps
+      );
 
-      const updatedQuery = {
-        ...accountPayload.segment.query,
-        table_props: newTableProps
-      };
+      if (!response.ok) return;
 
-      await updateSegmentForId(activeProject.id, accountPayload.segment.id, {
-        query: updatedQuery
-      });
+      await getSavedSegments(activeProject.id);
+
       const updatedPayload = { ...accountPayload };
-      updatedPayload.segment.query = updatedQuery;
-      setAccountPayload({ ...updatedPayload });
-      getSavedSegments(activeProject.id);
+      updatedPayload.segment.query.table_props = newTableProps;
+      setAccountPayload(updatedPayload);
     } else {
-      const enabledProps = selectedTableColumnsList
-        .filter(({ enabled }) => enabled)
-        .map(({ prop_name }) => prop_name);
-
-      const updatedConfig = {
-        ...timelineConfig,
-        account_config: {
-          ...timelineConfig.account_config,
-          table_props: enabledProps
-        }
-      };
-
-      await udpateProjectSettings(activeProject.id, {
-        timelines_config: updatedConfig
-      });
+      await updateTableProperties(
+        activeProject.id,
+        PROFILE_TYPE_ACCOUNT,
+        newTableProps
+      );
+      await fetchProjectSettings(activeProject.id);
       setAccountPayload({ ...accountPayload });
     }
     setShowTableColumnsDD(false);

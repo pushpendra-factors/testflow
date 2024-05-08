@@ -45,7 +45,6 @@ export default function (state = initialState, action) {
       return { ...state, contactDetails: { isLoading: false, data: {} } };
     case 'FETCH_PROFILE_ACCOUNTS_LOADING':
       return { ...state, accounts: { ...state.accounts, isLoading: true } };
-
     case 'FETCH_PROFILE_ACCOUNTS_FULFILLED':
       const updatedData = { ...state.accounts.data };
       updatedData[action.segmentID || 'default'] = action.payload;
@@ -282,4 +281,18 @@ export const fetchConfiguredEventProperties = (
 ) => {
   const url = `${host}projects/${projectID}/v1/profiles/event_properties/${eventID}/${eventName}`;
   return get(null, url);
+};
+
+export const updateTableProperties = (projectID, profileType, payload) => {
+  const url = `${host}projects/${projectID}/v1/profiles/${profileType}/table_properties`;
+  return put(null, url, payload);
+};
+
+export const updateTablePropertiesForSegment = (
+  projectID,
+  segmentID,
+  payload
+) => {
+  const url = `${host}projects/${projectID}/v1/profiles/segments/${segmentID}/table_properties`;
+  return put(null, url, payload);
 };

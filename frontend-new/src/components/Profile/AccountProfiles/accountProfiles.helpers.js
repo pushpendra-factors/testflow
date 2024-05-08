@@ -247,14 +247,13 @@ export const getColumns = ({
             />
             <TextWithOverflowTooltip text={domain.name} />
           </div>
-          <div className='flex items-center'>
+          <div className='inline-flex gap--4 preview-btns'>
             <Button
               size='small'
               onClick={(e) => {
                 e.stopPropagation();
                 onClickOpen(domain);
               }}
-              className='mr-1 preview-btn'
             >
               Open
             </Button>
@@ -264,8 +263,8 @@ export const getColumns = ({
                   e.stopPropagation();
                   onClickOpenNewTab(domain);
                 }}
-                className='preview-btn'
                 size='small'
+                className='flex items-center'
               >
                 <SVG name='ArrowUpRightSquare' size='12' />
               </Button>
