@@ -11,6 +11,7 @@ export const linkedInScope_rw_ads = [
     '399', // Chargebee
     '2', // FactorsAI Solutions
     '2000338', // Descope
+    '2000001', // Squadcast
   ]
 
   // Scope: rw_conversions
