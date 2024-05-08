@@ -114,8 +114,10 @@
       padding: 6px 16px;
       margin: 2px 0;
       transition: all 0.3s;
-      &:hover {
+      &:hover,
+      &:focus-visible {
         background-color: $fa-color--mono-1;
+        outline: none;
       }
       &.active {
         // border: 2px solid $fa-color--brand-color;
@@ -126,7 +128,7 @@
   }
 
   .fa-project-list--wrapper {
-    max-height: 220px;
+    max-height: 250px;
     overflow-x: hidden;
     overflow-y: auto;
   }
@@ -145,6 +147,7 @@
     &:focus {
       outline: none;
       box-shadow: none;
+      border: 1px solid $fa-color--mono-4;
     }
   }
 }
