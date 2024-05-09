@@ -92,8 +92,10 @@ func extractData(lastSync int64, apiKey string) ([]EventStreamResponseDataFormat
 	data := make([]EventStreamResponseDataFormat, 0)
 	from, to := getFromAndToTimestampInReqFormat(lastSync)
 	url := fmt.Sprintf("https://data.g2.com/api/v1/ahoy/remote-event-streams?page[size]=25&&filter[start_time]=%s&&filter[end_time]=%s", from, to)
+	logCtx := log.WithField("url", url).WithField("from", from).WithField("to", to)
 	response, err := fetchEventStreamDataFromAPI(url, apiKey)
 	if err != nil {
+		logCtx.WithField("err", err).Errorf("Failed in fetching g2")
 		return make([]EventStreamResponseDataFormat, 0), err
 	} else {
 		data = append(data, response.Data...)
@@ -103,8 +105,10 @@ func extractData(lastSync int64, apiKey string) ([]EventStreamResponseDataFormat
 		fetchNextBatch = false
 	}
 	for fetchNextBatch {
+		logCtx = log.WithField("response", response).WithField("from", from).WithField("to", to)
 		response, err = fetchEventStreamDataFromAPI(response.Links["next"], apiKey)
 		if err != nil {
+			logCtx.WithField("err", err).Errorf("Failed in fetching g2")
 			return make([]EventStreamResponseDataFormat, 0), err
 		} else {
 			data = append(data, response.Data...)
@@ -164,6 +168,7 @@ func buildDocumentAndInsertData(projectID int64, typeAlias string, data []map[st
 }
 
 func fetchEventStreamDataFromAPI(url string, apiKey string) (EventStreamResponseStruct, error) {
+	logCtx := log.WithField("url", url)
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -179,6 +184,9 @@ func fetchEventStreamDataFromAPI(url string, apiKey string) (EventStreamResponse
 	var jsonResponse EventStreamResponseStruct
 	err = json.NewDecoder(resp.Body).Decode(&jsonResponse)
 	if err != nil {
+		var requestAsMap map[string]interface{}
+		json.NewDecoder(resp.Body).Decode(&requestAsMap)
+		logCtx.Errorf("Decode failed on request to G2. %v", requestAsMap)
 		return EventStreamResponseStruct{}, err
 	}
 	return jsonResponse, nil
