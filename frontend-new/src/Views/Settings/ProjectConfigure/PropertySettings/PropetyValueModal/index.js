@@ -4,7 +4,17 @@ import { Text, SVG } from 'factorsComponents';
 
 import PropertyFilter from '../PropertiesFilter';
 
-import { Modal, Form, Row, Col, Select, Input, Button, Radio } from 'antd';
+import {
+  Modal,
+  Form,
+  Row,
+  Col,
+  Select,
+  Input,
+  Button,
+  Radio,
+  notification
+} from 'antd';
 import useAutoFocus from 'hooks/useAutoFocus';
 
 const { Option } = Select;
@@ -64,10 +74,13 @@ function PropertyValueModal({
   }, [rule]);
 
   const onFinishValues = (data) => {
+    if (filters.length === 0) {
+      notification.error({ message: 'Please apply some filters' });
+      return;
+    }
     const modalResult = { ...data, filters: [...filters] };
     submitValues(modalResult, rule);
   };
-
   const onSelectCombinationOperator = (val) => {
     setComboOper(val.target.value);
   };
