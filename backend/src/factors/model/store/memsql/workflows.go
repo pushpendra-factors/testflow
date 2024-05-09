@@ -138,7 +138,7 @@ func (store *MemSQL) GetWorkflowById(projectID int64, id string) (*model.Workflo
 	return &workflow, http.StatusFound, nil
 }
 
-func (store *MemSQL) CreateWorkflow(projectID int64, agentID, oldID string, alertBody model.WorkflowAlertBody) (*model.Workflow, int, error) {
+func (store *MemSQL) CreateWorkflow(projectID int64, agentID, oldIDIfEdit string, alertBody model.WorkflowAlertBody) (*model.Workflow, int, error) {
 	if projectID == 0 || agentID == "" {
 		return nil, http.StatusBadRequest, fmt.Errorf("invalid parameter")
 	}
@@ -153,7 +153,7 @@ func (store *MemSQL) CreateWorkflow(projectID int64, agentID, oldID string, aler
 	logCtx := log.WithFields(logFields)
 	db := C.GetServices().Db
 
-	if isValid, errMsg := store.isValidWorkflowAlertBody(projectID, oldID, alertBody); !isValid {
+	if isValid, errMsg := store.isValidWorkflowAlertBody(projectID, oldIDIfEdit, alertBody); !isValid {
 		return nil, http.StatusBadRequest, fmt.Errorf(errMsg)
 	}
 
@@ -194,7 +194,7 @@ func (store *MemSQL) CreateWorkflow(projectID int64, agentID, oldID string, aler
 	return &workflow, http.StatusFound, nil
 }
 
-func (store *MemSQL) UpdateWorkflow(projectID int64, id, agentID string, fields map[string]interface{}) (int, error) {
+func (store *MemSQL) UpdateWorkflow(projectID int64, id, agentID string, fieldsToUpdate map[string]interface{}) (int, error) {
 	if projectID == 0 || id == "" {
 		return http.StatusBadRequest, fmt.Errorf("invalid parameter")
 	}
@@ -211,10 +211,10 @@ func (store *MemSQL) UpdateWorkflow(projectID int64, id, agentID string, fields 
 
 	var workflow model.Workflow
 	transTime := U.TimeNowZ()
-	fields["updated_at"] = transTime
+	fieldsToUpdate["updated_at"] = transTime
 
 	if err := db.Model(&workflow).Where("project_id = ? AND is_deleted = 0", projectID).
-		Where("id = ?", id).Updates(fields).Error; err != nil {
+		Where("id = ?", id).Updates(fieldsToUpdate).Error; err != nil {
 		logCtx.WithError(err).Error("Failed to update workflow.")
 		return http.StatusInternalServerError, err
 	}

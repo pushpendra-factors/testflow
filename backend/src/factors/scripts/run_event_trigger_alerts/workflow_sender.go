@@ -59,10 +59,7 @@ func SendHelperForWorkflow(key *cacheRedis.Key, cachedWorkflow *model.CachedEven
 		"is_payload_null": isPayloadNull,
 		"is_workflow":     cachedWorkflow.IsWorkflow,
 	}).Info("ALERT TRACKER.")
-
-	if response["error"] == "<nil>" {
-		response["error"] = "an"
-	}
+	
 	if stat != "success" {
 		log.WithField("status", stat).WithField("response", response).Error("Workflow error details")
 		sendReport.WebhookFail++
