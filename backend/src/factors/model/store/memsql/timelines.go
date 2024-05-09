@@ -1506,7 +1506,7 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 		uniqueUser.Milestones = FilterConfiguredProperties(timelinesConfig.UserConfig.Milestones, propertiesDecoded)
 	}
 
-	if activities, err := store.GetUserActivities(projectID, identity, userId); err == nil {
+	if activities, err := store.GetUserActivities(projectID, identity, isAnon); err == nil {
 		uniqueUser.UserActivity = activities
 	}
 
@@ -1519,15 +1519,30 @@ func (store *MemSQL) GetProfileUserDetailsByID(projectID int64, identity string,
 	return &uniqueUser, http.StatusFound, ""
 }
 
-func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId string) ([]model.UserActivity, error) {
+func (store *MemSQL) GetUserActivities(projectID int64, identity string, isAnonymous bool) ([]model.UserActivity, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"id":         identity,
 	}
 
 	var userActivities []model.UserActivity
+	queryArgs := make([]interface{}, 0)
 
 	eventNamesToExcludePlaceholders := strings.Repeat("?,", len(model.ExcludedEvents)-1) + "?"
+	excludedEventNamesArgs := make([]interface{}, len(model.ExcludedEvents))
+	for i, name := range model.ExcludedEvents {
+		excludedEventNamesArgs[i] = name
+	}
+
+	var userIDstmt string
+	var userIDstmtArgs []interface{}
+	if !isAnonymous {
+		userIDstmt = "IN (SELECT id FROM users WHERE project_id=? AND customer_user_id = ? ORDER BY last_event_at DESC LIMIT 100)"
+		userIDstmtArgs = append(userIDstmtArgs, projectID, identity)
+	} else {
+		userIDstmt = "= ?"
+		userIDstmtArgs = append(userIDstmtArgs, identity)
+	}
 
 	eventsQuery := fmt.Sprintf(`SELECT events1.id AS event_id,
 		event_names.name AS event_name, 
@@ -1538,28 +1553,18 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, userId 
         SELECT project_id, id, event_name_id, timestamp, properties 
         FROM events 
         WHERE project_id=? AND timestamp <= ? 
-        AND user_id IN (
-            SELECT id FROM users WHERE project_id=? AND %s = ? ORDER BY last_event_at DESC LIMIT 100
-        ) AND event_name_id NOT IN (
+        AND user_id %s
+		AND event_name_id NOT IN (
             SELECT id FROM event_names WHERE project_id=? AND name IN (%s)
         ) 
         ORDER BY timestamp DESC LIMIT 5000) AS events1 
     LEFT JOIN event_names
     ON events1.event_name_id=event_names.id 
-    WHERE event_names.project_id=?;`, userId, eventNamesToExcludePlaceholders)
+    WHERE event_names.project_id=?;`, userIDstmt, eventNamesToExcludePlaceholders)
 
-	excludedEventNamesArgs := make([]interface{}, len(model.ExcludedEvents))
-	for i, name := range model.ExcludedEvents {
-		excludedEventNamesArgs[i] = name
-	}
-
-	queryArgs := []interface{}{
-		projectID,
-		gorm.NowFunc().Unix(),
-		projectID,
-		identity,
-		projectID,
-	}
+	queryArgs = append(queryArgs, projectID, gorm.NowFunc().Unix())
+	queryArgs = append(queryArgs, userIDstmtArgs...)
+	queryArgs = append(queryArgs, projectID)
 	queryArgs = append(queryArgs, excludedEventNamesArgs...)
 	queryArgs = append(queryArgs, projectID)
 
@@ -1661,41 +1666,32 @@ func GetFilteredEventProperties(eventName string, eventType string, properties *
 	return returnProperties
 }
 
-func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, groupName string) (*model.AccountDetails, int, string) {
+func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, domainID string) (*model.AccountDetails, int, string) {
 	logFields := log.Fields{
 		"project_id": projectID,
-		"id":         id,
-		"group_name": groupName,
+		"id":         domainID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	if projectID == 0 {
 		log.Error("Invalid project ID.")
 		return nil, http.StatusBadRequest, "Invalid project ID."
 	}
-	if id == "" {
+	if domainID == "" {
 		log.Error("Invalid account ID.")
 		return nil, http.StatusBadRequest, "Invalid account ID."
 	}
-	if groupName == "" {
-		log.Error("Invalid group name.")
-		return nil, http.StatusBadRequest, "Invalid group name."
-	}
-
 	propertiesDecoded := make(map[string]interface{})
 	var status int
 	var accountDetails model.AccountDetails
 
-	var group *model.Group
-	if model.IsDomainGroup(groupName) {
-		group, status = store.GetGroup(projectID, U.GROUP_NAME_DOMAINS)
-	} else {
-		group, status = store.GetGroup(projectID, groupName)
-	}
+	groupName := U.GROUP_NAME_DOMAINS
+	group, status := store.GetGroup(projectID, groupName)
+
 	if status != http.StatusFound || group == nil {
 		return nil, status, "Failed to get group"
 	}
 	groupUserString := fmt.Sprintf("group_%d_user_id=? ", group.ID)
-	params := []interface{}{projectID, id}
+	params := []interface{}{projectID, domainID}
 
 	timelinesConfig, err := store.GetTimelinesConfig(projectID)
 	if err != nil {
@@ -1703,16 +1699,16 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 	}
 
 	if C.IsDomainEnabled(projectID) {
-		accountDetails, status = store.AccountPropertiesForDomainsEnabledV2(projectID, id, groupName, timelinesConfig)
+		accountDetails, status = store.AccountPropertiesForDomainsEnabledV2(projectID, domainID, groupName, timelinesConfig)
 	} else {
-		groupUserString, propertiesDecoded, params, status = store.AccountPropertiesForDomainsDisabledV1(projectID, id)
+		groupUserString, propertiesDecoded, params, status = store.AccountPropertiesForDomainsDisabledV1(projectID, domainID)
 		accountDetails = FormatAccountDetails(projectID, propertiesDecoded, groupName, accountDetails.DomainName)
 		accountDetails.LeftPaneProps = FilterConfiguredProperties(timelinesConfig.AccountConfig.TableProps, &propertiesDecoded)
 		accountDetails.Milestones = FilterConfiguredProperties(timelinesConfig.AccountConfig.Milestones, &propertiesDecoded)
 	}
 
 	if C.IsDomainEnabled(projectID) && status == http.StatusNotFound {
-		accountDetails, propertiesDecoded, status = store.GetUserDetailsAssociatedToDomain(projectID, id)
+		accountDetails, propertiesDecoded, status = store.GetUserDetailsAssociatedToDomain(projectID, domainID)
 		accountDetails = FormatAccountDetails(projectID, propertiesDecoded, groupName, accountDetails.DomainName)
 		accountDetails.LeftPaneProps = make(map[string]interface{})
 		accountDetails.Milestones = make(map[string]interface{})
@@ -1724,7 +1720,7 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 	}
 
 	if model.IsDomainGroup(groupName) {
-		domainName, err := model.ConvertDomainIdToHostName(id)
+		domainName, err := model.ConvertDomainIdToHostName(domainID)
 		if err != nil || domainName == "" {
 			log.WithFields(logFields).WithError(err).Error("Couldn't translate ID to Hostname")
 		} else {
@@ -1774,16 +1770,8 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 			return nil, http.StatusInternalServerError, "Accounts Query Execution Failed"
 		}
 
-		// Determine column to use as the user ID based on IsAnonymous
-		var userIDStr string
-		if userTimeline.IsAnonymous {
-			userIDStr = model.COLUMN_NAME_ID
-		} else {
-			userIDStr = model.COLUMN_NAME_CUSTOMER_USER_ID
-		}
-
 		// Get the user's activities
-		if activities, err := store.GetUserActivities(projectID, userTimeline.UserId, userIDStr); err == nil {
+		if activities, err := store.GetUserActivities(projectID, userTimeline.UserId, userTimeline.IsAnonymous); err == nil {
 			userTimeline.UserActivities = activities
 		}
 
@@ -1810,7 +1798,7 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, id string, gr
 
 	accountDetails.AccountTimeline = accountTimeline
 
-	intentTimeline, err := store.GetIntentTimeline(projectID, groupName, id)
+	intentTimeline, err := store.GetIntentTimeline(projectID, domainID)
 	if err != nil {
 		log.WithFields(logFields).WithError(err).Error("Error retrieving intent timeline")
 	} else {
@@ -2064,7 +2052,7 @@ func (store *MemSQL) GetTopAnonymousUsers(queryParams []interface{}, groupUserSt
 	return topAnonymousUsers, nil
 }
 
-func (store *MemSQL) GetIntentTimeline(projectID int64, groupName string, id string) (model.UserTimeline, error) {
+func (store *MemSQL) GetIntentTimeline(projectID int64, id string) (model.UserTimeline, error) {
 	intentTimeline := model.UserTimeline{
 		UserId:         id,
 		IsAnonymous:    false,
@@ -2072,43 +2060,43 @@ func (store *MemSQL) GetIntentTimeline(projectID int64, groupName string, id str
 		UserActivities: []model.UserActivity{},
 	}
 
-	if model.IsDomainGroup(groupName) {
-		intentTimeline.ExtraProp = "All"
-		groupNameIDMap, status := store.GetGroupNameIDMap(projectID)
-		if status != http.StatusFound {
-			return intentTimeline, fmt.Errorf("failed to retrieve GroupNameID map")
-		}
-		// Fetch accounts associated with the domain
-		associatedAccounts, status := store.GetAccountsAssociatedToDomain(projectID, id, groupNameIDMap[model.GROUP_NAME_DOMAINS])
-		if status != http.StatusFound {
-			return intentTimeline, fmt.Errorf("failed to fetch associated accounts for domain ID %v", id)
-		}
-		// Fetch user activities for each associated account
-		for _, user := range associatedAccounts {
-			intentActivities, err := store.GetUserActivities(projectID, user.ID, model.COLUMN_NAME_ID)
-			if err != nil {
-				return intentTimeline, fmt.Errorf("failed to retrieve user activities for user ID %v", user.ID)
-			}
-			intentTimeline.UserActivities = append(intentTimeline.UserActivities, intentActivities...)
-		}
-	} else {
-		if groupDisplayName, exists := U.STANDARD_GROUP_DISPLAY_NAMES[groupName]; exists {
-			intentTimeline.ExtraProp = groupDisplayName
-		} else {
-			intentTimeline.ExtraProp = groupName
-		}
-		// Fetch user activities for the given account ID
-		intentActivities, err := store.GetUserActivities(projectID, id, model.COLUMN_NAME_ID)
-		if err != nil {
-			return intentTimeline, fmt.Errorf("failed to retrieve user activities for user ID %v", id)
-		}
-		intentTimeline.UserActivities = intentActivities
+	intentTimeline.ExtraProp = "All"
+	groupNameIDMap, status := store.GetGroupNameIDMap(projectID)
+	if status != http.StatusFound {
+		return intentTimeline, fmt.Errorf("failed to retrieve GroupNameID map")
 	}
+	// Fetch accounts associated with the domain
+	associatedAccounts, status := store.GetAccountsAssociatedToDomain(projectID, id, groupNameIDMap[model.GROUP_NAME_DOMAINS])
+	if status != http.StatusFound {
+		return intentTimeline, fmt.Errorf("failed to fetch associated accounts for domain ID %v", id)
+	}
+	// Fetch events for each associated account
+	for _, user := range associatedAccounts {
+		intentActivities, err := store.GetUserActivities(projectID, user.ID, true)
+		if err != nil {
+			return intentTimeline, fmt.Errorf("failed to retrieve user activities for user ID %v", user.ID)
+		}
+		intentTimeline.UserActivities = append(intentTimeline.UserActivities, intentActivities...)
+	}
+	// Fetch events for domain
+	domainEvents, err := store.GetUserActivities(projectID, id, true)
+	if err != nil {
+		return intentTimeline, fmt.Errorf("failed to retrieve user activities for domain ID %v", id)
+	}
+	intentTimeline.UserActivities = append(intentTimeline.UserActivities, domainEvents...)
 
 	return intentTimeline, nil
 }
 
 func (store *MemSQL) AccountPropertiesForDomainsEnabledV2(projectID int64, id, groupName string, timelinesConfig model.TimelinesConfig) (model.AccountDetails, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"id":         id,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	var domainName string
 	accountGroupDetails := make([]model.User, 0)
 	if model.IsDomainGroup(groupName) {
 		groupNameIDMap, status := store.GetGroupNameIDMap(projectID)
@@ -2119,12 +2107,17 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabledV2(projectID int64, id, g
 		accountGroupDetails, status = store.GetAccountsAssociatedToDomain(projectID, id, groupNameIDMap[model.GROUP_NAME_DOMAINS])
 
 		// fetch all domain properties
-		domain, domStatus := store.GetDomainPropertiesByID(projectID, []string{id})
+		domain, domStatus := store.GetUser(projectID, id)
 		if domStatus != http.StatusFound {
 			log.Error("Failed to get account properties.")
 			return model.AccountDetails{}, http.StatusInternalServerError
 		}
-		accountGroupDetails = append(accountGroupDetails, domain...)
+		groupXId, err := model.GetGroupUserGroupID(domain, groupNameIDMap[model.GROUP_NAME_DOMAINS])
+		if err != nil {
+			logCtx.Error(err)
+		}
+		domainName = groupXId
+		accountGroupDetails = append(accountGroupDetails, *domain)
 
 		// return not found if no associated accounts found
 		if status != http.StatusFound && len(accountGroupDetails) < 1 {
@@ -2132,13 +2125,13 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabledV2(projectID int64, id, g
 		}
 	} else {
 		if !model.IsAllowedGroupName(groupName) {
-			log.Error("Invalid group name.")
+			logCtx.Error("Invalid group name.")
 			return model.AccountDetails{}, http.StatusBadRequest
 		}
 		// Filter Properties
 		properties, status := store.GetUserPropertiesByUserID(projectID, id)
 		if status != http.StatusFound {
-			log.Error("Failed to get account properties.")
+			logCtx.Error("Failed to get account properties.")
 			return model.AccountDetails{}, http.StatusInternalServerError
 		}
 		if properties != nil {
@@ -2149,17 +2142,19 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabledV2(projectID int64, id, g
 			accountGroupDetails = append(accountGroupDetails, user)
 		}
 	}
-	accountDetails, status := FetchAccountDetailsFromProps(projectID, groupName, timelinesConfig, accountGroupDetails)
+
+	accountDetails, status := FetchAccountDetailsFromProps(projectID, groupName, domainName, timelinesConfig, accountGroupDetails)
 	if status != http.StatusOK {
 		return accountDetails, status
 	}
 	return accountDetails, http.StatusOK
 }
 
-func FetchAccountDetailsFromProps(projectID int64, groupName string, timelinesConfig model.TimelinesConfig,
+func FetchAccountDetailsFromProps(projectID int64, groupName string, domainName string, timelinesConfig model.TimelinesConfig,
 	accountGroupDetails []model.User) (model.AccountDetails, int) {
 
 	var accountDetails model.AccountDetails
+	accountDetails.DomainName = domainName
 	milestonesMap := propsMapGroupingByName(timelinesConfig.AccountConfig.Milestones)
 	leftPaneMap := propsMapGroupingByName(timelinesConfig.AccountConfig.TableProps)
 
@@ -2171,9 +2166,8 @@ func FetchAccountDetailsFromProps(projectID int64, groupName string, timelinesCo
 			log.Error("Unable to decode account properties.")
 			return accountDetails, http.StatusInternalServerError
 		}
-
 		// add name and hostname
-		if accountDetails.DomainName == "" && accountDetails.Name == "" {
+		if accountDetails.Name == "" {
 			accountDetails = FormatAccountDetails(projectID, *props, groupName, accountDetails.DomainName)
 		}
 
@@ -2374,7 +2368,6 @@ func FormatAccountDetails(projectID int64, propertiesDecoded map[string]interfac
 			break
 		}
 	}
-
 	if hostName != "" {
 		accountDetails.DomainName = hostName
 	} else {
