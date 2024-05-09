@@ -476,6 +476,8 @@ type Model interface {
 	EditProjectAgentMapping(projectID int64, agentUUIDToEdit string, role int64) int
 	GetProjectAgentLatestAdminEmailByProjectId(projectId int64) (string, int)
 	UpdateChecklistDismissalStatus(projectId int64, agentUUID string, status bool) int
+	SetSlackTeamIdForProjectAgentMappings(projectId int64, agentUUIDToUpdate string, teamId string) int
+	GetProjectAgentMappingFromSlackTeamId(teamId string) ([]model.ProjectAgentMapping, int)
 
 	// project_setting
 	GetProjectSetting(projectID int64) (*model.ProjectSetting, int)
@@ -1129,7 +1131,8 @@ type Model interface {
 	// Slack
 	SetAuthTokenforSlackIntegration(projectID int64, agentUUID string, authTokens model.SlackAccessTokens) error
 	GetSlackAuthToken(projectID int64, agentUUID string) (model.SlackAccessTokens, error)
-	DeleteSlackIntegration(projectID int64, agentUUID string) error
+	DeleteSlackIntegrationFromAgents(projectID int64, agentUUID string) error
+	DeleteSlackTeamIDFromProjectAgentMappings(projectID int64, agentUUID string) error
 	GetSlackUsersListFromDb(projectID int64, agentID string) ([]model.SlackMember, int, error)
 	UpdateSlackUsersListForProject(projectID int64, fields map[string]interface{}) (int, error)
 

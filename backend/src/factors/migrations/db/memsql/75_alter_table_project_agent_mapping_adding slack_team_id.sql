@@ -1,0 +1,1 @@
+ALTER TABLE project_agent_mappings ADD COLUMN slack_team_id text DEFAULT NULL;

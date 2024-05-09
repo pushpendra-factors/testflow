@@ -3,6 +3,7 @@ package v1
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	C "factors/config"
 	slack "factors/integration/slack"
 	mid "factors/middleware"
@@ -57,6 +58,7 @@ func SlackAuthRedirectHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"redirectURL": redirectURL})
 }
 func GetSlackAuthorisationURL(clientID string, state string) string {
+
 	url := fmt.Sprintf(`https://slack.com/oauth/v2/authorize?client_id=%s&scope=channels:read,chat:write,chat:write.public,im:read,users:read,users:read.email&user_scope=channels:read,chat:write,groups:read,mpim:read,users:read,users:read.email&state=%s`, clientID, state)
 	return url
 }
@@ -150,6 +152,20 @@ func SlackCallbackHandler(c *gin.Context) {
 		redirectURl := buildRedirectURL("AUTH_ERROR", oauthState.Source)
 		c.Redirect(http.StatusPermanentRedirect, redirectURl)
 	}
+
+	team := jsonResponse["team"].(map[string]interface{})
+	if team["id"] == nil {
+		logCtx.Error("Failed to get team id")
+		redirectURL := buildRedirectURL("AUTH_ERROR", oauthState.Source)
+		c.Redirect(http.StatusPermanentRedirect, redirectURL)
+	}
+	errCode = store.GetStore().SetSlackTeamIdForProjectAgentMappings(oauthState.ProjectID, *oauthState.AgentUUID, team["id"].(string))
+	if errCode != http.StatusAccepted {
+		logCtx.Error("Failed to store access token for slack")
+		redirectURl := buildRedirectURL("AUTH_ERROR", oauthState.Source)
+		c.Redirect(http.StatusPermanentRedirect, redirectURl)
+	}
+
 	redirectURL := buildRedirectURL("", oauthState.Source)
 	c.Redirect(http.StatusPermanentRedirect, redirectURL)
 	defer resp.Body.Close()
@@ -249,7 +265,7 @@ func DeleteSlackIntegrationHandler(c *gin.Context) {
 			gin.H{"error": "Invalid agent id. or project id"})
 		return
 	}
-	err := store.GetStore().DeleteSlackIntegration(projectID, loggedInAgentUUID)
+	err := slack.DeleteSlackIntegration(projectID, loggedInAgentUUID)
 	if err != nil {
 		log.Error("Failed to delete slack integration")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete slack integration"})
@@ -302,4 +318,73 @@ func GetSlackUsersListHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, humanUsers)
+}
+
+func SlackEventListnerHandler(c *gin.Context) {
+
+	r := c.Request
+
+	logCtx := log.WithFields(log.Fields{
+		"reqId": U.GetScopeByKeyAsString(c, mid.SCOPE_REQ_ID),
+	})
+
+	if r.Body == nil {
+		logCtx.Error("Invalid request. Request body unavailable.")
+		c.AbortWithError(http.StatusBadRequest, errors.New("Invalid request. Request body unavailable."))
+		return
+	}
+
+	var slackEventType model.SlackEventType
+	slackEventType, err := slackEventType.ParseEvent(&r.Body)
+	if err != nil {
+		logCtx.WithError(err).Error("Tracking failed. Json Decoding failed.")
+
+		c.AbortWithError(http.StatusInternalServerError, errors.New("Tracking failed. Json Decoding failed."))
+		return
+	}
+
+	if slackEventType.Type == "url_verification" {
+
+		var slackEventsApiURLVerificationEvent model.SlackEventsApiURLVerificationEvent
+		slackEventsApiURLVerificationEvent, err := slackEventsApiURLVerificationEvent.ParseEvent(&r.Body)
+		if err != nil {
+			logCtx.WithError(err).Error("Tracking failed. Json Decoding failed.")
+			c.AbortWithError(http.StatusInternalServerError, errors.New("Tracking failed. Json Decoding failed."))
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"challenge": slackEventsApiURLVerificationEvent.Challenge,
+		})
+	} else {
+
+		var slackUninstallAPIEvent model.SlackUninstallAPIEvent
+		slackUninstallAPIEvent, err := slackUninstallAPIEvent.ParseEvent(&r.Body)
+		if err != nil {
+			logCtx.WithError(err).Error("Tracking failed. Json Decoding failed.")
+			c.AbortWithError(http.StatusInternalServerError, errors.New("Tracking failed. Json Decoding failed."))
+			return
+		}
+
+		if slackUninstallAPIEvent.Event.Type == "app_uninstalled" {
+
+			pamList, errCode := store.GetStore().GetProjectAgentMappingFromSlackTeamId(slackUninstallAPIEvent.TeamID)
+			if errCode != http.StatusFound {
+				logCtx.WithError(err).Error("No associated agents found")
+				c.AbortWithError(http.StatusInternalServerError, errors.New("No associated agents found"))
+				return
+			}
+			for _, pam := range pamList {
+				err := slack.DeleteSlackIntegration(pam.ProjectID, pam.AgentUUID)
+				if err != nil {
+					logCtx.WithError(err).Error("Slack accsess Token removal failed.")
+					c.AbortWithError(http.StatusInternalServerError, errors.New("Slack accsess Token removal failed."))
+					return
+				}
+			}
+
+			c.JSON(http.StatusOK, nil)
+		}
+
+	}
+
 }

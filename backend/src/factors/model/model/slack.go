@@ -1,9 +1,13 @@
 package model
 
 import (
+	"encoding/json"
+	U "factors/util"
+	"io"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
+	log "github.com/sirupsen/logrus"
 )
 
 type SlackChannelsAndUserGroups struct {
@@ -51,4 +55,58 @@ type SlackUsersList struct {
 	AgentID      string          `gorm:"column:agent_id" json:"agent_id"`
 	UsersList    *postgres.Jsonb `gorm:"column:users_list" json:"users_list"`
 	LastSyncTime time.Time       `gorm:"column:last_sync_time" json:"last_sync_time"`
+}
+
+type SlackEventsApiURLVerificationEvent struct {
+	Token     string `json:"token"`
+	Challenge string `json:"challenge"`
+	Type      string `json:"type"`
+}
+
+type SlackEventType struct {
+	Type string `json:"type"`
+}
+
+type SlackUninstallAPIEvent struct {
+	Token     string                 `json:"token"`
+	TeamID    string                 `json:"team_id"`
+	APIAppID  string                 `json:"api_app_id"`
+	Event     SlackAppUninstallEvent `json:"event"`
+	Type      string                 `json:"type"`
+	EventID   string                 `json:"event_id"`
+	EventTime int                    `json:"event_time"`
+}
+
+type SlackAppUninstallEvent struct {
+	Type string `json:"type"`
+}
+
+func (eventStruct SlackEventType) ParseEvent(jsonBody *io.ReadCloser) (SlackEventType, error) {
+
+	decoder := json.NewDecoder(*jsonBody)
+	if err := decoder.Decode(&eventStruct); U.IsJsonError(err) {
+		log.WithError(err).Error("Tracking failed. Json Decoding failed.")
+		return SlackEventType{}, err
+	}
+	return eventStruct, nil
+}
+
+func (eventStruct SlackUninstallAPIEvent) ParseEvent(jsonBody *io.ReadCloser) (SlackUninstallAPIEvent, error) {
+
+	decoder := json.NewDecoder(*jsonBody)
+	if err := decoder.Decode(&eventStruct); U.IsJsonError(err) {
+		log.WithError(err).Error("Tracking failed. Json Decoding failed.")
+		return SlackUninstallAPIEvent{}, err
+	}
+	return eventStruct, nil
+}
+
+func (eventStruct SlackEventsApiURLVerificationEvent) ParseEvent(jsonBody *io.ReadCloser) (SlackEventsApiURLVerificationEvent, error) {
+
+	decoder := json.NewDecoder(*jsonBody)
+	if err := decoder.Decode(&eventStruct); U.IsJsonError(err) {
+		log.WithError(err).Error("Tracking failed. Json Decoding failed.")
+		return SlackEventsApiURLVerificationEvent{}, err
+	}
+	return eventStruct, nil
 }
