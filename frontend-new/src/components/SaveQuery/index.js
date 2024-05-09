@@ -622,7 +622,7 @@ function SaveQuery({
           setShowShareToSlackModal(false);
         }
         if (r.status >= 400) {
-          message.error('Error fetching slack redirect url');
+          message.error('Error fetching Slack redirect url');
         }
       })
       .catch((err) => {
@@ -645,10 +645,10 @@ function SaveQuery({
 
   useEffect(() => {
     if (slack?.length > 0) {
-      let tempArr = [];
-      let allArr = [];
+      const tempArr = [];
+      const allArr = [];
       for (let i = 0; i < slack.length; i++) {
-        tempArr.push({ label: '#' + slack[i].name, value: slack[i].id });
+        tempArr.push({ label: `#${slack[i].name}`, value: slack[i].id });
         allArr.push({
           name: slack[i].name,
           id: slack[i].id,
@@ -900,7 +900,7 @@ function SaveQuery({
                   extraClass='m-0'
                 >
                   Slack is not integrated, Do you want to integrate with your
-                  slack account now?
+                  Slack account now?
                 </Text>
               </Col>
             </Row>
@@ -916,7 +916,7 @@ function SaveQuery({
                 </Col>
                 <Col className='mr-2'>
                   <Button type='primary' onClick={onConnectSlack}>
-                    Connect to slack
+                    Connect to Slack
                   </Button>
                 </Col>
               </Row>

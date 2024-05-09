@@ -677,7 +677,7 @@ function CoreQuery({
               color='grey'
               extraClass='inline mr-2'
             />
-            Share to slack
+            Share to Slack
           </a>
         </Menu.Item>
       ) : null}
@@ -831,7 +831,7 @@ function CoreQuery({
           setShowShareToSlackModal(false);
         }
         if (r.status >= 400) {
-          message.error('Error fetching slack redirect url');
+          message.error('Error fetching Slack redirect url');
         }
       })
       .catch((err) => {
@@ -975,7 +975,7 @@ function CoreQuery({
         .then((r) => {
           notification.success({
             message: 'Report Sent Successfully',
-            description: 'Report has been sent to the selected slack channel',
+            description: 'Report has been sent to the selected Slack channel',
             duration: 5
           });
         })
@@ -1252,7 +1252,7 @@ function CoreQuery({
                   extraClass='m-0'
                 >
                   Slack is not integrated, Do you want to integrate with your
-                  slack account now?
+                  Slack account now?
                 </Text>
               </Col>
             </Row>
@@ -1268,7 +1268,7 @@ function CoreQuery({
                 </Col>
                 <Col className='mr-2'>
                   <Button type='primary' onClick={onConnectSlack}>
-                    Connect to slack
+                    Connect to Slack
                   </Button>
                 </Col>
               </Row>
