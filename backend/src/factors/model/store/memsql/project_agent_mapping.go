@@ -284,6 +284,56 @@ func (store *MemSQL) EditProjectAgentMapping(projectId int64, agentUUIDToEdit st
 	return 0
 }
 
+func (store *MemSQL) SetSlackTeamIdForProjectAgentMappings(projectId int64, agentUUIDToUpdate string, teamId string) int {
+	logFields := log.Fields{
+		"project_id":         projectId,
+		"agent_uuid_to_edit": agentUUIDToUpdate,
+		"teamId":             teamId,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	if projectId == 0 || agentUUIDToUpdate == "" || teamId == "" {
+		return http.StatusBadRequest
+	}
+	db := C.GetServices().Db
+
+	updateFields := make(map[string]interface{}, 0)
+	updateFields["slack_team_id"] = teamId
+
+	err := db.Model(&model.ProjectAgentMapping{}).Where("project_id = ? AND agent_uuid = ?", projectId, agentUUIDToUpdate).Update(updateFields).Error
+
+	if err != nil {
+		log.WithFields(log.Fields{"projectId": projectId, "agentUUID": agentUUIDToUpdate}).WithError(err).Error(
+			"Setting Slack team_id failed.")
+		return http.StatusInternalServerError
+	}
+	return http.StatusAccepted
+}
+
+func (store *MemSQL) GetProjectAgentMappingFromSlackTeamId(teamId string) ([]model.ProjectAgentMapping, int) {
+	logFields := log.Fields{
+		"teamId": teamId,
+	}
+	var pamList []model.ProjectAgentMapping
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	if teamId == "" {
+		return pamList, http.StatusBadRequest
+	}
+	db := C.GetServices().Db
+
+	if err := db.Where("slack_team_id = ? ", teamId).Find(&pamList).Error; err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return pamList, http.StatusNotFound
+		}
+
+		log.WithField("teamId",
+			teamId).WithError(err).Error("Failed to check does agent have project.")
+		return pamList, http.StatusInternalServerError
+	}
+
+	return pamList, http.StatusFound
+
+}
+
 // GetProjectAgentLatestAdminEmailByProjectId fetches the non-solution latest admin (most recent admin) email id.
 func (store *MemSQL) GetProjectAgentLatestAdminEmailByProjectId(projectId int64) (string, int) {
 	logFields := log.Fields{

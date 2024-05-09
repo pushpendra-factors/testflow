@@ -2,6 +2,7 @@ package tests
 
 import (
 	C "factors/config"
+	"factors/integration/slack"
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
@@ -217,4 +218,82 @@ func TestPAMConstraints(t *testing.T) {
 		// In Postgres, primary constrain get's checked first and returns found for existing project, agent.
 		assert.Equal(t, http.StatusFound, errCode)
 	}
+}
+
+func TestPAMForSalckIntegration(t *testing.T) {
+
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	noOfAgents := int(U.RandomInt64()%10 + 5)
+	createdAgents := make([]*model.Agent, 0, 0)
+	for i := 0; i < noOfAgents; i++ {
+		ag, errCode := SetupAgentReturnDAO(getRandomEmail(), "+13425356")
+		assert.Equal(t, http.StatusCreated, errCode)
+		createdAgents = append(createdAgents, ag)
+	}
+
+	// list of team_id
+	teamIdList := make([]string, 0)
+	// create project agent mapping
+	teamIdList = append(teamIdList, U.RandomLowerAphaNumString(20))
+	teamIdList = append(teamIdList, U.RandomLowerAphaNumString(20))
+	for i, createdAgent := range createdAgents {
+
+		_, errCode := store.GetStore().CreateProjectAgentMappingWithDependencies(&model.ProjectAgentMapping{
+			ProjectID: project.ID,
+			AgentUUID: createdAgent.UUID,
+		})
+		assert.Equal(t, http.StatusCreated, errCode)
+
+		errCode = store.GetStore().SetSlackTeamIdForProjectAgentMappings(project.ID, createdAgent.UUID, teamIdList[i%2])
+		assert.Equal(t, http.StatusAccepted, errCode)
+	}
+
+	for _, createdAgent := range createdAgents {
+
+		err = store.GetStore().SetAuthTokenforSlackIntegration(project.ID, createdAgent.UUID,
+			model.SlackAccessTokens{
+				UserAccessToken: U.RandomLowerAphaNumString(20),
+				BotAccessToken:  U.RandomLowerAphaNumString(20),
+			})
+		assert.Nil(t, err)
+	}
+
+	t.Run("TestGetPamFromTeamId", func(t *testing.T) {
+
+		// fetch all
+		for _, teamId := range teamIdList {
+			pamList, errCode := store.GetStore().GetProjectAgentMappingFromSlackTeamId(teamId)
+			assert.Equal(t, http.StatusFound, errCode)
+
+			for _, pam := range pamList {
+				assert.Equal(t, pam.SlackTeamID, teamId)
+			}
+
+		}
+
+	})
+
+	t.Run("TestDeletePamFromTeamId", func(t *testing.T) {
+
+		// fetch all
+		for _, teamId := range teamIdList {
+			pamList, errCode := store.GetStore().GetProjectAgentMappingFromSlackTeamId(teamId)
+			assert.Equal(t, http.StatusFound, errCode)
+
+			for _, pam := range pamList {
+				err := slack.DeleteSlackIntegration(pam.ProjectID, pam.AgentUUID)
+				assert.Nil(t, err)
+			}
+
+			pamList, errCode = store.GetStore().GetProjectAgentMappingFromSlackTeamId(teamId)
+			assert.Equal(t, http.StatusFound, errCode)
+
+			for _, pam := range pamList {
+				assert.NotEqual(t, pam.SlackTeamID, teamId)
+			}
+
+		}
+
+	})
 }
