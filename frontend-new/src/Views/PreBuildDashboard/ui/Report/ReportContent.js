@@ -24,8 +24,8 @@ import {
   shouldShowChartConfigOptions
 } from 'Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
 import { getKpiLabel } from 'Views/CoreQuery/KPIAnalysis/kpiAnalysis.helpers';
-import Filter from './Filter';
 import { useSelector } from 'react-redux';
+import Filter from './Filter';
 
 const { TabPane } = Tabs;
 
@@ -69,7 +69,6 @@ function ReportContent({
       }),
     [breakdown, chartTypes, queryType]
   );
-  // const chartType= CHART_TYPE_LINECHART;
 
   const [currMetricsValue, setCurrMetricsValue] = useState(0);
   const [chartTypeMenuItems, setChartTypeMenuItems] = useState([]);
