@@ -334,46 +334,60 @@ func SlackEventListnerHandler(c *gin.Context) {
 		return
 	}
 
-	log.WithField("body", r.Body).Info("SlackEventListnerHandler")
-	var slackEventType model.SlackEventType
-	slackEventType, err := slackEventType.ParseEvent(&r.Body)
-
-	log.WithField("slackEventType", slackEventType).WithField("err", err).Info("SlackEventListnerHandler")
+	var jsonPayload map[string]interface{}
+	err := json.NewDecoder(r.Body).Decode(&jsonPayload)
 	if err != nil {
+		logCtx.Error("Invalid request. Request body unavailable.")
+		c.AbortWithError(http.StatusBadRequest, errors.New("Invalid request. Request body unavailable."))
+		return
+	}
+
+	log.WithField("jsonPayload", jsonPayload).Info("SlackEventListnerHandler")
+	if jsonPayload["type"] == nil {
 		logCtx.WithError(err).Error("Tracking failed. Json Decoding failed.")
 
 		c.AbortWithError(http.StatusInternalServerError, errors.New("Tracking failed. Json Decoding failed."))
 		return
 	}
 
-	if slackEventType.Type == "url_verification" {
+	if jsonPayload["type"] == "url_verification" {
 
-		var slackEventsApiURLVerificationEvent model.SlackEventsApiURLVerificationEvent
-		slackEventsApiURLVerificationEvent, err := slackEventsApiURLVerificationEvent.ParseEvent(&r.Body)
-		log.WithField("slackEventsApiURLVerificationEvent", slackEventsApiURLVerificationEvent).WithField("err", err).Info("SlackEventListnerHandler")
-		if err != nil {
+		log.WithField("jsonPayload", jsonPayload).WithField("err", err).Info("url_verification SlackEventListnerHandler")
+		if jsonPayload["challenge"] == nil {
 			logCtx.WithError(err).Error("Tracking failed. Json Decoding failed.")
 			c.AbortWithError(http.StatusInternalServerError, errors.New("Tracking failed. Json Decoding failed."))
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{
-			"challenge": slackEventsApiURLVerificationEvent.Challenge,
+			"challenge": jsonPayload["challenge"],
 		})
 	} else {
 
-		var slackUninstallAPIEvent model.SlackUninstallAPIEvent
-		slackUninstallAPIEvent, err := slackUninstallAPIEvent.ParseEvent(&r.Body)
-		log.WithField("slackUninstallAPIEvent", slackUninstallAPIEvent).WithField("err", err).Info("SlackEventListnerHandler")
+		log.WithField("jsonPayload", jsonPayload).WithField("err", err).Info("SlackEventListnerHandler")
 
-		if err != nil {
+		if jsonPayload["event"] == nil {
 			logCtx.WithError(err).Error("Tracking failed. Json Decoding failed.")
 			c.AbortWithError(http.StatusInternalServerError, errors.New("Tracking failed. Json Decoding failed."))
 			return
 		}
 
-		if slackUninstallAPIEvent.Event.Type == "app_uninstalled" {
+		slackEvent := jsonPayload["event"].(map[string]interface{})
+		if slackEvent["type"] == nil {
+			logCtx.WithError(err).Error("Tracking failed. Json Decoding failed.")
+			c.AbortWithError(http.StatusInternalServerError, errors.New("Tracking failed. Json Decoding failed."))
+			return
+		}
 
-			pamList, errCode := store.GetStore().GetProjectAgentMappingFromSlackTeamId(slackUninstallAPIEvent.TeamID)
+		if slackEvent["type"] == "app_uninstalled" {
+
+			if jsonPayload["team_id"] == nil {
+				logCtx.WithError(err).Error("Tracking failed. Json Decoding failed.")
+				c.AbortWithError(http.StatusInternalServerError, errors.New("Tracking failed. Json Decoding failed."))
+				return
+			}
+			teamId := U.GetPropertyValueAsString(jsonPayload["team_id"])
+
+			pamList, errCode := store.GetStore().GetProjectAgentMappingFromSlackTeamId(teamId)
 			if errCode != http.StatusFound {
 				logCtx.WithError(err).Error("No associated agents found")
 				c.AbortWithError(http.StatusInternalServerError, errors.New("No associated agents found"))
