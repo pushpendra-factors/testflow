@@ -334,8 +334,11 @@ func SlackEventListnerHandler(c *gin.Context) {
 		return
 	}
 
+	log.WithField("body", r.Body).Info("SlackEventListnerHandler")
 	var slackEventType model.SlackEventType
 	slackEventType, err := slackEventType.ParseEvent(&r.Body)
+
+	log.WithField("slackEventType", slackEventType).WithField("err", err).Info("SlackEventListnerHandler")
 	if err != nil {
 		logCtx.WithError(err).Error("Tracking failed. Json Decoding failed.")
 
@@ -347,6 +350,7 @@ func SlackEventListnerHandler(c *gin.Context) {
 
 		var slackEventsApiURLVerificationEvent model.SlackEventsApiURLVerificationEvent
 		slackEventsApiURLVerificationEvent, err := slackEventsApiURLVerificationEvent.ParseEvent(&r.Body)
+		log.WithField("slackEventsApiURLVerificationEvent", slackEventsApiURLVerificationEvent).WithField("err", err).Info("SlackEventListnerHandler")
 		if err != nil {
 			logCtx.WithError(err).Error("Tracking failed. Json Decoding failed.")
 			c.AbortWithError(http.StatusInternalServerError, errors.New("Tracking failed. Json Decoding failed."))
@@ -359,6 +363,8 @@ func SlackEventListnerHandler(c *gin.Context) {
 
 		var slackUninstallAPIEvent model.SlackUninstallAPIEvent
 		slackUninstallAPIEvent, err := slackUninstallAPIEvent.ParseEvent(&r.Body)
+		log.WithField("slackUninstallAPIEvent", slackUninstallAPIEvent).WithField("err", err).Info("SlackEventListnerHandler")
+
 		if err != nil {
 			logCtx.WithError(err).Error("Tracking failed. Json Decoding failed.")
 			c.AbortWithError(http.StatusInternalServerError, errors.New("Tracking failed. Json Decoding failed."))
