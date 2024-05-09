@@ -342,7 +342,6 @@ func SlackEventListnerHandler(c *gin.Context) {
 		return
 	}
 
-	log.WithField("jsonPayload", jsonPayload).Info("SlackEventListnerHandler")
 	if jsonPayload["type"] == nil {
 		logCtx.WithError(err).Error("Tracking failed. Json Decoding failed.")
 
@@ -352,7 +351,6 @@ func SlackEventListnerHandler(c *gin.Context) {
 
 	if jsonPayload["type"] == "url_verification" {
 
-		log.WithField("jsonPayload", jsonPayload).WithField("err", err).Info("url_verification SlackEventListnerHandler")
 		if jsonPayload["challenge"] == nil {
 			logCtx.WithError(err).Error("Tracking failed. Json Decoding failed.")
 			c.AbortWithError(http.StatusInternalServerError, errors.New("Tracking failed. Json Decoding failed."))
@@ -362,8 +360,6 @@ func SlackEventListnerHandler(c *gin.Context) {
 			"challenge": jsonPayload["challenge"],
 		})
 	} else {
-
-		log.WithField("jsonPayload", jsonPayload).WithField("err", err).Info("SlackEventListnerHandler")
 
 		if jsonPayload["event"] == nil {
 			logCtx.WithError(err).Error("Tracking failed. Json Decoding failed.")
