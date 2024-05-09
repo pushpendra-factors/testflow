@@ -306,15 +306,6 @@ func GetProfileAccountOverviewHandler(c *gin.Context) (interface{}, int, string,
 	return accountOverview, http.StatusOK, "", "", false
 }
 
-func getNewEventConfig(c *gin.Context) (*[]string, error) {
-	payload := []string{}
-	err := c.BindJSON(&payload)
-	if err != nil {
-		return nil, err
-	}
-	return &payload, nil
-}
-
 func UpdateEventConfigHandler(c *gin.Context) {
 	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
@@ -339,7 +330,7 @@ func UpdateEventConfigHandler(c *gin.Context) {
 		return
 	}
 
-	payload, err := getNewEventConfig(c)
+	payload, err := getScopeArrString(c)
 	if err != nil {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
@@ -352,11 +343,7 @@ func UpdateEventConfigHandler(c *gin.Context) {
 		return
 	}
 
-	response := map[string]interface{}{
-		"status":     "success",
-		"event_name": eventName,
-	}
-	c.JSON(http.StatusOK, response)
+	c.Status(http.StatusOK)
 }
 
 func GetConfiguredUserPropertiesWithValuesHandler(c *gin.Context) {
@@ -473,4 +460,85 @@ func GetTopEventsForADomainHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, properties)
+}
+
+func UpdateDefaultTablePropertiesHandler(c *gin.Context) {
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectID == 0 {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	profileType := c.Params.ByName("type")
+
+	logCtx := log.WithFields(log.Fields{
+		"projectId":   projectID,
+		"profileType": profileType,
+	})
+
+	if profileType == "" {
+		logCtx.Error("Invalid config type")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	payload, err := getScopeArrString(c)
+	if err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	errCode, err := store.GetStore().UpdateDefaultTablePropertiesConfig(projectID, profileType, *payload)
+	if errCode != http.StatusOK {
+		logCtx.Error(err)
+		c.AbortWithStatus(errCode)
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+func UpdateSegmentTablePropertiestHandler(c *gin.Context) {
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectID == 0 {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	segmentID := c.Params.ByName("segment_id")
+
+	logCtx := log.WithFields(log.Fields{
+		"projectId": projectID,
+		"segmentId": segmentID,
+	})
+
+	if segmentID == "" {
+		logCtx.Error("Invalid segment id")
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	payload, err := getScopeArrString(c)
+	if err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	errCode, err := store.GetStore().UpdateSegmentTablePropertiesConfig(projectID, segmentID, *payload)
+	if errCode != http.StatusOK {
+		logCtx.Error(err)
+		c.AbortWithStatus(errCode)
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+func getScopeArrString(c *gin.Context) (*[]string, error) {
+	payload := []string{}
+	err := c.BindJSON(&payload)
+	if err != nil {
+		return nil, err
+	}
+	return &payload, nil
 }

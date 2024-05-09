@@ -982,6 +982,8 @@ type Model interface {
 	GetTopEventsForADomain(projectID int64, domainID string) ([]model.TimelineEvent, int)
 	GetConfiguredUserPropertiesWithValues(projectID int64, id string, isAnonymous bool) (map[string]interface{}, int)
 	GetConfiguredEventPropertiesWithValues(projectID int64, eventID string, eventName string) (map[string]interface{}, int)
+	UpdateDefaultTablePropertiesConfig(projectID int64, profileType string, updatedConfig []string) (int, error)
+	UpdateSegmentTablePropertiesConfig(projectID int64, segmentID string, updatedConfig []string) (int, error)
 
 	// Timeline consuming segment_marker
 	GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload, downloadLimitGiven bool) ([]model.Profile, int, string)

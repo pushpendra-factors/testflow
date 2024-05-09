@@ -312,6 +312,8 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/v1/profiles/accounts/top_events/:domain_name", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_PROFILES}), V1.GetTopEventsForADomainHandler)
 	authRouteGroup.GET("/:project_id/v1/profiles/user_properties/:id", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES, M.FEATURE_ACCOUNT_PROFILES}), V1.GetConfiguredUserPropertiesWithValuesHandler)
 	authRouteGroup.GET("/:project_id/v1/profiles/event_properties/:id/:name", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES, M.FEATURE_ACCOUNT_PROFILES}), V1.GetConfiguredEventPropertiesWithValuesHandler)
+	authRouteGroup.PUT("/:project_id/v1/profiles/:type/table_properties", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES, M.FEATURE_ACCOUNT_PROFILES}), V1.UpdateDefaultTablePropertiesHandler)
+	authRouteGroup.PUT("/:project_id/v1/profiles/segments/:segment_id/table_properties", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES, M.FEATURE_ACCOUNT_PROFILES}), V1.UpdateSegmentTablePropertiestHandler)
 
 	// Segments
 	authRouteGroup.POST("/:project_id/segments", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), CreateSegmentHandler)

@@ -41,6 +41,10 @@ import { ACCOUNTS_TABLE_COLUMN_TYPES, COLUMN_TYPE_PROPS } from 'Utils/table';
 import ResizableTitle from 'Components/Resizable';
 import logger from 'Utils/logger';
 import useAutoFocus from 'hooks/useAutoFocus';
+import {
+  updateTableProperties,
+  updateTablePropertiesForSegment
+} from 'Reducers/timelines';
 import { Text, SVG } from '../../factorsComponents';
 import { getUserPropertiesV2 } from '../../../reducers/coreQuery/middleware';
 import PropertyFilter from '../AccountProfiles/PropertyFilter';
@@ -84,7 +88,12 @@ import DeleteSegmentModal from '../AccountProfiles/DeleteSegmentModal';
 import RenameSegmentModal from '../AccountProfiles/RenameSegmentModal';
 import UpdateSegmentModal from '../AccountProfiles/UpdateSegmentModal';
 import styles from './index.module.scss';
-import { ALPHANUMSTR, headerClassStr, iconColors } from '../constants';
+import {
+  ALPHANUMSTR,
+  PROFILE_TYPE_USER,
+  headerClassStr,
+  iconColors
+} from '../constants';
 
 const userOptions = getUserOptions();
 
@@ -733,28 +742,27 @@ function UserProfiles({
   };
 
   const applyTableProps = () => {
+    const newTableProps =
+      checkListUserProps
+        ?.filter((item) => item.enabled === true)
+        ?.map((item) => item?.prop_name)
+        ?.filter(
+          (entry) => entry !== '' && entry !== undefined && entry !== null
+        ) || [];
     if (timelinePayload?.segment?.id?.length) {
-      const updatedQuery = { ...timelinePayload?.segment?.query };
-      updatedQuery.table_props =
-        checkListUserProps
-          ?.filter((item) => item.enabled === true)
-          ?.map((item) => item?.prop_name)
-          ?.filter(
-            (entry) => entry !== '' && entry !== undefined && entry !== null
-          ) || [];
-      updateSegmentForId(activeProject.id, timelinePayload.segment.id, {
-        query: { ...updatedQuery }
-      })
+      updateTablePropertiesForSegment(
+        activeProject.id,
+        timelinePayload.segment.id,
+        newTableProps
+      )
         .then(() => getSavedSegments(activeProject.id))
         .finally(() => getUsers(timelinePayload));
     } else {
-      const config = { ...tlConfig };
-      config.user_config.table_props = checkListUserProps
-        ?.filter((item) => item.enabled === true)
-        ?.map((item) => item?.prop_name);
-      udpateProjectSettings(activeProject.id, {
-        timelines_config: { ...config }
-      }).then(() => getUsers(timelinePayload));
+      updateTableProperties(
+        activeProject.id,
+        PROFILE_TYPE_USER,
+        newTableProps
+      ).then(() => getUsers(timelinePayload));
     }
     setShowPopOver(false);
   };
