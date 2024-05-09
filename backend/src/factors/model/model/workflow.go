@@ -25,41 +25,51 @@ type WorkflowStaticDataFields struct {
 }
 
 type Workflow struct {
-	ID             string          `json:"id"`
-	ProjectID      int64           `json:"project_id"`
-	Name           string          `json:"name"`
-	AlertBody      *postgres.Jsonb `json:"alert_body"`
-	InternalStatus string            `json:"internal_status"`
-	CreatedAt      time.Time       `json:"created_at"`
-	UpdatedAt      time.Time       `json:"updated_at"`
-	CreatedBy      string          `json:"created_by"`
-	IsDeleted      bool            `gorm:"not null;default:false" json:"is_deleted"`
+	ID                      string          `json:"id"`
+	ProjectID               int64           `json:"project_id"`
+	Name                    string          `json:"name"`
+	AlertBody               *postgres.Jsonb `json:"alert_body"`
+	WorkflowUrl             string          `json:"workflow_url"`
+	InternalStatus          string          `json:"internal_status"`
+	LastWorkflowTriggeredAt time.Time       `json:"last_workflow_triggered_at"`
+	LastWorkflowFailDetails *postgres.Jsonb `json:"last_workflow_fail_details"`
+	CreatedAt               time.Time       `json:"created_at"`
+	UpdatedAt               time.Time       `json:"updated_at"`
+	CreatedBy               string          `json:"created_by"`
+	IsDeleted               bool            `gorm:"not null;default:false" json:"is_deleted"`
 }
 
 type WorkflowDisplayableInfo struct {
 	ID        string          `json:"id"`
 	Title     string          `json:"title"`
 	AlertBody *postgres.Jsonb `json:"alert_body"`
-	Status    string            `json:"status"`
+	Status    string          `json:"status"`
 	CreatedAt time.Time       `json:"created_at"`
 }
 
 type WorkflowAlertBody struct {
-	Title               string          `json:"title"`
-	Description         string          `json:"description"`
-	TemplateTitle       string          `json:"template_title"`
-	TemplateID          int             `json:"template_id"`
-	TemplateDescription string          `json:"template_description"`
-	EventLevel          string          `json:"event_level"`
-	ActionPerformed     string          `json:"action_performed"`
-	Event               string          `json:"event"`
-	Filters             []QueryProperty `json:"filters"`
-	DontRepeatAlerts    bool            `json:"repeat_alerts"`
-	CoolDownTime        int64           `json:"cool_down_time"`
-	BreakdownProperties []QueryProperty `json:"breakdown_properties"`
-	SetAlertLimit       bool            `json:"notifications"`
-	AlertLimit          int64           `json:"alert_limit"`
-	MessageProperties   *postgres.Jsonb `json:"message_properties"`
+	Title                   string          `json:"title"`
+	Description             string          `json:"description"`
+	TemplateTitle           string          `json:"template_title"`
+	TemplateID              int             `json:"template_id"`
+	TemplateDescription     string          `json:"template_description"`
+	EventLevel              string          `json:"event_level"`
+	ActionPerformed         string          `json:"action_performed"`
+	Event                   string          `json:"event"`
+	Filters                 []QueryProperty `json:"filters"`
+	DontRepeatAlerts        bool            `json:"repeat_alerts"`
+	CoolDownTime            int64           `json:"cool_down_time"`
+	BreakdownProperties     []QueryProperty `json:"breakdown_properties"`
+	SetAlertLimit           bool            `json:"notifications"`
+	AlertLimit              int64           `json:"alert_limit"`
+	MessageProperties       *postgres.Jsonb `json:"message_properties"`
+	AdditonalConfigurations *postgres.Jsonb `json:"addtional_configuration"`
+}
+
+type WorkflowMessageProperties struct {
+	MandatoryPropertiesCompany  []WorkflowPropertiesMapping `json:"mandatory_properties"`
+	AdditionalPropertiesCompany []WorkflowPropertiesMapping `json:"additional_properties_company"`
+	AdditionalPropertiesContact []WorkflowPropertiesMapping `json:"additional_properties_contact"`
 }
 
 type WorkflowPropertiesMapping struct {
@@ -67,15 +77,15 @@ type WorkflowPropertiesMapping struct {
 	Others  string `json:"others"`
 }
 
-type WorkflowMappingDetails map[string]string
-
 // Different config to be used in the payloads
 
 type WorkflowPayloadProperties map[string]interface{}
 
 type WorkflowParagonPayload struct {
-	MandatoryPropsCompany  map[string]interface{} `json:"mandatory_props_companykey"`
-	AdditionalPropsCompany map[string]interface{} `json:"additional_props_company"`
+	MandatoryPropsCompany  WorkflowPayloadProperties `json:"mandatory_props_companykey"`
+	AdditionalPropsCompany WorkflowPayloadProperties `json:"additional_props_company"`
+	AdditionalPropsContact WorkflowPayloadProperties `json:"additional_props_contact_mapping"`
+	Configuration          map[string]interface{}    `json:"config"`
 }
 
 type ApolloWorkflowConfig struct {
