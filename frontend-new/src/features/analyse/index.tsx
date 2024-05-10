@@ -38,9 +38,11 @@ import {
 } from 'Utils/constants';
 import {
   COMPARISON_DATA_FETCHED,
+  COMPARISON_DATA_LOADING,
   CORE_QUERY_INITIAL_STATE,
   DEFAULT_PIVOT_CONFIG,
   INITIAL_STATE as INITIAL_RESULT_STATE,
+  RESET_COMPARISON_DATA,
   SET_COMPARE_DURATION,
   SET_COMPARISON_SUPPORTED,
   SET_SAVED_QUERY_SETTINGS,
@@ -130,6 +132,14 @@ const CoreQuery = () => {
     }
     return [];
   }, []);
+
+  const updateLocalReducer = useCallback((type, payload) => {
+    localDispatch({ type, payload });
+  }, []);
+
+  const resetComparisonData = useCallback(() => {
+    updateLocalReducer(RESET_COMPARISON_DATA, null);
+  }, [updateLocalReducer]);
 
   // Use Effects
   useEffect(() => {
@@ -353,15 +363,15 @@ const CoreQuery = () => {
     }
 
     dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
-    dispatch({
-      type: SET_COMPARISON_SUPPORTED,
-      payload: isComparisonEnabled(
+    updateLocalReducer(
+      SET_COMPARISON_SUPPORTED,
+      isComparisonEnabled(
         queryState.queryType,
         equivalentQuery.events,
         equivalentQuery.breakdown,
         models
       )
-    });
+    );
 
     setAppliedBreakdowns(equivalentQuery.breakdown, queryState);
 
@@ -457,15 +467,15 @@ const CoreQuery = () => {
     }
 
     dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
-    dispatch({
-      type: SET_COMPARISON_SUPPORTED,
-      payload: isComparisonEnabled(
+    updateLocalReducer(
+      SET_COMPARISON_SUPPORTED,
+      isComparisonEnabled(
         queryState.queryType,
         equivalentQuery.events,
         equivalentQuery.breakdown,
         models
       )
-    });
+    );
 
     setAppliedBreakdowns(equivalentQuery.breakdown, queryState);
 
@@ -489,8 +499,6 @@ const CoreQuery = () => {
   const runEventsQueryFromUrl = () => {
     const queryToAdd = getQueryFromHashId();
     if (queryToAdd) {
-      // updateResultState({ ...initialState, loading: true });
-      // dispatch({ type: SHOW_ANALYTICS_RESULT, payload: true });
       if (query_type === QUERY_TYPE_FUNNEL) {
         getFunnelData(active_project.id, null, null, false, query_id).then(
           (res) => {
@@ -542,10 +550,6 @@ const CoreQuery = () => {
     </CoreQueryContext.Provider>
   );
 
-  const updateLocalReducer = useCallback((type, payload) => {
-    localDispatch({ type, payload });
-  }, []);
-
   const configActionsOnRunningQuery = (
     isQuerySaved = false,
     qState: CoreQueryState
@@ -579,7 +583,10 @@ const CoreQuery = () => {
     }
   };
 
-  const runQuery = async (dateRange: any = undefined) => {
+  const runQuery = async (
+    dateRange: any = undefined,
+    isCompareQuery = false
+  ) => {
     try {
       let durationObj;
       const qState = _.cloneDeep(coreQueryState);
@@ -613,8 +620,12 @@ const CoreQuery = () => {
 
       setAppliedBreakdowns(coreQueryState.queryOptions?.groupBy, qState);
       qState.showResult = true;
-      qState.loading = true;
-      setLoading(true);
+      if (!isCompareQuery) {
+        qState.loading = true;
+        setLoading(true);
+      } else {
+        updateLocalReducer(COMPARISON_DATA_LOADING, null);
+      }
       configActionsOnRunningQuery(false, qState);
       qState.requestQuery = query;
       qState.resultState = { ...qState.resultState, loading: true };
@@ -649,29 +660,23 @@ const CoreQuery = () => {
         }
       }
 
-      if (dateRange) {
+      if (dateRange && !isCompareQuery) {
         qState.queryOptions.date_range = dateRange;
       }
 
-      qState.loading = false;
-      setLoading(false);
-      qState.resultState = {
-        ...qState.resultState,
-        data: resultantData,
-        loading: false,
-        apiCallStatus: res.status
-      };
-      setCoreQueryState(qState);
-      // if (isCompareQuery) {
-      //   updateLocalReducer(COMPARISON_DATA_FETCHED, resultantData);
-      // } else {
-      //   setLoading(false);
-      //   updateResultState({
-      //     ...initialState,
-      //     data: resultantData,
-      //     status: res.status
-      //   });
-      // }
+      if (isCompareQuery) {
+        updateLocalReducer(COMPARISON_DATA_FETCHED, resultantData);
+      } else {
+        qState.loading = false;
+        setLoading(false);
+        qState.resultState = {
+          ...qState.resultState,
+          data: resultantData,
+          loading: false,
+          apiCallStatus: res.status
+        };
+        setCoreQueryState(qState);
+      }
     } catch (err) {
       logger.error(err);
       const qState = { ...coreQueryState };
@@ -686,7 +691,7 @@ const CoreQuery = () => {
     }
   };
 
-  const handleDurationChange = (dates: any, isCompareDate: boolean = false) => {
+  const handleDurationChange = (dates: any, isCompareDate = false) => {
     let from;
     let to;
     let frequency;
@@ -733,15 +738,12 @@ const CoreQuery = () => {
     }
 
     if (isCompareDate) {
-      localDispatch({
-        type: SET_COMPARE_DURATION,
-        payload: {
-          from,
-          to,
-          frequency,
-          dateType,
-          selectedOption
-        }
+      updateLocalReducer(SET_COMPARE_DURATION, {
+        from,
+        to,
+        frequency,
+        dateType,
+        selectedOption
       });
     }
 
@@ -750,12 +752,21 @@ const CoreQuery = () => {
       ...payload
     };
 
-    setCoreQueryState(qState);
+    if (!isCompareDate) {
+      setCoreQueryState(qState);
+    }
 
     if (qState.queryType === QUERY_TYPE_EVENT) {
-      runQuery(qState.queryOptions.date_range);
+      runQuery(
+        isCompareDate ? appliedDateRange : qState.queryOptions.date_range,
+        isCompareDate
+      );
     } else if (qState.queryType === QUERY_TYPE_FUNNEL) {
-      runFunnelQuery(false, qState.queryOptions.date_range, isCompareDate);
+      runFunnelQuery(
+        false,
+        isCompareDate ? appliedDateRange : qState.queryOptions.date_range,
+        isCompareDate
+      );
     }
   };
 
@@ -960,22 +971,30 @@ const CoreQuery = () => {
           setAppliedBreakdowns(coreQueryState.queryOptions?.groupBy, qState);
           qState.showResult = true;
           qState.loading = true;
-          setLoading(true);
           // configActionsOnRunningQuery(false, qState);
           qState.requestQuery = query;
           qState.resultState = { ...qState.resultState, loading: true };
           qState.querySaved = {};
           setCoreQueryState(qState);
+        } else {
+          updateLocalReducer(COMPARISON_DATA_LOADING, null);
         }
 
         const res = await getFunnelData(active_project.id, query, null, true);
 
-        let queryToAdd = getQueryFromHashId();
+        const queryToAdd = getQueryFromHashId();
         if (!isQuerySaved) {
           queryToAdd.query = query;
         }
 
-        createFunnelStateFromResult(queryToAdd, res, dateRange, false);
+        if (isCompareQuery) {
+          updateLocalReducer(
+            COMPARISON_DATA_FETCHED,
+            res.data.result || res.data
+          );
+        } else {
+          createFunnelStateFromResult(queryToAdd, res, dateRange, false);
+        }
       } catch (err) {
         logger.error(err);
         setLoading(false);
@@ -986,6 +1005,26 @@ const CoreQuery = () => {
       coreQueryState,
       coreQueryReducerState.funnelConversionDurationNumber,
       coreQueryReducerState.funnelConversionDurationUnit
+    ]
+  );
+
+  const contextValue = useMemo(
+    () => ({
+      coreQueryState: coreQueryReducerState,
+      runQuery,
+      queryChange,
+      runFunnelQuery,
+      setQueries,
+      updateCoreQueryReducer,
+      resetComparisonData
+    }),
+    [
+      coreQueryState,
+      runQuery,
+      queryChange,
+      runFunnelQuery,
+      updateCoreQueryReducer,
+      resetComparisonData
     ]
   );
 
@@ -1009,15 +1048,14 @@ const CoreQuery = () => {
         />
       );
     }
+    return null;
   };
 
-  const renderSpinner = () => {
-    return (
-      <div className='w-full h-64 flex items-center justify-center'>
-        <Spin size='large' />
-      </div>
-    );
-  };
+  const renderSpinner = () => (
+    <div className='w-full h-64 flex items-center justify-center'>
+      <Spin size='large' />
+    </div>
+  );
 
   const renderSaveQueryComp = () => (
     <SaveQuery
@@ -1058,61 +1096,57 @@ const CoreQuery = () => {
     // handleBreadCrumbClick();
   };
 
-  const renderEmptyHeader = () => {
-    return (
-      <div
-        id='app-header'
-        className={cx('bg-white z-50 flex-col  px-8 w-full', {
-          fixed: true
-        })}
-        style={{
-          borderBottom: true ? '1px solid lightgray' : 'none'
-        }}
-      >
-        <div className='items-center flex justify-between w-full pt-3 pb-3'>
-          <div
-            role='button'
-            tabIndex={0}
-            className='flex items-center cursor-pointer'
+  const renderEmptyHeader = () => (
+    <div
+      id='app-header'
+      className={cx('bg-white z-50 flex-col  px-8 w-full', {
+        fixed: true
+      })}
+      style={{
+        borderBottom: true ? '1px solid lightgray' : 'none'
+      }}
+    >
+      <div className='items-center flex justify-between w-full pt-3 pb-3'>
+        <div
+          role='button'
+          tabIndex={0}
+          className='flex items-center cursor-pointer'
+        >
+          <Button
+            size='large'
+            type='text'
+            onClick={() => {
+              history.push('/');
+            }}
+            icon={<SVG size={32} name='Brand' />}
+          />
+          <Text
+            type='title'
+            level={5}
+            weight='bold'
+            extraClass='m-0 mt-1'
+            lineHeight='small'
           >
-            <Button
-              size='large'
-              type='text'
-              onClick={() => {
-                history.push('/');
-              }}
-              icon={<SVG size={32} name='Brand' />}
-            />
-            <Text
-              type='title'
-              level={5}
-              weight='bold'
-              extraClass='m-0 mt-1'
-              lineHeight='small'
-            >
-              {coreQueryState.querySaved
-                ? `Reports / ${coreQueryState.queryType} / ${coreQueryState.querySaved.name}`
-                : `Reports / ${
-                    coreQueryState.queryType
-                  } / Untitled Analysis${' '}
+            {coreQueryState.querySaved
+              ? `Reports / ${coreQueryState.queryType} / ${coreQueryState.querySaved.name}`
+              : `Reports / ${coreQueryState.queryType} / Untitled Analysis${' '}
             ${moment().format('DD/MM/YYYY')}`}
-            </Text>
-          </div>
+          </Text>
+        </div>
 
-          <div className='flex items-center gap-x-2'>
-            <div className='pr-2 border-r'>{renderSaveQueryComp()}</div>
-            <Button
-              size='large'
-              type='default'
-              onClick={handleCloseDashboardQuery}
-            >
-              Close
-            </Button>
-          </div>
+        <div className='flex items-center gap-x-2'>
+          <div className='pr-2 border-r'>{renderSaveQueryComp()}</div>
+          <Button
+            size='large'
+            type='default'
+            onClick={handleCloseDashboardQuery}
+          >
+            Close
+          </Button>
         </div>
       </div>
-    );
-  };
+    </div>
+  );
 
   const renderAnalysisHeader = () => (
     <AnalysisHeader
@@ -1145,8 +1179,8 @@ const CoreQuery = () => {
     />
   );
 
-  const renderReportContent = () => {
-    return (
+  const renderReportContent = () => (
+    <CoreQueryContext.Provider value={contextValue}>
       <ReportContent
         coreQueryReducerState={coreQueryReducerState}
         breakdownType={coreQueryState.breakdownType}
@@ -1170,8 +1204,8 @@ const CoreQuery = () => {
         }}
         queries={coreQueryState.appliedQueries}
       />
-    );
-  };
+    </CoreQueryContext.Provider>
+  );
 
   const renderMain = () => {
     if (coreQueryState.loading) {
@@ -1210,14 +1244,11 @@ const CoreQuery = () => {
           </div>
         </>
       );
-    } else if (
-      !coreQueryState.showResult &&
-      coreQueryState.resultState.loading
-    ) {
-      return <PageSuspenseLoader />;
-    } else {
-      return null;
     }
+    if (!coreQueryState.showResult && coreQueryState.resultState.loading) {
+      return <PageSuspenseLoader />;
+    }
+    return null;
   };
 
   return renderMain();
