@@ -68,6 +68,7 @@ func GetSlackChannels(accessTokens model.SlackAccessTokens, nextCursor string) (
 	q := request.URL.Query()
 	q.Add("types", "public_channel,private_channel,mpim")
 	q.Add("limit", "2000")
+	q.Add("exclude_archived", "true")
 	if nextCursor != "" {
 		q.Add("cursor", nextCursor)
 	}
