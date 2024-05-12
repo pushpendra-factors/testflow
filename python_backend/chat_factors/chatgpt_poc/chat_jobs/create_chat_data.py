@@ -13,6 +13,8 @@ import pickle
 import io
 import os
 from tornado.log import logging as log
+#sys.path.append('/Users/satyamishra/repos/factors/python_backend/chat_factors/')
+
 
 from chatgpt_poc.chat import embed_prompts
 from chatgpt_poc.data_preparer import prepare_data
