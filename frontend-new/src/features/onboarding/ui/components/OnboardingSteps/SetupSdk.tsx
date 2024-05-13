@@ -14,7 +14,7 @@ import {
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import GtmSteps from 'Views/Settings/ProjectSettings/SDKSettings/InstructionSteps/gtmSteps';
 import ManualSteps from 'Views/Settings/ProjectSettings/SDKSettings/InstructionSteps/manualSteps';
-import ThirdPartySteps from 'Views/Settings/ProjectSettings/SDKSettings/InstructionSteps/thirdpartySteps';
+import ThirdPartySteps from 'Views/Settings/ProjectSettings/SDKSettings/InstructionSteps/thirdPartySteps';
 import StepsPdf from './StepsPdf';
 import { SDKDocumentation, generateCopyText } from '../../../utils';
 import {
