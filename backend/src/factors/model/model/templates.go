@@ -1,7 +1,7 @@
 package model
 
 import (
-	cacheRedis "factors/cache/redis"
+	"factors/cache"
 	U "factors/util"
 	"fmt"
 	"math"
@@ -64,13 +64,13 @@ func (q *TemplateQuery) GetQueryCacheHashString() (string, error) {
 	return queryHash, nil
 }
 
-func (q *TemplateQuery) GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key, error) {
+func (q *TemplateQuery) GetQueryCacheRedisKey(projectID int64) (*cache.Key, error) {
 	hashString, err := q.GetQueryCacheHashString()
 	if err != nil {
 		return nil, err
 	}
 	suffix := fmt.Sprintf("%s:from:%d:to:%d:prev_from:%d:prev_to:%d", hashString, q.From, q.To, q.PrevFrom, q.PrevTo)
-	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
+	return cache.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
 func (q *TemplateQuery) GetQueryCacheExpiry(projectID int64) float64 {
@@ -241,7 +241,7 @@ var TemplateMetricsForAdwordsMap = map[string]bool{
 	ConversionRate:        true,
 }
 
-//validates if the thresholds metric is part of allowed metrics and is not repeated. e.g: [{metric: clicks}, {metric: clicks}] not allowed
+// validates if the thresholds metric is part of allowed metrics and is not repeated. e.g: [{metric: clicks}, {metric: clicks}] not allowed
 func ValidateTemplateThresholds(thresholds []TemplateThreshold) bool {
 	metricsCountMap := make(map[string]int)
 	for _, threshold := range thresholds {

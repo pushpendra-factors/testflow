@@ -2,6 +2,7 @@ package model
 
 import (
 	"encoding/json"
+	"factors/cache"
 	cacheRedis "factors/cache/redis"
 
 	U "factors/util"
@@ -95,10 +96,10 @@ func SetSixSignalCacheResult(projectID int64, userId string, userIP string) {
 	}
 
 }
-func GetSixSignalCacheRedisKey(projectID int64, userId string, userIP string) (*cacheRedis.Key, error) {
+func GetSixSignalCacheRedisKey(projectID int64, userId string, userIP string) (*cache.Key, error) {
 	prefix := "ip:enrichment:sixsignal"
 	suffix := fmt.Sprintf("userId:%s:userIP:%s", userId, userIP)
-	return cacheRedis.NewKey(projectID, prefix, suffix)
+	return cache.NewKey(projectID, prefix, suffix)
 }
 
 func GetSixSignalCacheResult(projectID int64, userId string, userIP string) (bool, int) {
@@ -130,10 +131,10 @@ func GetSixSignalCacheResult(projectID int64, userId string, userIP string) (boo
 }
 
 // GetFactorsDeanonAPICountRedisKey returns the redis key when given projectID and timeZone
-func GetFactorsDeanonAPICountRedisKey(projectID int64, date uint64) (*cacheRedis.Key, error) {
+func GetFactorsDeanonAPICountRedisKey(projectID int64, date uint64) (*cache.Key, error) {
 	prefix := "ip:enrichment:sixsignal"
 	suffix := fmt.Sprintf("%d", date)
-	return cacheRedis.NewKey(projectID, prefix, suffix) //Sample Key: "ip:enrichment:sixsignal:pid:399:20221130"
+	return cache.NewKey(projectID, prefix, suffix) //Sample Key: "ip:enrichment:sixsignal:pid:399:20221130"
 }
 
 // SetFactorsDeanonAPICountResult fetches the count of number of times API has been hit and increases it by 1.
@@ -197,10 +198,10 @@ func GetFactorsDeanonAPICountResult(projectID int64, date uint64) (int, error) {
 }
 
 // GetFactorsDeanonAPITotalHitCountRedisKey returns the redis key when given projectID and timeZone
-func GetFactorsDeanonAPITotalHitCountRedisKey(projectID int64, date uint64) (*cacheRedis.Key, error) {
+func GetFactorsDeanonAPITotalHitCountRedisKey(projectID int64, date uint64) (*cache.Key, error) {
 	prefix := "ip:enrichment:total:sixsignal"
 	suffix := fmt.Sprintf("%d", date)
-	return cacheRedis.NewKey(projectID, prefix, suffix) //Sample Key: "ip:enrichment:total:sixsignal:pid:399:20221130"
+	return cache.NewKey(projectID, prefix, suffix) //Sample Key: "ip:enrichment:total:sixsignal:pid:399:20221130"
 }
 
 // GetFactorsDeanonAPITotalHitCountResult returns the total count of number of times 6Signal API has been called when projectID and timeZone is given
@@ -262,10 +263,10 @@ func SetFactorsDeanonAPITotalHitCountResult(projectID int64, timeZone U.TimeZone
 	}
 }
 
-func GetFactorsDeanonMonthlyUniqueEnrichmentKey(projectId int64, monthYear string) (*cacheRedis.Key, error) {
+func GetFactorsDeanonMonthlyUniqueEnrichmentKey(projectId int64, monthYear string) (*cache.Key, error) {
 	prefix := "unique:enrichment:monthly:sixsignal"
 	suffix := monthYear
-	return cacheRedis.NewKey(projectId, prefix, suffix) //Sample Key: "unique:enrichment:monthly:sixsignal:pid:399:May2023"
+	return cache.NewKey(projectId, prefix, suffix) //Sample Key: "unique:enrichment:monthly:sixsignal:pid:399:May2023"
 }
 
 func GetFactorsDeanonMonthlyUniqueEnrichmentCount(projectId int64, monthYear string) (int64, error) {
@@ -299,10 +300,10 @@ func SetFactorsDeanonMonthlyUniqueEnrichmentCount(projectId int64, value string,
 	return err
 }
 
-func GetFactorsDeanonAlertRedisKey() (*cacheRedis.Key, error) {
+func GetFactorsDeanonAlertRedisKey() (*cache.Key, error) {
 	prefix := "factorsDeanon:monitoring"
 	agent := "internal"
-	return cacheRedis.NewKeyWithAgentUID(agent, prefix, "")
+	return cache.NewKeyWithAgentUID(agent, prefix, "")
 }
 
 func GetFactorsDeanonAlertRedisResult() (int64, error) {

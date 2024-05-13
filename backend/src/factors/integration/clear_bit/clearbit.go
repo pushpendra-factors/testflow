@@ -2,6 +2,7 @@ package clear_bit
 
 import (
 	"encoding/json"
+	"factors/cache"
 	cacheRedis "factors/cache/redis"
 	"fmt"
 	"net/http"
@@ -37,10 +38,10 @@ func SetClearBitCacheResult(projectID int64, userId string, userIP string) {
 	}
 
 }
-func GetClearbitCacheRedisKey(projectID int64, userId string, userIP string) (*cacheRedis.Key, error) {
+func GetClearbitCacheRedisKey(projectID int64, userId string, userIP string) (*cache.Key, error) {
 	prefix := "ip:enrichment:clearbit"
 	suffix := fmt.Sprintf("userId:%v:userIP:%v", userId, userIP)
-	return cacheRedis.NewKey(projectID, prefix, suffix)
+	return cache.NewKey(projectID, prefix, suffix)
 }
 
 func GetClearbitCacheResult(projectID int64, userId string, userIP string) (bool, int) {

@@ -3,6 +3,8 @@ package model
 import (
 	"encoding/json"
 	"errors"
+	"factors/cache"
+	pCache "factors/cache/persistent"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	U "factors/util"
@@ -217,7 +219,7 @@ type BaseQuery interface {
 
 	// Query cache related helper methods.
 	GetQueryCacheHashString() (string, error)
-	GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key, error)
+	GetQueryCacheRedisKey(projectID int64) (*cache.Key, error)
 	GetQueryCacheExpiry(projectID int64) float64
 	TransformDateTypeFilters() error
 	ConvertAllDatesFromTimezone1ToTimezone2(currentTimezone, nextTimezone string) error
@@ -349,13 +351,13 @@ func (q *Query) GetQueryCacheHashString() (string, error) {
 	return queryHash, nil
 }
 
-func (q *Query) GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key, error) {
+func (q *Query) GetQueryCacheRedisKey(projectID int64) (*cache.Key, error) {
 	hashString, err := q.GetQueryCacheHashString()
 	if err != nil {
 		return nil, err
 	}
 	suffix := getQueryCacheRedisKeySuffix(hashString, q.From, q.To, U.TimeZoneString(q.Timezone))
-	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
+	return cache.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
 func (q *Query) GetQueryCacheExpiry(projectID int64) float64 {
@@ -655,13 +657,13 @@ func (q *QueryGroup) GetQueryCacheHashString() (string, error) {
 	return queryHash, nil
 }
 
-func (q *QueryGroup) GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key, error) {
+func (q *QueryGroup) GetQueryCacheRedisKey(projectID int64) (*cache.Key, error) {
 	hashString, err := q.GetQueryCacheHashString()
 	if err != nil {
 		return nil, err
 	}
 	suffix := getQueryCacheRedisKeySuffix(hashString, q.Queries[0].From, q.Queries[0].To, U.TimeZoneString(q.Queries[0].Timezone))
-	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
+	return cache.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
 func (q *QueryGroup) GetQueryCacheExpiry(projectID int64) float64 {
@@ -831,7 +833,7 @@ func GetQueryResultFromCache(projectID int64, query BaseQuery,
 	}
 
 	// Using persistent redis for this.
-	value, exists, err := cacheRedis.GetIfExistsPersistent(cacheKey)
+	value, exists, err := pCache.GetIfExists(cacheKey, true)
 	if err != nil {
 		logCtx.WithError(err).Error("Error getting value from redis")
 		return queryResult, http.StatusInternalServerError
@@ -919,7 +921,7 @@ func SetQueryCachePlaceholder(projectID int64, query BaseQuery) {
 		return
 	}
 
-	cacheRedis.SetPersistent(cacheKey, QueryCacheInProgressPlaceholder, QueryCachePlaceholderExpirySeconds)
+	pCache.Set(cacheKey, QueryCacheInProgressPlaceholder, QueryCachePlaceholderExpirySeconds, true)
 }
 
 type CacheMeta struct {
@@ -956,7 +958,7 @@ func SetQueryCacheResult(projectID int64, query BaseQuery, queryResult interface
 	if err != nil {
 		return
 	}
-	cacheRedis.SetPersistent(cacheKey, string(queryResultString), query.GetQueryCacheExpiry(projectID))
+	pCache.Set(cacheKey, string(queryResultString), query.GetQueryCacheExpiry(projectID), true)
 }
 
 // DeleteQueryCacheKey Delete a query cache key on error.

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"factors/cache"
 	cacheRedis "factors/cache/redis"
 	v1 "factors/handler/v1"
 	mid "factors/middleware"
@@ -388,9 +389,9 @@ func SetSegmentCachePlaceholder(projectID int64, segmentID, widgetGroup string, 
 	cacheRedis.SetPersistent(cacheKey, model.QueryCacheInProgressPlaceholder, model.QueryCachePlaceholderExpirySeconds)
 }
 
-func getWidgetGroupMarkerKey(projectID int64, widgetGroup string) (*cacheRedis.Key, error) {
+func getWidgetGroupMarkerKey(projectID int64, widgetGroup string) (*cache.Key, error) {
 	suffix := fmt.Sprintf("widgetGroup:%s", widgetGroup)
-	return cacheRedis.NewKey(projectID, model.WidgetGroupMarker, suffix)
+	return cache.NewKey(projectID, model.WidgetGroupMarker, suffix)
 }
 
 // Set when edit of widget group query is changed.
@@ -432,9 +433,9 @@ func SetSegmentCacheResult(projectID int64, segmentID string, widgetGroup string
 	cacheRedis.SetPersistent(cacheKey, string(queryResultString), FifteenMinutesTime)
 }
 
-func getSegmentWidgetGroupCacheKey(projectID int64, segmentID string, widgetGroup string, fr, to int64) (*cacheRedis.Key, error) {
+func getSegmentWidgetGroupCacheKey(projectID int64, segmentID string, widgetGroup string, fr, to int64) (*cache.Key, error) {
 	suffix := fmt.Sprintf("segment:%s:widgetGroup:%s:from:%d:to:%d", segmentID, widgetGroup, fr, to)
-	return cacheRedis.NewKey(projectID, model.QueryCacheKeyForSegmentAnalytics, suffix)
+	return cache.NewKey(projectID, model.QueryCacheKeyForSegmentAnalytics, suffix)
 }
 
 // Doesnt have any dependencies to be checked when deleting segment analysis.

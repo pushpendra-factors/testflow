@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"factors/cache"
 	cacheRedis "factors/cache/redis"
 	"factors/config"
 	"factors/util"
@@ -282,54 +283,54 @@ func GetIdentifiedUserPropertiesAsJsonb(customerUserId string) (*postgres.Jsonb,
 }
 
 // Today's cache keys
-func GetUsersCachedCacheKey(projectId int64, dateKey string) (*cacheRedis.Key, error) {
+func GetUsersCachedCacheKey(projectId int64, dateKey string) (*cache.Key, error) {
 	prefix := "US:LIST"
-	return cacheRedis.NewKey(projectId, prefix, dateKey)
+	return cache.NewKey(projectId, prefix, dateKey)
 }
 
-func GetUserPropertiesCategoryByProjectCacheKey(projectId int64, property string, category string, dateKey string) (*cacheRedis.Key, error) {
+func GetUserPropertiesCategoryByProjectCacheKey(projectId int64, property string, category string, dateKey string) (*cache.Key, error) {
 	prefix := "US:PC"
-	return cacheRedis.NewKey(projectId, prefix, fmt.Sprintf("%s:%s:%s", dateKey, category, property))
+	return cache.NewKey(projectId, prefix, fmt.Sprintf("%s:%s:%s", dateKey, category, property))
 
 }
 
-func GetValuesByUserPropertyCacheKey(projectId int64, property_name string, value string, dateKey string) (*cacheRedis.Key, error) {
+func GetValuesByUserPropertyCacheKey(projectId int64, property_name string, value string, dateKey string) (*cache.Key, error) {
 	prefix := "US:PV"
-	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s", prefix, property_name), fmt.Sprintf("%s:%s", dateKey, value))
+	return cache.NewKey(projectId, fmt.Sprintf("%s:%s", prefix, property_name), fmt.Sprintf("%s:%s", dateKey, value))
 }
 
 // sorted sets
-func GetUserPropertiesCategoryByProjectCacheKeySortedSet(projectId int64, dateKey string) (*cacheRedis.Key, error) {
+func GetUserPropertiesCategoryByProjectCacheKeySortedSet(projectId int64, dateKey string) (*cache.Key, error) {
 	prefix := "SS:US:PC"
-	return cacheRedis.NewKey(projectId, prefix, fmt.Sprintf("%s", dateKey))
+	return cache.NewKey(projectId, prefix, fmt.Sprintf("%s", dateKey))
 
 }
 
-func GetValuesByUserPropertyCacheKeySortedSet(projectId int64, dateKey string) (*cacheRedis.Key, error) {
+func GetValuesByUserPropertyCacheKeySortedSet(projectId int64, dateKey string) (*cache.Key, error) {
 	prefix := "SS:US:PV"
-	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s", prefix), fmt.Sprintf("%s", dateKey))
+	return cache.NewKey(projectId, fmt.Sprintf("%s", prefix), fmt.Sprintf("%s", dateKey))
 }
 
 // Rollup cache keys
-func GetUserPropertiesCategoryByProjectRollUpCacheKey(projectId int64, dateKey string) (*cacheRedis.Key, error) {
+func GetUserPropertiesCategoryByProjectRollUpCacheKey(projectId int64, dateKey string) (*cache.Key, error) {
 	prefix := "RollUp:US:PC"
-	return cacheRedis.NewKey(projectId, prefix, dateKey)
+	return cache.NewKey(projectId, prefix, dateKey)
 }
 
-func GetValuesByUserPropertyRollUpCacheKey(projectId int64, property_name string, dateKey string) (*cacheRedis.Key, error) {
+func GetValuesByUserPropertyRollUpCacheKey(projectId int64, property_name string, dateKey string) (*cache.Key, error) {
 	prefix := "RollUp:US:PV"
-	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s", prefix, property_name), dateKey)
+	return cache.NewKey(projectId, fmt.Sprintf("%s:%s", prefix, property_name), dateKey)
 }
 
 // Today's cache keys count
-func GetUserPropertiesCategoryByProjectCountCacheKey(projectId int64, dateKey string) (*cacheRedis.Key, error) {
+func GetUserPropertiesCategoryByProjectCountCacheKey(projectId int64, dateKey string) (*cache.Key, error) {
 	prefix := "C:US:PC"
-	return cacheRedis.NewKeyWithAllProjectsSupport(projectId, prefix, dateKey)
+	return cache.NewKeyWithAllProjectsSupport(projectId, prefix, dateKey)
 }
 
-func GetValuesByUserPropertyCountCacheKey(projectId int64, dateKey string) (*cacheRedis.Key, error) {
+func GetValuesByUserPropertyCountCacheKey(projectId int64, dateKey string) (*cache.Key, error) {
 	prefix := "C:US:PV"
-	return cacheRedis.NewKeyWithAllProjectsSupport(projectId, prefix, dateKey)
+	return cache.NewKeyWithAllProjectsSupport(projectId, prefix, dateKey)
 }
 
 func GetUpdatedPhoneNoFromFormSubmit(formPropertyPhone, userPropertyPhone string) (string, error) {
@@ -658,8 +659,8 @@ func UpdateUserPropertiesIdentifierMetaObject(userProperties *postgres.Jsonb, me
 	return nil
 }
 
-func getCacheKeyForUserIDByAMPUserID(projectID int64, ampUserID string) (*cacheRedis.Key, error) {
-	return cacheRedis.NewKey(projectID, "users_ampid_id", ampUserID)
+func getCacheKeyForUserIDByAMPUserID(projectID int64, ampUserID string) (*cache.Key, error) {
+	return cache.NewKey(projectID, "users_ampid_id", ampUserID)
 }
 
 func GetCacheUserIDByAMPUserID(projectID int64, ampUserID string) (string, int) {

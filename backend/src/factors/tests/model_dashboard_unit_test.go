@@ -2,7 +2,8 @@ package tests
 
 import (
 	"encoding/json"
-	"factors/cache/redis"
+	"factors/cache"
+	pCache "factors/cache/persistent"
 	"strconv"
 	"strings"
 
@@ -1519,7 +1520,7 @@ func TestCacheDashboardUnitsForLastComputed1(t *testing.T) {
 	mondayEnd := sundayEnd + U.SECONDS_IN_A_DAY
 	tuesdayEnd := mondayEnd + U.SECONDS_IN_A_DAY
 
-	cache := []struct {
+	caches := []struct {
 		name      string
 		args      args
 		ProjectId int64
@@ -1538,18 +1539,18 @@ func TestCacheDashboardUnitsForLastComputed1(t *testing.T) {
 		{"cacheDatePresetCurrentWeek3", args{preset: U.DateRangePresetCurrentWeek, from: sundayStart, to: tuesdayEnd}, 100},
 		{"cacheDatePresetCurrentWeek4", args{preset: U.DateRangePresetCurrentWeek, from: thisWeekStart, to: thisWeekEnd}, 100},
 	}
-	var key *redis.Key
-	for _, tt := range cache {
+	var key *cache.Key
+	for _, tt := range caches {
 		prefix := fmt.Sprintf("dashboard:query")
 		suffix := fmt.Sprintf("did:%d:duid:%d:preset:%s:from:%d:to:%d", 100, 100, tt.args.preset, tt.args.from, tt.args.to)
 
-		key = &redis.Key{
+		key = &cache.Key{
 			ProjectID: tt.ProjectId,
 			Prefix:    prefix,
 			Suffix:    suffix,
 		}
 
-		redis.SetPersistent(key, "1", 8400)
+		pCache.Set(key, "1", 8400, true)
 	}
 
 	tests := []struct {

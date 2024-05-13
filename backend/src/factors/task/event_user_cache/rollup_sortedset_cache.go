@@ -2,6 +2,8 @@ package event_user_cache
 
 import (
 	"encoding/json"
+	"factors/cache"
+	pCache "factors/cache/persistent"
 	cacheRedis "factors/cache/redis"
 	"factors/config"
 	"factors/model/model"
@@ -79,7 +81,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 		// U.CachePropertyValueWithTimestamp contains map of multiple values of a specific day.
 		eventNameAndPropertyKeysCacheByDate := make(map[string]map[string][]U.CachePropertyValueWithTimestamp)
 
-		rollupsAddedToAggregate := make([]*cacheRedis.Key, 0)
+		rollupsAddedToAggregate := make([]*cache.Key, 0)
 		for i := 0; i <= rollupLookback; i++ {
 			isCurrentDay = i == 0
 			currentTimeDatePart := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
@@ -157,7 +159,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 					logCtx.WithError(err).Error("Failed to marshall event names")
 					continue
 				}
-				err = cacheRedis.SetPersistent(eventNamesKey, string(enEventCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
+				err = pCache.Set(eventNamesKey, string(enEventCache), U.EVENT_USER_CACHE_EXPIRY_SECS, true)
 				if err != nil {
 					logCtx.WithError(err).Error("Failed to set events rollup cache")
 				}
@@ -175,7 +177,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 					}
 					propertiesMap[eventName][property] = count
 				}
-				eventPropertiesToCache := make(map[*cacheRedis.Key]string)
+				eventPropertiesToCache := make(map[*cache.Key]string)
 				for eventName, properties := range propertiesMap {
 					if len(properties) > 0 {
 						eventPropertiesKey, _ := model.GetPropertiesByEventCategoryRollUpCacheKey(projectID, eventName, currentTimeDatePart)
@@ -189,7 +191,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 					}
 				}
 				if len(eventPropertiesToCache) > 0 {
-					err = cacheRedis.SetPersistentBatch(eventPropertiesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
+					err = pCache.SetBatch(eventPropertiesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS, true)
 					if err != nil {
 						logCtx.WithError(err).Error("Failed to set cache")
 					}
@@ -206,7 +208,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 						logCtx.WithError(err).Error("Failed to marshall user properties")
 						continue
 					}
-					err = cacheRedis.SetPersistent(userPropertiesKey, string(usPropertyCache), U.EVENT_USER_CACHE_EXPIRY_SECS)
+					err = pCache.Set(userPropertiesKey, string(usPropertyCache), U.EVENT_USER_CACHE_EXPIRY_SECS, true)
 					if err != nil {
 						logCtx.WithError(err).Error("Failed to set cache user properties rollup.")
 					}
@@ -230,7 +232,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 					}
 					propertyValues[eventName][property][value] = count
 				}
-				eventPropertyValuesToCache := make(map[*cacheRedis.Key]string)
+				eventPropertyValuesToCache := make(map[*cache.Key]string)
 				for eventName, propertyValue := range propertyValues {
 					if _, isExists := eventNameAndPropertyKeysCacheByDate[eventName]; config.IsAggrEventPropertyValuesCacheEnabled(projectID) && !isExists {
 						eventNameAndPropertyKeysCacheByDate[eventName] = make(map[string][]U.CachePropertyValueWithTimestamp)
@@ -262,7 +264,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 					}
 				}
 				if len(eventPropertyValuesToCache) > 0 {
-					err = cacheRedis.SetPersistentBatch(eventPropertyValuesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
+					err = pCache.SetBatch(eventPropertyValuesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS, true)
 					if err != nil {
 						logCtx.WithError(err).Error("Failed to set cache event property values rollup")
 					}
@@ -282,7 +284,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 					userPropertyValues[property][value] = count
 
 				}
-				userPropertyValuesToCache := make(map[*cacheRedis.Key]string)
+				userPropertyValuesToCache := make(map[*cache.Key]string)
 				for property, values := range userPropertyValues {
 					if len(values) > 0 {
 						userPropertyValuesKey, _ := model.GetValuesByUserPropertyRollUpCacheKey(projectID, property, currentTimeDatePart)
@@ -296,7 +298,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 					}
 				}
 				if len(userPropertyValuesToCache) > 0 {
-					err = cacheRedis.SetPersistentBatch(userPropertyValuesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
+					err = pCache.SetBatch(userPropertyValuesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS, true)
 					if err != nil {
 						logCtx.WithError(err).Error("Failed to set cache user property values.")
 					}
@@ -357,7 +359,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 					}
 					groupPropertiesMap[groupName][property] = count
 				}
-				groupPropertiesToCache := make(map[*cacheRedis.Key]string)
+				groupPropertiesToCache := make(map[*cache.Key]string)
 				for groupName, properties := range groupPropertiesMap {
 					if len(properties) > 0 {
 						groupPropertiesKey, _ := model.GetPropertiesByGroupCategoryRollUpCacheKey(projectID, groupName, currentTimeDatePart)
@@ -371,7 +373,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 					}
 				}
 				if len(groupPropertiesToCache) > 0 {
-					err = cacheRedis.SetPersistentBatch(groupPropertiesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
+					err = pCache.SetBatch(groupPropertiesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS, true)
 					if err != nil {
 						logCtx.WithError(err).Error("Failed to set cache group properties rollup in batch.")
 					}
@@ -395,7 +397,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 					}
 					groupPropertyValues[groupName][property][value] = count
 				}
-				groupPropertyValuesToCache := make(map[*cacheRedis.Key]string)
+				groupPropertyValuesToCache := make(map[*cache.Key]string)
 				for groupName, propertyValue := range groupPropertyValues {
 					for property, values := range propertyValue {
 						if len(values) > 0 {
@@ -411,7 +413,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 					}
 				}
 				if len(groupPropertyValuesToCache) > 0 {
-					err = cacheRedis.SetPersistentBatch(groupPropertyValuesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS)
+					err = pCache.SetBatch(groupPropertyValuesToCache, U.EVENT_USER_CACHE_EXPIRY_SECS, true)
 					if err != nil {
 						logCtx.WithError(err).Error("Failed to set cache group property values rollup in batch.")
 					}
@@ -441,7 +443,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 
 		// Run through event property values rollups of all recent dates and
 		// add to aggregated cache excluding the current date.
-		eventPropertyValuesAggregateCache := make(map[*cacheRedis.Key]string)
+		eventPropertyValuesAggregateCache := make(map[*cache.Key]string)
 		for eventName, propertyWithValuesByDate := range eventNameAndPropertyKeysCacheByDate {
 			for property, valuesByDate := range propertyWithValuesByDate {
 				logCtx = logCtx.WithField("property", property).WithField("event_name", eventName)
@@ -450,7 +452,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 					projectID, eventName, property)
 
 				// Transform aggregate to tuple to allow aggregation with new rollups.
-				existingAggCache, aggCacheExists, err := cacheRedis.GetIfExistsPersistent(eventPropertyValuesAggCacheKey)
+				existingAggCache, aggCacheExists, err := pCache.GetIfExists(eventPropertyValuesAggCacheKey, true)
 				if err != nil {
 					logCtx.WithError(err).Error("Failed to get existing values cache aggregate.")
 					continue
@@ -492,7 +494,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 		}
 
 		if len(eventPropertyValuesAggregateCache) > 0 {
-			err := cacheRedis.SetPersistentBatch(eventPropertyValuesAggregateCache, 0)
+			err := pCache.SetBatch(eventPropertyValuesAggregateCache, 0, true)
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to set aggregate cache for event properties.")
 				continue

@@ -2,7 +2,8 @@ package model
 
 import (
 	"encoding/json"
-	cacheRedis "factors/cache/redis"
+	"factors/cache"
+	pCache "factors/cache/persistent"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -83,7 +84,7 @@ var DefaultWebAnalyticsQueries = map[string]string{
 }
 
 func getWebAnalyticsQueryResultCacheKey(projectID int64, dashboardID int64,
-	from, to int64, timezoneString U.TimeZoneString) (*cacheRedis.Key, error) {
+	from, to int64, timezoneString U.TimeZoneString) (*cache.Key, error) {
 
 	prefix := "dashboard:query:web"
 	var suffix string
@@ -96,7 +97,7 @@ func getWebAnalyticsQueryResultCacheKey(projectID int64, dashboardID int64,
 	} else {
 		suffix = fmt.Sprintf("did:%d:from:%d:to:%d", dashboardID, from, to)
 	}
-	return cacheRedis.NewKey(projectID, prefix, suffix)
+	return cache.NewKey(projectID, prefix, suffix)
 }
 
 var SkippableWindows = map[string]int64{
@@ -229,13 +230,13 @@ func (q *DashboardUnitsWebAnalyticsQuery) GetQueryCacheHashString() (string, err
 	return queryHash, nil
 }
 
-func (q *DashboardUnitsWebAnalyticsQuery) GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key, error) {
+func (q *DashboardUnitsWebAnalyticsQuery) GetQueryCacheRedisKey(projectID int64) (*cache.Key, error) {
 	hashString, err := q.GetQueryCacheHashString()
 	if err != nil {
 		return nil, err
 	}
 	suffix := getQueryCacheRedisKeySuffix(hashString, q.From, q.To, U.TimeZoneString(q.Timezone))
-	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
+	return cache.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
 func (q *DashboardUnitsWebAnalyticsQuery) GetQueryCacheExpiry(projectID int64) float64 {
@@ -285,7 +286,7 @@ func GetCacheResultForWebAnalyticsDashboard(projectID int64, dashboardID int64,
 		return cacheResult, http.StatusInternalServerError
 	}
 
-	result, err := cacheRedis.GetPersistent(cacheKey)
+	result, err := pCache.Get(cacheKey, true)
 	if err == redis.ErrNil {
 		return cacheResult, http.StatusNotFound
 	} else if err != nil {
@@ -350,7 +351,7 @@ func SetCacheResultForWebAnalyticsDashboard(result *WebAnalyticsQueryResult,
 		return
 	}
 
-	err = cacheRedis.SetPersistent(cacheKey, string(dashboardCacheResultJSON), U.GetDashboardCacheResultExpiryInSeconds(from, to, timezoneString))
+	err = pCache.Set(cacheKey, string(dashboardCacheResultJSON), U.GetDashboardCacheResultExpiryInSeconds(from, to, timezoneString), true)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to set cache for channel query")
 		return

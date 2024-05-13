@@ -79,7 +79,7 @@ func main() {
 
 // NOTE: DO NOT MOVE THIS TO STORE AS THIS CANNOT BE USED AS PRODUCTION CODE. ONLY FOR MIGRATION ON POSTGRES.
 func createDefaultBillingAccount(db *gorm.DB, agent model.Agent) error {
-	billingAcc := &model.BillingAccount{PlanID: model.FreePlanID, AgentUUID: agent.UUID}
+	billingAcc := &model.BillingAccount{AgentUUID: agent.UUID}
 	return db.Create(billingAcc).Error
 }
 

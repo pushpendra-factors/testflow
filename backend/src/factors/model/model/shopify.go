@@ -4,15 +4,16 @@ import (
 	"fmt"
 	"net/http"
 
+	"factors/cache"
 	cacheRedis "factors/cache/redis"
 
 	log "github.com/sirupsen/logrus"
 )
 
-func getShopifyCartTokenCacheKey(projectId int64, cartToken string) (*cacheRedis.Key, error) {
+func getShopifyCartTokenCacheKey(projectId int64, cartToken string) (*cache.Key, error) {
 	prefix := "shp:ctkn"
 	suffix := cartToken
-	return cacheRedis.NewKey(projectId, prefix, suffix)
+	return cache.NewKey(projectId, prefix, suffix)
 }
 
 func SetCacheShopifyCartTokenToUserId(projectId int64, cartToken string, userId string) int {

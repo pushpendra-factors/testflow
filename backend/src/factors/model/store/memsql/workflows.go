@@ -1,6 +1,7 @@
 package memsql
 
 import (
+	"factors/cache"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	E "factors/event_match"
@@ -638,7 +639,7 @@ func (store *MemSQL) CacheWorkflowToBeSent(workflow *model.Workflow, event *mode
 	return true
 }
 
-func (store *MemSQL) AddWorkflowToCache(workflow *model.Workflow, msgProps *U.PropertiesMap, key *cacheRedis.Key) (int, error) {
+func (store *MemSQL) AddWorkflowToCache(workflow *model.Workflow, msgProps *U.PropertiesMap, key *cache.Key) (int, error) {
 	logFields := log.Fields{
 		"workflow":  *workflow,
 		"cache_key": key,

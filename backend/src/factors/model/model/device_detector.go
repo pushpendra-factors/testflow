@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/base64"
 	"encoding/json"
+	"factors/cache"
 	cacheRedis "factors/cache/redis"
 	"net/http"
 	"time"
@@ -36,10 +37,10 @@ type DeviceInfo struct {
 	DeviceModel string     `json:"device_model"`
 }
 
-func GetDeviceInfoCacheRedisKey(userAgent string) (*cacheRedis.Key, error) {
+func GetDeviceInfoCacheRedisKey(userAgent string) (*cache.Key, error) {
 	projectUid := base64.StdEncoding.EncodeToString([]byte(userAgent))
 	prefix := "dd"
-	return cacheRedis.NewKeyWithProjectUID(projectUid, prefix, "")
+	return cache.NewKeyWithProjectUID(projectUid, prefix, "")
 }
 
 func GetCacheResultByUserAgent(userAgent string) (*DeviceInfo, int, error) {

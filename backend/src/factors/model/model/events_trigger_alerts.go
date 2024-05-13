@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/json"
 	"errors"
+	"factors/cache"
 	cacheRedis "factors/cache/redis"
 	"fmt"
 	"strings"
@@ -189,7 +190,7 @@ var TeamsErrorStates = map[string]string{
 	"Too Many Requests": "Too many messages sent in a short period. Adjust rules under Advanced settings to control the number of alerts sent.",
 }
 
-func SetCacheForEventTriggerAlert(key *cacheRedis.Key, cacheETA *CachedEventTriggerAlert) error {
+func SetCacheForEventTriggerAlert(key *cache.Key, cacheETA *CachedEventTriggerAlert) error {
 	if cacheETA == nil {
 		log.Error("Nil cache event on setCacheUserLastEventTriggerAlert")
 		return errors.New("nil cache event")
@@ -209,12 +210,12 @@ func SetCacheForEventTriggerAlert(key *cacheRedis.Key, cacheETA *CachedEventTrig
 	return err
 }
 
-func GetEventTriggerAlertCacheKey(projectId, timestamp int64, alertID string) (*cacheRedis.Key, error) {
+func GetEventTriggerAlertCacheKey(projectId, timestamp int64, alertID string) (*cache.Key, error) {
 
 	suffix := fmt.Sprintf("%s:%d", alertID, timestamp)
 	prefix := prefixNameforAlerts
 
-	key, err := cacheRedis.NewKey(projectId, prefix, suffix)
+	key, err := cache.NewKey(projectId, prefix, suffix)
 	if err != nil || key == nil {
 		log.WithError(err).Error("cacheKey NewKey function failure")
 		return nil, err
@@ -223,12 +224,12 @@ func GetEventTriggerAlertCacheKey(projectId, timestamp int64, alertID string) (*
 	return key, err
 }
 
-func GetEventTriggerAlertCacheCounterKey(projectId int64, alertId, date string) (*cacheRedis.Key, error) {
+func GetEventTriggerAlertCacheCounterKey(projectId int64, alertId, date string) (*cache.Key, error) {
 
 	suffix := fmt.Sprintf("%s:%s", alertId, date)
 	prefix := fmt.Sprintf("%s:%s", prefixNameforAlerts, counterIndex)
 
-	key, err := cacheRedis.NewKey(projectId, prefix, suffix)
+	key, err := cache.NewKey(projectId, prefix, suffix)
 	if err != nil || key == nil {
 		log.WithError(err).Error("cacheKey NewKey function failure")
 		return nil, err
