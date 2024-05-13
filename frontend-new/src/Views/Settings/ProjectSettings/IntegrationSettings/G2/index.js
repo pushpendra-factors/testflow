@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { connect } from 'react-redux';
 import { fetchProjectSettings, udpateProjectSettings } from 'Reducers/global';
 import { Row, Col, Modal, Input, Form, Button, message, Avatar } from 'antd';
@@ -13,8 +12,6 @@ const G2Intergration = ({
   udpateProjectSettings,
   activeProject,
   currentProjectSettings,
-  setIsActive,
-  kbLink = false,
   currentAgent
 }) => {
   const [form] = Form.useForm();
@@ -22,16 +19,10 @@ const G2Intergration = ({
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
-  useEffect(() => {
-    if (currentProjectSettings?.int_g2) {
-      setIsActive(true);
-    }
-  }, [currentProjectSettings]);
-
   const onFinish = (values) => {
     setLoading(true);
 
-    //Factors INTEGRATION tracking
+    // Factors INTEGRATION tracking
     factorsai.track('INTEGRATION', {
       name: 'G2',
       activeProjectID: activeProject.id
@@ -47,14 +38,12 @@ const G2Intergration = ({
         setTimeout(() => {
           message.success('G2 integration successful');
         }, 500);
-        setIsActive(true);
         sendSlackNotification(currentAgent.email, activeProject.name, 'G2');
       })
       .catch((err) => {
         setShowForm(false);
         setLoading(false);
         seterrorInfo(err?.error);
-        setIsActive(false);
       });
   };
 
@@ -77,7 +66,6 @@ const G2Intergration = ({
             setTimeout(() => {
               message.success('G2 integration disconnected!');
             }, 500);
-            setIsActive(false);
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);
@@ -98,165 +86,95 @@ const G2Intergration = ({
     seterrorInfo(null);
   };
 
+  useEffect(() => {
+    if (currentProjectSettings?.int_g2) {
+      form.setFieldsValue({
+        api_key: currentProjectSettings.int_g2_api_key || ''
+      });
+    }
+  }, [currentProjectSettings]);
+
+  const isG2Enabled = Boolean(currentProjectSettings?.int_g2);
+
   return (
-    <>
-      <ErrorBoundary
-        fallback={
-          <FaErrorComp subtitle={'Facing issues with G2 integrations'} />
-        }
-        onError={FaErrorLog}
+    <ErrorBoundary
+      fallback={<FaErrorComp subtitle='Facing issues with G2 integrations' />}
+      onError={FaErrorLog}
+    >
+      <Modal
+        visible={showForm}
+        zIndex={1020}
+        onCancel={onReset}
+        afterClose={() => setShowForm(false)}
+        className='fa-modal--regular fa-modal--slideInDown'
+        centered
+        footer={null}
+        closable={false}
+        transitionName=''
+        maskTransitionName=''
       >
-        <Modal
-          visible={showForm}
-          zIndex={1020}
-          onCancel={onReset}
-          afterClose={() => setShowForm(false)}
-          className={'fa-modal--regular fa-modal--slideInDown'}
-          centered={true}
-          footer={null}
-          closable={false}
-          transitionName=''
-          maskTransitionName=''
+        <div className='p-4' />
+      </Modal>
+      <div className='mt-4'>
+        <Form
+          form={form}
+          onFinish={onFinish}
+          onChange={onChange}
+          style={{ width: 320 }}
         >
-          <div className={'p-4'}>
-            <Form
-              form={form}
-              onFinish={onFinish}
-              className={'w-full'}
-              onChange={onChange}
-            >
-              <Row>
-                <Col span={24}>
-                  <Avatar
-                    size={40}
-                    shape={'square'}
-                    icon={<SVG name={'g2crowd'} size={40} />}
-                    style={{ backgroundColor: '#F5F6F8' }}
-                  />
-                </Col>
-              </Row>
-              <Row>
-                <Col span={24}>
-                  <Text
-                    type={'title'}
-                    level={6}
-                    weight={'bold'}
-                    extraClass={'m-0 mt-2'}
-                  >
-                    Integrate with G2
+          <Row>
+            <Col span={24}>
+              <Text
+                type='title'
+                level={7}
+                color='character-primary'
+                extraClass='m-0 mb-4'
+              >
+                G2 API Key
+              </Text>
+              <Form.Item
+                name='api_key'
+                rules={[
+                  {
+                    required: true,
+                    message: 'Please input your G2 API Key'
+                  }
+                ]}
+              >
+                <Input
+                  disabled={isG2Enabled}
+                  className='fa-input w-full'
+                  placeholder='G2 API Key'
+                  style={{ background: isG2Enabled ? '#fff' : '' }}
+                />
+              </Form.Item>
+            </Col>
+            {errorInfo && (
+              <Col span={24}>
+                <div className='flex flex-col justify-center items-center mt-1'>
+                  <Text type='title' color='red' size='7' className='m-0'>
+                    {errorInfo}
                   </Text>
-                  <Text
-                    type={'title'}
-                    level={7}
-                    color={'grey'}
-                    extraClass={'m-0 mt-2'}
-                  >
-                    Enter your G2 API key to sync intent data from your G2
-                    account
-                  </Text>
-                </Col>
-              </Row>
-              <Row className={'mt-6'}>
-                <Col span={24}>
-                  <Form.Item
-                    name='api_key'
-                    rules={[
-                      {
-                        required: true,
-                        message: 'Please input your G2 API Key'
-                      }
-                    ]}
-                  >
-                    <Input
-                      size='large'
-                      className={'fa-input w-full'}
-                      placeholder='G2 API Key'
-                    />
-                  </Form.Item>
-                </Col>
-                {errorInfo && (
-                  <Col span={24}>
-                    <div
-                      className={
-                        'flex flex-col justify-center items-center mt-1'
-                      }
-                    >
-                      <Text
-                        type={'title'}
-                        color={'red'}
-                        size={'7'}
-                        className={'m-0'}
-                      >
-                        {errorInfo}
-                      </Text>
-                    </div>
-                  </Col>
-                )}
-              </Row>
-              <Row className={'mt-6'}>
-                <Col span={24}>
-                  <div className={'flex justify-end'}>
-                    {/* <Button disabled={loading} size={'large'} onClick={onReset} className={'mr-2'}> Cancel </Button>  */}
-                    <Button
-                      loading={loading}
-                      type='primary'
-                      size={'large'}
-                      htmlType='submit'
-                    >
-                      Connect Now
-                    </Button>
-                  </div>
-                </Col>
-              </Row>
-            </Form>
-          </div>
-        </Modal>
-        {currentProjectSettings?.int_g2 && (
-          <div
-            className={'mt-4 flex flex-col border-top--thin py-4 mt-2 w-full'}
-          >
-            <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>
-              Connected Account
-            </Text>
-            <Text
-              type={'title'}
-              level={7}
-              color={'grey'}
-              extraClass={'m-0 mt-2'}
-            >
-              API Key
-            </Text>
-            <Input
-              size='large'
-              disabled={true}
-              placeholder='API Key'
-              value={currentProjectSettings.int_g2_api_key}
-              style={{ width: '400px' }}
-            />
-          </div>
-        )}
-        <div className={'mt-4 flex'} data-tour='step-11'>
-          {currentProjectSettings?.int_g2 ? (
-            <Button loading={loading} onClick={() => onDisconnect()}>
-              Disconnect
-            </Button>
-          ) : (
-            <Button
-              type={'primary'}
-              loading={loading}
-              onClick={() => setShowForm(!showForm)}
-            >
-              Connect Now
-            </Button>
-          )}
-          {kbLink && (
-            <a className={'ant-btn ml-2 '} target={'_blank'} href={kbLink}>
-              View documentation
-            </a>
-          )}
-        </div>
-      </ErrorBoundary>
-    </>
+                </div>
+              </Col>
+            )}
+          </Row>
+          <Row className='mt-4'>
+            <Col span={24}>
+              {isG2Enabled ? (
+                <Button loading={loading} onClick={() => onDisconnect()}>
+                  Disconnect
+                </Button>
+              ) : (
+                <Button loading={loading} type='primary' htmlType='submit'>
+                  Connect Now
+                </Button>
+              )}
+            </Col>
+          </Row>
+        </Form>
+      </div>
+    </ErrorBoundary>
   );
 };
 

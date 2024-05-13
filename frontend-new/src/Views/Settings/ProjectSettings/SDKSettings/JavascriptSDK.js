@@ -18,193 +18,25 @@ import { Text, SVG } from 'factorsComponents';
 import {
   fetchBingAdsIntegration,
   fetchMarketoIntegration,
-  fetchProjectSettings,
   fetchProjectSettingsV1,
   udpateProjectSettings
 } from 'Reducers/global';
+import { connect } from 'react-redux';
+
+import { Link } from 'react-router-dom';
 import {
   fetchClickableElements,
   toggleClickableElement
 } from '../../../../reducers/settings/middleware';
-import { connect, useSelector } from 'react-redux';
 import MomentTz from '../../../../components/MomentTz';
-import DemoSDK from './DemoSDK';
-import CodeBlock from 'Components/CodeBlock';
-import styles from './index.module.scss';
-import { UserAddOutlined } from '@ant-design/icons';
-import InviteUsers from 'Views/Settings/ProjectSettings/UserSettings/InviteUsers';
 import ExcludeIp from '../BasicSettings/IpBlocking/excludeIp';
-import { generateSdkScriptCode } from './utils';
-import ScriptHtml from './ScriptHtml';
-import CodeBlockV2 from 'Components/CodeBlock/CodeBlockV2';
-import logger from 'Utils/logger';
-import GTMSteps from './GTMSteps';
-import { OnboardingSupportLink, SDKDocumentation } from 'Onboarding/utils';
+
+import SdkVerificationFooter from './SdkVerificationFooter';
+import GtmSteps from './InstructionSteps/gtmSteps';
+import ManualSteps from './InstructionSteps/manualSteps';
+import { JavascriptHeadDocumentation } from './utils';
 
 const { TabPane } = Tabs;
-
-const ViewSetup = ({ currentProjectSettings, activeProject }) => {
-  const projectToken = activeProject.token;
-  const assetURL = currentProjectSettings.sdk_asset_url;
-  const apiURL = currentProjectSettings.sdk_api_url;
-
-  return (
-    <Row>
-      <Col span={24}>
-        <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0 mt-2'}>
-          Setup manually
-        </Text>
-        <Text type={'title'} level={6} color={'grey'} extraClass={'m-0 mb-3'}>
-          Add Factors SDK manually in the head section for all pages you wish to
-          get data for
-        </Text>
-        <div className='ml-3'>
-          <Text
-            type={'title'}
-            level={6}
-            weight={'bold'}
-            color={'grey'}
-            extraClass={'m-0 mt-2 mb-2'}
-          >
-            Setup 1
-          </Text>
-          <Text type='paragraph' color='mono-6' extraClass={'m-0'}>
-            Add the javascript code below on every page between the {'<head>'}{' '}
-            and {'</head>'} tags.
-          </Text>
-          <div className='py-4'>
-            <CodeBlockV2
-              collapsedViewText={
-                <>
-                  <span style={{ color: '#2F80ED' }}>{`<script>`}</span>
-                  {`(function(c)d.appendCh.....func("`}
-                  <span style={{ color: '#EB5757' }}>{`${projectToken}`}</span>
-                  {`")`}
-                  <span style={{ color: '#2F80ED' }}>{`</script>`}</span>
-                </>
-              }
-              fullViewText={
-                <ScriptHtml
-                  projectToken={projectToken}
-                  assetURL={assetURL}
-                  apiURL={apiURL}
-                />
-              }
-              textToCopy={generateSdkScriptCode(assetURL, projectToken, apiURL)}
-            />
-          </div>
-        </div>
-      </Col>
-      <div className='ml-3'>
-        <Col span={24}>
-          <Text
-            type={'title'}
-            level={6}
-            weight={'bold'}
-            color={'grey'}
-            extraClass={'m-0 mt-4'}
-          >
-            Setup 2 (Optional)
-          </Text>
-          <Text type='paragraph' color='mono-6' extraClass={'m-0'}>
-            Once you enable <span className='italic'>Auto-track </span>under{' '}
-            <span className='italic'>General Configuration</span> tab, Factors
-            will track all standard events automatically. You can also add
-            tracking for your own custom events and properties for that event.
-            Eg- You can create a custom track call for whenever someone signups
-            on your website.
-          </Text>
-        </Col>
-        <Col span={24}>
-          <CodeBlock
-            codeContent={
-              <>
-                <span style={{ color: '#2F80ED' }}>{'faitracker.call'}</span>
-                {'("track", "'}
-                <span style={{ color: '#EB5757' }}>{'YOUR_EVENT'}</span>
-                {'");'}
-              </>
-            }
-            pureTextCode={`faitracker.call("track", "YOUR_EVENT");`}
-            hideCopyBtn={true}
-          ></CodeBlock>
-        </Col>
-      </div>
-    </Row>
-  );
-};
-
-const GTMSetup = ({ currentProjectSettings, activeProject }) => {
-  const projectToken = activeProject.token;
-  const assetURL = currentProjectSettings.sdk_asset_url;
-  const apiURL = currentProjectSettings.sdk_api_url;
-
-  return (
-    <Row>
-      <Col span={24}>
-        <Text type={'title'} level={5} weight={'bold'} extraClass={'m-0 mt-2'}>
-          Setup using GTM
-        </Text>
-        <Text type={'title'} level={6} color={'grey'} extraClass={'m-0 mb-3'}>
-          Add Factors SDK quickly using Google Tag Manager without any
-          engineering effort
-        </Text>
-        <div className='ml-3'>
-          <Text
-            type={'title'}
-            level={6}
-            weight={'bold'}
-            color={'grey'}
-            extraClass={'m-0 mt-2 mb-2'}
-          >
-            Setup 1
-          </Text>
-          <GTMSteps
-            projectToken={projectToken}
-            apiURL={apiURL}
-            assetURL={assetURL}
-          />
-        </div>
-      </Col>
-
-      <div className='ml-3'>
-        <Col span={24}>
-          <Text
-            type={'title'}
-            level={6}
-            weight={'bold'}
-            color={'grey'}
-            extraClass={'m-0 mt-4'}
-          >
-            Setup 2 (Optional)
-          </Text>
-          <Text type='paragraph' color='mono-6' extraClass={'m-0'}>
-            Once you enable <span className='italic'>Auto-track </span>under{' '}
-            <span className='italic'>General Configuration</span> tab, Factors
-            will track all standard events automatically. You can also add
-            tracking for your own custom events and properties for that event.
-            Eg- You can create a custom track call for whenever someone signups
-            on your website.
-          </Text>
-        </Col>
-        <Col span={24}>
-          <CodeBlock
-            codeContent={
-              <>
-                <span style={{ color: '#2F80ED' }}>{'faitracker.call'}</span>
-                {'("track", "'}
-                <span style={{ color: '#EB5757' }}>{'YOUR_EVENT'}</span>
-                {'");'}
-              </>
-            }
-            pureTextCode={`faitracker.call("track", "YOUR_EVENT");`}
-            hideCopyBtn={true}
-          ></CodeBlock>
-        </Col>
-      </div>
-    </Row>
-  );
-};
 
 const JSConfig = ({
   currentProjectSettings,
@@ -458,13 +290,13 @@ const JSConfig = ({
     <Row>
       {enableEdit && (
         <Col span={24}>
-          <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 my-2'}>
+          <Text type='title' level={7} color='grey' extraClass='m-0 my-2'>
             *Only Admin(s) can change configurations.
           </Text>
         </Col>
       )}
       <Col span={24}>
-        <div span={24} className={'flex flex-start items-center mt-2'}>
+        <div span={24} className='flex flex-start items-center mt-2'>
           <span style={{ width: '50px' }}>
             <Switch
               checkedChildren='On'
@@ -474,25 +306,20 @@ const JSConfig = ({
               checked={autoTrack}
             />
           </span>
-          <Text
-            type={'title'}
-            level={6}
-            weight={'bold'}
-            extraClass={'m-0 ml-2'}
-          >
+          <Text type='title' level={6} weight='bold' extraClass='m-0 ml-2'>
             Auto-track
           </Text>
         </div>
       </Col>
-      <Col span={24} className={'flex flex-start items-center'}>
-        <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>
+      <Col span={24} className='flex flex-start items-center'>
+        <Text type='paragraph' mini extraClass='m-0 mt-2' color='grey'>
           Automatically track standard events on your website like start of a
           website session, page views and properties associated with these
           events like landing page URL, page load time, page scroll percent etc.
         </Text>
       </Col>
       <Col span={24}>
-        <div span={24} className={'flex flex-start items-center mt-8'}>
+        <div span={24} className='flex flex-start items-center mt-8'>
           <span style={{ width: '50px' }}>
             <Switch
               checkedChildren='On'
@@ -502,24 +329,19 @@ const JSConfig = ({
               checked={autoTrackSPAPageView}
             />
           </span>
-          <Text
-            type={'title'}
-            level={6}
-            weight={'bold'}
-            extraClass={'m-0 ml-2'}
-          >
+          <Text type='title' level={6} weight='bold' extraClass='m-0 ml-2'>
             Auto-track Single Page Application
           </Text>
         </div>
       </Col>
-      <Col span={24} className={'flex flex-start items-center'}>
-        <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>
+      <Col span={24} className='flex flex-start items-center'>
+        <Text type='paragraph' mini extraClass='m-0 mt-2' color='grey'>
           Track standard events on single page applications like React, Angular,
           Vue, etc.
         </Text>
       </Col>
       <Col span={24}>
-        <div span={24} className={'flex flex-start items-center mt-8'}>
+        <div span={24} className='flex flex-start items-center mt-8'>
           <span style={{ width: '50px' }}>
             <Switch
               checkedChildren='On'
@@ -529,24 +351,19 @@ const JSConfig = ({
               checked={excludeBot}
             />
           </span>
-          <Text
-            type={'title'}
-            level={6}
-            weight={'bold'}
-            extraClass={'m-0 ml-2'}
-          >
+          <Text type='title' level={6} weight='bold' extraClass='m-0 ml-2'>
             Exclude Bot
           </Text>
         </div>
       </Col>
-      <Col span={24} className={'flex flex-start items-center'}>
-        <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>
+      <Col span={24} className='flex flex-start items-center'>
+        <Text type='paragraph' mini extraClass='m-0 mt-2' color='grey'>
           Automatically exclude bot traffic from website traffic using Factor’s
           proprietary algorithm
         </Text>
       </Col>
       <Col span={24}>
-        <div span={24} className={'flex flex-start items-center mt-8'}>
+        <div span={24} className='flex flex-start items-center mt-8'>
           <span style={{ width: '50px' }}>
             <Switch
               checkedChildren='On'
@@ -556,24 +373,19 @@ const JSConfig = ({
               checked={autoFormCapture}
             />
           </span>
-          <Text
-            type={'title'}
-            level={6}
-            weight={'bold'}
-            extraClass={'m-0 ml-2'}
-          >
+          <Text type='title' level={6} weight='bold' extraClass='m-0 ml-2'>
             Auto Form Capture
           </Text>
         </div>
       </Col>
-      <Col span={24} className={'flex flex-start items-center'}>
-        <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>
+      <Col span={24} className='flex flex-start items-center'>
+        <Text type='paragraph' mini extraClass='m-0 mt-2' color='grey'>
           Automatically record personal identification information such as email
           and phone number whenever someone submits a form on your website
         </Text>
       </Col>
       <Col span={24}>
-        <div span={24} className={'flex flex-start items-center mt-8'}>
+        <div span={24} className='flex flex-start items-center mt-8'>
           <span style={{ width: '50px' }}>
             <Switch
               checkedChildren='On'
@@ -585,25 +397,20 @@ const JSConfig = ({
               checked={autoCaptureFormFills}
             />
           </span>
-          <Text
-            type={'title'}
-            level={6}
-            weight={'bold'}
-            extraClass={'m-0 ml-2'}
-          >
+          <Text type='title' level={6} weight='bold' extraClass='m-0 ml-2'>
             Auto Form Fill Capture
           </Text>
         </div>
       </Col>
-      <Col span={24} className={'flex flex-start items-center'}>
-        <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>
+      <Col span={24} className='flex flex-start items-center'>
+        <Text type='paragraph' mini extraClass='m-0 mt-2' color='grey'>
           Automatically track personal identification information such as email
           and phone number whenever someone fills a form field on your website,
           even if they do not submit the form.
         </Text>
       </Col>
       <Col span={24}>
-        <div span={24} className={'flex flex-start items-center mt-8'}>
+        <div span={24} className='flex flex-start items-center mt-8'>
           <span style={{ width: '50px' }}>
             <Switch
               checkedChildren='On'
@@ -613,18 +420,13 @@ const JSConfig = ({
               checked={clickCapture}
             />
           </span>
-          <Text
-            type={'title'}
-            level={6}
-            weight={'bold'}
-            extraClass={'m-0 ml-2'}
-          >
+          <Text type='title' level={6} weight='bold' extraClass='m-0 ml-2'>
             Auto Click Capture
           </Text>
         </div>
       </Col>
-      <Col span={24} className={'flex flex-start items-center'}>
-        <Text type={'paragraph'} mini extraClass={'m-0 mt-2'} color={'grey'}>
+      <Col span={24} className='flex flex-start items-center'>
+        <Text type='paragraph' mini extraClass='m-0 mt-2' color='grey'>
           Automatically capture button clicks take place on your website. Once
           tracked, they will be available under the Click tracking configuration
           tab and can be turned on to be tracked as events.
@@ -662,7 +464,7 @@ const ClickTrackConfiguration = ({
   const headerClassStr =
     'fai-text fai-text__color--grey-2 fai-text__size--h8 fai-text__weight--bold';
 
-  var columns = [
+  const columns = [
     {
       title: <span className={headerClassStr}>Name</span>,
       dataIndex: 'displayName',
@@ -725,16 +527,14 @@ const ClickTrackConfiguration = ({
   ];
 
   const dataSource = useMemo(() => {
-    const data = clickableElements.map((element) => {
-      return {
-        index: element.id,
-        displayName: element.display_name,
-        type: element.element_type,
-        clickCount: element.click_count,
-        createdAt: element.created_at,
-        tracking: { id: element.id, enabled: element.enabled }
-      };
-    });
+    const data = clickableElements.map((element) => ({
+      index: element.id,
+      displayName: element.display_name,
+      type: element.element_type,
+      clickCount: element.click_count,
+      createdAt: element.created_at,
+      tracking: { id: element.id, enabled: element.enabled }
+    }));
     return data;
   }, [clickableElements]);
 
@@ -743,36 +543,35 @@ const ClickTrackConfiguration = ({
   };
 
   useEffect(() => {
-    const searchResults = dataSource.filter((item) => {
-      return (
+    const searchResults = dataSource.filter(
+      (item) =>
         item?.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item?.type?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    });
+    );
     setListData(searchResults);
   }, [searchTerm, dataSource]);
 
   return (
-    <Row className={'mt-1'}>
+    <Row className='mt-1'>
       <Col span={24}>
-        <div className={'mb-4 flex justify-between'}>
-          <Text type={'title'} level={7} color={'grey'}>
+        <div className='mb-4 flex justify-between'>
+          <Text type='title' level={7} color='grey'>
             *Only Admin(s) can change configurations.
           </Text>
-          <div className={'flex items-center'}>
+          <div className='flex items-center'>
             {showSearch ? (
               <Input
                 onChange={searchList}
-                className={''}
-                placeholder={'Search'}
+                className=''
+                placeholder='Search'
                 style={{ width: '220px', 'border-radius': '5px' }}
-                prefix={<SVG name='search' size={16} color={'grey'} />}
+                prefix={<SVG name='search' size={16} color='grey' />}
               />
             ) : null}
             <Button
               type='text'
-              ghost={true}
-              className={'p-2 bg-white'}
+              ghost
+              className='p-2 bg-white'
               onClick={() => {
                 setShowSearch(!showSearch);
                 if (showSearch) {
@@ -783,7 +582,7 @@ const ClickTrackConfiguration = ({
               <SVG
                 name={!showSearch ? 'search' : 'close'}
                 size={20}
-                color={'grey'}
+                color='grey'
               />
             </Button>
           </div>
@@ -795,134 +594,9 @@ const ClickTrackConfiguration = ({
     </Row>
   );
 };
-const VerifySdkCheck = ({
-  activeProject,
-  setDataLoading,
 
-  fetchBingAdsIntegration,
-  fetchMarketoIntegration,
-  fetchProjectSettingsV1
-}) => {
-  const int_completed = useSelector(
-    (state) => state?.global?.projectSettingsV1?.int_completed
-  );
-  const [sdkVerified, setSdkVerified] = useState(int_completed ? true : false);
-  const [loading, setLoading] = useState(false);
-  const [errorState, setErrorState] = useState(false);
-
-  const handleSdkVerification = async () => {
-    try {
-      setLoading(true);
-      setErrorState(false);
-      const res = await fetchProjectSettingsV1(activeProject.id);
-
-      if (res?.data?.int_completed) {
-        setSdkVerified(true);
-        notification.success({
-          message: 'Success',
-          description: 'SDK Verified!',
-          duration: 3
-        });
-      } else {
-        notification.error({
-          message: 'Error',
-          description: 'SDK not Verified!',
-          duration: 3
-        });
-        setErrorState(true);
-      }
-
-      setLoading(false);
-    } catch (error) {
-      logger.error(error);
-      setErrorState(true);
-      setLoading(false);
-    }
-  };
-
-  return (
-    <React.Fragment>
-      <div className='mt-2 ml-2'>
-        <Divider />
-        {sdkVerified && (
-          <div className='flex justify-between items-center'>
-            <div>
-              <SVG name={'CheckCircle'} extraClass={'inline'} />
-              <Text
-                type={'title'}
-                level={6}
-                color={'character-primary'}
-                extraClass={'m-0 ml-2 inline'}
-              >
-                {'Verified. Your script is up and running.'}
-              </Text>
-            </div>
-            <Button
-              type={'text'}
-              size={'small'}
-              style={{ color: '#1890FF' }}
-              onClick={() => handleSdkVerification()}
-              loading={loading}
-            >
-              {'Verify again'}
-            </Button>
-          </div>
-        )}
-        {!int_completed && !errorState && (
-          <div className='flex gap-2 items-center'>
-            <Text type='paragraph' color='mono-6' extraClass='m-0'>
-              {'Have you already added the code?'}
-            </Text>
-            <Button onClick={() => handleSdkVerification()}>
-              {'Verify it now'}
-            </Button>
-          </div>
-        )}
-        {errorState && (
-          <div className='flex items-center'>
-            <SVG name={'CloseCircle'} extraClass={'inline'} color='#F5222D' />
-            <Text
-              type={'title'}
-              level={6}
-              color={'character-primary'}
-              extraClass={'m-0 ml-2 inline'}
-            >
-              {'Couldn’t detect SDK.'}
-            </Text>
-            <Button
-              type={'text'}
-              size={'small'}
-              style={{ color: '#1890FF', padding: 0 }}
-              onClick={() => handleSdkVerification()}
-              loading={loading}
-            >
-              Verify again
-            </Button>
-            <Text
-              type={'title'}
-              level={6}
-              color={'character-primary'}
-              extraClass={'m-0 ml-1 inline'}
-            >
-              or
-            </Text>
-            <Button
-              type={'text'}
-              size={'small'}
-              style={{ color: '#1890FF', padding: 0, marginLeft: 4 }}
-              onClick={() => window.open(OnboardingSupportLink, '_blank')}
-            >
-              book a call
-            </Button>
-          </div>
-        )}
-      </div>
-    </React.Fragment>
-  );
-};
 function JavascriptSDK({
   activeProject,
-  fetchProjectSettings,
   currentProjectSettings,
   udpateProjectSettings,
   agents,
@@ -930,27 +604,13 @@ function JavascriptSDK({
   fetchClickableElements,
   toggleClickableElement,
   clickableElements,
-
-  fetchBingAdsIntegration,
-  fetchMarketoIntegration,
-  fetchProjectSettingsV1,
-  isOnBoardFlow
+  kbLink
 }) {
   const [dataLoading, setDataLoading] = useState(true);
-  const [isDemo, setIsDemo] = useState(null);
-
-  const projectId = useSelector((state) => state?.global?.active_project?.id);
+  const projectToken = activeProject.token;
+  const assetURL = currentProjectSettings.sdk_asset_url;
+  const apiURL = currentProjectSettings.sdk_api_url;
   useEffect(() => {
-    console.log(projectId);
-    if (projectId == '519') {
-      setIsDemo(true);
-    }
-  }, []);
-  useEffect(() => {
-    fetchProjectSettings(activeProject.id).then(() => {
-      setDataLoading(false);
-    });
-
     fetchClickableElements(activeProject.id).then(() => {
       setDataLoading(false);
     });
@@ -964,25 +624,99 @@ function JavascriptSDK({
     currentProjectSettings?.project_settings || currentProjectSettings;
 
   const renderTabs = () => {
-    let tabs = [
-      <TabPane tab='GTM Setup' key='1'>
-        <GTMSetup
-          currentProjectSettings={currentProjectSettings}
-          activeProject={activeProject}
-        />
+    const tabs = [
+      <TabPane tab='Setup' key='1'>
+        <div className='flex justify-between items-center'>
+          <Text
+            type='title'
+            level={4}
+            weight='bold'
+            extraClass='m-0'
+            color='character-primary'
+          >
+            Integration Details
+          </Text>
+          {kbLink && (
+            <Link
+              className='inline-block ml-1'
+              target='_blank'
+              to={{
+                pathname: kbLink
+              }}
+            >
+              <div className='flex items-center gap-2'>
+                <Text type='paragraph' mini weight='bold' color='brand-color-6'>
+                  View Documentation
+                </Text>
+                <SVG name='ArrowUpRightSquare' size={14} color='#1890ff' />
+              </div>
+            </Link>
+          )}
+        </div>
+        <div>
+          <Text
+            type='title'
+            level={7}
+            extraClass='m-0 mt-2'
+            color='character-secondary'
+          >
+            Your website data will be visible on the platform from the time the
+            your javascript SDK is placed on your site. Hence, no historical
+            data prior to the setup would be available on the platform. The
+            website data you see in Factors is real-time.
+          </Text>
+          <div>
+            <Text
+              type='title'
+              level={7}
+              extraClass='m-0 mt-2'
+              color='character-secondary'
+            >
+              Add javascript below on every page you want to track between the{' '}
+              {'<head>'} and {'</head>'} tags{' '}
+              <Link
+                className='inline-block ml-1'
+                target='_blank'
+                to={{
+                  pathname: JavascriptHeadDocumentation
+                }}
+              >
+                <div className='flex items-center gap-2'>
+                  <Text
+                    type='paragraph'
+                    mini
+                    weight='bold'
+                    color='brand-color-6'
+                  >
+                    Here's why
+                  </Text>
+                  <SVG name='ArrowUpRightSquare' size={14} color='#1890ff' />
+                </div>
+              </Link>
+            </Text>
+          </div>
+        </div>
+        <div className='mt-6'>
+          <GtmSteps
+            apiURL={apiURL}
+            assetURL={assetURL}
+            projectToken={projectToken}
+            isOnboardingFlow={false}
+          />
+        </div>
+        <div className='mt-6'>
+          <ManualSteps
+            apiURL={apiURL}
+            assetURL={assetURL}
+            projectToken={projectToken}
+            isOnboardingFlow={false}
+          />
+        </div>
       </TabPane>,
-      <TabPane tab='Manual Setup' key='2'>
-        <ViewSetup
-          currentProjectSettings={currentProjectSettings}
-          activeProject={activeProject}
-          fetchBingAdsIntegration={fetchBingAdsIntegration}
-          fetchMarketoIntegration={fetchMarketoIntegration}
-          fetchProjectSettingsV1={fetchProjectSettingsV1}
-        />
-      </TabPane>,
-      <TabPane tab='General Configuration' key='3'>
-        <React.Fragment>
-          <Col span={24} className={'mb-4'}>
+
+      <TabPane tab='General Configuration' key='2'>
+        <>
+          <Col span={24} className='mb-4'>
             <JSConfig
               udpateProjectSettings={udpateProjectSettings}
               currentProjectSettings={currentProjectSettings}
@@ -991,13 +725,13 @@ function JavascriptSDK({
               currentAgent={currentAgent}
             />
           </Col>
-        </React.Fragment>
+        </>
       </TabPane>
     ];
 
     if (currentProjectSettings.auto_click_capture)
       tabs.push(
-        <TabPane tab='Click Tracking Configuration' key='4'>
+        <TabPane tab='Click Tracking Configuration' key='3'>
           <ClickTrackConfiguration
             activeProject={activeProject}
             agents={agents}
@@ -1011,144 +745,51 @@ function JavascriptSDK({
 
     return tabs;
   };
-  const [inviteModal, setInviteModal] = useState(false);
-  const handleOk = () => {};
-  const confirmLoading = () => {};
   return (
-    <>
-      <div className={'mb-4'}>
-        <Row style={{ width: '100%', justifyContent: 'space-between' }}>
-          <Col span={12}>
-            <Text
-              type={'title'}
-              level={3}
-              weight={'bold'}
-              extraClass={'m-0'}
-              id={'fa-at-text--page-title'}
-            >
-              {isOnBoardFlow === true ? 'Add our ' : ''} Javascript SDK
-            </Text>
-          </Col>
-          <Col>
-            {isOnBoardFlow === true ? (
-              <Row>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    margin: '0 10px',
-                    fontWeight: '600'
-                  }}
-                >
-                  Need help?
-                </div>
-                <Button
-                  size='large'
-                  icon={<UserAddOutlined />}
-                  className={styles['btn']}
-                  onClick={() => {
-                    setInviteModal((prev) => !prev);
-                  }}
-                >
-                  Invite Team
-                </Button>
-              </Row>
-            ) : (
-              ''
-            )}
-          </Col>
-        </Row>
-        <Row>
-          <Col span={24}>
-            <Text
-              type={'title'}
-              level={6}
-              color={'grey-2'}
-              extraClass={'m-0 my-1'}
-            >
-              {isOnBoardFlow === true
-                ? 'Track Data Natively With a Factors SDK (Coded Tracking)'
-                : 'Your website data will be visible on the platform from the time the your javascript SDK is placed on your site. Hence, no historical data prior to the setup would be available on the platform.'}
-            </Text>
-            {isOnBoardFlow === true ? (
-              <></>
-            ) : (
-              <Text
-                type={'title'}
-                level={6}
-                color={'grey-2'}
-                extraClass={'m-0 my-1'}
-              >
-                The website data you see in Factors is real-time.
-              </Text>
-            )}
-          </Col>
-        </Row>
-        <InviteUsers
-          visible={inviteModal}
-          onCancel={() => setInviteModal(false)}
-          onOk={() => handleOk()}
-          confirmLoading={confirmLoading}
-        />
-        <Row className={'mt-2'}>
-          <Col span={24}>
-            {isDemo === true ? (
-              <DemoSDK />
-            ) : (
-              <>
-                {dataLoading ? (
-                  <Skeleton active paragraph={{ rows: 4 }} />
-                ) : (
-                  <>
-                    <Tabs defaultActiveKey='1' onChange={callback}>
-                      {renderTabs()}
-                    </Tabs>
+    <div className='mb-4'>
+      <Row>
+        <Col span={24}>
+          {dataLoading ? (
+            <Skeleton active paragraph={{ rows: 4 }} />
+          ) : (
+            <>
+              <Tabs defaultActiveKey='1' onChange={callback}>
+                {renderTabs()}
+              </Tabs>
 
-                    <VerifySdkCheck
-                      activeProject={activeProject}
-                      setDataLoading={setDataLoading}
-                      fetchBingAdsIntegration={fetchBingAdsIntegration}
-                      fetchMarketoIntegration={fetchMarketoIntegration}
-                      fetchProjectSettingsV1={fetchProjectSettingsV1}
-                    />
-                  </>
-                )}
-              </>
-            )}
-          </Col>
-        </Row>
-        <Row
-          style={{
-            margin: '10px 15px',
-            display: 'flex'
-          }}
-        >
-          <Text type='paragraph' color='mono-6' extraClass={'m-0 inline'}>
-            For detailed instructions on how to install and initialize the
-            JavaScript SDK please refer to our
-          </Text>
-          <Text type='paragraph' color='mono-6' extraClass={'m-0 inline'}>
-            <a href={SDKDocumentation} target='_blank' rel='noreferrer'>
-              JavaScript developer documentation &#8594;
-            </a>
-          </Text>
-        </Row>
-      </div>
-    </>
+              <SdkVerificationFooter type='gtm' />
+            </>
+          )}
+        </Col>
+      </Row>
+      {/* <Row
+        style={{
+          margin: '10px 15px',
+          display: 'flex'
+        }}
+      >
+        <Text type='paragraph' color='mono-6' extraClass='m-0 inline'>
+          For detailed instructions on how to install and initialize the
+          JavaScript SDK please refer to our
+        </Text>
+        <Text type='paragraph' color='mono-6' extraClass='m-0 inline'>
+          <a href={SDKDocumentation} target='_blank' rel='noreferrer'>
+            JavaScript developer documentation &#8594;
+          </a>
+        </Text>
+      </Row> */}
+    </div>
   );
 }
 
-const mapStateToProps = (state) => {
-  return {
-    currentProjectSettings: state.global.currentProjectSettings,
-    activeProject: state.global.active_project,
-    agents: state.agent.agents,
-    currentAgent: state.agent.agent_details,
-    clickableElements: state.settings.clickableElements
-  };
-};
+const mapStateToProps = (state) => ({
+  currentProjectSettings: state.global.currentProjectSettings,
+  activeProject: state.global.active_project,
+  agents: state.agent.agents,
+  currentAgent: state.agent.agent_details,
+  clickableElements: state.settings.clickableElements
+});
 export default connect(mapStateToProps, {
-  fetchProjectSettings,
   udpateProjectSettings,
   fetchClickableElements,
   toggleClickableElement,

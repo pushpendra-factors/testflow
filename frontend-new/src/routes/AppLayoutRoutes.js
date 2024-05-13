@@ -141,18 +141,7 @@ const UserSettings = lazyWithRetry(
       /* webpackChunkName: "settings" */ '../Views/Settings/ProjectSettings/UserSettings'
     )
 );
-const SDKSettings = lazyWithRetry(
-  () =>
-    import(
-      /* webpackChunkName: "settings" */ '../Views/Settings/ProjectSettings/SDKSettings'
-    )
-);
-const IntegrationSettings = lazyWithRetry(
-  () =>
-    import(
-      /* webpackChunkName: "settings" */ '../Views/Settings/ProjectSettings/IntegrationSettings'
-    )
-);
+
 const Sharing = lazyWithRetry(
   () =>
     import(
@@ -163,6 +152,21 @@ const PricingComponent = lazyWithRetry(
   () =>
     import(
       /* webpackChunkName: "settings" */ '../Views/Settings/ProjectSettings/Pricing'
+    )
+);
+
+// Integration Screen
+const IntegrationSettings = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "integration" */ '../Views/Settings/ProjectSettings/IntegrationSettings/integrationRoute'
+    )
+);
+
+const IntegrationRedirection = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "integration" */ '../Views/Settings/ProjectSettings/IntegrationSettings/IntegrationCallbackRedirection'
     )
 );
 
@@ -560,16 +564,15 @@ export const APP_LAYOUT_ROUTES = {
     Component: UserSettings,
     Private: true
   },
-  SettingsSdk: {
-    exact: true,
-    path: PathUrls.SettingsSdk,
-    Component: SDKSettings,
-    Private: true
-  },
   SettingsIntegration: {
-    exact: true,
     path: PathUrls.SettingsIntegration,
     Component: IntegrationSettings,
+    Private: true
+  },
+  IntegrationRedirection: {
+    exact: true,
+    path: PathUrls.IntegrationCallbackRedirection,
+    Component: IntegrationRedirection,
     Private: true
   },
   SettingsSharing: {

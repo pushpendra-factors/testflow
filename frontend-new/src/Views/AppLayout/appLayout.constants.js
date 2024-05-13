@@ -9,7 +9,7 @@ export const routesWithSidebar = [
   PathUrls.ProfilePeople,
   PathUrls.SettingsGeneral,
   PathUrls.SettingsIntegration,
-  PathUrls.SettingsSdk,
+  PathUrls.SettingsIntegrationURLID,
   PathUrls.SettingsSharing,
   PathUrls.SettingsUser,
   PathUrls.ConfigureContentGroups,

@@ -18,25 +18,8 @@
   }
 }
 
-.dashedButton {
-  :global(.ant-btn) {
-    border: 1px dashed $fa-color--mono-4;
-    font-size: 16px;
-    color: $fa-color-character-title;
-  }
-}
 
-.dashedButtonActive {
-  @extend .dashedButton;
-  :global(.ant-btn) {
-    border: 1px dashed $fa-color--brand-color;
-    color: $fa-color--brand-color;
-  }
-  :global(.ant-btn:focus, .ant-btn:hover, .ant-btn:active) {
-    border: 1px dashed $fa-color--brand-color;
-    color: $fa-color--brand-color;
-  }
-}
+
 
 .outlineButton {
   border: 1px solid $fa-color-neutral-grey-5 !important;

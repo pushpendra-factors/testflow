@@ -1,15 +1,10 @@
 import React from 'react';
 import JavascriptSDK from './JavascriptSDK';
-import { Row, Col } from 'antd';
 
-function SDKSettings() {
+function SDKSettings(props) {
   return (
-    <div className={'fa-container'}>
-      <Row gutter={[24, 24]} justify='center'>
-        <Col span={22}>
-          <JavascriptSDK />
-        </Col>
-      </Row>
+    <div className='fa-container'>
+      <JavascriptSDK {...props} />
     </div>
   );
 }

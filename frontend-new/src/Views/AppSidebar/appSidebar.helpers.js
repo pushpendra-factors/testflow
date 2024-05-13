@@ -14,10 +14,10 @@ export const checkMatchPath = (urlToMatch, internalRouteToMatch) =>
 export const isSettingsUrl = (pathname) =>
   pathname === PathUrls.SettingsGeneral ||
   pathname === PathUrls.SettingsIntegration ||
-  pathname === PathUrls.SettingsSdk ||
   pathname === PathUrls.SettingsSharing ||
   pathname === PathUrls.SettingsUser ||
-  pathname === PathUrls.SettingsPricing;
+  pathname === PathUrls.SettingsPricing ||
+  checkMatchPath(pathname, PathUrls.SettingsIntegrationURLID);
 
 export const isConfigurationUrl = (pathname) =>
   pathname === PathUrls.ConfigureContentGroups ||
