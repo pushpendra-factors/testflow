@@ -767,13 +767,6 @@ upload-g2-data-pull: export IMAGE_NAME=g2-enrich-job
 upload-g2-data-pull: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/g2-enrich-job:$(TAG)
 
-pack-plan-population:
-	docker build -t us.gcr.io/factors-$(ENV)/plan-population-job:$(TAG) -f Dockerfile.plan_population_job .
-
-upload-plan-population: export IMAGE_NAME=plan-population-job
-upload-plan-population: notify-deployment
-	docker push us.gcr.io/factors-$(ENV)/plan-population-job:$(TAG)
-
 pack-free-plan-migration:
 	docker build -t us.gcr.io/factors-$(ENV)/free-plan-migration-job:$(TAG) -f Dockerfile.free_plan_migration_job .
 
