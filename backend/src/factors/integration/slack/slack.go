@@ -11,6 +11,9 @@ import (
 	"net/http"
 	"time"
 
+	cacheRedis "factors/cache/redis"
+
+	"github.com/gomodule/redigo/redis"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -18,6 +21,42 @@ type oauthState struct {
 	ProjectID int64   `json:"project_id"`
 	AgentUUID *string `json:"agent_uuid"`
 	Source    int     `json:"source"`
+}
+
+func GetCacheKeyForSlackIntegration(projectID int64, agentUUID string) (*cacheRedis.Key, error) {
+	prefix := "slack:auth:"
+	suffix := fmt.Sprintf("agent_uid:%v", agentUUID)
+	return cacheRedis.NewKey(projectID, prefix, suffix)
+}
+
+func SetCacheForSlackAuthRandomState(projectID int64, agentUUID, randAuthState string) {
+
+	slackAuthKey, err := GetCacheKeyForSlackIntegration(projectID, agentUUID)
+	if err != nil {
+		return
+	}
+	expiry := float64(U.SLACK_AUTH_RANDOM_STATE_EXPIRY_SECS)
+	err = cacheRedis.SetPersistent(slackAuthKey, randAuthState, expiry)
+	if err != nil {
+		log.WithError(err).Error("Failed to set randState in cache")
+		return
+	}
+}
+
+func GetCacheSlackAuthRandomState(projectId int64, agentUUID string) (string, int) {
+
+	cacheKey, err := GetCacheKeyForSlackIntegration(projectId, agentUUID)
+	if err != nil {
+		return "", http.StatusNotFound
+	}
+	cacheResult, err := cacheRedis.GetPersistent(cacheKey)
+	if err == redis.ErrNil {
+		return cacheResult, http.StatusNotFound
+	} else if err != nil {
+		log.WithError(err).Error("Error getting key from redis")
+		return cacheResult, http.StatusInternalServerError
+	}
+	return cacheResult, http.StatusFound
 }
 
 func GetSlackChannels(accessTokens model.SlackAccessTokens, nextCursor string) (response map[string]interface{}, status int, err error) {
@@ -272,4 +311,23 @@ func GetSlackIntegrationState(projectID int64, agentUUID string) model.Integrati
 		Message: U.GetPropertyValueAsString(response["error"]),
 	}
 
+}
+
+func DeleteSlackIntegration(projectID int64, agentUUID string) error {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "agent_uuid": agentUUID})
+	if projectID == 0 || agentUUID == "" {
+		logCtx.Error("invalid parameters")
+		return fmt.Errorf("invalid parameters")
+	}
+	err := store.GetStore().DeleteSlackIntegrationFromAgents(projectID, agentUUID)
+	if err != nil {
+		return err
+	}
+
+	err = store.GetStore().DeleteSlackTeamIDFromProjectAgentMappings(projectID, agentUUID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

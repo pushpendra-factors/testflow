@@ -293,6 +293,10 @@ function AccountProfiles({
       return accountPayload;
     }
 
+    if (accountPayload.search_filter) {
+      return accountPayload;
+    }
+
     if (!segmentID) {
       return INITIAL_ACCOUNT_PAYLOAD;
     }

@@ -159,7 +159,13 @@ function CustomKPI({
         )
       });
     } else {
-      setKPIType(item.type_of_query === 1 ? 'default' : 'derived_kpi');
+      setKPIType(
+        item.type_of_query === 1
+          ? 'default'
+          : item.type_of_query === 2
+            ? 'derived_kpi'
+            : 'event_based'
+      );
     }
   };
   const menu = (item) => (
@@ -873,7 +879,7 @@ function CustomKPI({
             ]}
             initialValue={
               pageMode === 'Edit'
-                ? matchEventName(viewKPIDetails?.transformations?.daFie)
+                ? viewKPIDetails?.transformations?.daFie
                 : undefined
             }
           >
@@ -1345,13 +1351,16 @@ function CustomKPI({
                     <Text type='title' level={7} extraClass='m-0'>
                       KPI Type
                     </Text>
-                    <Form.Item name='kpi_type' className='m-0'>
+                    <Form.Item
+                      name='kpi_type'
+                      className='m-0'
+                      initialValue={selKPIType}
+                    >
                       <Select
                         className='fa-select w-full'
                         size='large'
                         onChange={(value) => onKPITypeChange(value)}
                         placeholder='KPI Type'
-                        defaultValue={selKPIType}
                       >
                         <Option value='default'>Default</Option>
                         <Option value='derived_kpi'>Derived KPI</Option>
@@ -1574,9 +1583,7 @@ function CustomKPI({
                               ]}
                               initialValue={
                                 pageMode === 'Edit'
-                                  ? matchEventName(
-                                      viewKPIDetails?.transformations?.daFie
-                                    )
+                                  ? viewKPIDetails?.transformations?.daFie
                                   : undefined
                               }
                             >
@@ -1893,8 +1900,12 @@ function CustomKPI({
                                 </div>
                               </Col>
                               <Col>
-                                <Button className='mr-2' type='link' disabled>
-                                  {_.startCase(item?.me[0])}
+                                <Button
+                                  className='mr-2 capitalize'
+                                  type='link'
+                                  disabled
+                                >
+                                  {item?.me[0]}
                                 </Button>
                               </Col>
                               <Col>

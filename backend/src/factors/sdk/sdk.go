@@ -176,7 +176,7 @@ const (
 
 func IsBot(ProjectId int64, userAgent, eventName string) bool {
 
-	if !(U.IsBotUserAgent(userAgent) || U.IsBotEventByPrefix(eventName)) {
+	if !(U.IsBotUserAgent(userAgent) || U.IsBotEventByPrefix(eventName)) && userAgent != "" {
 		if C.AllowDeviceServiceByProjectID(ProjectId) {
 			deviceInfo, status, err := GetDeviceInfoFromDeviceService(userAgent)
 			if err != nil || status != http.StatusOK {
@@ -2358,6 +2358,8 @@ func GetDeviceInfoFromDeviceService(userAgent string) (deviceInfo model.DeviceIn
 	// check if device info for user agent exists in cache
 	if errCode == http.StatusFound && err == nil {
 		deviceInfo = *resp
+	} else if userAgent == "" {
+		return model.DeviceInfo{}, http.StatusBadRequest, err
 	} else {
 
 		deviceInfo, status, err = PostDeviceServiceAPI(C.GetConfig().DeviceServiceURL, userAgent)

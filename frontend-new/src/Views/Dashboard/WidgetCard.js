@@ -465,7 +465,7 @@ function WidgetCard({
     ) {
       analyseQueryParamsPath =
         analyseQueryParamsPath + '/events/' + unit.query.id_text;
-    } else if (unit?.query?.query?.cl === 'funnel' && featureLock(email)) {
+    } else if (unit?.query?.query?.cl === 'funnel') {
       analyseQueryParamsPath =
         analyseQueryParamsPath + '/funnel/' + unit.query.id_text;
     } else if (unit?.query?.query?.cl === 'kpi' && featureLock(email)) {

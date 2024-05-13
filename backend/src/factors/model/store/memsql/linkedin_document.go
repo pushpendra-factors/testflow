@@ -143,7 +143,7 @@ const linkedinCampaignMetadataFetchQueryStr = "select campaign_information.campa
 	"ON campaign_information.campaign_id_1 = campaign_latest_timestamp_id.campaign_id_1 AND campaign_information.timestamp = campaign_latest_timestamp_id.timestamp "
 const insertLinkedinStr = "INSERT INTO linkedin_documents (project_id,customer_ad_account_id,type,timestamp,id,campaign_group_id,campaign_id,creative_id,value,created_at,updated_at,is_backfilled,sync_status) VALUES "
 const campaignGroupInfoFetchStr = "With campaign_timestamp as (Select campaign_group_id as c1, max(timestamp) as t1 from linkedin_documents where project_id = ? " +
-	"and customer_ad_account_id = ? and type = 2 and timestamp between ? and ? and (JSON_EXTRACT_STRING(value, 'status') = 'ACTIVE' or JSON_EXTRACT_JSON(value, 'changeAuditStamps', 'lastModified', 'time')>= ?) group by campaign_group_id) select * from linkedin_documents inner join " +
+	"and customer_ad_account_id = ? and type = 2 and timestamp between ? and ? group by campaign_group_id) select * from linkedin_documents inner join " +
 	"campaign_timestamp on c1 = campaign_group_id and t1=timestamp where project_id = ? and customer_ad_account_id = ? and type = 2 and timestamp between ? and ?"
 const campaignInfoFetchStr = "With campaign_timestamp as (Select campaign_id as c1, max(timestamp) as t1 from linkedin_documents where project_id = ? " +
 	"and customer_ad_account_id = ? and type = 3 and timestamp between ? and ? and (JSON_EXTRACT_STRING(value, 'status') = 'ACTIVE' or JSON_EXTRACT_JSON(value, 'changeAuditStamps', 'lastModified', 'time')>= ?) group by campaign_id) select * from linkedin_documents inner join " +
@@ -747,11 +747,10 @@ func (store *MemSQL) GetCampaignGroupInfoForGivenTimerange(campaignGroupInfoRequ
 	logCtx := log.WithFields(logFields)
 	db := C.GetServices().Db
 	projectID, adAccountID, startTime, endTime := campaignGroupInfoRequestPayload.ProjectID, campaignGroupInfoRequestPayload.CustomerAdAccountID, campaignGroupInfoRequestPayload.StartTimestamp, campaignGroupInfoRequestPayload.EndTimestamp
-	unixForStartTime := U.GetBeginningoftheDayEpochForDateAndTimezone(startTime, "UTC") * 1000
 	linkedinDocuments := make([]model.LinkedinDocument, 0)
 
 	query := campaignGroupInfoFetchStr
-	rows, err := db.Raw(query, projectID, adAccountID, startTime, endTime, unixForStartTime, projectID, adAccountID, startTime, endTime).Rows()
+	rows, err := db.Raw(query, projectID, adAccountID, startTime, endTime, projectID, adAccountID, startTime, endTime).Rows()
 
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get campaign group info for given time range.")
@@ -775,7 +774,7 @@ func (store *MemSQL) GetCampaignInfoForGivenTimerange(campaignInfoRequestPayload
 	logCtx := log.WithFields(logFields)
 	db := C.GetServices().Db
 	projectID, adAccountID, startTime, endTime := campaignInfoRequestPayload.ProjectID, campaignInfoRequestPayload.CustomerAdAccountID, campaignInfoRequestPayload.StartTimestamp, campaignInfoRequestPayload.EndTimestamp
-	unixForStartTime := U.GetBeginningoftheDayEpochForDateAndTimezone(startTime, "UTC") * 1000
+	unixForStartTime := (U.GetBeginningoftheDayEpochForDateAndTimezone(startTime, "UTC") - (7 * 86400)) * 1000
 	linkedinDocuments := make([]model.LinkedinDocument, 0)
 
 	query := campaignInfoFetchStr

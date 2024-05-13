@@ -93,9 +93,15 @@ class WeeklyMemberCompanyJobRunner:
                 self.campaign_group_cache.reset_campaign_group_data()
                 self.campaign_cache.reset_campaign_data()
         
-        except Exception as e:
+        except CustomException as e:
+            log.warning(str(e))
             traceback.print_tb(e.__traceback__)
             self.metrics_aggregator_obj.update_stats(self.linkedin_setting.project_id, self.linkedin_setting.ad_account, 
-                                                MEMBER_COMPANY_INSIGHTS, e.request_count, 
-                                                'failed', e.message)
+                                                            e.doc_type, e.request_count, 'failed', e.message)
+            
+        except Exception as e:
+            log.warning(str(e))
+            traceback.print_tb(e.__traceback__)
+            self.metrics_aggregator_obj.update_stats(self.linkedin_setting.project_id, self.linkedin_setting.ad_account, 
+                                                            MEMBER_COMPANY_INSIGHTS, 0, 'failed', str(e))
 

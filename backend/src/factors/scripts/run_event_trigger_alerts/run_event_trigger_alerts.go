@@ -1009,7 +1009,10 @@ func sendTeamsAlertForEventTriggerAlert(projectID int64, agentUUID string,
 				} else {
 					errMessage += fmt.Sprintf("%s Error for %s channel\n\n", teamsErr, channel.ChannelName)
 				}
-				logCtx.WithField("errorCode", errorCode).WithError(err).Error("failed to send teams message")
+				logCtx.WithFields(log.Fields{
+					"err_response": response,
+					"error_code": errorCode,
+					}).WithError(err).Error("Failed to send teams message for event alert.")
 				return false, errMessage
 			}
 

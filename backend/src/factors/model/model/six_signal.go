@@ -300,8 +300,9 @@ func SetFactorsDeanonMonthlyUniqueEnrichmentCount(projectId int64, value string,
 }
 
 func GetFactorsDeanonAlertRedisKey() (*cacheRedis.Key, error) {
-	prefix := "factorsDeanon:internal:alerts"
-	return cacheRedis.NewKeyWithOnlyPrefix(prefix)
+	prefix := "factorsDeanon:monitoring"
+	agent := "internal"
+	return cacheRedis.NewKeyWithAgentUID(agent, prefix, "")
 }
 
 func GetFactorsDeanonAlertRedisResult() (int64, error) {
@@ -313,7 +314,9 @@ func GetFactorsDeanonAlertRedisResult() (int64, error) {
 	}
 
 	redisRes, err := cacheRedis.GetPersistent(key)
-	if err != nil {
+	if err == redis.ErrNil {
+		return result, nil
+	} else if err != nil {
 		return result, err
 	}
 

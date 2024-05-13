@@ -1125,7 +1125,7 @@ const EventBasedAlert = ({
           window.open(r.data.redirectURL, '_blank');
         }
         if (r.status >= 400) {
-          message.error('Error fetching slack redirect url');
+          message.error('Error fetching Slack redirect url');
         }
       })
       .catch((err) => {
@@ -1719,7 +1719,7 @@ const EventBasedAlert = ({
               content={
                 <div className='m-0 m-2'>
                   <p className='m-0 text-gray-900 text-base font-bold'>
-                    Your notification inside slack
+                    Your notification inside Slack
                   </p>
                   <p className='m-0 mb-2 text-gray-700'>
                     As events across your marketing activities happen, get
@@ -2157,7 +2157,7 @@ const EventBasedAlert = ({
                 size='grey'
                 extraClass='m-0'
               >
-                Select slack channels
+                Select Slack channels
               </Text>
             </Col>
           </Row>
