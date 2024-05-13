@@ -4,14 +4,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"factors/cache"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	"factors/model/store"
 	"flag"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const PARTIAL_LIMIT_THRESHOLD = 75
@@ -188,12 +190,12 @@ func shouldSendInternalAlert(projectID int64, limit string) (bool, error) {
 	return !exists, nil
 }
 
-func getCacheKeyForInternalAlert(projectID int64, limit string) (*cacheRedis.Key, error) {
+func getCacheKeyForInternalAlert(projectID int64, limit string) (*cache.Key, error) {
 	logCtx := log.WithField("project_id", projectID)
 
 	currentMonth := time.Now().Month().String()
 
-	key, err := cacheRedis.NewKey(projectID, limit, currentMonth)
+	key, err := cache.NewKey(projectID, limit, currentMonth)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get cache key for internal alert")
 		return nil, err

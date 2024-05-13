@@ -2,7 +2,7 @@ package model
 
 import (
 	"encoding/json"
-	cacheRedis "factors/cache/redis"
+	"factors/cache"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -104,13 +104,13 @@ func (q *KPIQueryGroup) GetQueryCacheHashString() (string, error) {
 	return queryHash, nil
 }
 
-func (q *KPIQueryGroup) GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key, error) {
+func (q *KPIQueryGroup) GetQueryCacheRedisKey(projectID int64) (*cache.Key, error) {
 	hashString, err := q.GetQueryCacheHashString()
 	if err != nil {
 		return nil, err
 	}
 	suffix := getQueryCacheRedisKeySuffix(hashString, q.Queries[0].From, q.Queries[0].To, U.TimeZoneString(q.Queries[0].Timezone))
-	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
+	return cache.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
 func (q *KPIQueryGroup) GetQueryCacheExpiry(projectID int64) float64 {

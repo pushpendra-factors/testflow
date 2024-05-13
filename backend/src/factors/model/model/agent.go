@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	cacheRedis "factors/cache/redis"
+	"factors/cache"
 
 	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -227,7 +227,7 @@ func BillingCustomerID(id string) Option {
 	}
 }
 
-func AgentFailedLoginAttemptCacheKey(agentUUID string) (*cacheRedis.Key, error) {
+func AgentFailedLoginAttemptCacheKey(agentUUID string) (*cache.Key, error) {
 	prefix := "LOGIN:FAIL"
-	return cacheRedis.NewKeyWithAgentUID(prefix, agentUUID, "")
+	return cache.NewKeyWithAgentUID(prefix, agentUUID, "")
 }

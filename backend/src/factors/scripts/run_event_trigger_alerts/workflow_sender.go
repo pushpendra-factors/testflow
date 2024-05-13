@@ -1,7 +1,7 @@
 package main
 
 import (
-	cacheRedis "factors/cache/redis"
+	"factors/cache"
 	"factors/integration/paragon"
 	"factors/model/model"
 	"factors/model/store"
@@ -12,7 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func SendHelperForWorkflow(key *cacheRedis.Key, cachedWorkflow *model.CachedEventTriggerAlert,
+func SendHelperForWorkflow(key *cache.Key, cachedWorkflow *model.CachedEventTriggerAlert,
 	workflowID string, retry bool, sendTo string) (totalSuccess bool, partialSuccess bool, sendReport SendReportLogCount) {
 
 	logCtx := log.WithFields(log.Fields{
@@ -59,7 +59,7 @@ func SendHelperForWorkflow(key *cacheRedis.Key, cachedWorkflow *model.CachedEven
 		"is_payload_null": isPayloadNull,
 		"is_workflow":     cachedWorkflow.IsWorkflow,
 	}).Info("ALERT TRACKER.")
-	
+
 	if stat != "success" {
 		log.WithField("status", stat).WithField("response", response).Error("Workflow error details")
 		sendReport.WebhookFail++
@@ -91,12 +91,12 @@ func SendHelperForWorkflow(key *cacheRedis.Key, cachedWorkflow *model.CachedEven
 	return totalSuccess, partialSuccess, sendReport
 }
 
-func ParagonWorkflowFailureExecution(key *cacheRedis.Key, workflowID string,
+func ParagonWorkflowFailureExecution(key *cache.Key, workflowID string,
 	deliveryFailures, errMsg []string, rejected, partialSuccess bool) error {
 
 	logFields := log.Fields{
-		"workflow_id":  workflowID,
-		"cache_key": key,
+		"workflow_id": workflowID,
+		"cache_key":   key,
 	}
 	logCtx := log.WithFields(logFields)
 

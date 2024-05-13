@@ -1,6 +1,7 @@
 package model
 
 import (
+	"factors/cache"
 	cacheRedis "factors/cache/redis"
 	U "factors/util"
 	"fmt"
@@ -194,8 +195,8 @@ func ValidateChannelGroupRules(rules postgres.Jsonb) bool {
 	}
 	return true
 }
-func getCacheKeyForProjectIDByToken(token string) (*cacheRedis.Key, error) {
-	return cacheRedis.NewKeyWithProjectUID(token, "projects_token_id", "")
+func getCacheKeyForProjectIDByToken(token string) (*cache.Key, error) {
+	return cache.NewKeyWithProjectUID(token, "projects_token_id", "")
 }
 
 func GetCacheProjectIDByToken(token string) (int64, int) {

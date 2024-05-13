@@ -1,6 +1,7 @@
 package main
 
 import (
+	"factors/cache"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	"factors/model/store"
@@ -127,7 +128,7 @@ func CacheCleanupHelper(projectID int64) {
 	}
 }
 
-func AddListValuesToCache(projectID int64, key *cacheRedis.Key, values map[string]string) error {
+func AddListValuesToCache(projectID int64, key *cache.Key, values map[string]string) error {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"cache_key":  *key,

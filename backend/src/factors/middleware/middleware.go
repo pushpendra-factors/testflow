@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"factors/cache"
 	C "factors/config"
 	"factors/handler/helpers"
 	"factors/model/model"
@@ -24,6 +25,7 @@ import (
 	"time"
 
 	cacheRedis "factors/cache/redis"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/gomodule/redigo/redis"
@@ -1134,7 +1136,7 @@ func RequestRateLimiterMiddleware(key string, numberOfRequestsALlowed int64, tim
 			"project_id": projectId,
 		})
 
-		key, err := cacheRedis.NewKey(projectId, "RL", key)
+		key, err := cache.NewKey(projectId, "RL", key)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get cache key for rate limiter middleware")
 			c.AbortWithStatus(http.StatusInternalServerError)
@@ -1163,13 +1165,13 @@ func RequestRateLimiterMiddleware(key string, numberOfRequestsALlowed int64, tim
 		}
 
 		_ = createOrIncreamentRequestCount(projectId, key, timeWindowInSeconds)
-		
+
 		c.Next()
 
 	}
 }
 
-func createOrIncreamentRequestCount(ProjectID int64, key *cacheRedis.Key, expiryInSeconds int) error {
+func createOrIncreamentRequestCount(ProjectID int64, key *cache.Key, expiryInSeconds int) error {
 	// create new redis key or increase the counter
 	logCtx := log.WithFields(log.Fields{
 		"project_id": ProjectID,

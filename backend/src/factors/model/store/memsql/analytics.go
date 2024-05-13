@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	cacheRedis "factors/cache/redis"
+	pCache "factors/cache/persistent"
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
@@ -2326,8 +2326,7 @@ func GetQueryResultFromCache(projectID int64, query model.BaseQuery, resultConta
 		return queryResult, http.StatusInternalServerError
 	}
 
-	// Using persistent redis for this.
-	value, exists, err := cacheRedis.GetIfExistsPersistent(cacheKey)
+	value, exists, err := pCache.GetIfExists(cacheKey, true)
 	if err != nil {
 		logCtx.WithError(err).Error("Error getting value from redis")
 		return queryResult, http.StatusInternalServerError

@@ -24,6 +24,10 @@ import styles from './index.module.scss';
 export const getConfigureMenuItems = (email) => {
   const configureMenuItems = [
     {
+      label: 'Integrations',
+      url: PathUrls.SettingsIntegration
+    },
+    {
       label: 'Events',
       url: PathUrls.ConfigureEvents
     },
@@ -60,6 +64,63 @@ export const getConfigureMenuItems = (email) => {
   }
   return configureMenuItems;
 };
+
+const ProjectSettingsSubItems = [
+  {
+    label: 'General',
+    url: PathUrls.SettingsGeneral,
+    lineBreak: false
+  },
+  {
+    label: 'Members',
+    url: PathUrls.SettingsUser,
+    lineBreak: false
+  },
+  {
+    label: 'Plans & Billings',
+    url: PathUrls.SettingsPricing,
+    lineBreak: false
+  },
+  {
+    label: 'Sharing',
+    url: PathUrls.SettingsSharing,
+    lineBreak: false
+  }
+];
+
+const PersonalSettingsSubItems = [
+  {
+    label: 'User',
+    url: PathUrls.SettingsUser,
+    lineBreak: false
+  }
+];
+
+const DataManagementSubItems = [
+  {
+    label: 'Integrations',
+    url: PathUrls.SettingsIntegration,
+    lineBreak: false
+  }
+];
+
+export const settingsCategorisedMap = (email) => [
+  {
+    label: 'Project Settings',
+    icon: 'rocket',
+    items: ProjectSettingsSubItems
+  },
+  // {
+  //   label: 'Personal Settings',
+  //   icon: 'user',
+  //   items: PersonalSettingsSubItems
+  // },
+  {
+    label: 'Data Management',
+    icon: 'user',
+    items: getConfigureMenuItems(email)
+  }
+];
 
 export const settingsMenuItems = [
   {
@@ -368,7 +429,7 @@ function FaHeader() {
         <div className='w-1/3 flex justify-end'>
           <SearchBar placeholder='Search ⌘+K' />
         </div>
-        <Dropdown
+        {/* <Dropdown
           overlay={renderConfigureMenu(activeAgent)}
           placement='bottomRight'
           overlayClassName='fa-at-overlay--config'
@@ -386,26 +447,26 @@ function FaHeader() {
           >
             <SVG color='#F0F0F0' size={16} name='config' />
           </div>
-        </Dropdown>
-        <Dropdown
+        </Dropdown> */}
+        {/* <Dropdown
           placement='bottomRight'
           overlayClassName='fa-at-overlay--settings'
           overlay={SettingsMenu}
+        > */}
+        <div
+          className={cx(
+            `cursor-pointer ${styles['header-item']} ${styles['header-item-circle']}`,
+            {
+              [styles['active-header-item']]: isSettingsUrl(pathname),
+              [styles['active-header-item-circle']]: isSettingsUrl(pathname)
+            }
+          )}
+          onClick={() => history.push(PathUrls.SettingsGeneral)}
+          id='fa-at-dropdown--settings'
         >
-          <div
-            className={cx(
-              `cursor-pointer ${styles['header-item']} ${styles['header-item-circle']}`,
-              {
-                [styles['active-header-item']]: isSettingsUrl(pathname),
-                [styles['active-header-item-circle']]: isSettingsUrl(pathname)
-              }
-            )}
-            id='fa-at-dropdown--settings'
-          >
-            <SVG color='#F0F0F0' size={20} name='settings' />
-          </div>
-        </Dropdown>
-
+          <SVG color='#F0F0F0' size={20} name='settings' />
+        </div>
+        {/* </Dropdown> */}
         <ProjectModal />
       </div>
     </Header>

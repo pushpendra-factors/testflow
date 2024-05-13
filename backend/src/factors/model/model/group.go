@@ -3,7 +3,8 @@ package model
 import (
 	"encoding/json"
 	"errors"
-	cacheRedis "factors/cache/redis"
+	"factors/cache"
+	pCache "factors/cache/persistent"
 	U "factors/util"
 	"fmt"
 	"strings"
@@ -75,24 +76,24 @@ func GetDomainNameSourcePropertyKey(groupName string) []string {
 // AllowedGroups total groups allowed per project
 var AllowedGroups = 8
 
-func GetPropertiesByGroupCategoryCacheKeySortedSet(projectId int64, date string) (*cacheRedis.Key, error) {
+func GetPropertiesByGroupCategoryCacheKeySortedSet(projectId int64, date string) (*cache.Key, error) {
 	prefix := "SS:GN:PC"
-	return cacheRedis.NewKey(projectId, prefix, date)
+	return cache.NewKey(projectId, prefix, date)
 }
 
-func GetValuesByGroupPropertyCacheKeySortedSet(projectId int64, date string) (*cacheRedis.Key, error) {
+func GetValuesByGroupPropertyCacheKeySortedSet(projectId int64, date string) (*cache.Key, error) {
 	prefix := "SS:GN:PV"
-	return cacheRedis.NewKey(projectId, prefix, date)
+	return cache.NewKey(projectId, prefix, date)
 }
 
-func GetPropertiesByGroupCategoryRollUpCacheKey(projectId int64, groupName string, date string) (*cacheRedis.Key, error) {
+func GetPropertiesByGroupCategoryRollUpCacheKey(projectId int64, groupName string, date string) (*cache.Key, error) {
 	prefix := "RollUp:GN:PC"
-	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s", prefix, groupName), date)
+	return cache.NewKey(projectId, fmt.Sprintf("%s:%s", prefix, groupName), date)
 }
 
-func GetValuesByGroupPropertyRollUpCacheKey(projectId int64, groupName string, propertyName string, date string) (*cacheRedis.Key, error) {
+func GetValuesByGroupPropertyRollUpCacheKey(projectId int64, groupName string, propertyName string, date string) (*cache.Key, error) {
 	prefix := "RollUp:GN:PV"
-	return cacheRedis.NewKey(projectId, fmt.Sprintf("%s:%s:%s", prefix, groupName, propertyName), date)
+	return cache.NewKey(projectId, fmt.Sprintf("%s:%s:%s", prefix, groupName, propertyName), date)
 }
 
 func GetPropertiesByGroupFromCache(projectID int64, groupName string, dateKey string) (U.CachePropertyWithTimestamp, error) {
@@ -115,7 +116,7 @@ func GetPropertiesByGroupFromCache(projectID int64, groupName string, dateKey st
 	if err != nil {
 		return U.CachePropertyWithTimestamp{}, err
 	}
-	groupProperties, _, err := cacheRedis.GetIfExistsPersistent(groupPropertiesKey)
+	groupProperties, _, err := pCache.GetIfExists(groupPropertiesKey, true)
 	if err != nil || groupProperties == "" {
 		logCtx.WithField("date_key", dateKey).Info("Missing rollup cache for groups.")
 		return U.CachePropertyWithTimestamp{}, nil
@@ -154,7 +155,7 @@ func GetPropertyValuesByGroupPropertyFromCache(projectID int64, groupName string
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
-	values, exists, _ := cacheRedis.GetIfExistsPersistent(groupPropertyValuesKey)
+	values, exists, _ := pCache.GetIfExists(groupPropertyValuesKey, true)
 	if !exists || values == "" {
 		return U.CachePropertyValueWithTimestamp{}, nil
 	}

@@ -224,6 +224,8 @@ func main() {
 	paragonProjectID := flag.String("paragon_project_id", "", "")
 	clearbitAccProvisionKey := flag.String("cb_acc_provision_key", "dummy", "")
 	emailUTMParameterAllowedProjects := flag.String("email_utm_parameter_allowed_projects", "", "")
+	enableCacheDBWriteProjects := flag.String("cache_db_write_projects", "", "")
+	enableCacheDBReadProjects := flag.String("cache_db_read_projects", "", "")
 
 	flag.Parse()
 
@@ -397,6 +399,8 @@ func main() {
 		ParagonProjectID:                               *paragonProjectID,
 		ClearbitProvisionAccountAPIKey:                 *clearbitAccProvisionKey,
 		EmailUTMParameterAllowedProjects:               *emailUTMParameterAllowedProjects,
+		EnableCacheDBWriteProjects:                     *enableCacheDBWriteProjects,
+		EnableCacheDBReadProjects:                      *enableCacheDBReadProjects,
 	}
 	C.InitConf(config)
 
