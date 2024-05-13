@@ -3186,6 +3186,24 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 		domainAccounts = append(domainAccounts, domID)
 	}
 
+	// 2 domain performed events
+	for i := 0; i < 2; i++ {
+		timestamp := U.UnixTimeBeforeDuration(time.Duration(1+i) * time.Hour)
+		trackPayload := SDK.TrackPayload{
+			UserId:        domainAccounts[i],
+			CreateUser:    false,
+			IsNewUser:     false,
+			Name:          "Third Party Intent Visit",
+			Timestamp:     timestamp,
+			ProjectId:     project.ID,
+			Auto:          false,
+			RequestSource: model.UserSourceDomains,
+		}
+		status, response := SDK.Track(project.ID, &trackPayload, false, SDK.SourceJSSDK, "")
+		assert.NotEmpty(t, response)
+		assert.Equal(t, http.StatusOK, status)
+	}
+
 	// 5 hubspot accounts
 	var accounts []string
 	cities := []string{"London", "London", "DC", "Delhi", "Paris"}
@@ -3695,6 +3713,34 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 		assert.NotNil(t, profile.LastActivity)
 		assert.Contains(t, hostNames, profile.DomainName)
 	}
+
+	// 4. domain events
+
+	payload = model.TimelinePayload{
+		Query: model.Query{
+			GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+			Type:            model.QueryTypeUniqueUsers,
+			EventsCondition: "all_given_event",
+			EventsWithProperties: []model.QueryEventWithProperties{
+				{
+					Name:          "Third Party Intent Visit",
+					GroupAnalysis: model.GROUP_NAME_DOMAINS,
+				},
+			},
+			Caller:     "account_profiles",
+			Source:     "$domains",
+			TableProps: []string{"$country", "$hubspot_company_created", "$hour_of_first_event"},
+		},
+	}
+
+	w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
+	assert.Equal(t, http.StatusOK, w.Code)
+	jsonResponse, _ = io.ReadAll(w.Body)
+	resp = make([]model.Profile, 0)
+	err = json.Unmarshal(jsonResponse, &resp)
+	assert.Nil(t, err)
+	assert.Equal(t, len(resp), 2)
+
 }
 
 func TestAllAccountDefaultGroupProperties(t *testing.T) {
