@@ -2,12 +2,13 @@ import React from 'react';
 import EmptyScreenDefaultIllustration from './../../assets/images/illustrations/EmptyScreenDefaultIllustration.png';
 import styles from './index.module.scss';
 import { Text } from 'Components/factorsComponents';
-import { Button, Empty, Spin } from 'antd';
+import { Button, ButtonProps, Empty, Spin, Tooltip, TooltipProps } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
 import SVG from 'Components/factorsComponents/SVG';
 type EmptyScreenProps = {
   image: JSX.Element | null;
   title: JSX.Element | string | null;
+  description?: JSX.Element | string | null;
   learnMore?: null | string; // If we have any URL
   topTitle?: JSX.Element | null;
   showTop?: boolean;
@@ -16,14 +17,24 @@ type EmptyScreenProps = {
     icon?: JSX.Element;
     text?: string | JSX.Element;
     onClick?: () => void | null;
+    props?: ButtonProps;
+    tooltip?: TooltipProps;
+    component: JSX.Element;
   } | null;
   upgradeScreen?: boolean;
   loading?: boolean;
 };
+function OptionalToolTipButton({ children, tooltip }: any) {
+  if (tooltip) {
+    return <Tooltip {...tooltip}>{children}</Tooltip>;
+  }
+  return children;
+}
 export default function ({
   image,
   imageStyle = { width: 216, height: 216 },
   title,
+  description,
   topTitle,
   ActionButton,
   showTop,
@@ -48,6 +59,7 @@ export default function ({
               type='primary'
               icon={<PlusOutlined color='white' />}
               onClick={ActionButton.onClick}
+              {...ActionButton?.props}
             >
               {' '}
               {ActionButton.text || 'Add New'}{' '}
@@ -68,14 +80,25 @@ export default function ({
           textAlign: 'center'
         }}
         description={
-          <Text
-            type={'title'}
-            level={6}
-            color={'grey-2'}
-            extraClass={'m-0 mt-2'}
-          >
-            {title}
-          </Text>
+          <div>
+            <Text
+              type={'title'}
+              level={6}
+              bold
+              color={'grey-2'}
+              extraClass={'m-0 mt-2'}
+            >
+              {title}
+            </Text>
+            <Text
+              type={'title'}
+              level={7}
+              color={'grey-4'}
+              extraClass={'m-0 mt-2'}
+            >
+              {description}
+            </Text>
+          </div>
         }
       >
         <div className='flex justify-center gap-2'>
@@ -91,13 +114,20 @@ export default function ({
             </a>
           )}
           {!showTop && ActionButton && (
-            <Button
-              type='primary'
-              icon={!upgradeScreen && <PlusOutlined />}
-              onClick={ActionButton.onClick}
-            >
-              {ActionButton.text || 'Add New'}{' '}
-            </Button>
+            <OptionalToolTipButton tooltip={ActionButton.tooltip}>
+              {ActionButton.component ? (
+                ActionButton.component
+              ) : (
+                <Button
+                  type='primary'
+                  icon={!upgradeScreen && <PlusOutlined />}
+                  onClick={ActionButton.onClick}
+                  {...ActionButton.props}
+                >
+                  {ActionButton.text || 'Add New'}{' '}
+                </Button>
+              )}
+            </OptionalToolTipButton>
           )}
         </div>
       </Empty>

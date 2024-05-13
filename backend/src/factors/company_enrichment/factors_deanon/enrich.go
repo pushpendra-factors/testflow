@@ -5,6 +5,7 @@ import (
 	"errors"
 	"factors/company_enrichment/clearbit"
 	"factors/company_enrichment/sixsignal"
+	"factors/config"
 	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
@@ -33,10 +34,9 @@ Factors Deanonymisation enrichment and metering flow:
 */
 
 // IsEligible method checks the eligibility creteria for enrichment via factors deanonymisation .
-func (fd *FactorsDeanon) IsEligible(projectSettings *model.ProjectSetting, isoCode, pageURL string) (bool, error) {
+func (fd *FactorsDeanon) IsEligible(projectSettings *model.ProjectSetting, isoCode, pageURL string, logCtx *log.Entry) (bool, error) {
 
 	projectId := projectSettings.ProjectId
-	logCtx := log.WithField("project_id", projectId)
 
 	featureFlag, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_FACTORS_DEANONYMISATION, false)
 	if err != nil {
@@ -69,6 +69,9 @@ func (fd *FactorsDeanon) IsEligible(projectSettings *model.ProjectSetting, isoCo
 	intFactorsDeanon := projectSettings.IntFactorsSixSignalKey
 
 	eligible := featureFlag && isDeanonQuotaAvailable && isFactorsDeanonRulesValid && *intFactorsDeanon
+	if config.IsEnrichmentDebugLogsEnabled(projectId) && !eligible {
+		logCtx.Warn("Eligibility check failed for factors deanon")
+	}
 
 	return eligible, nil
 }
@@ -76,10 +79,10 @@ func (fd *FactorsDeanon) IsEligible(projectSettings *model.ProjectSetting, isoCo
 // Enrich method fetches the factors deanon config and calls the method
 // to enrich the company identification props on basis of the config.
 func (fd *FactorsDeanon) Enrich(projectSettings *model.ProjectSetting,
-	userProperties *U.PropertiesMap, eventProperties *U.PropertiesMap, userId, clientIP string) (string, int) {
+	userProperties *U.PropertiesMap, eventProperties *U.PropertiesMap, userId, clientIP string, logCtx *log.Entry) (string, int) {
 
 	projectId := projectSettings.ProjectId
-	logCtx := log.WithField("project_id", projectId)
+
 	var factorsDeanonConfig model.FactorsDeanonConfig
 	if projectSettings.FactorsDeanonConfig != nil {
 		err := json.Unmarshal(projectSettings.FactorsDeanonConfig.RawMessage, &factorsDeanonConfig)
@@ -90,16 +93,18 @@ func (fd *FactorsDeanon) Enrich(projectSettings *model.ProjectSetting,
 		factorsDeanonConfig = defaultFactorsDeanonConfig
 	}
 
-	domain, status := FillFactorsDeanonUserProperties(projectId, factorsDeanonConfig, projectSettings, userProperties, eventProperties, userId, clientIP)
-	logCtx.WithFields(log.Fields{"domain": domain, "status": status}).Info("Debugging in Enrich.")
+	domain, status := FillFactorsDeanonUserProperties(projectId, factorsDeanonConfig, projectSettings, userProperties, eventProperties, userId, clientIP, logCtx)
 	return domain, status
 }
 
 // Meter method meters the count of unique domain enrichment for the calendar month
 // and successful domain enrichment count and total API calls count for each day.
-func (fd *FactorsDeanon) Meter(projectId int64, domain string) {
+func (fd *FactorsDeanon) Meter(projectId int64, domain string, logCtx *log.Entry) {
 
-	logCtx := log.WithField("project_id", projectId)
+	if config.IsEnrichmentDebugLogsEnabled(projectId) {
+		logCtx.Info("Metering the enrichment.")
+	}
+
 	timeZone, statusCode := store.GetStore().GetTimezoneForProject(projectId)
 	if statusCode != http.StatusFound {
 		logCtx.Warn("Failed fetching timezone. Using IST.")
@@ -107,18 +112,18 @@ func (fd *FactorsDeanon) Meter(projectId int64, domain string) {
 	}
 
 	//Unique Domain metering for calendar month
-	err := model.SetSixSignalMonthlyUniqueEnrichmentCount(projectId, domain, timeZone)
+	err := model.SetFactorsDeanonMonthlyUniqueEnrichmentCount(projectId, domain, timeZone)
 	if err != nil {
-		log.Error("SetSixSignalMonthlyUniqueEnrichmentCount Failed.")
+		logCtx.Error("SetSixSignalMonthlyUniqueEnrichmentCount Failed.")
 	}
 
 	if domain != "" {
 		// Successful domain enrichment count for each day
-		model.SetSixSignalAPICountCacheResult(projectId, U.TimeZoneStringIST)
+		model.SetFactorsDeanonAPICountResult(projectId, U.TimeZoneStringIST)
 	}
 
 	// Total successful API calls for a day
-	model.SetSixSignalAPITotalHitCountCacheResult(projectId, U.TimeZoneStringIST)
+	model.SetFactorsDeanonAPITotalHitCountResult(projectId, U.TimeZoneStringIST)
 
 }
 
@@ -131,9 +136,7 @@ HandleAccountLimitAlert handles the email alerts for account limit if it exceeds
 		- http.StatusForbidden, error : Match Failed/Email blocked or unsubscribed.
 		- http.StatusInternalServerError, error: error in getting or setting internal data.
 */
-func (fd *FactorsDeanon) HandleAccountLimitAlert(projectId int64, client HTTPClient) (int, error) {
-
-	logCtx := log.WithField("project_id", projectId)
+func (fd *FactorsDeanon) HandleAccountLimitAlert(projectId int64, client HTTPClient, logCtx *log.Entry) (int, error) {
 
 	email, errCode := store.GetStore().GetProjectAgentLatestAdminEmailByProjectId(projectId)
 	if errCode != http.StatusFound {
@@ -145,7 +148,6 @@ func (fd *FactorsDeanon) HandleAccountLimitAlert(projectId int64, client HTTPCli
 		return http.StatusInternalServerError, err
 	}
 	if !isEmailAllowed {
-		logCtx.Info("Email failed the check ", email)
 		return http.StatusForbidden, nil
 	}
 
@@ -176,15 +178,15 @@ func (fd *FactorsDeanon) HandleAccountLimitAlert(projectId int64, client HTTPCli
 		return http.StatusInternalServerError, err
 	}
 
-	if partialLimitMatch, _ := partialLimitExceeded.Match(projectId, percentageExhausted, limit, timeZone); partialLimitMatch {
+	if partialLimitMatch, _ := partialLimitExceeded.Match(projectId, percentageExhausted, limit, timeZone, logCtx); partialLimitMatch {
 
-		err := partialLimitExceeded.Execute(projectId, payloadJSON)
+		err := partialLimitExceeded.Execute(projectId, payloadJSON, logCtx)
 		if err != nil {
-			logCtx.Error(err)
+			logCtx.WithField("email", email).Warn("Failed to send partial limit exceeded account limit alert.")
 			return http.StatusBadRequest, err
 		}
 
-		err = SetAccountLimitEmailAlertCacheKey(projectId, limit, ACCOUNT_LIMIT_PARTIAL_EXCEEDED, timeZone)
+		err = SetAccountLimitEmailAlertCacheKey(projectId, limit, ACCOUNT_LIMIT_PARTIAL_EXCEEDED, timeZone, logCtx)
 		if err != nil {
 			return http.StatusInternalServerError, err
 		}
@@ -193,15 +195,15 @@ func (fd *FactorsDeanon) HandleAccountLimitAlert(projectId int64, client HTTPCli
 
 	}
 
-	if fullLimitMatch, _ := fullLimitExceeded.Match(projectId, percentageExhausted, limit, timeZone); fullLimitMatch {
+	if fullLimitMatch, _ := fullLimitExceeded.Match(projectId, percentageExhausted, limit, timeZone, logCtx); fullLimitMatch {
 
-		err := fullLimitExceeded.Execute(projectId, payloadJSON)
+		err := fullLimitExceeded.Execute(projectId, payloadJSON, logCtx)
 		if err != nil {
-			logCtx.Error(err)
+			logCtx.WithField("email", email).Warn("Failed to send full limit exceeded account limit alert.")
 			return http.StatusBadRequest, err
 		}
 
-		err = SetAccountLimitEmailAlertCacheKey(projectId, limit, ACCOUNT_LIMIT_FULLY_EXCEEDED, timeZone)
+		err = SetAccountLimitEmailAlertCacheKey(projectId, limit, ACCOUNT_LIMIT_FULLY_EXCEEDED, timeZone, logCtx)
 		if err != nil {
 			return http.StatusInternalServerError, err
 		}
@@ -209,16 +211,17 @@ func (fd *FactorsDeanon) HandleAccountLimitAlert(projectId int64, client HTTPCli
 		return http.StatusOK, nil
 	}
 
-	logCtx.Info("No account limit alerts sent.")
+	if config.IsEnrichmentDebugLogsEnabled(projectId) {
+		logCtx.Info("No account limit alerts sent.")
+	}
+
 	return http.StatusForbidden, nil
 }
 
 // FillFactorsDeanonUserProperties calls the respective method for clearbit and sixsignal enrichment
 // on basis of factors deanon config.
 func FillFactorsDeanonUserProperties(projectId int64, factorsDeanonConfig model.FactorsDeanonConfig,
-	projectSettings *model.ProjectSetting, userProperties *U.PropertiesMap, eventProperties *U.PropertiesMap, userId, clientIP string) (string, int) {
-
-	logCtx := log.WithField("project_id", projectId)
+	projectSettings *model.ProjectSetting, userProperties *U.PropertiesMap, eventProperties *U.PropertiesMap, userId, clientIP string, logCtx *log.Entry) (string, int) {
 
 	domain := ""
 	status := 0
@@ -228,39 +231,30 @@ func FillFactorsDeanonUserProperties(projectId int64, factorsDeanonConfig model.
 		return domain, status
 	}
 
-	/*
-		The factors clearbit key are being created manually for now. The below logic is to handle the case where
-		the factors clearbit key is not present, then we don't check the traffic fraction and goes through sixsignal
-		else we will check the fraction.
-	*/
-	if projectSettings.FactorsClearbitKey == "" {
-		factors6SignalKey := C.GetFactorsSixSignalAPIKey()
-		domain, status = sixsignal.FillSixSignalUserProperties(projectId, factors6SignalKey, userProperties, userId, clientIP)
-		(*userProperties)[U.ENRICHMENT_SOURCE] = FACTORS_6SIGNAL
-		logCtx.WithFields(log.Fields{"domain": domain, "status": status}).Info("Debugging in FillFactorsDeanonUserProperties")
+	if count < int64(float64(limit)*factorsDeanonConfig.Clearbit.TrafficFraction) {
+
+		if config.IsEnrichmentDebugLogsEnabled(projectId) {
+			logCtx.Info("Enrichment using factors clearbit.")
+		}
+		domain, status = clearbit.FillClearbitUserProperties(projectId, projectSettings.FactorsClearbitKey, userProperties, userId, clientIP, logCtx)
+		(*userProperties)[U.ENRICHMENT_SOURCE] = FACTORS_CLEARBIT
 		if status == 1 {
-			logCtx.Info("Adding enriched event property.")
-			(*eventProperties)[U.EP_COMPANY_ENRICHED] = FACTORS_6SIGNAL
+			(*eventProperties)[U.EP_COMPANY_ENRICHED] = FACTORS_CLEARBIT
 		}
 
 	} else {
-		if count < int64(float64(limit)*factorsDeanonConfig.Clearbit.TrafficFraction) {
 
-			domain, status = clearbit.FillClearbitUserProperties(projectId, projectSettings.FactorsClearbitKey, userProperties, userId, clientIP)
-			(*userProperties)[U.ENRICHMENT_SOURCE] = FACTORS_CLEARBIT
-			if status == 1 {
-				(*eventProperties)[U.EP_COMPANY_ENRICHED] = FACTORS_CLEARBIT
-			}
-
-		} else {
-			factors6SignalKey := C.GetFactorsSixSignalAPIKey()
-			domain, status = sixsignal.FillSixSignalUserProperties(projectId, factors6SignalKey, userProperties, userId, clientIP)
-			(*userProperties)[U.ENRICHMENT_SOURCE] = FACTORS_6SIGNAL
-			if status == 1 {
-				(*eventProperties)[U.EP_COMPANY_ENRICHED] = FACTORS_6SIGNAL
-			}
-
+		if config.IsEnrichmentDebugLogsEnabled(projectId) {
+			logCtx.Info("Enrichment using factors sixsignal.")
 		}
+		factors6SignalKey := C.GetFactorsSixSignalAPIKey()
+		domain, status = sixsignal.FillSixSignalUserProperties(projectId, factors6SignalKey, userProperties, userId, clientIP, logCtx)
+		(*userProperties)[U.ENRICHMENT_SOURCE] = FACTORS_6SIGNAL
+		if status == 1 {
+			(*eventProperties)[U.EP_COMPANY_ENRICHED] = FACTORS_6SIGNAL
+		}
+
 	}
+
 	return domain, status
 }

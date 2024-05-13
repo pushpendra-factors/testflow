@@ -1,25 +1,22 @@
 import React, { useState } from 'react';
-import { useEffect } from 'react';
 import { connect, useDispatch } from 'react-redux';
-import { fetchProjectSettings, udpateProjectSettings } from 'Reducers/global';
+import { udpateProjectSettings } from 'Reducers/global';
 import { Row, Col, Modal, Input, Form, Button, message, Avatar } from 'antd';
 import { Text, FaErrorComp, FaErrorLog, SVG } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import factorsai from 'factorsai';
-import { sendSlackNotification } from '../../../../../utils/slack';
-import { getDefaultTimelineConfigForSixSignal } from '../util';
 import { createDashboardFromTemplate } from 'Reducers/dashboard_templates/services';
 import { fetchDashboards } from 'Reducers/dashboard/services';
 import { fetchQueries } from 'Reducers/coreQuery/services';
 import logger from 'Utils/logger';
 import { fetchFeatureConfig } from 'Reducers/featureConfig/middleware';
+import { getDefaultTimelineConfigForSixSignal } from '../util';
+import { sendSlackNotification } from '../../../../../utils/slack';
 
 function SixSignalIntegration({
-  fetchProjectSettings,
   udpateProjectSettings,
   activeProject,
   currentProjectSettings,
-  setIsActive,
   kbLink = false,
   currentAgent
 }) {
@@ -29,13 +26,7 @@ function SixSignalIntegration({
   const [showForm, setShowForm] = useState(false);
   const dispatch = useDispatch();
 
-  useEffect(() => {
-    if (currentProjectSettings?.int_client_six_signal_key) {
-      setIsActive(true);
-    }
-  }, [currentProjectSettings]);
-
-  //activating visitor identification template when 6 signal keys are added
+  // activating visitor identification template when 6 signal keys are added
   const activateVisitorIdentificationTemplate = async () => {
     try {
       if (!activeProject?.id) return;
@@ -65,7 +56,7 @@ function SixSignalIntegration({
     udpateProjectSettings(activeProject.id, {
       client6_signal_key: values.api_key,
       int_client_six_signal_key: true,
-      //updating table user and account table config when six signal is activated
+      // updating table user and account table config when six signal is activated
       timelines_config: getDefaultTimelineConfigForSixSignal(
         currentProjectSettings
       )
@@ -77,7 +68,6 @@ function SixSignalIntegration({
         setTimeout(() => {
           message.success('6Signal integration successful');
         }, 500);
-        setIsActive(true);
         sendSlackNotification(
           currentAgent.email,
           activeProject.name,
@@ -89,7 +79,6 @@ function SixSignalIntegration({
         setShowForm(false);
         setLoading(false);
         seterrorInfo(err?.error);
-        setIsActive(false);
       });
   };
 
@@ -112,7 +101,6 @@ function SixSignalIntegration({
             setTimeout(() => {
               message.success('6Signal integration disconnected!');
             }, 500);
-            setIsActive(false);
             dispatch(fetchFeatureConfig(activeProject.id));
           })
           .catch((err) => {
@@ -198,7 +186,6 @@ function SixSignalIntegration({
                   ]}
                 >
                   <Input
-                    size='large'
                     className='fa-input w-full'
                     placeholder='6Signal API Key'
                   />
@@ -234,19 +221,20 @@ function SixSignalIntegration({
         </div>
       </Modal>
       {currentProjectSettings?.int_client_six_signal_key && (
-        <div className='mt-4 flex flex-col border-top--thin py-4 mt-2 w-full'>
-          <Text type='title' level={6} weight='bold' extraClass='m-0'>
-            Connected Account
-          </Text>
-          <Text type='title' level={7} color='grey' extraClass='m-0 mt-2'>
+        <div className='mt-4 flex flex-col  w-full'>
+          <Text
+            type='title'
+            level={7}
+            color='text-primary'
+            extraClass='m-0 mb-1'
+          >
             API Key
           </Text>
           <Input
-            size='large'
             disabled
             placeholder='API Key'
             value={currentProjectSettings?.client6_signal_key}
-            style={{ width: '400px' }}
+            style={{ width: '320px', background: '#fff' }}
           />
         </div>
       )}
@@ -256,17 +244,13 @@ function SixSignalIntegration({
             Disconnect
           </Button>
         ) : (
-          <Button
-            type='primary'
-            loading={loading}
-            onClick={() => setShowForm(!showForm)}
-          >
+          <Button loading={loading} onClick={() => setShowForm(!showForm)}>
             Connect Now
           </Button>
         )}
         {kbLink && (
           <a
-            className='ant-btn ml-2 '
+            className='ant-btn-text ml-2 flex items-center px-5'
             target='_blank'
             href={kbLink}
             rel='noreferrer'
@@ -286,6 +270,5 @@ const mapStateToProps = (state) => ({
 });
 
 export default connect(mapStateToProps, {
-  fetchProjectSettings,
   udpateProjectSettings
 })(SixSignalIntegration);

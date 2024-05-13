@@ -350,7 +350,6 @@ type Configuration struct {
 	ChargebeeApiKey                                      string
 	ChargebeeSiteName                                    string
 	UserPropertyUpdateOptProjects                        string
-	AccountLimitEmailAlertProjectIDs                     string
 	AssociateDealToDomainByProjectID                     string
 	EnableSyncTriesFlag                                  bool
 	ClearbitProvisionAccountAPIKey                       string
@@ -366,6 +365,7 @@ type Configuration struct {
 	EnableDomainWebsitePropertiesByProjectID             string
 	HubspotEnrichSkipContactUpdatesByProjectID           string
 	EnableSalesforceDeletedRecordByProjectID             string
+	EnableEnrichmentDebugLogsByProjectID                 string
 }
 
 type Services struct {
@@ -2572,28 +2572,6 @@ func GetSDKAndIntegrationMetricNameByConfig(metricName string) string {
 	return metricName
 }
 
-func IsAccountLimitEmailAlertEnabled(projectId int64) bool {
-
-	if configuration.AccountLimitEmailAlertProjectIDs == "" {
-		return false
-	}
-
-	if configuration.AccountLimitEmailAlertProjectIDs == "*" {
-		return true
-	}
-
-	projectIDstr := fmt.Sprintf("%d", projectId)
-	projectIDs := strings.Split(configuration.AccountLimitEmailAlertProjectIDs, ",")
-	for i := range projectIDs {
-		if projectIDs[i] == projectIDstr {
-			return true
-		}
-	}
-
-	return false
-
-}
-
 func IsSortedSetCachingAllowed() bool {
 	return configuration.CacheSortedSet
 }
@@ -3300,4 +3278,25 @@ func EnableSalesforceDeletedRecordByProjectID(projectID int64) bool {
 	}
 
 	return allowedProjectIDs[projectID]
+}
+
+func IsEnrichmentDebugLogsEnabled(projectId int64) bool {
+
+	if configuration.EnableEnrichmentDebugLogsByProjectID == "" {
+		return false
+	}
+
+	if configuration.EnableEnrichmentDebugLogsByProjectID == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectId)
+	projectIDs := strings.Split(configuration.EnableEnrichmentDebugLogsByProjectID, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
+	return false
 }

@@ -55,7 +55,9 @@
       }
 
       & .create-new-item-icon {
-        padding: 0 8px;
+        padding: 4px 4px;
+        margin: 0 4px;
+        border-radius: 4px;
       }
     }
   }
@@ -166,6 +168,7 @@
       padding: 10px 10px 10px 20px;
       transition-duration: 0.2s;
       display: flex;
+      align-items: center;
       color: #0e2647;
       cursor: pointer;
       & * {
@@ -176,7 +179,14 @@
       &:focus-visible {
         background-color: #f5f6f8;
       }
-
+      & .icon {
+        display: flex;
+        border-radius: 5px;
+        height: 32px;
+        width: 32px;
+        justify-content: center;
+        align-items: center;
+      }
       & .globalsearch-item-list-item-desc {
         color: #8692a3;
       }

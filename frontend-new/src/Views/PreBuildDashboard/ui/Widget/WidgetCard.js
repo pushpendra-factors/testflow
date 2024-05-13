@@ -28,12 +28,9 @@ const { Option } = Select;
 
 function WidgetCard({
   unit,
-  // showDeleteWidgetModal,
   durationObj,
   setOldestRefreshTime,
-  onDataLoadSuccess,
-  dashboardRefreshState
-  // handleWidgetRefresh
+  onDataLoadSuccess
 }) {
   const hasComponentUnmounted = useRef(false);
   const cardRef = useRef(null);
@@ -176,29 +173,6 @@ function WidgetCard({
     };
   }, [getData, durationWithSavedFrequency, appliedBreakdown, dashboardFilters]);
 
-  // const handleDelete = useCallback(() => {
-  //   showDeleteWidgetModal(unit);
-  // }, [unit, showDeleteWidgetModal]);
-
-  // const onWidgetRefresh = useCallback(() => {
-  //   handleWidgetRefresh(unit.inter_id);
-  // }, [unit.inter_id, handleWidgetRefresh]);
-
-  // const getMenu = () => (
-  //   <Menu>
-  //     <Menu.Item key='0'>
-  //       <a onClick={handleDelete} href='#!'>
-  //         Delete Widget
-  //       </a>
-  //     </Menu.Item>
-  //     <Menu.Item key='1'>
-  //       <a onClick={onWidgetRefresh} href='#!'>
-  //         Refresh
-  //       </a>
-  //     </Menu.Item>
-  //   </Menu>
-  // );
-
   const handleEditQuery = useCallback(() => {
     history.push({
       pathname: '/report/quick-board',
@@ -302,16 +276,6 @@ function WidgetCard({
                     </div>
                   </Tooltip>
                 ) : null}
-                {/* <Dropdown
-                  placement='bottomRight'
-                  overlay={getMenu()}
-                  trigger={['hover']}
-                >
-                  <Button
-                    type='text'
-                    icon={<SVG size={20} name='threedot' color='grey' />}
-                  />
-                </Dropdown> */}
               </div>
             </div>
             {!unit?.g_by?.length ? (

@@ -1,7 +1,6 @@
-import React, { useCallback, useRef, useMemo } from 'react';
-import WidgetCard from './WidgetCard';
+import React from 'react';
 import { Text } from 'Components/factorsComponents';
-import { ReactSortable } from 'react-sortablejs';
+import WidgetCard from './WidgetCard';
 
 function NoDataDashboard() {
   return (
@@ -22,36 +21,27 @@ function NoDataDashboard() {
   );
 }
 
-
-
 function SortableCards({
   widget,
   durationObj,
-  handleDurationChange,
   setOldestRefreshTime,
   dashboardRefreshState,
   onDataLoadSuccess
 }) {
-
   if (widget?.length) {
     return (
-      <div
-        className='flex flex-wrap'
-      >
-        {widget?.map((item) => {
-
-          return (
-            <WidgetCard
-              key={item?.inter_id}
-              unit={{ ...item }}
-              durationObj={durationObj}
-              setOldestRefreshTime={setOldestRefreshTime}
-              dashboardRefreshState={dashboardRefreshState}
-              onDataLoadSuccess={onDataLoadSuccess}
-            />
-          );
-        })}
-        </div>
+      <div className='flex flex-wrap'>
+        {widget?.map((item) => (
+          <WidgetCard
+            key={item?.inter_id}
+            unit={{ ...item }}
+            durationObj={durationObj}
+            setOldestRefreshTime={setOldestRefreshTime}
+            dashboardRefreshState={dashboardRefreshState}
+            onDataLoadSuccess={onDataLoadSuccess}
+          />
+        ))}
+      </div>
     );
   }
   return <NoDataDashboard />;

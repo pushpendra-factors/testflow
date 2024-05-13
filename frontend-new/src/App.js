@@ -13,6 +13,9 @@ import { AppRoutes } from 'Routes/AppRoutes';
 import { ProductFruits } from 'react-product-fruits';
 import { PRODUCTION_WORKSPACE_CODE } from 'Utils/productFruitsConfig';
 import { ScrollToTop } from 'Routes/feature';
+import { PathUrls } from 'Routes/pathUrls';
+import { INTEGRATION_ID } from 'Views/Settings/ProjectSettings/IntegrationSettings/integrations.constants';
+import { useHistory } from 'react-router-dom';
 import AdBlockerDetector from './components/AdBlockerDetector';
 import { sendSlackNotification } from './utils/slack';
 import { SSO_LOGIN_FULFILLED } from './reducers/types';
@@ -27,6 +30,7 @@ function App({
 }) {
   const dispatch = useDispatch();
   const [userInfo, setUserInfo] = useState(null);
+  const history = useHistory();
 
   const ssoLogin = () => {
     if (window.location.href.indexOf('?error=') > -1) {
@@ -49,6 +53,7 @@ function App({
     }
 
     if (window.location.href.indexOf('?code=') > -1) {
+      // linkedin redirection
       var searchParams = new URLSearchParams(window.location.search);
       if (searchParams) {
         const code = searchParams.get('code');
@@ -56,7 +61,9 @@ function App({
         localStorage.setItem('Linkedin_code', code);
         localStorage.setItem('Linkedin_state', state);
       }
-      window.location.replace('/settings/integration');
+      history.replace(
+        `${PathUrls.SettingsIntegration}/${INTEGRATION_ID.linkedIn}`
+      );
     }
 
     if (window.location.href.indexOf('?bingadsint=') > -1) {
@@ -68,7 +75,9 @@ function App({
         enableBingAdsIntegration(projectID)
           .then(() => {
             sendSlackNotification(email, projectname, 'Bing Ads');
-            window.location.replace('/settings/integration');
+            history.replace(
+              `${PathUrls.SettingsIntegration}/${INTEGRATION_ID.bing_ads}`
+            );
           })
           .catch((err) => {
             console.log('bing ads enable error', err);
@@ -85,7 +94,9 @@ function App({
         enableMarketoIntegration(projectID)
           .then(() => {
             sendSlackNotification(email, projectname, 'Marketo');
-            window.location.replace('/settings/integration');
+            history.replace(
+              `${PathUrls.SettingsIntegration}/${INTEGRATION_ID.marketo}`
+            );
           })
           .catch((err) => {
             console.log('Marketo enable error', err);
@@ -133,12 +144,12 @@ function App({
         }
 
         // Reditus - For affiliation tracking.
-        if (window.gr && typeof window.gr == 'function') {
+        if (window.gr && typeof window.gr === 'function') {
           window.gr('track', 'conversion', { email: agent_details?.email });
         }
 
-        //intercom init and passing logged-in user-data
-        var APP_ID = 'rvffkuu7';
+        // intercom init and passing logged-in user-data
+        const APP_ID = 'rvffkuu7';
         window.intercomSettings = {
           app_id: APP_ID,
           name: agent_details?.first_name,

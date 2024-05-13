@@ -33,9 +33,9 @@ const (
 	ETA_ENRICHED_HUBSPOT_COMPANY_OBJECT_URL    = "ignore_eta_hs_c_o_url"
 	ETA_ENRICHED_SALESFORCE_ACCOUNT_OBJECT_URL = "ignore_eta_sf_a_o_url"
 
-	ACTION_EVENT_PERFORMED   = "action_event"
-	ACTION_SEGMENT_ENTRY     = "action_segment_entry"
-	ACTION_SEGMENT_EXIT      = "action_segment_exit"
+	ACTION_EVENT_PERFORMED = "action_event"
+	ACTION_SEGMENT_ENTRY   = "action_segment_entry"
+	ACTION_SEGMENT_EXIT    = "action_segment_exit"
 
 	// cachekey structure = ETA:pid:<project_id>:<alert_id>:<UnixTime>
 	// cacheCounterKey structure = ETA:Counter:pid:<project_id>:<alert_id>:<YYYYMMDD>
@@ -102,8 +102,9 @@ type AlertInfo struct {
 }
 
 type CachedEventTriggerAlert struct {
-	Message   EventTriggerAlertMessage
-	FieldTags map[string]string
+	Message    EventTriggerAlertMessage
+	FieldTags  map[string]string
+	IsWorkflow bool
 }
 
 type EventTriggerAlertMessage struct {
@@ -205,7 +206,6 @@ func SetCacheForEventTriggerAlert(key *cacheRedis.Key, cacheETA *CachedEventTrig
 		log.WithError(err).Error("Failed to set Cache for EventTriggerAlert.")
 	}
 
-	log.Info("Adding to cache successful.")
 	return err
 }
 
@@ -227,8 +227,6 @@ func GetEventTriggerAlertCacheCounterKey(projectId int64, alertId, date string) 
 
 	suffix := fmt.Sprintf("%s:%s", alertId, date)
 	prefix := fmt.Sprintf("%s:%s", prefixNameforAlerts, counterIndex)
-
-	log.Info("Fetching redisKey, inside GetEventTriggerAlertCacheKey.")
 
 	key, err := cacheRedis.NewKey(projectId, prefix, suffix)
 	if err != nil || key == nil {
@@ -364,7 +362,7 @@ func GetSlackMsgBlock(msg EventTriggerAlertMessage, slackMentions string, isAcco
 		},`, sfAccUrl)
 		hasAttachements = true
 	}
-	
+
 	attachements := ""
 	if hasAttachements && isAccountAlert {
 		attachements = fmt.Sprintf(`{

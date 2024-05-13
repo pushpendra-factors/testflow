@@ -1,19 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
-import {
-  FaErrorComp,
-  SVG,
-  FaErrorLog,
-  Text
-} from 'Components/factorsComponents';
-import { Button, Dropdown, Menu, Spin, Tooltip } from 'antd';
+import { FaErrorComp, FaErrorLog, Text } from 'Components/factorsComponents';
+import { Spin, Tooltip } from 'antd';
 import { useHistory } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { getQuickDashboardDateRange } from 'Views/Dashboard/utils';
-import {
-  selectActivePreDashboard,
-  selectAreDraftsSelected
-} from 'Reducers/dashboard/selectors';
+import { selectActivePreDashboard } from 'Reducers/dashboard/selectors';
 import { get } from 'lodash';
 import { setItemToLocalStorage } from 'Utils/localStorage.helpers';
 import { DASHBOARD_KEYS } from 'Constants/localStorage.constants';
@@ -23,11 +15,11 @@ import { FEATURES } from 'Constants/plans.constants';
 import { PathUrls } from 'Routes/pathUrls';
 import { TOOLTIP_CONSTANTS } from 'Constants/tooltips.constans';
 import { InfoCircleOutlined } from '@ant-design/icons';
+import AddDashboard from 'Views/Dashboard/AddDashboard';
+import { DASHBOARD_UNMOUNTED } from 'Reducers/types';
 import { fetchActiveDashboardConfig } from '../state/services';
 import SubMenu from './Widget/SubMenu';
 import SortableCards from './Widget/SortableCards';
-import AddDashboard from 'Views/Dashboard/AddDashboard';
-import { ADD_DASHBOARD_MODAL_OPEN, DASHBOARD_UNMOUNTED } from 'Reducers/types';
 
 const dashboardRefreshInitialState = {
   inProgress: false,
@@ -42,15 +34,11 @@ function PreBuildDashboard({}) {
   const [addDashboardModal, setaddDashboardModal] = useState(false);
   const [editDashboard, setEditDashboard] = useState(null);
   const [durationObj, setDurationObj] = useState(getQuickDashboardDateRange());
-  const [oldestRefreshTime, setOldestRefreshTime] = useState(null);
 
   const activeDashboard = useSelector((state) =>
     selectActivePreDashboard(state)
   );
   const { active_project } = useSelector((state) => state.global);
-  const config = useSelector(
-    (state) => state.preBuildDashboardConfig.config.data.result
-  );
   const widget = useSelector((state) => state.preBuildDashboardConfig.widget);
   const predefinedConfigData = useSelector(
     (state) => state.preBuildDashboardConfig.config
@@ -94,7 +82,6 @@ function PreBuildDashboard({}) {
       let from;
       let to;
       const { startDate, endDate } = dates;
-      setOldestRefreshTime(null);
       resetDashboardRefreshState();
       if (Array.isArray(dates.startDate)) {
         from = get(startDate, 0);
@@ -211,7 +198,6 @@ function PreBuildDashboard({}) {
           widget={widget}
           durationObj={durationObj}
           handleDurationChange={handleDurationChange}
-          setOldestRefreshTime={setOldestRefreshTime}
           dashboardRefreshState={dashboardRefreshState}
           onDataLoadSuccess={onDataLoadSuccess}
         />

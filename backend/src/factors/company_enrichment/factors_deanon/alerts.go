@@ -2,6 +2,7 @@ package factors_deanon
 
 import (
 	"errors"
+	"factors/config"
 	"factors/model/model"
 	"fmt"
 	"net/http"
@@ -31,12 +32,12 @@ type FullAccountLimitExceeded struct {
 }
 
 // Match method on struct of PartialAccountLimitExceeded checks the cases if the acount limit exceeds 75% or not and alert is not sent.
-func (p *PartialAccountLimitExceeded) Match(projectId int64, percentageExhausted float64, limit int64, timeZone U.TimeZoneString) (bool, error) {
+func (p *PartialAccountLimitExceeded) Match(projectId int64, percentageExhausted float64, limit int64, timeZone U.TimeZoneString, logCtx *log.Entry) (bool, error) {
 
 	sendAlert := false
 	var err error
 	if percentageExhausted >= 75 && percentageExhausted < 100 {
-		sendAlert, err = ShouldSendAccountLimitAlert(projectId, limit, ACCOUNT_LIMIT_PARTIAL_EXCEEDED, timeZone)
+		sendAlert, err = ShouldSendAccountLimitAlert(projectId, limit, ACCOUNT_LIMIT_PARTIAL_EXCEEDED, timeZone, logCtx)
 		if err != nil {
 			return false, err
 		}
@@ -46,12 +47,12 @@ func (p *PartialAccountLimitExceeded) Match(projectId int64, percentageExhausted
 }
 
 // Match method on struct of FullAccountLimitExceeded checks the cases if the acount limit exceeds 100% or not and alert is not sent.
-func (f *FullAccountLimitExceeded) Match(projectId int64, percentageExhausted float64, limit int64, timeZone U.TimeZoneString) (bool, error) {
+func (f *FullAccountLimitExceeded) Match(projectId int64, percentageExhausted float64, limit int64, timeZone U.TimeZoneString, logCtx *log.Entry) (bool, error) {
 
 	alertNotSent := false
 	var err error
 	if percentageExhausted >= 100 {
-		alertNotSent, err = ShouldSendAccountLimitAlert(projectId, limit, ACCOUNT_LIMIT_FULLY_EXCEEDED, timeZone)
+		alertNotSent, err = ShouldSendAccountLimitAlert(projectId, limit, ACCOUNT_LIMIT_FULLY_EXCEEDED, timeZone, logCtx)
 		if err != nil {
 			return false, err
 		}
@@ -61,9 +62,7 @@ func (f *FullAccountLimitExceeded) Match(projectId int64, percentageExhausted fl
 }
 
 // Execute method on struct of PartialAccountLimitExceeded forms the request for and gets the response from Mailmodo if account limit exceeds 75%.
-func (p *PartialAccountLimitExceeded) Execute(projectId int64, payloadJSON []byte) error {
-
-	logCtx := log.WithField("project_id", projectId)
+func (p *PartialAccountLimitExceeded) Execute(projectId int64, payloadJSON []byte, logCtx *log.Entry) error {
 
 	request, err := model.FormMailmodoTriggerCampaignRequest(MAILMODO_75_PERCENT_EXCEEDED_CAMPAIGN_ID, payloadJSON)
 	if err != nil {
@@ -77,18 +76,17 @@ func (p *PartialAccountLimitExceeded) Execute(projectId int64, payloadJSON []byt
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
-		logCtx.WithFields(log.Fields{"response": response.Body, "statusCode": response.StatusCode}).Error("Failed to send account limit alert")
 		return errors.New("failed sending account limit email alert")
 	}
 
-	logCtx.Info("Partial Account limit exceeded email alert sent successfully.")
+	if config.IsEnrichmentDebugLogsEnabled(projectId) {
+		logCtx.Info("Partial Account limit exceeded email alert sent successfully.")
+	}
 	return nil
 }
 
 // Execute method on struct of FullAccountLimitExceeded forms the request for and gets the response from Mailmodo if account limit exceeds 100%.
-func (f *FullAccountLimitExceeded) Execute(projectId int64, payloadJSON []byte) error {
-
-	logCtx := log.WithField("project_id", projectId)
+func (f *FullAccountLimitExceeded) Execute(projectId int64, payloadJSON []byte, logCtx *log.Entry) error {
 
 	request, err := model.FormMailmodoTriggerCampaignRequest(MAILMODO_100_PERCENT_EXCEEDED_CAMPAIGN_ID, payloadJSON)
 	if err != nil {
@@ -102,20 +100,20 @@ func (f *FullAccountLimitExceeded) Execute(projectId int64, payloadJSON []byte) 
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
-		logCtx.WithFields(log.Fields{"response": response.Body, "statusCode": response.StatusCode}).Error("Failed to send account limit alert")
 		return errors.New("failed sending account limit email alert")
 	}
 
-	logCtx.Info("Full Account limit exceeded email alert sent successfully.")
+	if config.IsEnrichmentDebugLogsEnabled(projectId) {
+		logCtx.Info("Full Account limit exceeded email alert sent successfully.")
+	}
 
 	return nil
 }
 
 // ShouldSendAccountLimitAlert checks if the alert has already been sent or not.
-func ShouldSendAccountLimitAlert(projectId int64, limit int64, exhaustType string, timeZone U.TimeZoneString) (bool, error) {
-	logCtx := log.WithField("project_id", projectId)
+func ShouldSendAccountLimitAlert(projectId int64, limit int64, exhaustType string, timeZone U.TimeZoneString, logCtx *log.Entry) (bool, error) {
 
-	key, err := GetAccountLimitEmailAlertCacheKey(projectId, limit, exhaustType, timeZone)
+	key, err := GetAccountLimitEmailAlertCacheKey(projectId, limit, exhaustType, timeZone, logCtx)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get cache key for account limit email alert")
 		return false, err
@@ -129,9 +127,7 @@ func ShouldSendAccountLimitAlert(projectId int64, limit int64, exhaustType strin
 }
 
 // GetAccountLimitEmailAlertCacheKey gets the cache key for the account limit email alert.
-func GetAccountLimitEmailAlertCacheKey(projectId int64, limit int64, exhaustType string, timeZone U.TimeZoneString) (*cacheRedis.Key, error) {
-
-	logCtx := log.WithField("project_id", projectId)
+func GetAccountLimitEmailAlertCacheKey(projectId int64, limit int64, exhaustType string, timeZone U.TimeZoneString, logCtx *log.Entry) (*cacheRedis.Key, error) {
 
 	monthYear := U.GetCurrentMonthYear(timeZone)
 	prefix := fmt.Sprintf("alert:%s:limit:%v", exhaustType, limit)
@@ -145,11 +141,9 @@ func GetAccountLimitEmailAlertCacheKey(projectId int64, limit int64, exhaustType
 }
 
 // SetAccountLimitEmailAlertCacheKey sets the value of the cache key to true, which indicates the alert has been sent.
-func SetAccountLimitEmailAlertCacheKey(projectId int64, limit int64, exhaustType string, timeZone U.TimeZoneString) error {
+func SetAccountLimitEmailAlertCacheKey(projectId int64, limit int64, exhaustType string, timeZone U.TimeZoneString, logCtx *log.Entry) error {
 
-	logCtx := log.WithField("project_id", projectId)
-
-	key, err := GetAccountLimitEmailAlertCacheKey(projectId, limit, exhaustType, timeZone)
+	key, err := GetAccountLimitEmailAlertCacheKey(projectId, limit, exhaustType, timeZone, logCtx)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get cache key for account limit email alert")
 		return err

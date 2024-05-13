@@ -3,9 +3,7 @@ import { SVG, Text } from 'Components/factorsComponents';
 import ProgressBar from 'Components/GenericComponents/Progress';
 import { useSelector } from 'react-redux';
 import { FeatureConfigState } from 'Reducers/featureConfig/types';
-import { useHistory } from 'react-router-dom';
-import { PathUrls } from 'Routes/pathUrls';
-import { PRICING_PAGE_TABS } from '../../Pricing/utils';
+import { useHistory, useLocation } from 'react-router-dom';
 import styles from './index.module.scss';
 
 function ConnectedScreen() {
@@ -13,6 +11,7 @@ function ConnectedScreen() {
     (state: any) => state.featureConfig
   ) as FeatureConfigState;
   const { currentProjectSettings } = useSelector((state) => state?.global);
+  const location = useLocation();
   const history = useHistory();
   const sixSignalLimit = sixSignalInfo?.limit || 0;
   const sixSignalUsage = sixSignalInfo?.usage || 0;
@@ -61,8 +60,8 @@ function ConnectedScreen() {
     }
   };
   return (
-    <div className='mt-4 flex flex-col border-top--thin  py-4 w-full'>
-      <div>
+    <div className=' flex flex-col  w-full'>
+      {/* <div>
         <Text
           type='title'
           level={6}
@@ -81,9 +80,9 @@ function ConnectedScreen() {
           Gain insight into accounts visiting your website and where they are in
           the buying journey.
         </Text>
-      </div>
-      <div className='my-6'>
-        <div>{renderProviderCard()}</div>
+      </div> */}
+      <div>{renderProviderCard()}</div>
+      <div className='mt-2'>
         <Text
           type='title'
           level={7}
@@ -101,7 +100,7 @@ function ConnectedScreen() {
           team if you want to change your de-anonymisation provider
         </Text>
       </div>
-      <div>
+      <div className='mt-4'>
         <div className='flex justify-between items-center'>
           <div className='flex items-center justify-start gap-2'>
             <Text type='paragraph' mini>
@@ -110,12 +109,12 @@ function ConnectedScreen() {
             <div
               className='flex items-center justify-start gap-1 cursor-pointer'
               onClick={() =>
-                history.push(
-                  `${PathUrls.SettingsPricing}?activeTab=${PRICING_PAGE_TABS.ENRICHMENT_RULES}`
+                history.replace(
+                  `${location.pathname}?activeTab=enrichmentRules`
                 )
               }
             >
-              <SVG name='ArrowUpRightSquare' color='#40A9FF' />
+              <SVG name='ArrowUpRightSquare' size={14} color='#40A9FF' />
 
               <Text type='paragraph' mini color='brand-color'>
                 Enrichment rules

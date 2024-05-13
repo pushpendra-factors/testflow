@@ -185,7 +185,7 @@ func (store *MemSQL) GetSixSignalInfoForProject(projectID int64) (model.SixSigna
 		timeZoneString = U.TimeZoneStringIST
 	}
 	monthYearString := U.GetCurrentMonthYear(timeZoneString)
-	sixSignalCount, err := model.GetSixSignalMonthlyUniqueEnrichmentCount(projectID, monthYearString)
+	sixSignalCount, err := model.GetFactorsDeanonMonthlyUniqueEnrichmentCount(projectID, monthYearString)
 	if err != nil {
 		logCtx.WithError(err).Error(" Failed to get six signal count")
 		return model.SixSignalInfo{}, errors.New("Failed to get six signal count")

@@ -8,7 +8,7 @@ import React, {
 import _ from 'lodash';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { Button, Dropdown, Menu, Tooltip } from 'antd';
-import { RightOutlined, LeftOutlined } from '@ant-design/icons';
+import { RightOutlined, LeftOutlined, PlusOutlined } from '@ant-design/icons';
 import { useHistory, useLocation } from 'react-router-dom';
 import { Text, SVG } from '../../components/factorsComponents';
 import CardContent from './CardContent';
@@ -41,6 +41,7 @@ import { fetchWeeklyIngishts as fetchWeeklyInsightsAction } from '../../reducers
 import styles from './index.module.scss';
 import { featureLock } from 'Routes/feature';
 import useAgentInfo from 'hooks/useAgentInfo';
+import NewReportButton from './NewReportButton';
 
 function WidgetCard({
   unit,
@@ -51,7 +52,8 @@ function WidgetCard({
   setOldestRefreshTime,
   dashboardRefreshState,
   onDataLoadSuccess,
-  handleWidgetRefresh
+  handleWidgetRefresh,
+  addNewReport = false
 }) {
   const hasComponentUnmounted = useRef(false);
   const cardRef = useRef(null);
@@ -123,6 +125,10 @@ function WidgetCard({
 
   const getData = useCallback(
     async (refresh = false) => {
+      if (addNewReport) {
+        // If addNewReport then don't fetch anything.
+        return;
+      }
       try {
         hasComponentUnmounted.current = false;
         setResultState({
@@ -462,6 +468,9 @@ function WidgetCard({
     } else if (unit?.query?.query?.cl === 'funnel') {
       analyseQueryParamsPath =
         analyseQueryParamsPath + '/funnel/' + unit.query.id_text;
+    } else if (unit?.query?.query?.cl === 'kpi' && featureLock(email)) {
+      analyseQueryParamsPath =
+        analyseQueryParamsPath + '/kpi/' + unit.query.id_text;
     }
 
     history.push({
@@ -491,7 +500,7 @@ function WidgetCard({
     }),
     [attributionMetrics, tableFilters, handleEditQuery]
   );
-
+  const handleAddReport = function () {};
   return (
     <div
       className={`${unit?.query?.title.split(' ').join('-')} ${
@@ -501,77 +510,87 @@ function WidgetCard({
       <div
         id={`card-${unit.id}`}
         ref={cardRef}
-        className={`fa-dashboard--widget-card h-full w-full flex ${styles.widgetCardCustomCSS}`}
+        className={`fa-dashboard--widget-card h-full w-full flex ${
+          styles.widgetCardCustomCSS
+        } ${addNewReport && 'cursor-pointer'}`}
       >
         <div className='flex justify-between items-start w-full'>
-          <div className='w-full flex flex-1 flex-col h-full justify-between'>
-            <div
-              className={`${styles.widgetCard} flex items-center justify-between px-4`}
-            >
+          {addNewReport ? (
+            <NewReportButton isWidget showSavedReport placement='' />
+          ) : (
+            <div className='w-full flex flex-1 flex-col h-full justify-between'>
               <div
-                className='widget-card--title-container py-3 flex truncate cursor-pointer items-center w-full mr-2'
-                onClick={handleEditQuery}
+                className={`${styles.widgetCard} flex items-center justify-between px-4`}
               >
-                <div className='flex  items-center'>
-                  <Tooltip title={unit?.query?.title} mouseEnterDelay={0.2}>
-                    <Text
-                      ellipsis
-                      type='title'
-                      level={6}
-                      weight='bold'
-                      extraClass='widget-card--title m-0 mr-1 flex'
-                    >
-                      {unit?.query?.title}
-                    </Text>
-                  </Tooltip>
-                </div>
-                <SVG
-                  extraClass='widget-card--expand-icon ml-1'
-                  size={20}
-                  color='grey'
-                  name='arrowright'
-                />
-              </div>
-              <div className='flex items-center'>
-                {resultState.apiCallStatus &&
-                resultState.apiCallStatus.required &&
-                resultState.apiCallStatus.message ? (
-                  <Tooltip
-                    mouseEnterDelay={0.2}
-                    title={resultState.apiCallStatus.message}
-                  >
-                    <div className='cursor-pointer'>
-                      <SVG color='#dea069' name='warning' />
-                    </div>
-                  </Tooltip>
-                ) : null}
-                <Dropdown
-                  placement='bottomRight'
-                  overlay={getMenu()}
-                  trigger={['hover']}
+                <div
+                  className='widget-card--title-container py-3 flex truncate cursor-pointer items-center w-full mr-2'
+                  onClick={handleEditQuery}
                 >
-                  <Button
-                    type='text'
-                    icon={<SVG size={20} name='threedot' color='grey' />}
+                  <div className='flex  items-center'>
+                    <Tooltip title={unit?.query?.title} mouseEnterDelay={0.2}>
+                      <Text
+                        ellipsis
+                        type='title'
+                        level={6}
+                        weight='bold'
+                        extraClass='widget-card--title m-0 mr-1 flex'
+                      >
+                        {unit?.query?.title}
+                      </Text>
+                    </Tooltip>
+                  </div>
+                  <SVG
+                    extraClass='widget-card--expand-icon ml-1'
+                    size={20}
+                    color='grey'
+                    name='arrowright'
                   />
-                </Dropdown>
+                </div>
+                <div className='flex items-center'>
+                  {resultState.apiCallStatus &&
+                  resultState.apiCallStatus.required &&
+                  resultState.apiCallStatus.message ? (
+                    <Tooltip
+                      mouseEnterDelay={0.2}
+                      title={resultState.apiCallStatus.message}
+                    >
+                      <div className='cursor-pointer'>
+                        <SVG color='#dea069' name='warning' />
+                      </div>
+                    </Tooltip>
+                  ) : null}
+                  <Dropdown
+                    placement='bottomRight'
+                    overlay={getMenu()}
+                    trigger={['hover']}
+                  >
+                    <Button
+                      type='text'
+                      icon={<SVG size={20} name='threedot' color='grey' />}
+                    />
+                  </Dropdown>
+                </div>
               </div>
+              <DashboardContext.Provider value={contextValue}>
+                <CardContent
+                  durationObj={durationWithSavedFrequency}
+                  unit={unit}
+                  resultState={resultState}
+                />
+              </DashboardContext.Provider>
             </div>
-            <DashboardContext.Provider value={contextValue}>
-              <CardContent
-                durationObj={durationWithSavedFrequency}
-                unit={unit}
-                resultState={resultState}
-              />
-            </DashboardContext.Provider>
-          </div>
+          )}
         </div>
       </div>
+
       <div
         id={`resize-${unit.id}`}
         className='fa-widget-card--resize-container'
       >
-        <span className='fa-widget-card--resize-contents'>
+        <span
+          className='fa-widget-card--resize-contents'
+          style={{ visibility: addNewReport ? 'hidden' : 'auto' }}
+        >
           {unit.cardSize === 0 ? (
             <>
               <a href='#!' onClick={changeCardSize.bind(this, 1)}>

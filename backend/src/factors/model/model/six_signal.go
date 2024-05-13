@@ -123,35 +123,35 @@ func GetSixSignalCacheResult(projectID int64, userId string, userIP string) (boo
 	}
 	err = json.Unmarshal([]byte(result), &cacheResult)
 	if err != nil {
-		logCtx.WithError(err).Errorf("Error decoding redis result %v", result)
+		logCtx.WithError(err).Errorf("Error decoding redis result ", result)
 		return cacheResult, http.StatusInternalServerError
 	}
 	return cacheResult, http.StatusFound
 }
 
-// GetSixSignalAPICountCacheRedisKey returns the redis key when given projectID and timeZone
-func GetSixSignalAPICountCacheRedisKey(projectID int64, date uint64) (*cacheRedis.Key, error) {
+// GetFactorsDeanonAPICountRedisKey returns the redis key when given projectID and timeZone
+func GetFactorsDeanonAPICountRedisKey(projectID int64, date uint64) (*cacheRedis.Key, error) {
 	prefix := "ip:enrichment:sixsignal"
 	suffix := fmt.Sprintf("%d", date)
 	return cacheRedis.NewKey(projectID, prefix, suffix) //Sample Key: "ip:enrichment:sixsignal:pid:399:20221130"
 }
 
-// SetSixSignalAPICountCacheResult fetches the count of number of times API has been hit and increases it by 1.
-func SetSixSignalAPICountCacheResult(projectID int64, timeZone U.TimeZoneString) {
+// SetFactorsDeanonAPICountResult fetches the count of number of times API has been hit and increases it by 1.
+func SetFactorsDeanonAPICountResult(projectID int64, timeZone U.TimeZoneString) {
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
 	})
 
 	date := U.DateAsYYYYMMDDFormat(U.TimeNowIn(timeZone))
 
-	cacheKey, err := GetSixSignalAPICountCacheRedisKey(projectID, date)
+	cacheKey, err := GetFactorsDeanonAPICountRedisKey(projectID, date)
 	if err != nil {
 		logCtx.Warn("Failed to get cache key")
 		return
 	}
-	count, err := GetSixSignalAPICountCacheResult(projectID, date)
+	count, err := GetFactorsDeanonAPICountResult(projectID, date)
 	if err != nil {
-		logCtx.Warn("Failed to get total api hit count result, %v", err)
+		logCtx.Warn("Failed to get total api hit count result ", err)
 		return
 	}
 	if count <= 0 {
@@ -167,20 +167,13 @@ func SetSixSignalAPICountCacheResult(projectID int64, timeZone U.TimeZoneString)
 
 }
 
-// GetSixSignalAPITotalHitCountCacheRedisKey returns the redis key when given projectID and timeZone
-func GetSixSignalAPITotalHitCountCacheRedisKey(projectID int64, date uint64) (*cacheRedis.Key, error) {
-	prefix := "ip:enrichment:total:sixsignal"
-	suffix := fmt.Sprintf("%d", date)
-	return cacheRedis.NewKey(projectID, prefix, suffix) //Sample Key: "ip:enrichment:total:sixsignal:pid:399:20221130"
-}
-
-// GetSixSignalAPITotalHitCountCacheResult returns the total count of number of times 6Signal API has been called when projectID and timeZone is given
-func GetSixSignalAPITotalHitCountCacheResult(projectID int64, date uint64) (int, error) {
+// GetFactorsDeanonAPICountResult returns the count of number of times 6Signal API has been called when projectID and timeZone is given
+func GetFactorsDeanonAPICountResult(projectID int64, date uint64) (int, error) {
 	cacheResult := 0
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
 	})
-	cacheKey, err := GetSixSignalAPITotalHitCountCacheRedisKey(projectID, date)
+	cacheKey, err := GetFactorsDeanonAPICountRedisKey(projectID, date)
 	if err != nil {
 		logCtx.WithError(err).Error("Error getting cache key")
 		return cacheResult, err
@@ -196,29 +189,65 @@ func GetSixSignalAPITotalHitCountCacheResult(projectID int64, date uint64) (int,
 
 	err = json.Unmarshal([]byte(result), &cacheResult)
 	if err != nil {
-		logCtx.Warn("Error decoding redis result %v", result)
+		logCtx.Warn("Error decoding redis result ", result)
 		return cacheResult, err
 	}
 	return cacheResult, nil
 
 }
 
-// SetSixSignalAPITotalHitCountCacheResult fetches the total count of number of times API has been hit and increases it by 1.
-func SetSixSignalAPITotalHitCountCacheResult(projectID int64, timeZone U.TimeZoneString) {
+// GetFactorsDeanonAPITotalHitCountRedisKey returns the redis key when given projectID and timeZone
+func GetFactorsDeanonAPITotalHitCountRedisKey(projectID int64, date uint64) (*cacheRedis.Key, error) {
+	prefix := "ip:enrichment:total:sixsignal"
+	suffix := fmt.Sprintf("%d", date)
+	return cacheRedis.NewKey(projectID, prefix, suffix) //Sample Key: "ip:enrichment:total:sixsignal:pid:399:20221130"
+}
+
+// GetFactorsDeanonAPITotalHitCountResult returns the total count of number of times 6Signal API has been called when projectID and timeZone is given
+func GetFactorsDeanonAPITotalHitCountResult(projectID int64, date uint64) (int, error) {
+	cacheResult := 0
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectID,
+	})
+	cacheKey, err := GetFactorsDeanonAPITotalHitCountRedisKey(projectID, date)
+	if err != nil {
+		logCtx.WithError(err).Error("Error getting cache key")
+		return cacheResult, err
+	}
+
+	result, err := cacheRedis.GetPersistent(cacheKey)
+	if err == redis.ErrNil {
+		return cacheResult, nil
+	} else if err != nil {
+		logCtx.WithError(err).Error("Error getting key from redis")
+		return cacheResult, err
+	}
+
+	err = json.Unmarshal([]byte(result), &cacheResult)
+	if err != nil {
+		logCtx.Warn("Error decoding redis result ", result)
+		return cacheResult, err
+	}
+	return cacheResult, nil
+
+}
+
+// SetFactorsDeanonAPITotalHitCountResult fetches the total count of number of times API has been hit and increases it by 1.
+func SetFactorsDeanonAPITotalHitCountResult(projectID int64, timeZone U.TimeZoneString) {
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
 	})
 
 	date := U.DateAsYYYYMMDDFormat(U.TimeNowIn(timeZone))
 
-	cacheKey, err := GetSixSignalAPITotalHitCountCacheRedisKey(projectID, date)
+	cacheKey, err := GetFactorsDeanonAPITotalHitCountRedisKey(projectID, date)
 	if err != nil {
 		logCtx.Warn("Failed to get cache key total api hit count")
 		return
 	}
-	count, err := GetSixSignalAPITotalHitCountCacheResult(projectID, date)
+	count, err := GetFactorsDeanonAPITotalHitCountResult(projectID, date)
 	if err != nil {
-		logCtx.Warn("Failed to get total api hit count result, %v", err)
+		logCtx.Warn("Failed to get total api hit count result ", err)
 		return
 	}
 	if count <= 0 {
@@ -233,43 +262,14 @@ func SetSixSignalAPITotalHitCountCacheResult(projectID int64, timeZone U.TimeZon
 	}
 }
 
-// GetSixSignalAPICountCacheResult returns the count of number of times 6Signal API has been called when projectID and timeZone is given
-func GetSixSignalAPICountCacheResult(projectID int64, date uint64) (int, error) {
-	cacheResult := 0
-	logCtx := log.WithFields(log.Fields{
-		"project_id": projectID,
-	})
-	cacheKey, err := GetSixSignalAPICountCacheRedisKey(projectID, date)
-	if err != nil {
-		logCtx.WithError(err).Error("Error getting cache key")
-		return cacheResult, err
-	}
-
-	result, err := cacheRedis.GetPersistent(cacheKey)
-	if err == redis.ErrNil {
-		return cacheResult, nil
-	} else if err != nil {
-		logCtx.WithError(err).Error("Error getting key from redis")
-		return cacheResult, err
-	}
-
-	err = json.Unmarshal([]byte(result), &cacheResult)
-	if err != nil {
-		logCtx.Warn("Error decoding redis result %v", result)
-		return cacheResult, err
-	}
-	return cacheResult, nil
-
-}
-
-func GetSixSignalMonthlyUniqueEnrichmentKey(projectId int64, monthYear string) (*cacheRedis.Key, error) {
+func GetFactorsDeanonMonthlyUniqueEnrichmentKey(projectId int64, monthYear string) (*cacheRedis.Key, error) {
 	prefix := "unique:enrichment:monthly:sixsignal"
 	suffix := monthYear
 	return cacheRedis.NewKey(projectId, prefix, suffix) //Sample Key: "unique:enrichment:monthly:sixsignal:pid:399:May2023"
 }
 
-func GetSixSignalMonthlyUniqueEnrichmentCount(projectId int64, monthYear string) (int64, error) {
-	key, err := GetSixSignalMonthlyUniqueEnrichmentKey(projectId, monthYear)
+func GetFactorsDeanonMonthlyUniqueEnrichmentCount(projectId int64, monthYear string) (int64, error) {
+	key, err := GetFactorsDeanonMonthlyUniqueEnrichmentKey(projectId, monthYear)
 	if err != nil {
 		return -1, err
 	}
@@ -287,10 +287,10 @@ func GetSixSignalMonthlyUniqueEnrichmentCount(projectId int64, monthYear string)
 	return finalCount, nil
 }
 
-func SetSixSignalMonthlyUniqueEnrichmentCount(projectId int64, value string, timeZone U.TimeZoneString) error {
+func SetFactorsDeanonMonthlyUniqueEnrichmentCount(projectId int64, value string, timeZone U.TimeZoneString) error {
 
 	monthYear := U.GetCurrentMonthYear(timeZone)
-	key, err := GetSixSignalMonthlyUniqueEnrichmentKey(projectId, monthYear)
+	key, err := GetFactorsDeanonMonthlyUniqueEnrichmentKey(projectId, monthYear)
 	if err != nil {
 		return err
 	}

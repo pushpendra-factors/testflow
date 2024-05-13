@@ -125,3 +125,9 @@ export const EngagementTag: Record<string, { bgColor: string; icon: string }> =
   };
 
 export const placeholderIcon = '/assets/avatar/company-placeholder.png';
+
+export const headerClassStr =
+  'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold truncate';
+
+export const PROFILE_TYPE_ACCOUNT = 'account';
+export const PROFILE_TYPE_USER = 'user';

@@ -3,7 +3,6 @@ package clear_bit
 import (
 	"encoding/json"
 	U "factors/util"
-	"fmt"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -116,17 +115,13 @@ func ExecuteClearBitEnrichV1(projectId int64, clearbitKey string, properties *U.
 	domain, err := EnrichmentUsingclearBit(projectId, clearbitKey, properties, clientIP)
 
 	if err != nil {
-		logCtx.WithFields(log.Fields{"error": err, "apiKey": clearbitKey}).Warn("clearbit enrichment debug")
+		logCtx.WithField("error", err).Warn("Failed to enrich using clearbit.")
 		resultChannel <- ResultChannel{ExecuteStatus: 0, Domain: ""}
 	}
 	resultChannel <- ResultChannel{ExecuteStatus: 1, Domain: domain}
 }
 
 func EnrichmentUsingclearBit(projectId int64, clearbitKey string, properties *U.PropertiesMap, clientIP string) (string, error) {
-
-	if clientIP == "" {
-		return "", fmt.Errorf("invalid IP, failed adding user properties")
-	}
 
 	res, err := ClearbitHTTPRequest(clientIP, clearbitKey)
 	if err != nil {

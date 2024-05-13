@@ -337,7 +337,7 @@ export default function GroupSelect({
           {allowSearch && renderSearchInput()}
 
           <div
-            className={`fa-select-dropdown ${styles.dropdown__select__content}`}
+            className={`fa-select-dropdown ${styles.dropdown__select__content} capitalize`}
           >
             {renderOptions()}
           </div>

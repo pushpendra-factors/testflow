@@ -3464,6 +3464,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 							Entity:    "event",
 						},
 					},
+					From: U.TimeNowZ().AddDate(0, 0, -1).Unix(),
 				},
 			},
 			GlobalUserProperties: []model.QueryProperty{
@@ -3528,6 +3529,9 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 							GroupName: "$hubspot_company",
 						},
 					},
+					FrequencyOperator: model.GreaterThanOrEqualOpStr,
+					Frequency:         "1",
+					IsEventPerformed:  true,
 				},
 			},
 			Caller: "account_profiles",
@@ -3558,8 +3562,14 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 			Class:           "events",
 			EventsWithProperties: []model.QueryEventWithProperties{
 				{
-					Name:          U.EVENT_NAME_SESSION,
-					GroupAnalysis: "Others",
+					Name:             U.EVENT_NAME_SESSION,
+					GroupAnalysis:    "Others",
+					IsEventPerformed: true,
+				},
+				{
+					Name:             U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+					GroupAnalysis:    "Hubspot Company",
+					IsEventPerformed: false,
 				},
 			},
 			Caller: "account_profiles",
@@ -3641,6 +3651,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 				{
 					Name:          U.EVENT_NAME_SESSION,
 					GroupAnalysis: "Page views",
+					From:          U.TimeNowZ().AddDate(0, 0, -2).Unix(),
 					Properties: []model.QueryProperty{
 						{
 							Type:      "categorical",
@@ -3652,10 +3663,13 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 							GroupName: "event",
 						},
 					},
+					IsEventPerformed: true,
 				},
 				{
-					Name:          U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
-					GroupAnalysis: "Hubspot Companies",
+					Name:             U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+					GroupAnalysis:    "Hubspot Companies",
+					From:             U.TimeNowZ().AddDate(0, 0, -1).Unix(),
+					IsEventPerformed: true,
 					Properties: []model.QueryProperty{
 						{
 							Type:      "categorical",
@@ -5132,6 +5146,109 @@ func TestUpdateEventsConfig(t *testing.T) {
 	}
 	w := sendUpdateEventConfigRequest(r, project.ID, agent, U.EVENT_NAME_SESSION, newSessionEventProperties)
 	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func sendUpdateTablePropertiesRequest(r *gin.Engine, projectId int64, agent *model.Agent, profileType string, payload []string) *httptest.ResponseRecorder {
+
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error Creating cookieData")
+	}
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPut, fmt.Sprintf("/projects/%d/v1/profiles/%s/table_properties", projectId, profileType)).
+		WithPostParams(payload).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	w := httptest.NewRecorder()
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error Creating getProjectSetting Req")
+	}
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func TestUpdateTablePropertiesHandler(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	newTableProperties := []string{
+		U.SIX_SIGNAL_NAME,
+		U.SIX_SIGNAL_INDUSTRY,
+		U.SIX_SIGNAL_EMPLOYEE_RANGE,
+		U.SIX_SIGNAL_ANNUAL_REVENUE,
+		U.SIX_SIGNAL_EMPLOYEE_COUNT,
+	}
+
+	w := sendUpdateTablePropertiesRequest(r, project.ID, agent, model.PROFILE_TYPE_ACCOUNT, []string{})
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	w = sendUpdateTablePropertiesRequest(r, project.ID, agent, model.PROFILE_TYPE_ACCOUNT, newTableProperties)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	timelinesConfig, err := store.GetStore().GetTimelinesConfig(project.ID)
+	assert.Nil(t, err)
+	assert.Equal(t, newTableProperties, timelinesConfig.AccountConfig.TableProps)
+}
+
+func sendUpdateSegmentTablePropertiesRequest(r *gin.Engine, projectId int64, agent *model.Agent, segmentID string, payload []string) *httptest.ResponseRecorder {
+
+	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
+	if err != nil {
+		log.WithError(err).Error("Error Creating cookieData")
+	}
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPut, fmt.Sprintf("/projects/%d/v1/profiles/segments/%s/table_properties", projectId, segmentID)).
+		WithPostParams(payload).
+		WithCookie(&http.Cookie{
+			Name:   C.GetFactorsCookieName(),
+			Value:  cookieData,
+			MaxAge: 1000,
+		})
+
+	w := httptest.NewRecorder()
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error Creating getProjectSetting Req")
+	}
+	r.ServeHTTP(w, req)
+	return w
+}
+
+func TestUpdateSegmentTablePropertiesHandler(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+
+	newTableProperties := []string{
+		U.SIX_SIGNAL_NAME,
+		U.SIX_SIGNAL_INDUSTRY,
+		U.SIX_SIGNAL_EMPLOYEE_RANGE,
+		U.SIX_SIGNAL_ANNUAL_REVENUE,
+		U.SIX_SIGNAL_EMPLOYEE_COUNT,
+	}
+
+	segment, status := store.GetStore().GetSegmentByName(project.ID, U.ALL_ACCOUNT_DEFAULT_PROPERTIES_DISPLAY_NAMES[U.VISITED_WEBSITE])
+	assert.Equal(t, http.StatusFound, status)
+
+	w := sendUpdateSegmentTablePropertiesRequest(r, project.ID, agent, segment.Id, []string{})
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	w = sendUpdateSegmentTablePropertiesRequest(r, project.ID, agent, segment.Id, newTableProperties)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	updatedSegment, status := store.GetStore().GetSegmentById(project.ID, segment.Id)
+	assert.Equal(t, http.StatusFound, status)
+
+	var segmentQuery model.Query
+	err = U.DecodePostgresJsonbToStructType(updatedSegment.Query, &segmentQuery)
+	assert.Nil(t, err)
+	assert.Equal(t, newTableProperties, segmentQuery.TableProps)
 }
 
 func TestGetConfiguredUserPropertiesWithValuesHandler(t *testing.T) {

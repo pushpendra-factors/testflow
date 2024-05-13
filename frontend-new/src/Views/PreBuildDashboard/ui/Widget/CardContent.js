@@ -1,36 +1,38 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Spin } from 'antd';
 import { get } from 'lodash';
 import {
   QUERY_TYPE_EVENT,
-  QUERY_TYPE_CAMPAIGN,
   DASHBOARD_WIDGET_SECTION,
-  REVERSE_USER_TYPES,
   presentationObj,
   QUERY_TYPE_KPI,
   apiChartAnnotations,
   CHART_TYPE_TABLE
 } from 'Utils/constants';
 import NoDataChart from 'Components/NoDataChart';
-import { useSelector } from 'react-redux';
 import {
   FaErrorComp,
   SVG,
   Text,
   FaErrorLog
 } from 'Components/factorsComponents';
-import KPIAnalysis from '../../../Dashboard/KPIAnalysis';
 import {
   DEFAULT_DASHBOARD_PRESENTATION,
   DASHBOARD_PRESENTATION_KEYS
 } from 'Components/SaveQuery/saveQuery.constants';
 import { ErrorBoundary } from 'react-error-boundary';
+import KPIAnalysis from '../../../Dashboard/KPIAnalysis';
 
-function CardContent({ unit, resultState, durationObj, breakdown, currMetricsValue }) {
+function CardContent({
+  unit,
+  resultState,
+  durationObj,
+  breakdown,
+  currMetricsValue
+}) {
   let content = null;
 
   const queryType = 'kpi';
-
 
   if (resultState.loading) {
     content = (
@@ -73,16 +75,12 @@ function CardContent({ unit, resultState, durationObj, breakdown, currMetricsVal
     );
 
     const dashboardPresentation =
-    selectedDashboardPresentation === DASHBOARD_PRESENTATION_KEYS.CHART
-    ? reportSelectedChart
-    : apiChartAnnotations[CHART_TYPE_TABLE];
-
+      selectedDashboardPresentation === DASHBOARD_PRESENTATION_KEYS.CHART
+        ? reportSelectedChart
+        : apiChartAnnotations[CHART_TYPE_TABLE];
 
     const arrayMapper = useMemo(() => {
-      if (
-        queryType === QUERY_TYPE_EVENT ||
-        queryType === QUERY_TYPE_KPI
-      ) {
+      if (queryType === QUERY_TYPE_EVENT || queryType === QUERY_TYPE_KPI) {
         const am = [];
         unit?.me?.forEach((q, index) => {
           am.push({
@@ -96,13 +94,13 @@ function CardContent({ unit, resultState, durationObj, breakdown, currMetricsVal
       }
     }, [queryType, unit]);
 
-    const kpiData = unit?.me?.map(obj => {
+    const kpiData = unit?.me?.map((obj) => {
       const { inter_e_type, ty, na, d_na, ...rest } = obj;
       return { ...rest, metric: na, label: d_na, metricType: ty };
-    })
+    });
 
     unit.id = unit.inter_id;
-    if(breakdown?.[0] === undefined) {
+    if (breakdown?.[0] === undefined) {
       breakdown = [];
     }
 
@@ -113,13 +111,17 @@ function CardContent({ unit, resultState, durationObj, breakdown, currMetricsVal
           resultState={resultState}
           chartType={presentationObj[dashboardPresentation]}
           section={DASHBOARD_WIDGET_SECTION}
-          breakdown={breakdown.length ? [
-            {
-              property: breakdown?.[0]?.na,
-              prop_type: 'categorical',
-              display_name: breakdown?.[0]?.d_na,
-            }
-          ] : []}
+          breakdown={
+            breakdown.length
+              ? [
+                  {
+                    property: breakdown?.[0]?.na,
+                    prop_type: 'categorical',
+                    display_name: breakdown?.[0]?.d_na
+                  }
+                ]
+              : []
+          }
           unit={unit}
           currMetricsValue={currMetricsValue}
           arrayMapper={arrayMapper}

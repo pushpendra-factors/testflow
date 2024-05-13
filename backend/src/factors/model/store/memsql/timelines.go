@@ -2947,3 +2947,113 @@ func (store *MemSQL) GetConfiguredEventPropertiesWithValues(projectID int64, eve
 	}
 	return filteredProperties, http.StatusOK
 }
+
+func (store *MemSQL) UpdateDefaultTablePropertiesConfig(projectID int64, profileType string, updatedConfig []string) (int, error) {
+	logFields := log.Fields{
+		"projectID":   projectID,
+		"profileType": profileType,
+	}
+	logCtx := log.WithFields(logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	if projectID == 0 || profileType == "" || len(updatedConfig) == 0 {
+		logCtx.Error("Failed to update properties config. Invalid parameters.")
+		return http.StatusBadRequest, fmt.Errorf("invalid parameters")
+	}
+
+	if profileType != model.PROFILE_TYPE_ACCOUNT && profileType != model.PROFILE_TYPE_USER {
+		logCtx.Error("invalid profile type.")
+		return http.StatusBadRequest, fmt.Errorf("invalid parameters")
+	}
+
+	db := C.GetServices().Db
+
+	timelinesConfig, err := store.GetTimelinesConfig(projectID)
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	if profileType == model.PROFILE_TYPE_ACCOUNT {
+		timelinesConfig.AccountConfig.TableProps = updatedConfig
+
+	}
+	if profileType == model.PROFILE_TYPE_USER {
+		timelinesConfig.UserConfig.TableProps = updatedConfig
+	}
+
+	tlConfigEncoded, err := U.EncodeStructTypeToPostgresJsonb(timelinesConfig)
+	if err != nil {
+		logCtx.WithError(err).Error("Default Timelines Config Encode Failed.")
+		return http.StatusInternalServerError, err
+	}
+
+	updateFields := map[string]interface{}{
+		"timelines_config": tlConfigEncoded,
+	}
+
+	err = db.Model(&model.ProjectSetting{}).Where("project_id = ?", projectID).Update(updateFields).Error
+	if err != nil {
+		switch {
+		case gorm.IsRecordNotFoundError(err):
+			return http.StatusNotFound, err
+		default:
+			logCtx.WithError(err).Error("Failed while updating segment on UpdateSegmentById.")
+			return http.StatusInternalServerError, err
+		}
+	}
+
+	return http.StatusOK, nil
+}
+
+func (store *MemSQL) UpdateSegmentTablePropertiesConfig(projectID int64, segmentID string, updatedConfig []string) (int, error) {
+	logFields := log.Fields{
+		"projectID":   projectID,
+		"profileType": segmentID,
+	}
+	logCtx := log.WithFields(logFields)
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	if projectID == 0 || segmentID == "" || len(updatedConfig) == 0 {
+		logCtx.Error("Failed to update properties config. Invalid parameters.")
+		return http.StatusBadRequest, fmt.Errorf("invalid parameters")
+	}
+
+	db := C.GetServices().Db
+
+	segment, errCode := store.GetSegmentById(projectID, segmentID)
+	if errCode != http.StatusFound {
+		logCtx.Error("Failed to update properties config. segment not found.")
+		return http.StatusBadRequest, fmt.Errorf("segment not found")
+	}
+
+	var segmentQuery model.Query
+	err := U.DecodePostgresJsonbToStructType(segment.Query, &segmentQuery)
+	if err != nil {
+		logCtx.Error("Failed to update properties config. error decoding segment query.")
+		return http.StatusBadRequest, fmt.Errorf("segment query decode failed")
+	}
+	segmentQuery.TableProps = updatedConfig
+
+	segmentQueryEncoded, err := U.EncodeStructTypeToPostgresJsonb(segmentQuery)
+	if err != nil {
+		logCtx.WithError(err).Error("Default Timelines Config Encode Failed.")
+		return http.StatusInternalServerError, err
+	}
+
+	updateFields := map[string]interface{}{
+		"query": segmentQueryEncoded,
+	}
+
+	err = db.Model(&model.Segment{}).Where("project_id = ? AND id = ?", projectID, segmentID).Update(updateFields).Error
+	if err != nil {
+		switch {
+		case gorm.IsRecordNotFoundError(err):
+			return http.StatusNotFound, err
+		default:
+			logCtx.WithError(err).Error("Failed while updating segment on UpdateSegmentById.")
+			return http.StatusInternalServerError, err
+		}
+	}
+
+	return http.StatusOK, nil
+}

@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
-import { useEffect } from 'react';
 import { connect } from 'react-redux';
 import { fetchProjectSettings, udpateProjectSettings } from 'Reducers/global';
 import { Modal, Button, message } from 'antd';
 import { FaErrorComp, FaErrorLog } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
-import ConnectedScreen from './ConnectedScreen';
 import useAgentInfo from 'hooks/useAgentInfo';
 import { SolutionsAccountId } from 'Routes/constants';
+import ConnectedScreen from './ConnectedScreen';
 import { getDefaultTimelineConfigForSixSignal } from '../util';
 
 function SixSignalFactorsIntegration({
@@ -15,18 +14,11 @@ function SixSignalFactorsIntegration({
   udpateProjectSettings,
   activeProject,
   currentProjectSettings,
-  setIsActive,
   kbLink = false,
   currentAgent
 }) {
   const [loading, setLoading] = useState(false);
   const { email: userEmail } = useAgentInfo();
-
-  useEffect(() => {
-    if (currentProjectSettings?.int_factors_six_signal_key) {
-      setIsActive(true);
-    }
-  }, [currentProjectSettings, setIsActive]);
 
   const onConnect = () => {
     Modal.confirm({
@@ -41,7 +33,7 @@ function SixSignalFactorsIntegration({
         udpateProjectSettings(activeProject.id, {
           int_factors_six_signal_key: true,
           six_signal_config: {},
-          //updating table user and account table config when six signal is activated
+          // updating table user and account table config when six signal is activated
           timelines_config: getDefaultTimelineConfigForSixSignal(
             currentProjectSettings
           )
@@ -51,7 +43,6 @@ function SixSignalFactorsIntegration({
             setTimeout(() => {
               message.success('6Signal integration connected!');
             }, 500);
-            setIsActive(false);
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);
@@ -80,7 +71,6 @@ function SixSignalFactorsIntegration({
             setTimeout(() => {
               message.success('6Signal integration disconnected!');
             }, 500);
-            setIsActive(false);
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);
@@ -102,7 +92,7 @@ function SixSignalFactorsIntegration({
         <ConnectedScreen />
       )}
 
-      <div className='mt-4 flex' data-tour='step-11'>
+      <div className='mt-8 flex' data-tour='step-11'>
         {userEmail === SolutionsAccountId && (
           <>
             {currentProjectSettings?.int_factors_six_signal_key ? (

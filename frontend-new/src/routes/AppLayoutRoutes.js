@@ -120,6 +120,14 @@ const Alerts = lazyWithRetry(
     )
 );
 
+// Workflows
+const Workflows = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "Workflows" */ '../Views/Settings/ProjectSettings/Workflows'
+    )
+);
+
 // Settings
 const BasicSettings = lazyWithRetry(
   () =>
@@ -133,18 +141,7 @@ const UserSettings = lazyWithRetry(
       /* webpackChunkName: "settings" */ '../Views/Settings/ProjectSettings/UserSettings'
     )
 );
-const SDKSettings = lazyWithRetry(
-  () =>
-    import(
-      /* webpackChunkName: "settings" */ '../Views/Settings/ProjectSettings/SDKSettings'
-    )
-);
-const IntegrationSettings = lazyWithRetry(
-  () =>
-    import(
-      /* webpackChunkName: "settings" */ '../Views/Settings/ProjectSettings/IntegrationSettings'
-    )
-);
+
 const Sharing = lazyWithRetry(
   () =>
     import(
@@ -155,6 +152,21 @@ const PricingComponent = lazyWithRetry(
   () =>
     import(
       /* webpackChunkName: "settings" */ '../Views/Settings/ProjectSettings/Pricing'
+    )
+);
+
+// Integration Screen
+const IntegrationSettings = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "integration" */ '../Views/Settings/ProjectSettings/IntegrationSettings/integrationRoute'
+    )
+);
+
+const IntegrationRedirection = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "integration" */ '../Views/Settings/ProjectSettings/IntegrationSettings/IntegrationCallbackRedirection'
     )
 );
 
@@ -377,6 +389,17 @@ const FeatureLockConfigurationAlerts = withFeatureLockHOC(Alerts, {
     />
   )
 });
+const FeatureLockConfigurationWorkflows = withFeatureLockHOC(Workflows, {
+  featureName: FEATURES.FEATURE_WORKFLOWS,
+  LockedComponent: (props) => (
+    <CommonLockedComponent
+      title='Workflows'
+      description='With real-time alerts in Slack, stay informed the moment a prospect visits a high-intent page on your website or when a significant change occurs in a KPI that matters to your organization. Be instantly notified, take immediate action, and seize every opportunity to drive conversions, optimize performance, and achieve your business objectives.'
+      learnMoreLink='https://help.factors.ai/en/articles/7284705-alerts'
+      {...props}
+    />
+  )
+});
 
 const FeatureLockedConfigurationEngagement = withFeatureLockHOC(
   EngagementConfig,
@@ -541,16 +564,15 @@ export const APP_LAYOUT_ROUTES = {
     Component: UserSettings,
     Private: true
   },
-  SettingsSdk: {
-    exact: true,
-    path: PathUrls.SettingsSdk,
-    Component: SDKSettings,
-    Private: true
-  },
   SettingsIntegration: {
-    exact: true,
     path: PathUrls.SettingsIntegration,
     Component: IntegrationSettings,
+    Private: true
+  },
+  IntegrationRedirection: {
+    exact: true,
+    path: PathUrls.IntegrationCallbackRedirection,
+    Component: IntegrationRedirection,
     Private: true
   },
   SettingsSharing: {
@@ -601,6 +623,12 @@ export const APP_LAYOUT_ROUTES = {
     path: PathUrls.Alerts,
     Component: FeatureLockConfigurationAlerts,
     Private: true
+  },
+  Workflows: {
+    exact: true,
+    path: PathUrls.Workflows,
+    Component: FeatureLockConfigurationWorkflows,
+    Private: false
   },
   ConfigureEngagements: {
     exact: true,

@@ -143,7 +143,7 @@ func main() {
 	min := tt.Minute()
 
 	successfulProjectsCount := 0 //Total number of projects with no failures
-	failedProjectsCount := 0 //Total number of projects with atleast one failure
+	failedProjectsCount := 0     //Total number of projects with atleast one failure
 
 	for _, projectID := range projectIDs {
 		available := true
@@ -255,7 +255,6 @@ func main() {
 		}
 	}
 
-
 	if successfulProjectsCount/3 <= failedProjectsCount {
 		C.PingHealthcheckForFailure(healthcheckPingID, finalStatus)
 	} else {
@@ -348,7 +347,13 @@ func EventTriggerAlertsSender(projectID int64, configs map[string]interface{},
 			continue
 		}
 
-		totalSuccess, _, sendReport := sendHelperForEventTriggerAlert(cacheKey, &msg, alertID, false, "")
+		totalSuccess := false
+		sendReport := SendReportLogCount{}
+		if msg.IsWorkflow {
+			totalSuccess, _, sendReport = SendHelperForWorkflow(cacheKey, &msg, alertID, false, "")
+		} else {
+			totalSuccess, _, sendReport = sendHelperForEventTriggerAlert(cacheKey, &msg, alertID, false, "")
+		}
 
 		if totalSuccess {
 			err = cacheRedis.DelPersistent(cacheKey)
@@ -872,7 +877,7 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
 			} else {
 				blockMessage = model.GetSlackMsgBlockWithoutHyperlinks(alert.Message, slackMentionStr)
 			}
-			
+
 			response, status, err := slack.SendSlackAlert(projectID, blockMessage, agentUUID, channel)
 			partialSuccess = partialSuccess || status
 			if err != nil || !status {
@@ -1245,7 +1250,14 @@ func RetryFailedEventTriggerAlerts(projectID int64, blockedAlerts map[string]boo
 			sendTo = "Teams"
 		}
 
-		totalSuccess, _, sendReport := sendHelperForEventTriggerAlert(cacheKey, &msg, alertID, true, sendTo)
+		var totalSuccess bool
+		sendReport := SendReportLogCount{}
+		if msg.IsWorkflow {
+			totalSuccess, _, sendReport = SendHelperForWorkflow(cacheKey, &msg, alertID, true, sendTo)
+		} else {
+			totalSuccess, _, sendReport = sendHelperForEventTriggerAlert(cacheKey, &msg, alertID, true, sendTo)
+		}
+		
 		sendReportForProject.addToSendReport(sendReport)
 
 		if totalSuccess {

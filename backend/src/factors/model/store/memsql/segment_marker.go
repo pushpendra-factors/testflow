@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
@@ -19,12 +20,66 @@ import (
 func EventsPerformedCheck(projectID int64, segmentId string, eventNameIDsMap map[string]string,
 	segmentQuery *model.Query, userID string, isAllAccounts bool, userArray []model.User) bool {
 
+	// to be removed, default value true to all the events
+	for index := range segmentQuery.EventsWithProperties {
+		segmentQuery.EventsWithProperties[index].IsEventPerformed = true
+	}
+
 	isMatched := false
+
+	var didEventPresent, didNotDoEventPresent bool
+	var didEventCount, didNotEventCount int
+
+	for _, event := range segmentQuery.EventsWithProperties {
+		if event.IsEventPerformed {
+			didEventCount = didEventCount + 1
+		} else {
+			didNotEventCount = didNotEventCount + 1
+		}
+	}
+
+	if didEventCount > 0 {
+		didEventPresent = true
+	}
+	if didNotEventCount > 0 {
+		didNotDoEventPresent = true
+	}
+
+	if didEventPresent {
+		isMatched = didEventQuery(projectID, segmentId, eventNameIDsMap, segmentQuery,
+			userID, isAllAccounts, userArray, didEventCount)
+
+		if segmentQuery.EventsCondition == model.EventCondAnyGivenEvent && isMatched {
+			// if any event condition satisfies, return
+			return isMatched
+		} else if segmentQuery.EventsCondition == model.EventCondAllGivenEvent && !isMatched {
+			// if any event condition does not satisfies, return
+			return isMatched
+		}
+	}
+
+	// return if not exist
+	if !didNotDoEventPresent {
+		return isMatched
+	}
+
+	// already returned in case of any (positive) and all (negative) case
+	isMatched = didNotEventQuery(projectID, segmentId, eventNameIDsMap, segmentQuery,
+		userID, isAllAccounts, userArray, didNotEventCount)
+
+	return isMatched
+}
+
+func didEventQuery(projectID int64, segmentId string, eventNameIDsMap map[string]string,
+	segmentQuery *model.Query, userID string, isAllAccounts bool, userArray []model.User, didEventCount int) bool {
+	isMatched := false
+
 	var userIDString string
 	params := []interface{}{projectID}
+	didEvent := true
 
 	if isAllAccounts {
-		userIDS := userIdsList(*segmentQuery, userArray)
+		userIDS := userIdsList(*segmentQuery, userArray, didEvent)
 		if len(userIDS) == 0 {
 			return isMatched
 		}
@@ -40,9 +95,9 @@ func EventsPerformedCheck(projectID int64, segmentId string, eventNameIDsMap map
 	var err error
 
 	if C.MarkerEnableOptimisedEventsQuery(projectID) {
-		query, queryParams, err = eventsQueryOptimised(projectID, eventNameIDsMap, segmentQuery, userID, userIDString, params)
+		query, queryParams, err = eventsQueryOptimised(projectID, eventNameIDsMap, segmentQuery, userID, userIDString, params, didEvent)
 	} else {
-		query, queryParams, err = eventsQuery(projectID, eventNameIDsMap, segmentQuery, userID, userIDString, params)
+		query, queryParams, err = eventsQuery(projectID, eventNameIDsMap, segmentQuery, userID, userIDString, params, didEvent)
 	}
 
 	if err != nil {
@@ -51,7 +106,7 @@ func EventsPerformedCheck(projectID int64, segmentId string, eventNameIDsMap map
 
 	startTime := time.Now().UnixMilli()
 
-	result, status := GetStore().CheckIfUserPerformedGivenEvents(query, queryParams)
+	result, status := GetStore().CheckIfUserPerformedGivenEvents(projectID, userID, query, queryParams)
 	if status != http.StatusFound {
 		log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "segment_id": segmentId}).
 			Error("Error while validating for performed events")
@@ -66,7 +121,7 @@ func EventsPerformedCheck(projectID int64, segmentId string, eventNameIDsMap map
 	}
 
 	if segmentQuery.EventsCondition == model.EventCondAllGivenEvent {
-		if len(result) == len(segmentQuery.EventsWithProperties) {
+		if len(result) == didEventCount {
 			isMatched = true
 		}
 	} else {
@@ -75,12 +130,97 @@ func EventsPerformedCheck(projectID int64, segmentId string, eventNameIDsMap map
 		}
 	}
 
+	eventConditionMatched := false
+
+	for index, event := range segmentQuery.EventsWithProperties {
+		if event.FrequencyOperator == "" || event.Frequency == "" {
+			continue
+		}
+
+		checkValue, err := strconv.ParseFloat(event.Frequency, 64)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectID, "domain_id": userID, "segment_id": segmentId}).
+				WithError(err).Error("Failed to convert property value to float type")
+			isMatched = false
+			continue
+		}
+		count := result[eventNameIDsMap[event.Name]]
+		eventConditionMatched = NumericalPropCheck(event.FrequencyOperator, float64(count), checkValue)
+
+		if index == 0 {
+			isMatched = eventConditionMatched
+			continue
+		}
+
+		if segmentQuery.EventsCondition == model.EventCondAnyGivenEvent {
+			isMatched = isMatched || eventConditionMatched
+			// if any event condition satisfies, break
+			if isMatched {
+				return isMatched
+			}
+		} else if segmentQuery.EventsCondition == model.EventCondAllGivenEvent {
+			isMatched = isMatched && eventConditionMatched
+			// if any event condition does not satisfies, break
+			if !isMatched {
+				return isMatched
+			}
+		}
+	}
+
+	return isMatched
+}
+func didNotEventQuery(projectID int64, segmentId string, eventNameIDsMap map[string]string,
+	segmentQuery *model.Query, userID string, isAllAccounts bool, userArray []model.User, didNotEventCount int) bool {
+	isMatched := false
+
+	var userIDString string
+	params := []interface{}{projectID}
+	didEvent := false
+
+	if isAllAccounts {
+		userIDS := userIdsList(*segmentQuery, userArray, didEvent)
+		if len(userIDS) == 0 {
+			return isMatched
+		}
+		userIDString = "user_id IN (?)"
+		params = append(params, userIDS)
+	} else {
+		userIDString = "user_id=?"
+		params = append(params, userID)
+	}
+
+	query, queryParams, err := eventsQuery(projectID, eventNameIDsMap, segmentQuery, userID, userIDString, params, didEvent)
+
+	if err != nil {
+		return isMatched
+	}
+
+	result, status := GetStore().CheckIfUserPerformedGivenEvents(projectID, userID, query, queryParams)
+	if status == http.StatusInternalServerError {
+		log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "segment_id": segmentId}).
+			Error("Error while validating for did not performed events")
+	}
+
+	// if any record found, then return false for all_events
+	// if len of result less than didNotEventCount, return true for any_events
+	if (segmentQuery.EventsCondition == model.EventCondAnyGivenEvent && len(result) < didNotEventCount) ||
+		(segmentQuery.EventsCondition == model.EventCondAllGivenEvent && len(result) == 0) {
+		isMatched = true
+	}
+
 	return isMatched
 }
 
+// SELECT COUNT(event_name_id), event_name_id FROM events
+// WHERE project_id = '15000001' AND user_id='4cf0f3f9-b708-4c32-a8ca-b90af412fa55'
+// AND ((event_name_id='34a0c60e-1d83-498b-b2ab-5a112a6d812d' AND
+// (JSON_EXTRACT_STRING(events.user_properties, '$country') RLIKE 'India')) OR
+// (event_name_id='f82d3153-c091-471a-9021-29277dc03647') OR
+// (event_name_id='dd092c62-b2f0-4f2a-b780-ffc158d0f4b9') ) GROUP BY event_name_id;
+
 func eventsQuery(projectID int64, eventNameIDsMap map[string]string, segmentQuery *model.Query, userID string,
-	userIDString string, qParams []interface{}) (string, []interface{}, error) {
-	query := fmt.Sprintf(`SELECT COUNT(event_name_id)
+	userIDString string, qParams []interface{}, didEvent bool) (string, []interface{}, error) {
+	query := fmt.Sprintf(`SELECT COUNT(event_name_id), event_name_id
 	FROM events
 	WHERE project_id = ? AND %s
 	  AND (`, userIDString)
@@ -88,10 +228,21 @@ func eventsQuery(projectID int64, eventNameIDsMap map[string]string, segmentQuer
 	params := qParams
 
 	var eventStr string
-	for index, event := range segmentQuery.EventsWithProperties {
+	firstEventFound := true
+	for _, event := range segmentQuery.EventsWithProperties {
+		if event.IsEventPerformed != didEvent {
+			continue
+		}
 
 		queryStr := "(event_name_id=?"
 		params = append(params, eventNameIDsMap[event.Name])
+
+		// support for in last x days
+		if event.From > 0 {
+			queryStr = queryStr + " AND timestamp >= ?"
+			params = append(params, event.From)
+		}
+
 		if len(event.Properties) > 0 {
 			whereCond, queryParams, err := buildWhereFromProperties(projectID, event.Properties, 0)
 			if err != nil {
@@ -108,8 +259,9 @@ func eventsQuery(projectID int64, eventNameIDsMap map[string]string, segmentQuer
 			queryStr = queryStr + ")"
 		}
 
-		if index == 0 {
+		if firstEventFound {
 			eventStr = queryStr
+			firstEventFound = !firstEventFound
 			continue
 		}
 		eventStr = eventStr + " OR " + queryStr
@@ -130,7 +282,7 @@ func eventsQuery(projectID int64, eventNameIDsMap map[string]string, segmentQuer
 //	AND event_name_id IN ('6cc5ed17-09ff-4ee0-bdf1-844e97cfb27f','9fed79d3-1322-4393-a644-73c3e56826da')
 //	ORDER BY timestamp DESC LIMIT 100000)
 //
-// SELECT COUNT(event_name_id) FROM selected_events
+// SELECT COUNT(event_name_id), event_name_id FROM selected_events
 // WHERE (event_name_id='6cc5ed17-09ff-4ee0-bdf1-844e97cfb27f' AND
 // (JSON_EXTRACT_STRING(selected_events.properties, '$hubspot_engagement_from') = 'Somewhere')) OR
 // (event_name_id='9fed79d3-1322-4393-a644-73c3e56826da' AND
@@ -139,7 +291,7 @@ func eventsQuery(projectID int64, eventNameIDsMap map[string]string, segmentQuer
 // GROUP BY event_name_id;
 
 func eventsQueryOptimised(projectID int64, eventNameIDsMap map[string]string, segmentQuery *model.Query, userID string,
-	userIDString string, params []interface{}) (string, []interface{}, error) {
+	userIDString string, params []interface{}, didEvent bool) (string, []interface{}, error) {
 	query := `WITH selected_events AS 
 	(SELECT event_name_id`
 
@@ -149,10 +301,22 @@ func eventsQueryOptimised(projectID int64, eventNameIDsMap map[string]string, se
 	eventPropertiesFilter := map[string]int{}
 	userPropertiesFilter := map[string]int{}
 
-	for index, event := range segmentQuery.EventsWithProperties {
+	timestampRequired := false
+	firstEventFound := true
+	for _, event := range segmentQuery.EventsWithProperties {
+		if didEvent != event.IsEventPerformed {
+			continue
+		}
 
 		queryStr := "(event_name_id=?"
 		qParams = append(qParams, eventNameIDsMap[event.Name])
+
+		// support for in last x days
+		if event.From > 0 {
+			queryStr = queryStr + " AND timestamp >=?"
+			qParams = append(qParams, event.From)
+			timestampRequired = true
+		}
 		if len(event.Properties) > 0 {
 			whereCond, queryParams, err := buildWhereFromProperties(projectID, event.Properties, 0)
 			if err != nil {
@@ -179,12 +343,18 @@ func eventsQueryOptimised(projectID int64, eventNameIDsMap map[string]string, se
 			}
 		}
 
-		if index == 0 {
+		if firstEventFound {
 			eventStr = queryStr
+			firstEventFound = !firstEventFound
 			continue
 		}
 
 		eventStr = eventStr + " OR " + queryStr
+	}
+
+	// add timestamp column if required
+	if timestampRequired {
+		query = query + ", timestamp"
 	}
 
 	// event props support
@@ -215,7 +385,7 @@ func eventsQueryOptimised(projectID int64, eventNameIDsMap map[string]string, se
 	AND user_id IN (?) 
 	AND event_name_id IN (?)
 	ORDER BY timestamp DESC LIMIT 100000)
-	SELECT COUNT(event_name_id) FROM selected_events 
+	SELECT COUNT(event_name_id), event_name_id FROM selected_events 
 	WHERE ` + eventStr +
 		` GROUP BY event_name_id;`
 
@@ -306,25 +476,50 @@ func CheckPropertyInAllUsers(projectId int64, p model.QueryProperty, decodedProp
 	return isValueFound
 }
 
-// SELECT COUNT(event_name_id) FROM events
-// WHERE project_id = '15000001' AND user_id='4cf0f3f9-b708-4c32-a8ca-b90af412fa55'
-// AND ((event_name_id='34a0c60e-1d83-498b-b2ab-5a112a6d812d' AND
-// (JSON_EXTRACT_STRING(events.user_properties, '$country') RLIKE 'India')) OR
-// (event_name_id='f82d3153-c091-471a-9021-29277dc03647') OR
-// (event_name_id='dd092c62-b2f0-4f2a-b780-ffc158d0f4b9') ) GROUP BY event_name_id;
-func (store *MemSQL) CheckIfUserPerformedGivenEvents(queryStr string, params []interface{}) ([]int, int) {
-	db := C.GetServices().Db
+func (store *MemSQL) CheckIfUserPerformedGivenEvents(projectID int64, userID string, queryStr string, params []interface{}) (map[string]int, int) {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"user_id":    userID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
-	var result []int
-	if err := db.Raw(queryStr, params...).Scan(&result).Error; err != nil {
-		return result, http.StatusInternalServerError
+	results := make(map[string]int)
+
+	db := C.GetServices().Db
+	rows, err := db.Raw(queryStr, params...).Rows()
+
+	if rows != nil {
+		defer rows.Close()
 	}
 
-	return result, http.StatusFound
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return map[string]int{}, http.StatusNotFound
+		}
+		log.WithFields(logFields).WithError(err).Error("Error fetching records")
+		return map[string]int{}, http.StatusInternalServerError
+	}
+
+	for rows.Next() {
+		var event_name_id string
+		var count int
+		err = rows.Scan(&count, &event_name_id)
+		if err != nil {
+			log.WithFields(logFields).WithError(err).Error("Error fetching rows")
+			return map[string]int{}, http.StatusInternalServerError
+		}
+		results[event_name_id] = count
+	}
+
+	if len(results) == 0 {
+		return map[string]int{}, http.StatusNotFound
+	}
+
+	return results, http.StatusFound
 }
 
-func userIdsList(query model.Query, userArray []model.User) []string {
-	groupIDs := GetEventGroupIds(query)
+func userIdsList(query model.Query, userArray []model.User, didEventsList bool) []string {
+	groupIDs := GetEventGroupIds(query, didEventsList)
 	userIDsMap := userIdMap(userArray)
 
 	isGroupAdded := make(map[int]bool)
@@ -356,9 +551,12 @@ func userIdMap(userArray []model.User) map[int][]string {
 	return userIdMap
 }
 
-func GetEventGroupIds(query model.Query) []int {
+func GetEventGroupIds(query model.Query, didEventsList bool) []int {
 	groupIds := make([]int, 0)
 	for _, event := range query.EventsWithProperties {
+		if event.IsEventPerformed != didEventsList {
+			continue
+		}
 		groupName := U.GetGroupNameFromGroupEventName(event.Name)
 		if groupName != "" {
 			groupIds = append(groupIds, model.GroupUserSource[groupName])
@@ -491,7 +689,15 @@ func checkNumericalTypeProperty(segmentRule model.QueryProperty, properties *map
 	} else if intVal, ok := (*properties)[segmentRule.Property].(int64); ok {
 		propertyValue = float64(intVal)
 	}
-	switch segmentRule.Operator {
+
+	propertyExists = NumericalPropCheck(segmentRule.Operator, propertyValue, checkValue)
+
+	return propertyExists
+}
+
+func NumericalPropCheck(operator string, propertyValue float64, checkValue float64) bool {
+	var propertyExists bool
+	switch operator {
 	case model.EqualsOpStr:
 		if propertyValue == checkValue {
 			propertyExists = true

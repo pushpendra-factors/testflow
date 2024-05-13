@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { connect } from 'react-redux';
 import { Button, message, Input, Avatar, Popover, Modal } from 'antd';
 import { Text, FaErrorComp, FaErrorLog, SVG } from 'factorsComponents';
@@ -13,8 +13,6 @@ import { sendSlackNotification } from '../../../../../utils/slack';
 const SlackIntegration = ({
   activeProject,
   agent_details,
-  setIsStatus,
-  kbLink = false,
   fetchProjectSettingsV1,
   enableSlackIntegration,
   disableSlackIntegration,
@@ -37,7 +35,6 @@ const SlackIntegration = ({
             setTimeout(() => {
               message.success('Slack integration disconnected!');
             }, 500);
-            setIsStatus('');
             fetchProjectSettingsV1(activeProject.id);
           })
           .catch((err) => {
@@ -48,19 +45,6 @@ const SlackIntegration = ({
       onCancel: () => {}
     });
   };
-
-  const isSlackEnabled = () => {
-    fetchProjectSettingsV1(activeProject.id);
-  };
-
-  useEffect(() => {
-    isSlackEnabled();
-    if (projectSettings?.int_slack) {
-      setIsStatus('Active');
-    } else {
-      setIsStatus('');
-    }
-  }, [activeProject, projectSettings?.int_slack]);
 
   const enableSlack = () => {
     setLoading(true);
@@ -82,7 +66,6 @@ const SlackIntegration = ({
       .catch((err) => {
         setLoading(false);
         console.log('Slack error-->', err);
-        setIsStatus('');
       });
   };
 
@@ -93,49 +76,7 @@ const SlackIntegration = ({
       }
       onError={FaErrorLog}
     >
-      <div className='mt-4 flex w-full'>
-        {projectSettings?.int_slack && (
-          <div className='mt-4 flex flex-col border-top--thin py-4 mt-2 w-full'>
-            <Text type='title' level={6} weight='bold' extraClass='m-0'>
-              Integration Details
-            </Text>
-            <Text type='title' level={7} color='grey' extraClass='m-0 mt-2'>
-              Integrated by{' '}
-              <Avatar
-                src='../../../../../assets/avatar/avatar.png'
-                className='mr-2'
-                size={24}
-              />{' '}
-              <span className='font-bold text-gray-700'>
-                {`${agent_details.first_name} ${agent_details.last_name}`}
-              </span>
-              <Popover
-                content={
-                  <Text type='title' size={10} extraClass='max-w-xs'>
-                    The feature is only accessible to
-                    <span className='font-bold text-slate-500'>
-                      {` ${agent_details.first_name} ${agent_details.last_name}`}
-                      .
-                    </span>
-                  </Text>
-                }
-                title={null}
-                trigger='hover'
-              >
-                <Button
-                  type='text'
-                  className='m-0'
-                  style={{ backgroundColor: 'white' }}
-                >
-                  <SVG name='infoCircle' size={18} color='gray' />
-                </Button>
-              </Popover>
-            </Text>
-          </div>
-        )}
-      </div>
-
-      <div className='mt-4 flex'>
+      <div className='mt-4'>
         {!projectSettings?.int_slack ? (
           <Button
             className='mr-2'
@@ -146,18 +87,53 @@ const SlackIntegration = ({
             Connect Now
           </Button>
         ) : (
-          <Button
-            className='mr-2'
-            loading={loading}
-            onClick={() => onDisconnect()}
-          >
-            Disconnect
-          </Button>
-        )}
-        {kbLink && (
-          <a className='ant-btn' target='_blank' href={kbLink} rel='noreferrer'>
-            View documentation
-          </a>
+          <div className='flex items-center justify-between'>
+            <Button
+              className='mr-2'
+              loading={loading}
+              onClick={() => onDisconnect()}
+            >
+              Disconnect
+            </Button>
+            <div>
+              <Popover
+                content={
+                  <Text type='title' size={10} extraClass='max-w-xs'>
+                    The feature is only accessible to
+                    <span className='font-bold text-slate-500'>
+                      {` ${agent_details.first_name} ${agent_details.last_name}`}
+                    </span>
+                  </Text>
+                }
+                title={null}
+                trigger='hover'
+              >
+                <div className='flex gap-2 items-center'>
+                  <Text
+                    type='title'
+                    level={7}
+                    color='character-primary'
+                    extraClass='m-0 '
+                  >
+                    Integrated by
+                  </Text>
+                  <Avatar
+                    src='../../../../../assets/avatar/avatar.png'
+                    className='ml-2'
+                    size={24}
+                  />
+                  <Text
+                    type='title'
+                    level={7}
+                    color='character-primary'
+                    extraClass='m-0 '
+                  >
+                    {`${agent_details.first_name} ${agent_details.last_name}`}
+                  </Text>
+                </div>
+              </Popover>
+            </div>
+          </div>
         )}
       </div>
     </ErrorBoundary>

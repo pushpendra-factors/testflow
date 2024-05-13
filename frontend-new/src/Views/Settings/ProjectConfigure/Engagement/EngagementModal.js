@@ -10,8 +10,8 @@ import React, {
   useRef
 } from 'react';
 import { useSelector } from 'react-redux';
-import styles from './index.module.scss';
 import { PlusOutlined } from '@ant-design/icons';
+import styles from './index.module.scss';
 
 function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
   const sliderRef = useRef();
@@ -28,7 +28,7 @@ function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
   const availableGroups = useSelector((state) => state.coreQuery.groups);
   useEffect(() => {
     if (visible === false) {
-      let handle = setTimeout(() => {
+      const handle = setTimeout(() => {
         setModalVisible(false);
         clearTimeout(handle); // Removing the handler after use
       }, 200);
@@ -48,9 +48,10 @@ function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
     setSliderState(event.weight);
   }, [event.fname, event.weight]);
 
-  const groupsList = useMemo(() => {
-    return getGroupList(availableGroups?.all_groups);
-  }, [availableGroups]);
+  const groupsList = useMemo(
+    () => getGroupList(availableGroups?.all_groups),
+    [availableGroups]
+  );
 
   const onCancelState = () => {
     onCancel();
@@ -100,7 +101,8 @@ function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
             groupAnalysis='events'
             dropdownPlacement='bottom'
             propertiesScope={['event', 'user', 'group']}
-            isSpecialEvent={true}
+            isSpecialEvent
+            showInList
           />
         </div>
       );
@@ -119,7 +121,8 @@ function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
             dropdownPlacement='bottom'
             propertiesScope={['event', 'user', 'group']}
             viewMode={editMode}
-            isSpecialEvent={true}
+            isSpecialEvent
+            showInList
           />
         </div>
       );
@@ -163,7 +166,7 @@ function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
       width={750}
       visible={visible}
       footer={null}
-      className={'fa-modal--regular p-6'}
+      className='fa-modal--regular p-6'
       closable={false}
       centered
     >
@@ -186,14 +189,14 @@ function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
           <Input
             onChange={handleRuleNameChange}
             value={ruleName}
-            className={styles['signal_name_input']}
+            className={styles.signal_name_input}
             type='text'
             placeholder='Eg: Pricing page visit'
             maxLength={20}
             showCount
           />
         </div>
-        <div className={`${styles['eventslist']}`}>
+        <div className={`${styles.eventslist}`}>
           {eventsList()}
           {!isEventsDDVisible && listEvents.length === 0 && (
             <div className='relative'>
@@ -217,7 +220,7 @@ function EngagementModal({ visible, onOk, onCancel, event, editMode }) {
           >
             Assign weight
           </Text>
-          <div id='tooltip-container'></div>
+          <div id='tooltip-container' />
           <Slider
             disabled={!listEvents.length}
             onChange={handleSliderChange}

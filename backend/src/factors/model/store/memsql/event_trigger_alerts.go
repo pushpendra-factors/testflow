@@ -504,6 +504,8 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 
 	logCtx := log.WithFields(logFields)
 	alerts, eventName, errCode := store.GetEventTriggerAlertsForTheCurrentEvent(projectId, eventNameId)
+
+	
 	if errCode != http.StatusFound || alerts == nil {
 		//log.WithFields(logFields).Error("GetEventTriggerAlertsByEvent failure inside Match function.")
 		return nil, nil, nil, errCode

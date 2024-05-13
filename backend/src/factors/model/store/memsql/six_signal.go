@@ -131,8 +131,7 @@ func (store *MemSQL) RunSixSignalInsightsQuery(projectId int64, query model.SixS
 - buildSixSignalQuery takes two parameters: a project ID and a SixSignalQuery object.
 - The project ID is used to filter events related to a specific project, while the SixSignalQuery object contains the time range of the events to be considered.
 - The query retrieves the following user properties and behaviors:
-  - $6Signal_name, $6Signal_country, $6Signal_industry, $6Signal_employee_range, $6Signal_revenue_range, $session_spent_time,
-    $page_count, $6Signal_domain, $initial_page_url, $campaign, $channel.
+  - $6Signal_name, $6Signal_country, $6Signal_industry, $6Signal_employee_range, $6Signal_revenue_range, $session_spent_time, $6Signal_domain, $initial_page_url, $campaign, $channel.
 
 - The query also uses the ROW_NUMBER() function to assign a row number to each user based on their time spent partitioned by company,
 and then selects only the row with the highest time spent for each company.
@@ -168,7 +167,6 @@ func (store *MemSQL) buildSixSignalQuery(projectID int64, query model.SixSignalQ
 
 	subQuery := " SELECT JSON_EXTRACT_STRING(events.user_properties, ?) AS company, " +
 		caseSelectStmntSessionTimeSpent + " AS time_spent, " +
-		"JSON_EXTRACT_BIGINT(events.user_properties, ?) AS page_count, " +
 		caseSelectStmntUserProperties + " AS country, " +
 		caseSelectStmntUserProperties + " AS industry, " +
 		caseSelectStmntUserProperties + " AS emp_range, " +
@@ -179,15 +177,14 @@ func (store *MemSQL) buildSixSignalQuery(projectID int64, query model.SixSignalQ
 		caseSelectStmntEventProperties + " AS channel " +
 		" FROM events " + " WHERE project_id=? AND company IS NOT NULL AND timestamp >= ? AND timestamp <= ? AND events.event_name_id IN ( " + eventNameID + " ) "
 
-	rowNumAssigned := " SELECT company, country, industry, emp_range, revenue_range, time_spent, page_count, domain, page_seen, campaign, channel, " +
+	rowNumAssigned := " SELECT company, country, industry, emp_range, revenue_range, time_spent, domain, page_seen, campaign, channel, " +
 		" ROW_NUMBER() OVER(PARTITION BY company ORDER BY time_spent DESC) as row_num FROM ( " + subQuery + " ) "
 
-	qStmnt = " SELECT company, country, industry, emp_range, revenue_range, time_spent, page_count, domain, page_seen, campaign, channel " +
-		" FROM (" + rowNumAssigned + " ) WHERE row_num=1 ORDER BY page_count DESC; "
+	qStmnt = " SELECT company, country, industry, emp_range, revenue_range, time_spent, domain, page_seen, campaign, channel " +
+		" FROM (" + rowNumAssigned + " ) WHERE row_num=1 ORDER BY time_spent DESC; "
 
 	qParams = append(qParams, U.SIX_SIGNAL_NAME,
 		U.SP_SPENT_TIME, U.SP_SPENT_TIME, U.SP_SPENT_TIME,
-		U.UP_PAGE_COUNT,
 		U.SIX_SIGNAL_COUNTRY, model.PropertyValueNone, U.SIX_SIGNAL_COUNTRY, model.PropertyValueNone, U.SIX_SIGNAL_COUNTRY,
 		U.SIX_SIGNAL_INDUSTRY, model.PropertyValueNone, U.SIX_SIGNAL_INDUSTRY, model.PropertyValueNone, U.SIX_SIGNAL_INDUSTRY,
 		U.SIX_SIGNAL_EMPLOYEE_RANGE, model.PropertyValueNone, U.SIX_SIGNAL_EMPLOYEE_RANGE, model.PropertyValueNone, U.SIX_SIGNAL_EMPLOYEE_RANGE,

@@ -178,12 +178,12 @@ func TestPostAPISegmentHandler(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	// To check whether segemnent created
-	getSegement, status := store.GetStore().GetAllSegments(project.ID)
+	segments, status := store.GetStore().GetAllSegments(project.ID)
 	assert.Equal(t, http.StatusFound, status)
-	assert.Equal(t, segment.Name, getSegement["event"][0].Name)
-	assert.Equal(t, segment.Description, getSegement["event"][0].Description)
-	assert.Equal(t, segment.Type, getSegement["event"][0].Type)
-	querySegmentCheck, err := U.EncodeStructTypeToPostgresJsonb(getSegement["event"][0].Query)
+	assert.Equal(t, segment.Name, segments["event"][0].Name)
+	assert.Equal(t, segment.Description, segments["event"][0].Description)
+	assert.Equal(t, segment.Type, segments["event"][0].Type)
+	querySegmentCheck, err := U.EncodeStructTypeToPostgresJsonb(segments["event"][0].Query)
 	assert.Nil(t, err)
 	getQueryMap, err := U.DecodePostgresJsonb(querySegmentCheck)
 	assert.Nil(t, err)
@@ -333,9 +333,9 @@ func TestGetAPIAllSegmentsHandler(t *testing.T) {
 	w = sendAllSegmentGetReq(r, project.ID, agent)
 	assert.Equal(t, http.StatusFound, w.Code)
 
-	getSegement, status := store.GetStore().GetAllSegments(project.ID)
+	segments, status := store.GetStore().GetAllSegments(project.ID)
 	assert.Equal(t, http.StatusFound, status)
-	assert.Equal(t, int(2), len(getSegement))
+	assert.Equal(t, int(3), len(segments))
 }
 
 func TestGetAPISegmentByIdHandler(t *testing.T) {
@@ -375,20 +375,20 @@ func TestGetAPISegmentByIdHandler(t *testing.T) {
 	w := sendSegmentPostReq(r, *segment, project.ID, agent)
 	assert.Equal(t, http.StatusCreated, w.Code)
 
-	getSegement, status := store.GetStore().GetAllSegments(project.ID)
+	segments, status := store.GetStore().GetAllSegments(project.ID)
 	assert.Equal(t, http.StatusFound, status)
 
 	// Get segment by id
-	w = sendSegmentGetByIdReq(r, project.ID, getSegement["event"][0].Id, agent)
+	w = sendSegmentGetByIdReq(r, project.ID, segments["event"][0].Id, agent)
 	assert.Equal(t, http.StatusFound, w.Code)
 
 	// To check the segemnent recieved from api
-	getSegement1, status := store.GetStore().GetSegmentById(project.ID, getSegement["event"][0].Id)
+	segment1, status := store.GetStore().GetSegmentById(project.ID, segments["event"][0].Id)
 	assert.Equal(t, http.StatusFound, status)
-	assert.Equal(t, segment.Name, getSegement1.Name)
-	assert.Equal(t, segment.Description, getSegement1.Description)
-	assert.Equal(t, segment.Type, getSegement1.Type)
-	querySegmentCheck, err := U.EncodeStructTypeToPostgresJsonb(getSegement1.Query)
+	assert.Equal(t, segment.Name, segment1.Name)
+	assert.Equal(t, segment.Description, segment1.Description)
+	assert.Equal(t, segment.Type, segment1.Type)
+	querySegmentCheck, err := U.EncodeStructTypeToPostgresJsonb(segment1.Query)
 	assert.Nil(t, err)
 	getQueryMap, err := U.DecodePostgresJsonb(querySegmentCheck)
 	assert.Nil(t, err)
@@ -433,7 +433,7 @@ func TestPutAPISegmentHandler(t *testing.T) {
 	w := sendSegmentPostReq(r, *segment, project.ID, agent)
 	assert.Equal(t, http.StatusCreated, w.Code)
 
-	getSegement, status := store.GetStore().GetAllSegments(project.ID)
+	segments, status := store.GetStore().GetAllSegments(project.ID)
 	assert.Equal(t, http.StatusFound, status)
 
 	// Update segment by id
@@ -443,8 +443,8 @@ func TestPutAPISegmentHandler(t *testing.T) {
 	}
 
 	// Updating with only type test
-	w = sendUpdateSegmentPutReq(r, *segment, project.ID, getSegement["event"][0].Id, agent)
-	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	w = sendUpdateSegmentPutReq(r, *segment, project.ID, segments["event"][0].Id, agent)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
 
 	// updating with both type and query
 	prop = model.QueryProperty{
@@ -467,16 +467,16 @@ func TestPutAPISegmentHandler(t *testing.T) {
 		Query:       querySegment,
 	}
 
-	w = sendUpdateSegmentPutReq(r, *newSegment, project.ID, getSegement["event"][0].Id, agent)
+	w = sendUpdateSegmentPutReq(r, *newSegment, project.ID, segments["event"][0].Id, agent)
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	// To check whether segemnent created
-	getSegement1, status := store.GetStore().GetSegmentById(project.ID, getSegement["event"][0].Id)
+	segment1, status := store.GetStore().GetSegmentById(project.ID, segments["event"][0].Id)
 	assert.Equal(t, http.StatusFound, status)
-	assert.Equal(t, newSegment.Name, getSegement1.Name)
-	assert.Equal(t, newSegment.Description, getSegement1.Description)
-	assert.Equal(t, newSegment.Type, getSegement1.Type)
-	querySegmentCheck, err := U.EncodeStructTypeToPostgresJsonb(getSegement1.Query)
+	assert.Equal(t, newSegment.Name, segment1.Name)
+	assert.Equal(t, newSegment.Description, segment1.Description)
+	assert.Equal(t, newSegment.Type, segment1.Type)
+	querySegmentCheck, err := U.EncodeStructTypeToPostgresJsonb(segment1.Query)
 	assert.Nil(t, err)
 	getQueryMap, err := U.DecodePostgresJsonb(querySegmentCheck)
 	assert.Nil(t, err)
@@ -531,19 +531,19 @@ func TestDeleteAPISegmentHandler(t *testing.T) {
 	w = sendSegmentPostReq(r, *segment, project.ID, agent)
 	assert.Equal(t, http.StatusCreated, w.Code)
 
-	getSegement, status := store.GetStore().GetAllSegments(project.ID)
+	segments, status := store.GetStore().GetAllSegments(project.ID)
 	assert.Equal(t, http.StatusFound, status)
-	assert.Equal(t, 2, len(getSegement))
+	assert.Equal(t, 3, len(segments))
 
 	// delete the created record
-	w = sendSegmentDeleteByIdReq(r, project.ID, getSegement["event"][0].Id, agent)
+	w = sendSegmentDeleteByIdReq(r, project.ID, segments["event"][0].Id, agent)
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	// check if record deleted
-	w = sendSegmentGetByIdReq(r, project.ID, getSegement["event"][0].Id, agent)
+	w = sendSegmentGetByIdReq(r, project.ID, segments["event"][0].Id, agent)
 	assert.Equal(t, http.StatusNotFound, w.Code)
 
-	getSegement, status = store.GetStore().GetAllSegments(project.ID)
+	segments, status = store.GetStore().GetAllSegments(project.ID)
 	assert.Equal(t, http.StatusFound, status)
-	assert.Equal(t, 1, len(getSegement))
+	assert.Equal(t, 2, len(segments))
 }

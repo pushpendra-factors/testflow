@@ -6,19 +6,18 @@
 
   &:hover,
   &:focus {
-    background: #F5F6F8;
+    background: #f0f0f0;
   }
 }
 
 .popover_content {
-
   &__header {
     display: flex;
     align-items: center;
     margin: 0;
     padding: 0 16px;
     font-weight: 700;
-    background: #F5F6F8;
+    background: #f0f0f0;
     height: 40px;
     border-radius: 12px 12px 0 0;
   }
@@ -34,7 +33,7 @@
 
     &:hover,
     &:focus {
-      background: #F5F6F8;
+      background: #f0f0f0;
     }
   }
 
@@ -42,19 +41,21 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin: 0 8px 0 16px;
+    margin: 8px 8px 0 16px;
   }
 
   &__additionalActions {
     display: flex;
     flex-direction: column;
-
+    span {
+      padding: 8px 16px;
+    }
     a {
       padding: 8px 16px;
 
       &:hover,
       &:focus {
-        background: #F5F6F8;
+        background: #f0f0f0;
       }
     }
   }
@@ -64,5 +65,55 @@
     border-radius: 0 0 12px 12px;
     text-align: left;
     height: 48px;
+  }
+}
+.projects_list_container {
+  transition: height 500ms;
+
+  &part2 {
+    height: 500px;
+  }
+  & .active_project_div {
+    display: flex;
+    justify-content: space-between;
+
+    & > div:first-child {
+      padding: 16px;
+      text-transform: capitalize;
+    }
+    & > div:nth-child(2) {
+      border-left: 1px solid #e7e9ed;
+      transition-duration: 200ms;
+      padding: 16px;
+      cursor: pointer;
+      &:hover {
+        background-color: #f7f7f7;
+      }
+    }
+  }
+  & .active_project_div_active {
+    display: flex;
+    justify-content: left;
+    border-bottom: 1px solid #e7e9ed;
+
+    & > div:first-child {
+      border-right: 1px solid #e7e9ed;
+      transition-duration: 200ms;
+      padding: 16px;
+      cursor: pointer;
+      &:hover {
+        background-color: #f7f7f7;
+      }
+    }
+    & > div:nth-child(2) {
+      padding: 16px;
+      text-transform: capitalize;
+    }
+  }
+
+  & .project_list_item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
 }

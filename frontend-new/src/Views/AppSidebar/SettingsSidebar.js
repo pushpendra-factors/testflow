@@ -4,10 +4,11 @@ import {
   settingsMenuItems,
   getConfigureMenuItems
 } from 'Components/FaHeader/FaHeader';
-import { isConfigurationUrl } from './appSidebar.helpers';
-import SidebarMenuItem from './SidebarMenuItem';
 import { WhiteListedAccounts } from 'Routes/constants';
 import { useSelector } from 'react-redux';
+import { PathUrls } from 'Routes/pathUrls';
+import SidebarMenuItem from './SidebarMenuItem';
+import { checkMatchPath, isConfigurationUrl } from './appSidebar.helpers';
 
 const SettingItem = ({ item }) => {
   const location = useLocation();
@@ -17,8 +18,11 @@ const SettingItem = ({ item }) => {
   const handleItemClick = () => {
     history.push(item.url);
   };
-
-  const isActive = pathname === item.url;
+  const isActive =
+    item.url === PathUrls.SettingsIntegration
+      ? pathname === item.url ||
+        checkMatchPath(pathname, PathUrls.SettingsIntegrationURLID)
+      : pathname === item.url;
 
   return (
     <SidebarMenuItem
@@ -46,8 +50,8 @@ const SettingsSidebar = () => {
   return (
     <div className='flex flex-col gap-y-1 px-2'>
       {menuList.map((item) => {
-        if(item?.whitelisted && !WhiteListedAccounts.includes(activeAgent)){
-          return null
+        if (item?.whitelisted && !WhiteListedAccounts.includes(activeAgent)) {
+          return null;
         }
         return <SettingItem item={item} />;
       })}
