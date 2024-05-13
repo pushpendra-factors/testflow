@@ -46,6 +46,7 @@ var FeatureDisplayNameMap = map[string]string{
 	"Rudderstack":     FEATURE_RUDDERSTACK,
 	"Drift":           FEATURE_DRIFT,
 	"Segment":         FEATURE_SEGMENT,
+	"Teams":           FEATURE_TEAMS,
 }
 
 type ProjectSetting struct {
@@ -156,7 +157,7 @@ const (
 	PULL_DELAYED         = "delayed"
 	SYNC_PENDING         = "pending"
 	SYNCED               = "synced"
-	ACCOUNT_DELETOIN     = "accountDeletion"
+	ACCOUNT_DELETION     = "accountDeletion"
 	CLIENT_TOKEN_EXPIRED = "client_side_token_expired"
 	HEAVY_DELAYED        = "large_data_delayed"
 	LIMIT_EXCEED         = "limit_exceed"
