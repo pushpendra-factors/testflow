@@ -3,10 +3,11 @@ import _ from 'lodash';
 import PropTypes from 'prop-types';
 import { SVG } from 'factorsComponents';
 import { Button, Dropdown, Menu, Tooltip, Modal, message, Popover } from 'antd';
+import { QuestionCircleOutlined } from '@ant-design/icons';
+import { useLocation, useParams } from 'react-router-dom';
 import { BUTTON_TYPES } from '../../constants/buttons.constants';
 import ControlledComponent from '../ControlledComponent';
 import styles from './index.module.scss';
-import { QuestionCircleOutlined } from '@ant-design/icons';
 import {
   QUERY_TYPE_EVENT,
   QUERY_TYPE_KPI,
@@ -16,7 +17,6 @@ import {
 } from '../../utils/constants';
 // import { getChartType } from '../../Views/CoreQuery/AnalysisResultsPage/analysisResultsPage.helpers';
 import { CoreQueryContext } from '../../contexts/CoreQueryContext';
-import { useLocation, useParams } from 'react-router-dom';
 
 const QueryActionsComponent = ({
   queryType,
@@ -110,19 +110,19 @@ const QueryActionsComponent = ({
     <Menu onClick={handleMenuClick} className={`${styles.antdActionMenu}`}>
       <Menu.Item key='1'>
         <SVG
-          name={'pluscopy'}
+          name='pluscopy'
           size={20}
-          color={'grey'}
-          extraClass={'inline -mt-1 mr-1'}
+          color='grey'
+          extraClass='inline -mt-1 mr-1'
         />
         Save as New
       </Menu.Item>
       <Menu.Item key='2'>
         <SVG
-          name={'SaveLight'}
+          name='SaveLight'
           size={20}
-          color={'grey'}
-          extraClass={'inline -mt-1 mr-1'}
+          color='grey'
+          extraClass='inline -mt-1 mr-1'
         />
         Save
       </Menu.Item>
@@ -142,7 +142,7 @@ const QueryActionsComponent = ({
         }
       >
         <SVG
-          name={'envelope'}
+          name='envelope'
           size={18}
           color={`${
             !savedQueryId ||
@@ -150,7 +150,7 @@ const QueryActionsComponent = ({
               ? 'LightGray'
               : 'grey'
           }`}
-          extraClass={'inline mr-2'}
+          extraClass='inline mr-2'
         />
         Email this report
       </Menu.Item>
@@ -162,7 +162,7 @@ const QueryActionsComponent = ({
         }
       >
         <SVG
-          name={'SlackStroke'}
+          name='SlackStroke'
           size={18}
           color={`${
             !savedQueryId ||
@@ -170,46 +170,41 @@ const QueryActionsComponent = ({
               ? 'LightGray'
               : 'grey'
           }`}
-          extraClass={'inline mr-2'}
+          extraClass='inline mr-2'
         />
-        Share to slack
+        Share to Slack
       </Menu.Item>
       <Menu.Item key='3' disabled={!savedQueryId}>
         <SVG
-          name={'addtodash'}
+          name='addtodash'
           size={18}
           color={`${!savedQueryId ? 'LightGray' : 'grey'}`}
-          extraClass={'inline mr-2'}
+          extraClass='inline mr-2'
         />
         Add to Dashboard
       </Menu.Item>
       <Menu.Divider />
       <Menu.Item key='4' disabled={!savedQueryId}>
         <SVG
-          name={'edit'}
+          name='edit'
           size={18}
           color={`${!savedQueryId ? 'LightGray' : 'grey'}`}
-          extraClass={'inline mr-2'}
+          extraClass='inline mr-2'
         />
         Edit Details
       </Menu.Item>
       <Menu.Item key='5' disabled={!savedQueryId}>
         <SVG
-          name={'TrashLight'}
+          name='TrashLight'
           size={18}
           color={`${!savedQueryId ? 'LightGray' : 'grey'}`}
-          extraClass={'inline mr-2'}
+          extraClass='inline mr-2'
         />
         Delete
       </Menu.Item>
       <Menu.Divider />
       <Menu.Item key='6'>
-        <SVG
-          name={'headset'}
-          size={18}
-          color={'grey'}
-          extraClass={'inline mr-2'}
-        />
+        <SVG name='headset' size={18} color='grey' extraClass='inline mr-2' />
         Talk to us
       </Menu.Item>
       <Menu.Item key='7'>
@@ -274,15 +269,15 @@ const QueryActionsComponent = ({
               onClick={toggleAddToDashboardModal}
               size='large'
               type='text'
-              icon={<SVG name={'addtodash'} size={20} />}
-            ></Button>
+              icon={<SVG name='addtodash' size={20} />}
+            />
           </Tooltip>
         </ControlledComponent>
       </ControlledComponent>
 
-      <div className={'relative gap-x-2 mr-2'}>
+      <div className='relative gap-x-2 mr-2'>
         <Dropdown overlay={actionMenu} placement='bottomRight'>
-          <Button type='text' icon={<SVG name={'threedot'} size={25} />} />
+          <Button type='text' icon={<SVG name='threedot' size={25} />} />
         </Dropdown>
       </div>
 
@@ -310,8 +305,8 @@ const QueryActionsComponent = ({
               onClick={urlId && handleUpdateClick}
               disabled={savedQueryId}
               type={BUTTON_TYPES.PRIMARY}
-              size={'large'}
-              icon={<SVG name={'CaretDown'} size={20} color={'white'} />}
+              size='large'
+              icon={<SVG name='CaretDown' size={20} color='white' />}
             >
               Save
             </Dropdown.Button>
@@ -329,7 +324,7 @@ const QueryActionsComponent = ({
               trigger='click'
               visible={isPopoverVisible}
               placement='bottomLeft'
-              arrowPointAtCenter={true}
+              arrowPointAtCenter
               autoAdjustOverflow
               onVisibleChange={(visible) => setIsPopoverVisible(visible)}
             >
@@ -337,8 +332,8 @@ const QueryActionsComponent = ({
                 overlay={menuItems}
                 onClick={handleDropdownClick}
                 type={BUTTON_TYPES.PRIMARY}
-                size={'large'}
-                icon={<SVG name={'CaretDown'} size={20} color={'white'} />}
+                size='large'
+                icon={<SVG name='CaretDown' size={20} color='white' />}
               >
                 Save
               </Dropdown.Button>
