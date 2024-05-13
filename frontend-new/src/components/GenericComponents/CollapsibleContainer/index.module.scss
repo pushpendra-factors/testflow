@@ -1,0 +1,20 @@
+.collapse {
+  background: #fff;
+
+  :global(.ant-collapse-content) {
+    border: none;
+  }
+
+  :global(.ant-collapse-item) {
+    border: none;
+  }
+
+  :global(.ant-collapse-content-box) {
+    border: none;
+  }
+}
+
+.border {
+  border-radius: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+}

@@ -5,6 +5,8 @@ import {
 import { createDashboardFromTemplate } from 'Reducers/dashboard_templates/services';
 import logger from 'Utils/logger';
 import { get, getHostUrl } from 'Utils/request';
+import { IntegrationPageCategories } from './integrations.constants';
+import { IntegrationStatus } from './types';
 
 export const INTEGRATION_HOME_PAGE = '/settings/integration';
 export const ADWORDS_INTERNAL_REDIRECT_URI = '?googleAds=manageAccounts';
@@ -152,4 +154,61 @@ export const createDashboardsFromTemplatesForRequiredIntegration = async (
     logger.error('Error in creating dashboard', error);
     return false;
   }
+};
+
+export const getIntegrationCategoryNameFromId = (categoryId: string) =>
+  IntegrationPageCategories.find((category) => category.id === categoryId)
+    ?.name || '';
+
+export const getBackendHost = () => {
+  const backendHost = BUILD_CONFIG.backend_host;
+  return backendHost;
+};
+
+export const getIntegrationStatus = (integrationStatus: IntegrationStatus) => {
+  let status = '';
+  switch (integrationStatus?.state) {
+    case 'synced':
+      status = 'connected';
+      break;
+    case 'client_token_expired':
+    case 'limit_exceed':
+      status = 'error';
+      break;
+    case 'pull_delayed':
+    case 'delayed':
+    case 'heavy_delayed':
+    case 'sync_pending':
+      status = 'pending';
+      break;
+    default:
+      status = 'not_connected';
+      break;
+  }
+  return status;
+};
+
+export const getIntegrationActionText = (
+  integrationStatus: IntegrationStatus
+) => {
+  let actionText = '';
+  switch (integrationStatus?.state) {
+    case 'synced':
+      actionText = 'Receiving Data';
+      break;
+    case 'client_token_expired':
+    case 'limit_exceed':
+      actionText = 'Action Required';
+      break;
+    case 'pull_delayed':
+    case 'delayed':
+    case 'heavy_delayed':
+    case 'sync_pending':
+      actionText = 'Data sync Pending';
+      break;
+    default:
+      actionText = 'Connect Now';
+      break;
+  }
+  return actionText;
 };

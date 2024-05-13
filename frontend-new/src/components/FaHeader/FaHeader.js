@@ -78,12 +78,6 @@ export const settingsMenuItems = [
     lineBreak: false
   },
   {
-    label: 'Javascript SDK',
-    url: PathUrls.SettingsSdk,
-    lineBreak: true
-  },
-
-  {
     label: 'Sharing',
     url: PathUrls.SettingsSharing,
     lineBreak: true
@@ -249,8 +243,7 @@ function FaHeader() {
             >
               <div
                 className={cx(
-                  'flex cursor-pointer items-center gap-x-1 pl-2 pr-1 py-1 ' +
-                    styles['header-item'],
+                  `flex cursor-pointer items-center gap-x-1 pl-2 pr-1 py-1 ${styles['header-item']}`,
                   {
                     [styles['active-header-item']]: isAccountsUrl(pathname)
                   }
@@ -292,8 +285,7 @@ function FaHeader() {
             <Dropdown overlay={reportsMainMenu}>
               <div
                 className={cx(
-                  'flex cursor-pointer items-center gap-x-1 pl-2 pr-1 py-1 ' +
-                    styles['header-item'],
+                  `flex cursor-pointer items-center gap-x-1 pl-2 pr-1 py-1 ${styles['header-item']}`,
                   {
                     [styles['active-header-item']]: isReportsMainUrl(pathname)
                   }
@@ -335,9 +327,9 @@ function FaHeader() {
             </Link> */}
 
             <Link
-              to={PathUrls.Alerts + '?type=realtime'}
+              to={`${PathUrls.Alerts}?type=realtime`}
               className={cx(
-                'flex items-center pl-2 pr-1 py-1 ' + styles['header-item'],
+                `flex items-center pl-2 pr-1 py-1 ${styles['header-item']}`,
                 {
                   [styles['active-header-item']]: isAlertsUrl(pathname)
                 }
@@ -371,10 +363,10 @@ function FaHeader() {
             </Button>
           </div>
         ) : (
-          <div className='flex w-1/2 gap-x-6'></div>
+          <div className='flex w-1/2 gap-x-6' />
         )}
-        <div className={'w-1/3 flex justify-end'}>
-          <SearchBar placeholder={'Search ⌘+K'} />
+        <div className='w-1/3 flex justify-end'>
+          <SearchBar placeholder='Search ⌘+K' />
         </div>
         <Dropdown
           overlay={renderConfigureMenu(activeAgent)}

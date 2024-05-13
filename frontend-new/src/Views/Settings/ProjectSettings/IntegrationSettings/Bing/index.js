@@ -24,7 +24,6 @@ const BingIntegration = ({
   activeProject,
   agent_details,
   enableBingAdsIntegration,
-  setIsStatus,
   createBingAdsIntegration,
   kbLink = false,
   fetchBingAdsIntegration,
@@ -49,7 +48,6 @@ const BingIntegration = ({
             setTimeout(() => {
               message.success('Bing Ads integration disconnected!');
             }, 500);
-            setIsStatus('');
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);
@@ -60,54 +58,20 @@ const BingIntegration = ({
     });
   };
 
-  const isBingAdsEnabled = () => {
-    fetchBingAdsIntegration(activeProject.id);
-  };
-
-  useEffect(() => {
-    isBingAdsEnabled();
-    if (bingAds.status) {
-      bingAds.accounts == '' ? setIsStatus('Pending') : setIsStatus('Active');
-      setAccounts(bingAds.accounts);
-    } else {
-      setIsStatus('');
-    }
-  }, [activeProject, agent_details, bingAds?.status]);
-
   const enableBingAds = () => {
     setLoading(true);
     createBingAdsIntegration(activeProject.id)
       .then((r) => {
         setLoading(false);
         if (r.status == 200) {
-          let hostname = window.location.hostname;
-          let protocol = window.location.protocol;
-          let port = window.location.port;
-          let redirectURL =
-            protocol +
-            '//' +
-            hostname +
-            ':' +
-            port +
-            '?bingadsint=' +
-            activeProject.id +
-            '&email=' +
-            agent_details.email +
-            '&projectname=' +
-            activeProject.name;
+          const { hostname } = window.location;
+          const { protocol } = window.location;
+          const { port } = window.location;
+          let redirectURL = `${protocol}//${hostname}:${port}?bingadsint=${activeProject.id}&email=${agent_details.email}&projectname=${activeProject.name}`;
           if (port === undefined || port === '') {
-            redirectURL =
-              protocol +
-              '//' +
-              hostname +
-              '?bingadsint=' +
-              activeProject.id +
-              '&email=' +
-              agent_details.email +
-              '&projectname=' +
-              activeProject.name;
+            redirectURL = `${protocol}//${hostname}?bingadsint=${activeProject.id}&email=${agent_details.email}&projectname=${activeProject.name}`;
           }
-          let url = new URL(r.data.redirect_uri);
+          const url = new URL(r.data.redirect_uri);
           url.searchParams.set('redirect_uri', redirectURL);
           window.location = url.href;
         }
@@ -118,92 +82,66 @@ const BingIntegration = ({
       .catch((err) => {
         setLoading(false);
         console.log('Bing Ads error-->', err);
-        setIsStatus('');
       });
   };
 
   return (
-    <>
-      <ErrorBoundary
-        fallback={
-          <FaErrorComp subtitle={'Facing issues with Bing Ads integrations'} />
-        }
-        onError={FaErrorLog}
-      >
-        <div className={'mt-4 flex w-full'}>
-          {bingAds.status && (
-            <>
-              <div
-                className={
-                  'mt-4 flex flex-col border-top--thin py-4 mt-2 w-full'
-                }
-              >
-                <Text
-                  type={'title'}
-                  level={6}
-                  weight={'bold'}
-                  extraClass={'m-0'}
-                >
-                  Connected Account
-                </Text>
-                <Text
-                  type={'title'}
-                  level={7}
-                  color={'grey'}
-                  extraClass={'m-0 mt-2'}
-                >
-                  Bing Ads sync account details
-                </Text>
-                {accounts == '' ? (
-                  <Text
-                    type={'title'}
-                    size={10}
-                    color={'red'}
-                    extraClass={'m-0 mt-2'}
-                  >
-                    No ads account found or partial integration. Please
-                    disconnect and try again.
-                  </Text>
-                ) : (
-                  <Input
-                    size='large'
-                    disabled={true}
-                    value={accounts}
-                    style={{ width: '400px' }}
-                  />
-                )}
-              </div>
-            </>
-          )}
-        </div>
+    <ErrorBoundary
+      fallback={
+        <FaErrorComp subtitle='Facing issues with Bing Ads integrations' />
+      }
+      onError={FaErrorLog}
+    >
+      <div className='flex w-full'>
+        {bingAds.status && (
+          <div className='flex flex-col w-full'>
+            <Text
+              type='title'
+              level={6}
+              weight='bold'
+              color='character-primary'
+              extraClass='m-0'
+            >
+              Selected Bing Account
+            </Text>
 
-        <div className={'mt-4 flex'}>
-          {!bingAds.status ? (
-            <Button
-              className={'mr-2'}
-              type={'primary'}
-              loading={loading}
-              onClick={enableBingAds}
-            >
-              Connect Now
-            </Button>
-          ) : (
-            <Button
-              className={'mr-2'}
-              loading={loading}
-              onClick={() => onDisconnect()}
-            >
-              Disconnect
-            </Button>
-          )}
-          {kbLink && (
-            <a className={'ant-btn'} target={'_blank'} href={kbLink}>
-              View documentation
-            </a>
-          )}
-        </div>
-      </ErrorBoundary>
-    </>
+            {accounts == '' ? (
+              <Text type='title' size={10} color='red' extraClass='m-0 mt-2'>
+                No ads account found or partial integration. Please disconnect
+                and try again.
+              </Text>
+            ) : (
+              <Input
+                disabled
+                value={accounts}
+                style={{ width: 320, marginTop: 8, background: '#fff' }}
+              />
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className='mt-4 flex'>
+        {!bingAds.status ? (
+          <Button
+            className='mr-2'
+            type='primary'
+            loading={loading}
+            onClick={enableBingAds}
+          >
+            Connect Now
+          </Button>
+        ) : (
+          <Button
+            className='mr-2'
+            loading={loading}
+            onClick={() => onDisconnect()}
+          >
+            Disconnect
+          </Button>
+        )}
+      </div>
+    </ErrorBoundary>
   );
 };
 

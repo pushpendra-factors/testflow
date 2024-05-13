@@ -19,3 +19,6 @@ export const generateSdkScriptCodeForPdf = (
   if (includeScriptTag) return `<script>${codeWithOutScriptTag}</script>`;
   return codeWithOutScriptTag;
 };
+
+export const JavascriptHeadDocumentation =
+  'https://help.factors.ai/en/collections/8535799-installing-factors-sdk';
