@@ -393,6 +393,7 @@ CREATE TABLE IF NOT EXISTS hubspot_documents (
 CREATE ROWSTORE TABLE IF NOT EXISTS project_agent_mappings (
     project_id bigint,
     agent_uuid text,
+    slack_team_id text,
     role bigint,
     checklist_dismissed bool,
     invited_by text,

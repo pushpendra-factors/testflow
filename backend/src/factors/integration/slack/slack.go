@@ -313,3 +313,22 @@ func GetSlackIntegrationState(projectID int64, agentUUID string) model.Integrati
 	}
 
 }
+
+func DeleteSlackIntegration(projectID int64, agentUUID string) error {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID, "agent_uuid": agentUUID})
+	if projectID == 0 || agentUUID == "" {
+		logCtx.Error("invalid parameters")
+		return fmt.Errorf("invalid parameters")
+	}
+	err := store.GetStore().DeleteSlackIntegrationFromAgents(projectID, agentUUID)
+	if err != nil {
+		return err
+	}
+
+	err = store.GetStore().DeleteSlackTeamIDFromProjectAgentMappings(projectID, agentUUID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
