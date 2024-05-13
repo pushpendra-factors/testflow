@@ -80,6 +80,7 @@ func didEventQuery(projectID int64, segmentId string, eventNameIDsMap map[string
 
 	if isAllAccounts {
 		userIDS := userIdsList(*segmentQuery, userArray, didEvent)
+		userIDS = append(userIDS, userID)
 		if len(userIDS) == 0 {
 			return isMatched
 		}
