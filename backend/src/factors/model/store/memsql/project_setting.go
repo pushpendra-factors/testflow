@@ -1694,7 +1694,7 @@ func (store *MemSQL) ProjectCountToRunAllMarkerFor() (int, int) {
 }
 
 // fetch project_ids to run all marker for
-func (store *MemSQL) GetProjectIDsListForMarker(limit int) ([]int64, int) {
+func (store *MemSQL) GetProjectIDsListForMarker(limit int) (map[int64]bool, int) {
 	db := C.GetServices().Db
 
 	// greater than default time to 24 hours
@@ -1714,24 +1714,24 @@ func (store *MemSQL) GetProjectIDsListForMarker(limit int) ([]int64, int) {
 
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
-			return []int64{}, http.StatusNotFound
+			return map[int64]bool{}, http.StatusNotFound
 		}
 		log.WithError(err).Error("Error fetching top %d least updated projects", limit)
-		return []int64{}, http.StatusInternalServerError
+		return map[int64]bool{}, http.StatusInternalServerError
 	}
 
 	defer rows.Close()
 
-	var projectIDs []int64
+	projectIDs := make(map[int64]bool)
 
 	for rows.Next() {
 		var project_id int64
 		err = rows.Scan(&project_id)
 		if err != nil {
 			log.WithError(err).Error("Error fetching rows")
-			return []int64{}, http.StatusInternalServerError
+			return map[int64]bool{}, http.StatusInternalServerError
 		}
-		projectIDs = append(projectIDs, project_id)
+		projectIDs[project_id] = true
 	}
 
 	return projectIDs, http.StatusFound

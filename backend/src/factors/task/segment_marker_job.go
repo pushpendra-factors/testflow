@@ -17,7 +17,11 @@ import (
 	U "factors/util"
 )
 
-func SegmentMarker(projectID int64, projectIdListAllRun []int64) int {
+func SegmentMarker(projectID int64, projectIdListAllRun map[int64]bool, latestSegmentsMap map[int64][]string) int {
+
+	if C.DisableAccountsRuntMarker(projectID) {
+		return http.StatusOK
+	}
 
 	domainGroup, status := store.GetStore().GetGroup(projectID, model.GROUP_NAME_DOMAINS)
 
@@ -31,7 +35,7 @@ func SegmentMarker(projectID int64, projectIdListAllRun []int64) int {
 	var endTime, timeTaken int64
 	startTime := time.Now().Unix()
 
-	domainsList, allUsersRun, status, lookBack := GetDomainsToRunMarkerFor(projectID, domainGroup, status, projectIdListAllRun)
+	domainsList, allUsersRun, status, lookBack := GetDomainsToRunMarkerFor(projectID, domainGroup, status, projectIdListAllRun, latestSegmentsMap)
 
 	// fetching list of all the users with last updated_at in last x hour
 	if !C.ProcessOnlyAllAccountsSegments() {
@@ -58,18 +62,18 @@ func SegmentMarker(projectID int64, projectIdListAllRun []int64) int {
 
 	log.WithFields(log.Fields{"project_id": projectID, "no_of_domains": len(domainsList)}).Info("Total no.of domains pulled time(sec) ", timeTaken)
 
-	// list of all segments
-	allSegmentsMap, statusCode := store.GetStore().GetAllSegments(projectID)
-	if statusCode != http.StatusFound {
-		log.WithField("project_id", projectID).Warn("No segment found for this project")
-		return http.StatusOK
-	}
-
 	// set Query Timezone
 	timezoneString, statusCode := store.GetStore().GetTimezoneForProject(projectID)
 	if statusCode != http.StatusFound {
 		log.WithField("project_id", projectID).Error("Failed to get Timezone.")
 		return http.StatusBadRequest
+	}
+
+	// list of segments
+	allSegmentsMap, statusCode := ListOfSegmentsToRunMarkerFor(projectID, allUsersRun, latestSegmentsMap)
+	if statusCode != http.StatusFound {
+		log.WithField("project_id", projectID).Warn("No segment found for this project")
+		return http.StatusOK
 	}
 
 	// list of all event_names and all ids for it
@@ -166,9 +170,20 @@ func SegmentMarker(projectID int64, projectIdListAllRun []int64) int {
 		}
 	}
 
+	var runForGivenSegment bool
+	var segmentIds []string
+
+	// to run marker for 100k domains for selected recently updated/created segments
+	if !allUsersRun && C.EnableLatestSegmentsMarkerRun(projectID) {
+		segmentIds, runForGivenSegment = latestSegmentsMap[projectID]
+	}
+
 	if allUsersRun {
 		// updating marker_last_run_all_accounts in project settings after completing the job
 		errCode = store.GetStore().UpdateSegmentMarkerLastRunForAllAccounts(projectID, U.TimeNowZ())
+	} else if runForGivenSegment && len(segmentIds) > 0 {
+		// updating marker_run_segment in segments table after completing the job
+		errCode = store.GetStore().UpdateMarkerRunSegment(projectID, segmentIds, U.TimeNowZ())
 	} else {
 		// updating segment_marker_last_run in project settings after completing the job
 		errCode = store.GetStore().UpdateSegmentMarkerLastRun(projectID, U.TimeNowZ())
@@ -183,20 +198,29 @@ func SegmentMarker(projectID int64, projectIdListAllRun []int64) int {
 }
 
 func GetDomainsToRunMarkerFor(projectID int64, domainGroup *model.Group, domainGroupStatus int,
-	projectIdListAllRun []int64) ([]string, bool, int, time.Time) {
+	projectIdListAllRun map[int64]bool, latestSegmentsMap map[int64][]string) ([]string, bool, int, time.Time) {
 
 	allUsersRun := false
 
 	limitVal := C.MarkerDomainLimitForAllRun()
 
+	_, isAllRun := projectIdListAllRun[projectID]
+
+	var runForGivenSegment bool
+
+	// to run marker for 100k domains for selected recently updated/created segments
+	if !isAllRun && C.EnableLatestSegmentsMarkerRun(projectID) {
+		_, runForGivenSegment = latestSegmentsMap[projectID]
+	}
+
 	if C.AllAccountsRuntMarker(projectID) {
 
-		if domainGroupStatus == http.StatusFound && isRunAllMarkerForProjectID(projectIdListAllRun, projectID) {
+		if domainGroupStatus == http.StatusFound && (isAllRun || runForGivenSegment) {
 
 			domainIDList, status := store.GetStore().GetAllDomainsByProjectID(projectID, domainGroup.ID, limitVal)
 
 			if len(domainIDList) > 0 {
-				allUsersRun = true
+				allUsersRun = isAllRun
 				return domainIDList, allUsersRun, http.StatusOK, time.Time{}
 			}
 
@@ -229,6 +253,26 @@ func GetDomainsToRunMarkerFor(projectID int64, domainGroup *model.Group, domainG
 	}
 
 	return domainIDList, allUsersRun, http.StatusOK, time.Time{}
+}
+
+func ListOfSegmentsToRunMarkerFor(projectID int64, allUsersRun bool, latestSegmentsMap map[int64][]string) (map[string][]model.Segment, int) {
+
+	var runForGivenSegment bool
+
+	var segmentIds []string
+
+	// to run marker for 100k domains for selected recently updated/created segments
+	if !allUsersRun && C.EnableLatestSegmentsMarkerRun(projectID) {
+		segmentIds, runForGivenSegment = latestSegmentsMap[projectID]
+	}
+
+	if runForGivenSegment && len(segmentIds) > 0 {
+		// list of given segments
+		return store.GetStore().GetSegmentByGivenIds(projectID, segmentIds)
+	}
+
+	// list of all segments
+	return store.GetStore().GetAllSegments(projectID)
 }
 
 func processDomainsInBatches(projectID int64, domainIDList []string, segments []model.Segment, segmentsRulesArr []model.Query,
@@ -584,20 +628,4 @@ func updateAllAccountsSegmentMap(matched bool, userArr []model.User, userPartOfS
 	}
 
 	return segmentMap
-}
-
-func isRunAllMarkerForProjectID(projectIdListAllRun []int64, projectID int64) bool {
-	allRun := false
-
-	if C.DisableAccountsRuntMarker(projectID) {
-		return allRun
-	}
-
-	for _, pID := range projectIdListAllRun {
-		if projectID == pID {
-			allRun = true
-			break
-		}
-	}
-	return allRun
 }

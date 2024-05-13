@@ -539,8 +539,9 @@ type Model interface {
 	GetMarkerLastForAllAccounts(projectID int64) (time.Time, int)
 	UpdateSegmentMarkerLastRun(projectID int64, lastRunTime time.Time) int
 	UpdateSegmentMarkerLastRunForAllAccounts(projectID int64, lastRunTime time.Time) int
-	GetProjectIDsListForMarker(limit int) ([]int64, int)
+	GetProjectIDsListForMarker(limit int) (map[int64]bool, int)
 	ProjectCountToRunAllMarkerFor() (int, int)
+	GetNewlyUpdatedAndCreatedSegments() (map[int64][]string, error)
 
 	// project
 	UpdateProject(projectID int64, project *model.Project) int
@@ -1001,6 +1002,8 @@ type Model interface {
 	IsDuplicateSegmentNameCheck(projectID int64, name string) bool
 	DeleteSegmentById(projectId int64, segmentId string) (int, error)
 	CreateDefaultSegment(projectID int64, entity string, isGroup bool) (int, error)
+	GetSegmentByGivenIds(projectId int64, segmentIds []string) (map[string][]model.Segment, int)
+	UpdateMarkerRunSegment(projectID int64, ids []string, updateTime time.Time) int
 
 	// segment analytics
 	GetWidgetGroupAndWidgetsForConfig(projectID int64) ([]model.WidgetGroup, string, int)

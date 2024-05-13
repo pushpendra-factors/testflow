@@ -27,6 +27,7 @@ type Segment struct {
 	Type              string          `json:"type"`
 	IsLongRunComplete bool            `json:"long_run_comp" gorm:"-"`
 	UpdatedAt         time.Time       `json:"updated_at"`
+	MarkerRunSegment  time.Time       `json:"marker_run_segment"`
 }
 
 type AssociatedSegments struct {

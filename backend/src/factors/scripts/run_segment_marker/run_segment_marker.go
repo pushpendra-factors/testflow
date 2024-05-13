@@ -49,6 +49,8 @@ func main() {
 		"Project Id to disable all accounts run for marker. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
 	useOptimisedEventsQueryProjectIDs := flag.String("use_optimised_events_query_project_ids", "",
 		"Project Id to enable optimised query for event based filters check. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
+	latestSegmentsMarkerRun := flag.String("latest_segments_marker_run", "",
+		"Project Id to enable latest segments markup run. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
 	runForAllAccountsInHours := flag.Int("run_for_all_accounts_in_hours", 24, "Run domains where marker_last_run_all_accounts is greater than given hours")
 	jobRunCount := flag.Int("job_run_count", 40, "Total number of runs per day")
 
@@ -103,6 +105,7 @@ func main() {
 		UseOptimisedEventsQueryProjectIDs:  *useOptimisedEventsQueryProjectIDs,
 		RunForAllAccountsInHours:           *runForAllAccountsInHours,
 		JobRunCountPerDayMarker:            *jobRunCount,
+		LatestSegmentsMarkerRun:            *latestSegmentsMarkerRun,
 		BatchSizeDomains:                   *batchSizeDomains,
 		DomainsLimitAllRun:                 *domainsLimitAllRun,
 	}
@@ -151,6 +154,19 @@ func RunSegmentMarkerForProjects(projectIdFlag *string) {
 		log.WithField("err_code", status).Error(err)
 	}
 
+	// fetch the projects and segment ids with latest updated_at/created_at
+
+	segmentsMap, err := store.GetStore().GetNewlyUpdatedAndCreatedSegments()
+
+	if err != nil {
+		log.WithError(err).Error("Failed to get newly updated and created segments")
+	}
+
+	if len(segmentsMap) > 0 {
+		log.WithField("segment_map", segmentsMap).
+			Info("Following are the list of newly created and updated segments after latest all run")
+	}
+
 	allProjects, projectIDsMap, _ := C.GetProjectsFromListWithAllProjectSupport(projectIdList, "")
 	failureCount := 0
 	successCount := 0
@@ -163,7 +179,7 @@ func RunSegmentMarkerForProjects(projectIdFlag *string) {
 			return
 		}
 		for _, projectId := range projectIDs {
-			status := T.SegmentMarker(projectId, projectIdListAllRun)
+			status := T.SegmentMarker(projectId, projectIdListAllRun, segmentsMap)
 			if status != http.StatusOK {
 				log.WithField("project_id", projectId).Error("failed to run segment markup for project ID ")
 				failureCount++
@@ -173,7 +189,7 @@ func RunSegmentMarkerForProjects(projectIdFlag *string) {
 		}
 	} else {
 		for projectId, _ := range projectIDsMap {
-			status := T.SegmentMarker(projectId, projectIdListAllRun)
+			status := T.SegmentMarker(projectId, projectIdListAllRun, segmentsMap)
 			if status != http.StatusOK {
 				log.WithField("project_id", projectId).Error("failed to run segment markup for project ID ")
 				failureCount++

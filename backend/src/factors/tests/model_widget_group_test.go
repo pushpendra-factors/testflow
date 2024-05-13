@@ -180,8 +180,8 @@ func TestWidgetGroupExecution1(t *testing.T) {
 	log.WithField("statusCode1", statusCode1).Warn("k1")
 	segment, _ := store.GetStore().GetSegmentByName(project.ID, "In Hubspot")
 
-	pIDList := []int64{project.ID}
-	errCode = T.SegmentMarker(project.ID, pIDList)
+	pIDList := map[int64]bool{project.ID: true}
+	errCode = T.SegmentMarker(project.ID, pIDList, map[int64][]string{})
 	assert.Equal(t, errCode, http.StatusOK)
 
 	requestParamsForExecution := model.RequestSegmentKPI{}

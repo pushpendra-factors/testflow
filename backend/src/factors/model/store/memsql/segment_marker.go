@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jinzhu/gorm"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
 )
@@ -710,4 +711,35 @@ func GetFileValues(projectID int64, globalUserProperties []model.QueryProperty,
 	}
 
 	return allFilesValuesMap
+}
+
+func (store *MemSQL) GetNewlyUpdatedAndCreatedSegments() (map[int64][]string, error) {
+	query := `SELECT segments.project_id AS project_id, segments.id AS id FROM segments
+	JOIN project_settings 
+	ON segments.project_id = project_settings.project_id
+	WHERE segments.updated_at > project_settings.marker_last_run_all_accounts
+	AND project_settings.marker_last_run_all_accounts > ?
+	AND segments.updated_at > segments.marker_run_segment LIMIT 5000000;`
+
+	var segments []model.Segment
+	db := C.GetServices().Db
+	err := db.Raw(query, U.DefaultTime()).Scan(&segments).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return map[int64][]string{}, nil
+		}
+		log.WithError(err).Error("Failed to get newly updated and created segments")
+		return map[int64][]string{}, err
+	}
+
+	segmentsMap := make(map[int64][]string)
+
+	for _, segment := range segments {
+		if _, exists := segmentsMap[segment.ProjectID]; !exists {
+			segmentsMap[segment.ProjectID] = make([]string, 0)
+		}
+		segmentsMap[segment.ProjectID] = append(segmentsMap[segment.ProjectID], segment.Id)
+	}
+
+	return segmentsMap, nil
 }
