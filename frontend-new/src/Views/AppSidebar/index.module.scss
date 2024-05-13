@@ -126,6 +126,10 @@
   }
 }
 
+.subMenu-title {
+  border-bottom: '1px solid #eee';
+}
+
 .dashboard-more-options-menu {
   &:hover {
     background-color: $fa-color-neutral-grey-3;

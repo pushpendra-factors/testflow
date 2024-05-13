@@ -2,7 +2,8 @@ import React, { useMemo } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import {
   settingsMenuItems,
-  getConfigureMenuItems
+  getConfigureMenuItems,
+  settingsCategorisedMap
 } from 'Components/FaHeader/FaHeader';
 import { WhiteListedAccounts } from 'Routes/constants';
 import { useSelector } from 'react-redux';
@@ -28,6 +29,7 @@ const SettingItem = ({ item }) => {
     <SidebarMenuItem
       text={item.label}
       isActive={isActive}
+      icon={item.icon}
       onClick={handleItemClick}
     />
   );
@@ -49,11 +51,19 @@ const SettingsSidebar = () => {
 
   return (
     <div className='flex flex-col gap-y-1 px-2'>
-      {menuList.map((item) => {
+      {settingsCategorisedMap(activeAgent).map((item) => {
         if (item?.whitelisted && !WhiteListedAccounts.includes(activeAgent)) {
           return null;
         }
-        return <SettingItem item={item} />;
+        return (
+          <>
+            <SettingItem item={item} />
+            <div className={`border-bottom--thin-2`}></div>
+            {item.items.map((subItem) => {
+              return <SettingItem item={subItem} />;
+            })}
+          </>
+        );
       })}
     </div>
   );
