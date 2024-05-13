@@ -2,155 +2,16 @@ package redis
 
 import (
 	"errors"
-	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/gomodule/redigo/redis"
 	log "github.com/sirupsen/logrus"
 
+	"factors/cache"
 	C "factors/config"
 )
 
-type Key struct {
-	// any one must be set.
-	ProjectID  int64
-	ProjectUID string
-	AgentUUID  string
-	// Prefix - Helps better grouping and searching
-	// i.e table_name + index_name
-	Prefix string
-	// Suffix - optional
-	Suffix string
-}
-
-var (
-	ErrorInvalidProject  = errors.New("invalid key project")
-	ErrorInvalidPrefix   = errors.New("invalid key prefix")
-	ErrorInvalidKey      = errors.New("invalid redis cache key")
-	ErrorInvalidValues   = errors.New("invalid values to set")
-	ErrorPartialFailures = errors.New("Partial failures in Set")
-)
-
-func NewKeyWithOnlyPrefix(prefix string) (*Key, error) {
-
-	if prefix == "" {
-		return nil, ErrorInvalidPrefix
-	}
-
-	return &Key{Prefix: prefix}, nil
-}
-
-func NewKey(projectId int64, prefix string, suffix string) (*Key, error) {
-	if projectId == 0 {
-		return nil, ErrorInvalidProject
-	}
-
-	if prefix == "" {
-		return nil, ErrorInvalidPrefix
-	}
-	return &Key{ProjectID: projectId, Prefix: prefix, Suffix: suffix}, nil
-}
-
-func NewKeyWithAllProjectsSupport(projectId int64, prefix string, suffix string) (*Key, error) {
-	if prefix == "" {
-		return nil, ErrorInvalidPrefix
-	}
-	return &Key{ProjectID: projectId, Prefix: prefix, Suffix: suffix}, nil
-}
-
-// NewKeyWithProjectUID - Uses projectUID as project scope on the key.
-func NewKeyWithProjectUID(projectUID, prefix, suffix string) (*Key, error) {
-	if projectUID == "" {
-		return nil, ErrorInvalidProject
-	}
-
-	if prefix == "" {
-		return nil, ErrorInvalidPrefix
-	}
-
-	return &Key{ProjectUID: projectUID, Prefix: prefix, Suffix: suffix}, nil
-}
-
-func NewKeyWithAgentUID(agentUUID, prefix, suffix string) (*Key, error) {
-	if agentUUID == "" {
-		return nil, ErrorInvalidProject
-	}
-
-	if prefix == "" {
-		return nil, ErrorInvalidPrefix
-	}
-
-	return &Key{AgentUUID: agentUUID, Prefix: prefix, Suffix: suffix}, nil
-}
-
-func (key *Key) Key() (string, error) {
-	if key.ProjectID == 0 && key.ProjectUID == "" && key.AgentUUID == "" {
-		return "", ErrorInvalidProject
-	}
-
-	if key.Prefix == "" {
-		return "", ErrorInvalidPrefix
-	}
-
-	var projectScope string
-	if key.ProjectID != 0 {
-		projectScope = fmt.Sprintf("pid:%d", key.ProjectID)
-	} else if key.ProjectUID != "" {
-		projectScope = fmt.Sprintf("puid:%s", key.ProjectUID)
-	} else {
-		projectScope = fmt.Sprintf("auuid:%s", key.AgentUUID)
-	}
-
-	// key: i.e, event_names:user_last_event:pid:1:uid:1
-	return fmt.Sprintf("%s:%s:%s", key.Prefix, projectScope, key.Suffix), nil
-}
-
-func (key *Key) KeyWithAllProjectsSupport() (string, error) {
-	if key.Prefix == "" {
-		return "", ErrorInvalidPrefix
-	}
-
-	var projectScope string
-	if key.ProjectID == 0 {
-		projectScope = "pid:*"
-	} else {
-		projectScope = fmt.Sprintf("pid:%d", key.ProjectID)
-	}
-	// key: i.e, event_names:user_last_event:pid:*:suffix
-	return fmt.Sprintf("%s:%s:%s", key.Prefix, projectScope, key.Suffix), nil
-}
-
-func (key *Key) KeyWithOnlyPrefix() (string, error) {
-	if key.Prefix == "" {
-		return "", ErrorInvalidPrefix
-	}
-
-	// key: i.e, event_names:user_last_event:pid:*:suffix
-	return fmt.Sprintf("%s", key.Prefix), nil
-}
-
-// KeyFromStringWithPid - Splits the cache key into prefix/suffix/projectid format
-// Only for pid based cache
-func KeyFromStringWithPid(key string) (*Key, error) {
-	if key == "" {
-		return nil, ErrorInvalidValues
-	}
-	cacheKey := Key{}
-	keyPidSplit := strings.Split(key, ":pid:")
-	if len(keyPidSplit) == 2 {
-		projectIDSuffix := strings.SplitN(keyPidSplit[1], ":", 2)
-		if len(projectIDSuffix) == 2 {
-			cacheKey.Suffix = projectIDSuffix[1]
-		}
-		projectId, _ := strconv.Atoi(projectIDSuffix[0])
-		cacheKey.ProjectID = int64(projectId)
-		cacheKey.Prefix = keyPidSplit[0]
-	}
-	return &cacheKey, nil
-}
-
-func SetPersistent(key *Key, value string, expiryInSecs float64) error {
+func SetPersistent(key *cache.Key, value string, expiryInSecs float64) error {
 	err := set(key, value, expiryInSecs, true, false)
 
 	// Log for measuring dashboard and query cache usage.
@@ -168,17 +29,17 @@ func SetPersistent(key *Key, value string, expiryInSecs float64) error {
 	return err
 }
 
-func Set(key *Key, value string, expiryInSecs float64) error {
+func Set(key *cache.Key, value string, expiryInSecs float64) error {
 	return set(key, value, expiryInSecs, false, false)
 }
 
-func SetQueueRedis(key *Key, value string, expiryInSecs float64) error {
+func SetQueueRedis(key *cache.Key, value string, expiryInSecs float64) error {
 	return set(key, value, expiryInSecs, false, true)
 }
 
-func set(key *Key, value string, expiryInSecs float64, persistent bool, queue bool) error {
+func set(key *cache.Key, value string, expiryInSecs float64, persistent bool, queue bool) error {
 	if key == nil {
-		return ErrorInvalidKey
+		return cache.ErrorInvalidKey
 	}
 
 	if value == "" {
@@ -209,21 +70,21 @@ func set(key *Key, value string, expiryInSecs float64, persistent bool, queue bo
 	return err
 }
 
-func ZAddPersistent(key *Key, value string, expiryInSecs float64) error {
+func ZAddPersistent(key *cache.Key, value string, expiryInSecs float64) error {
 	return zadd(key, value, expiryInSecs, true, false)
 }
 
-func ZAdd(key *Key, value string, expiryInSecs float64) error {
+func ZAdd(key *cache.Key, value string, expiryInSecs float64) error {
 	return zadd(key, value, expiryInSecs, false, false)
 }
 
-func ZAddQueueRedis(key *Key, value string, expiryInSecs float64) error {
+func ZAddQueueRedis(key *cache.Key, value string, expiryInSecs float64) error {
 	return zadd(key, value, expiryInSecs, false, true)
 }
 
-func zadd(key *Key, value string, expiryInSecs float64, persistent bool, queue bool) error {
+func zadd(key *cache.Key, value string, expiryInSecs float64, persistent bool, queue bool) error {
 	if key == nil {
-		return ErrorInvalidKey
+		return cache.ErrorInvalidKey
 	}
 
 	if value == "" {
@@ -255,7 +116,7 @@ func zadd(key *Key, value string, expiryInSecs float64, persistent bool, queue b
 
 // GetIfExistsPersistent - Check if the cache key exists, if not return null
 // Get value if the cache key exists
-func GetIfExistsPersistent(key *Key) (string, bool, error) {
+func GetIfExistsPersistent(key *cache.Key) (string, bool, error) {
 	ifExists, err := ExistsPersistent(key)
 	if err != nil {
 		return "", false, err
@@ -270,7 +131,7 @@ func GetIfExistsPersistent(key *Key) (string, bool, error) {
 	return value, true, nil
 }
 
-func GetPersistent(key *Key) (string, error) {
+func GetPersistent(key *cache.Key) (string, error) {
 	response, err := get(key, true, false)
 
 	// Log for measuring dashboard and query cache usage.
@@ -288,17 +149,17 @@ func GetPersistent(key *Key) (string, error) {
 	return response, err
 }
 
-func Get(key *Key) (string, error) {
+func Get(key *cache.Key) (string, error) {
 	return get(key, false, false)
 }
 
-func GetQueueRedis(key *Key) (string, error) {
+func GetQueueRedis(key *cache.Key) (string, error) {
 	return get(key, false, true)
 }
 
-func get(key *Key, persistent bool, queue bool) (string, error) {
+func get(key *cache.Key, persistent bool, queue bool) (string, error) {
 	if key == nil {
-		return "", ErrorInvalidKey
+		return "", cache.ErrorInvalidKey
 	}
 
 	cKey, err := key.Key()
@@ -319,26 +180,26 @@ func get(key *Key, persistent bool, queue bool) (string, error) {
 	return redis.String(redisConn.Do("GET", cKey))
 }
 
-func MGetPersistent(keys ...*Key) ([]string, error) {
+func MGetPersistent(keys ...*cache.Key) ([]string, error) {
 	return mGet(true, false, keys...)
 }
 
-func MGet(keys ...*Key) ([]string, error) {
+func MGet(keys ...*cache.Key) ([]string, error) {
 	return mGet(false, false, keys...)
 }
 
-func MGetQueueRedis(keys ...*Key) ([]string, error) {
+func MGetQueueRedis(keys ...*cache.Key) ([]string, error) {
 	return mGet(false, true, keys...)
 }
 
 // MGet Function to get multiple keys from redis. Returns slice of result strings.
-func mGet(persistent bool, queue bool, keys ...*Key) ([]string, error) {
+func mGet(persistent bool, queue bool, keys ...*cache.Key) ([]string, error) {
 
 	var cKeys []interface{}
 	var cValues []string
 	for _, key := range keys {
 		if key == nil {
-			return cValues, ErrorInvalidKey
+			return cValues, cache.ErrorInvalidKey
 		}
 		cKey, err := key.Key()
 		if err != nil {
@@ -368,24 +229,24 @@ func mGet(persistent bool, queue bool, keys ...*Key) ([]string, error) {
 	return cValues, nil
 }
 
-func DelPersistent(keys ...*Key) error {
+func DelPersistent(keys ...*cache.Key) error {
 	return del(true, false, keys...)
 }
 
-func Del(keys ...*Key) error {
+func Del(keys ...*cache.Key) error {
 	return del(false, false, keys...)
 }
 
-func DelQueueRedis(keys ...*Key) error {
+func DelQueueRedis(keys ...*cache.Key) error {
 	return del(false, true, keys...)
 }
 
-func del(persistent bool, queue bool, keys ...*Key) error {
+func del(persistent bool, queue bool, keys ...*cache.Key) error {
 	var cKeys []interface{}
 
 	for _, key := range keys {
 		if key == nil {
-			return ErrorInvalidKey
+			return cache.ErrorInvalidKey
 		}
 		cKey, err := key.Key()
 		if err != nil {
@@ -411,22 +272,22 @@ func del(persistent bool, queue bool, keys ...*Key) error {
 	return err
 }
 
-func ExistsPersistent(key *Key) (bool, error) {
+func ExistsPersistent(key *cache.Key) (bool, error) {
 	return exists(key, true, false)
 }
 
-func Exists(key *Key) (bool, error) {
+func Exists(key *cache.Key) (bool, error) {
 	return exists(key, false, false)
 }
 
-func ExistsQueueRedis(key *Key) (bool, error) {
+func ExistsQueueRedis(key *cache.Key) (bool, error) {
 	return exists(key, false, true)
 }
 
 // Exists Checks if a key exists in Redis.
-func exists(key *Key, persistent bool, queue bool) (bool, error) {
+func exists(key *cache.Key, persistent bool, queue bool) (bool, error) {
 	if key == nil {
-		return false, ErrorInvalidKey
+		return false, cache.ErrorInvalidKey
 	}
 
 	cKey, err := key.Key()
@@ -451,18 +312,18 @@ func exists(key *Key, persistent bool, queue bool) (bool, error) {
 	return count.(int64) == 1, nil
 }
 
-func IncrBatch(keys ...*Key) ([]int64, error) {
+func IncrBatch(keys ...*cache.Key) ([]int64, error) {
 	return incrBatch(false, false, keys)
 }
-func IncrPersistentBatch(keys ...*Key) ([]int64, error) {
+func IncrPersistentBatch(keys ...*cache.Key) ([]int64, error) {
 	return incrBatch(true, false, keys)
 }
-func IncrQueueRedisBatch(keys ...*Key) ([]int64, error) {
+func IncrQueueRedisBatch(keys ...*cache.Key) ([]int64, error) {
 	return incrBatch(false, true, keys)
 }
-func incrBatch(persistent bool, queue bool, keys []*Key) ([]int64, error) {
+func incrBatch(persistent bool, queue bool, keys []*cache.Key) ([]int64, error) {
 	if len(keys) == 0 {
-		return nil, ErrorInvalidValues
+		return nil, cache.ErrorInvalidValues
 	}
 	var redisConn redis.Conn
 	if queue {
@@ -528,7 +389,7 @@ func incrKey(persistent bool, queue bool, tuple KeyCountTuple) error {
 }
 
 type SortedSetKeyValueTuple struct {
-	Key   *Key
+	Key   *cache.Key
 	Value string
 }
 
@@ -544,7 +405,7 @@ func ZincrQueueRedisBatch(OnlyPrefixKey bool, keys ...SortedSetKeyValueTuple) ([
 
 func zincrBatch(persistent bool, queue bool, keys []SortedSetKeyValueTuple, OnlyPrefixKey bool) ([]int64, error) {
 	if len(keys) == 0 {
-		return nil, ErrorInvalidValues
+		return nil, cache.ErrorInvalidValues
 	}
 	var redisConn redis.Conn
 	if queue {
@@ -589,21 +450,21 @@ func zincrBatch(persistent bool, queue bool, keys []SortedSetKeyValueTuple, Only
 	return counts, nil
 }
 
-func SetBatch(values map[*Key]string, expiryInSecs float64) error {
+func SetBatch(values map[*cache.Key]string, expiryInSecs float64) error {
 	return setBatch(values, expiryInSecs, false, false)
 }
 
-func SetPersistentBatch(values map[*Key]string, expiryInSecs float64) error {
+func SetPersistentBatch(values map[*cache.Key]string, expiryInSecs float64) error {
 	return setBatch(values, expiryInSecs, true, false)
 }
 
-func SetBatchQueueRedis(values map[*Key]string, expiryInSecs float64) error {
+func SetBatchQueueRedis(values map[*cache.Key]string, expiryInSecs float64) error {
 	return setBatch(values, expiryInSecs, false, true)
 }
 
-func setBatch(values map[*Key]string, expiryInSecs float64, persistent bool, queue bool) error {
+func setBatch(values map[*cache.Key]string, expiryInSecs float64, persistent bool, queue bool) error {
 	if len(values) == 0 {
-		return ErrorInvalidValues
+		return cache.ErrorInvalidValues
 	}
 	var redisConn redis.Conn
 	if queue {
@@ -638,26 +499,26 @@ func setBatch(values map[*Key]string, expiryInSecs float64, persistent bool, que
 		return err
 	}
 	if len(res) != len(values) {
-		return ErrorPartialFailures
+		return cache.ErrorPartialFailures
 	}
 	return nil
 }
 
-func GetKeysPersistent(pattern string) ([]*Key, error) {
+func GetKeysPersistent(pattern string) ([]*cache.Key, error) {
 	return getKeys(pattern, true, false)
 }
 
-func GetKeys(pattern string) ([]*Key, error) {
+func GetKeys(pattern string) ([]*cache.Key, error) {
 	return getKeys(pattern, false, false)
 }
 
-func GetKeysQueueRedis(pattern string) ([]*Key, error) {
+func GetKeysQueueRedis(pattern string) ([]*cache.Key, error) {
 	return getKeys(pattern, false, true)
 }
 
-func getKeys(pattern string, persistent bool, queue bool) ([]*Key, error) {
+func getKeys(pattern string, persistent bool, queue bool) ([]*cache.Key, error) {
 	if pattern == "" {
-		return nil, ErrorInvalidKey
+		return nil, cache.ErrorInvalidKey
 	}
 
 	var redisConn redis.Conn
@@ -677,29 +538,29 @@ func getKeys(pattern string, persistent bool, queue bool) ([]*Key, error) {
 	cacheKeyStrings := make([]string, 0)
 	_ = redis.ScanSlice(keys, &cacheKeyStrings)
 
-	cacheKeys := make([]*Key, 0)
+	cacheKeys := make([]*cache.Key, 0)
 	for _, key := range cacheKeyStrings {
-		cacheKey, _ := KeyFromStringWithPid(key)
+		cacheKey, _ := cache.KeyFromStringWithPid(key)
 		cacheKeys = append(cacheKeys, cacheKey)
 	}
 	return cacheKeys, nil
 }
 
-func PFAddPersistent(cacheKey *Key, value string, expiryInSeconds float64) (bool, error) {
+func PFAddPersistent(cacheKey *cache.Key, value string, expiryInSeconds float64) (bool, error) {
 	return pfAdd(cacheKey, value, expiryInSeconds, true, false)
 }
 
-func PFAdd(cacheKey *Key, value string, expiryInSeconds float64) (bool, error) {
+func PFAdd(cacheKey *cache.Key, value string, expiryInSeconds float64) (bool, error) {
 	return pfAdd(cacheKey, value, expiryInSeconds, false, false)
 }
 
-func PFAddQueueRedis(cacheKey *Key, value string, expiryInSeconds float64) (bool, error) {
+func PFAddQueueRedis(cacheKey *cache.Key, value string, expiryInSeconds float64) (bool, error) {
 	return pfAdd(cacheKey, value, expiryInSeconds, false, true)
 }
 
-func pfAdd(cacheKey *Key, value string, expiryInSeconds float64, persistent bool, queue bool) (bool, error) {
+func pfAdd(cacheKey *cache.Key, value string, expiryInSeconds float64, persistent bool, queue bool) (bool, error) {
 	if cacheKey == nil {
-		return false, ErrorInvalidKey
+		return false, cache.ErrorInvalidKey
 	}
 	cKey, err := cacheKey.Key()
 	if err != nil {
@@ -732,13 +593,13 @@ func pfAdd(cacheKey *Key, value string, expiryInSeconds float64, persistent bool
 }
 
 // PFCountPersistent - Returns the cardinalilty of the data present in HyperlogLog redis data structure
-func PFCountPersistent(key *Key) (interface{}, error) {
+func PFCountPersistent(key *cache.Key) (interface{}, error) {
 	return pfCount(key, true, false)
 }
 
-func pfCount(key *Key, persistent bool, queue bool) (interface{}, error) {
+func pfCount(key *cache.Key, persistent bool, queue bool) (interface{}, error) {
 	if key == nil {
-		return -1, ErrorInvalidKey
+		return -1, cache.ErrorInvalidKey
 	}
 
 	cKey, err := key.Key()
@@ -773,19 +634,19 @@ func pfCount(key *Key, persistent bool, queue bool) (interface{}, error) {
 	return count, nil
 }
 
-func Scan(pattern string, perScanCount int64, limit int64) ([]*Key, error) {
+func Scan(pattern string, perScanCount int64, limit int64) ([]*cache.Key, error) {
 	return scan(pattern, perScanCount, limit, false, false)
 }
 
-func ScanPersistent(pattern string, perScanCount int64, limit int64) ([]*Key, error) {
+func ScanPersistent(pattern string, perScanCount int64, limit int64) ([]*cache.Key, error) {
 	return scan(pattern, perScanCount, limit, true, false)
 }
 
-func ScanQueueRedis(pattern string, perScanCount int64, limit int64) ([]*Key, error) {
+func ScanQueueRedis(pattern string, perScanCount int64, limit int64) ([]*cache.Key, error) {
 	return scan(pattern, perScanCount, limit, false, true)
 }
 
-func scan(pattern string, perScanCount int64, limit int64, persistent bool, queue bool) ([]*Key, error) {
+func scan(pattern string, perScanCount int64, limit int64, persistent bool, queue bool) ([]*cache.Key, error) {
 	var redisConn redis.Conn
 	if queue {
 		redisConn = C.GetCacheQueueRedisConnection()
@@ -796,7 +657,7 @@ func scan(pattern string, perScanCount int64, limit int64, persistent bool, queu
 	}
 	defer redisConn.Close()
 
-	cacheKeys := make([]*Key, 0)
+	cacheKeys := make([]*cache.Key, 0)
 	cursor := 0
 	for {
 		res, err := redis.Values(redisConn.Do("SCAN", cursor, "MATCH", pattern, "COUNT", perScanCount))
@@ -809,7 +670,7 @@ func scan(pattern string, perScanCount int64, limit int64, persistent bool, queu
 			return nil, err
 		}
 		for _, key := range cacheKeyStrings {
-			cacheKey, _ := KeyFromStringWithPid(key)
+			cacheKey, _ := cache.KeyFromStringWithPid(key)
 			cacheKeys = append(cacheKeys, cacheKey)
 		}
 		if cursor == 0 || (limit != -1 && int64(len(cacheKeys)) >= limit) {
@@ -820,7 +681,7 @@ func scan(pattern string, perScanCount int64, limit int64, persistent bool, queu
 }
 
 type KeyCountTuple struct {
-	Key   *Key
+	Key   *cache.Key
 	Count int64
 }
 
@@ -838,7 +699,7 @@ func IncrByBatchQueueRedis(keys []KeyCountTuple) ([]int64, error) {
 
 func incrByBatch(keys []KeyCountTuple, persistent bool, queue bool) ([]int64, error) {
 	if len(keys) == 0 {
-		return nil, ErrorInvalidValues
+		return nil, cache.ErrorInvalidValues
 	}
 	var redisConn redis.Conn
 	if queue {
@@ -876,21 +737,21 @@ func incrByBatch(keys []KeyCountTuple, persistent bool, queue bool) ([]int64, er
 	return counts, nil
 }
 
-func DecrByBatch(keys map[*Key]int64) error {
+func DecrByBatch(keys map[*cache.Key]int64) error {
 	return decrByBatch(keys, false, false)
 }
 
-func DecrByBatchPersistent(keys map[*Key]int64) error {
+func DecrByBatchPersistent(keys map[*cache.Key]int64) error {
 	return decrByBatch(keys, true, false)
 }
 
-func DecrByBatchQueueRedis(keys map[*Key]int64) error {
+func DecrByBatchQueueRedis(keys map[*cache.Key]int64) error {
 	return decrByBatch(keys, false, true)
 }
 
-func decrByBatch(keys map[*Key]int64, persistent bool, queue bool) error {
+func decrByBatch(keys map[*cache.Key]int64, persistent bool, queue bool) error {
 	if len(keys) == 0 {
-		return ErrorInvalidValues
+		return cache.ErrorInvalidValues
 	}
 	var redisConn redis.Conn
 	if queue {
@@ -924,18 +785,18 @@ func decrByBatch(keys map[*Key]int64, persistent bool, queue bool) error {
 	return nil
 }
 
-func Zcard(key *Key) (int64, error) {
+func Zcard(key *cache.Key) (int64, error) {
 	return zcard(key, false, false)
 }
-func ZcardPersistent(key *Key) (int64, error) {
+func ZcardPersistent(key *cache.Key) (int64, error) {
 	return zcard(key, true, false)
 }
-func ZcardQueueRedis(key *Key) (int64, error) {
+func ZcardQueueRedis(key *cache.Key) (int64, error) {
 	return zcard(key, false, true)
 }
-func zcard(key *Key, persistent bool, queue bool) (int64, error) {
+func zcard(key *cache.Key, persistent bool, queue bool) (int64, error) {
 	if key == nil {
-		return 0, ErrorInvalidKey
+		return 0, cache.ErrorInvalidKey
 	}
 
 	cKey, err := key.Key()
@@ -956,18 +817,18 @@ func zcard(key *Key, persistent bool, queue bool) (int64, error) {
 	return redis.Int64(redisConn.Do("ZCARD", cKey))
 }
 
-func ZScore(key *Key, member string) (int64, error) {
+func ZScore(key *cache.Key, member string) (int64, error) {
 	return zscore(key, member, false, false)
 }
-func ZScorePersistent(key *Key, member string) (int64, error) {
+func ZScorePersistent(key *cache.Key, member string) (int64, error) {
 	return zscore(key, member, true, false)
 }
-func ZScoreQueueRedis(key *Key, member string) (int64, error) {
+func ZScoreQueueRedis(key *cache.Key, member string) (int64, error) {
 	return zscore(key, member, false, true)
 }
-func zscore(key *Key, member string, persistent bool, queue bool) (int64, error) {
+func zscore(key *cache.Key, member string, persistent bool, queue bool) (int64, error) {
 	if key == nil {
-		return 0, ErrorInvalidKey
+		return 0, cache.ErrorInvalidKey
 	}
 
 	cKey, err := key.Key()
@@ -989,18 +850,18 @@ func zscore(key *Key, member string, persistent bool, queue bool) (int64, error)
 	return redis.Int64(result, err)
 }
 
-func ZrangeWithScores(OnlyPrefixKey bool, key *Key) (map[string]string, error) {
+func ZrangeWithScores(OnlyPrefixKey bool, key *cache.Key) (map[string]string, error) {
 	return zrangeWithScores(OnlyPrefixKey, key, false, false)
 }
-func ZrangeWithScoresPersistent(OnlyPrefixKey bool, key *Key) (map[string]string, error) {
+func ZrangeWithScoresPersistent(OnlyPrefixKey bool, key *cache.Key) (map[string]string, error) {
 	return zrangeWithScores(OnlyPrefixKey, key, true, false)
 }
-func ZrangeWithScoresQueueRedis(OnlyPrefixKey bool, key *Key) (map[string]string, error) {
+func ZrangeWithScoresQueueRedis(OnlyPrefixKey bool, key *cache.Key) (map[string]string, error) {
 	return zrangeWithScores(OnlyPrefixKey, key, false, true)
 }
-func zrangeWithScores(OnlyPrefixKey bool, key *Key, persistent bool, queue bool) (map[string]string, error) {
+func zrangeWithScores(OnlyPrefixKey bool, key *cache.Key, persistent bool, queue bool) (map[string]string, error) {
 	if key == nil {
-		return nil, ErrorInvalidKey
+		return nil, cache.ErrorInvalidKey
 	}
 	var err error
 	var cKey string
@@ -1038,18 +899,18 @@ func zrangeWithScores(OnlyPrefixKey bool, key *Key, persistent bool, queue bool)
 	return sortedSetMap, nil
 }
 
-func ZRemRange(key *Key, startIndex int, endIndex int) (int64, error) {
+func ZRemRange(key *cache.Key, startIndex int, endIndex int) (int64, error) {
 	return zRemRange(key, startIndex, endIndex, false, false)
 }
-func ZRemRangePersistent(key *Key, startIndex int, endIndex int) (int64, error) {
+func ZRemRangePersistent(key *cache.Key, startIndex int, endIndex int) (int64, error) {
 	return zRemRange(key, startIndex, endIndex, true, false)
 }
-func ZRemRangeQueueRedis(key *Key, startIndex int, endIndex int) (int64, error) {
+func ZRemRangeQueueRedis(key *cache.Key, startIndex int, endIndex int) (int64, error) {
 	return zRemRange(key, startIndex, endIndex, false, true)
 }
-func zRemRange(key *Key, startIndex int, endIndex int, persistent bool, queue bool) (int64, error) {
+func zRemRange(key *cache.Key, startIndex int, endIndex int, persistent bool, queue bool) (int64, error) {
 	if key == nil {
-		return 0, ErrorInvalidKey
+		return 0, cache.ErrorInvalidKey
 	}
 
 	cKey, err := key.Key()
@@ -1070,18 +931,18 @@ func zRemRange(key *Key, startIndex int, endIndex int, persistent bool, queue bo
 	return redis.Int64(redisConn.Do("ZREMRANGEBYRANK", cKey, startIndex, endIndex))
 }
 
-func ZRem(key *Key, OnlyPrefixKey bool, members ...string) (int64, error) {
+func ZRem(key *cache.Key, OnlyPrefixKey bool, members ...string) (int64, error) {
 	return zRem(key, OnlyPrefixKey, false, false, members...)
 }
-func ZRemPersistent(key *Key, OnlyPrefixKey bool, members ...string) (int64, error) {
+func ZRemPersistent(key *cache.Key, OnlyPrefixKey bool, members ...string) (int64, error) {
 	return zRem(key, OnlyPrefixKey, true, false, members...)
 }
-func ZRemQueueRedis(key *Key, OnlyPrefixKey bool, members ...string) (int64, error) {
+func ZRemQueueRedis(key *cache.Key, OnlyPrefixKey bool, members ...string) (int64, error) {
 	return zRem(key, OnlyPrefixKey, false, true, members...)
 }
-func zRem(key *Key, OnlyPrefixKey bool, persistent bool, queue bool, members ...string) (int64, error) {
+func zRem(key *cache.Key, OnlyPrefixKey bool, persistent bool, queue bool, members ...string) (int64, error) {
 	if key == nil {
-		return 0, ErrorInvalidKey
+		return 0, cache.ErrorInvalidKey
 	}
 
 	var cKey string
@@ -1111,18 +972,18 @@ func zRem(key *Key, OnlyPrefixKey bool, persistent bool, queue bool, members ...
 	return redis.Int64(redisConn.Do("ZREM", redis.Args{}.Add(cKey).AddFlat(members)...))
 }
 
-func SetExpiry(key *Key, expiryInSeconds int) (int64, error) {
+func SetExpiry(key *cache.Key, expiryInSeconds int) (int64, error) {
 	return setExpiry(key, false, false, expiryInSeconds)
 }
-func SetExpiryPersistent(key *Key, expiryInSeconds int) (int64, error) {
+func SetExpiryPersistent(key *cache.Key, expiryInSeconds int) (int64, error) {
 	return setExpiry(key, true, false, expiryInSeconds)
 }
-func SetExpiryQueueRedis(key *Key, expiryInSeconds int) (int64, error) {
+func SetExpiryQueueRedis(key *cache.Key, expiryInSeconds int) (int64, error) {
 	return setExpiry(key, false, true, expiryInSeconds)
 }
-func setExpiry(key *Key, persistent bool, queue bool, expiryInSeconds int) (int64, error) {
+func setExpiry(key *cache.Key, persistent bool, queue bool, expiryInSeconds int) (int64, error) {
 	if key == nil {
-		return 0, ErrorInvalidKey
+		return 0, cache.ErrorInvalidKey
 	}
 
 	cKey, err := key.Key()

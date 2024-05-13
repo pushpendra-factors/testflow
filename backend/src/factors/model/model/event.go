@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/json"
 	"errors"
+	"factors/cache"
 	cacheRedis "factors/cache/redis"
 	"factors/util"
 	U "factors/util"
@@ -128,10 +129,10 @@ func GetCacheUserLastEvent(projectId int64, userId string) (*CacheEvent, error) 
 	return &cacheEvent, nil
 }
 
-func getUserLastEventCacheKey(projectId int64, userId string) (*cacheRedis.Key, error) {
+func getUserLastEventCacheKey(projectId int64, userId string) (*cache.Key, error) {
 	suffix := fmt.Sprintf("uid:%s", userId)
 	prefix := fmt.Sprintf("%s:%s", tableName, cacheIndexUserLastEvent)
-	return cacheRedis.NewKey(projectId, prefix, suffix)
+	return cache.NewKey(projectId, prefix, suffix)
 }
 
 // AreMarketingPropertiesMatching This method compares given event's marketing props with another event conservatively.

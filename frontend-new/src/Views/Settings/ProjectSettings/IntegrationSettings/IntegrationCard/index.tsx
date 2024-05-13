@@ -7,13 +7,13 @@ import {
 import { Avatar, Button, Tag, Tooltip } from 'antd';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ErrorBoundary } from 'react-error-boundary';
-import { IntegrationConfig } from '../types';
 import useFeatureLock from 'hooks/useFeatureLock';
-import LockedIntegrationCard from '../LockedIntegrationCard';
 import { getHostUrl } from 'Utils/request';
 import { useSelector } from 'react-redux';
 import { AdminLock } from 'Routes/feature';
 import { FEATURES } from 'Constants/plans.constants';
+import LockedIntegrationCard from '../LockedIntegrationCard';
+import { IntegrationConfig } from '../types';
 
 let host = getHostUrl();
 host = host[host.length - 1] === '/' ? host : `${host}/`;
@@ -32,11 +32,11 @@ function IntegrationCard({
   const activeAgent = agentState?.agent_details?.email;
 
   // CRM Status URL
-  const statusUrl = useMemo(() => {
-    return `${host}projects/${
-      activeProject?.id
-    }/crm_status/${integrationConfig?.name?.toLowerCase()}?html=true`;
-  }, [activeProject?.id, integrationConfig?.name]);
+  const statusUrl = useMemo(
+    () =>
+      `${host}projects/${activeProject?.id}/crm_status/${integrationConfig?.name?.toLowerCase()}?html=true`,
+    [activeProject?.id, integrationConfig?.name]
+  );
 
   const loadIntegrationForm = () => {
     const { Component } = integrationConfig;
@@ -116,11 +116,12 @@ function IntegrationCard({
                     Active
                   </Tag>
                 )}
-                {[FEATURES.INT_HUBSPOT, FEATURES.INT_SALESFORCE].includes(
-                  integrationConfig.featureName
-                ) &&
+                {[
+                  FEATURES.FEATURE_HUBSPOT,
+                  FEATURES.FEATURE_SALESFORCE
+                ].includes(integrationConfig.featureName) &&
                   AdminLock(activeAgent) && (
-                    <a target={'_blank'} href={statusUrl} rel='noreferrer'>
+                    <a target='_blank' href={statusUrl} rel='noreferrer'>
                       <div className='mx-2 underline'>Status</div>
                     </a>
                   )}

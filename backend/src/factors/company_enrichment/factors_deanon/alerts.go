@@ -3,6 +3,7 @@ package factors_deanon
 import (
 	"errors"
 	"factors/config"
+	"factors/cache"
 	"factors/model/model"
 	"fmt"
 	"net/http"
@@ -127,11 +128,11 @@ func ShouldSendAccountLimitAlert(projectId int64, limit int64, exhaustType strin
 }
 
 // GetAccountLimitEmailAlertCacheKey gets the cache key for the account limit email alert.
-func GetAccountLimitEmailAlertCacheKey(projectId int64, limit int64, exhaustType string, timeZone U.TimeZoneString, logCtx *log.Entry) (*cacheRedis.Key, error) {
+func GetAccountLimitEmailAlertCacheKey(projectId int64, limit int64, exhaustType string, timeZone U.TimeZoneString, logCtx *log.Entry) (*cache.Key, error) {
 
 	monthYear := U.GetCurrentMonthYear(timeZone)
 	prefix := fmt.Sprintf("alert:%s:limit:%v", exhaustType, limit)
-	key, err := cacheRedis.NewKey(projectId, prefix, monthYear)
+	key, err := cache.NewKey(projectId, prefix, monthYear)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get cache key for account limit email alert")
 		return nil, err

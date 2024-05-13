@@ -8,6 +8,8 @@ import (
 	"factors/model/model"
 	"factors/model/store"
 	"factors/task/event_user_cache"
+
+	pCache "factors/cache/persistent"
 	U "factors/util"
 	"fmt"
 	"io/ioutil"
@@ -20,8 +22,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/stretchr/testify/assert"
-
-	cacheRedis "factors/cache/redis"
 )
 
 func TestPullEventRowsV2(t *testing.T) {
@@ -929,7 +929,7 @@ func TestEventPropertyValuesAggregate(t *testing.T) {
 
 	eventPropertyValuesAggCacheKey, err := model.GetValuesByEventPropertyRollUpAggregateCacheKey(project.ID, eventName.Name, "value")
 	assert.Nil(t, err)
-	existingAggCache, aggCacheExists, err := cacheRedis.GetIfExistsPersistent(eventPropertyValuesAggCacheKey)
+	existingAggCache, aggCacheExists, err := pCache.GetIfExists(eventPropertyValuesAggCacheKey, true)
 	assert.Nil(t, err)
 	assert.True(t, aggCacheExists)
 	var existingAggregate U.CacheEventPropertyValuesAggregate
@@ -948,7 +948,7 @@ func TestEventPropertyValuesAggregate(t *testing.T) {
 
 	eventPropertyValuesAggCacheKey, err = model.GetValuesByEventPropertyRollUpAggregateCacheKey(project.ID, eventName.Name, "value")
 	assert.Nil(t, err)
-	existingAggCache, aggCacheExists, err = cacheRedis.GetIfExistsPersistent(eventPropertyValuesAggCacheKey)
+	existingAggCache, aggCacheExists, err = pCache.GetIfExists(eventPropertyValuesAggCacheKey, true)
 	assert.Nil(t, err)
 	assert.True(t, aggCacheExists)
 	err = json.Unmarshal([]byte(existingAggCache), &existingAggregate)
@@ -966,7 +966,7 @@ func TestEventPropertyValuesAggregate(t *testing.T) {
 
 	eventPropertyValuesAggCacheKey, err = model.GetValuesByEventPropertyRollUpAggregateCacheKey(project.ID, eventName.Name, "value")
 	assert.Nil(t, err)
-	existingAggCache, aggCacheExists, err = cacheRedis.GetIfExistsPersistent(eventPropertyValuesAggCacheKey)
+	existingAggCache, aggCacheExists, err = pCache.GetIfExists(eventPropertyValuesAggCacheKey, true)
 	assert.Nil(t, err)
 	assert.True(t, aggCacheExists)
 	err = json.Unmarshal([]byte(existingAggCache), &existingAggregate)
@@ -985,7 +985,7 @@ func TestEventPropertyValuesAggregate(t *testing.T) {
 
 	eventPropertyValuesAggCacheKey, err = model.GetValuesByEventPropertyRollUpAggregateCacheKey(project.ID, eventName.Name, "value")
 	assert.Nil(t, err)
-	existingAggCache, aggCacheExists, err = cacheRedis.GetIfExistsPersistent(eventPropertyValuesAggCacheKey)
+	existingAggCache, aggCacheExists, err = pCache.GetIfExists(eventPropertyValuesAggCacheKey, true)
 	assert.Nil(t, err)
 	assert.True(t, aggCacheExists)
 	err = json.Unmarshal([]byte(existingAggCache), &existingAggregate)

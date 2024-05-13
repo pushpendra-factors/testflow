@@ -3,7 +3,7 @@ package memsql
 import (
 	"encoding/json"
 	"errors"
-	cacheRedis "factors/cache/redis"
+	pCache "factors/cache/persistent"
 	C "factors/config"
 	U "factors/util"
 	"fmt"
@@ -644,7 +644,7 @@ func (store *MemSQL) GetPropertyValuesByEventProperty(projectID int64, eventName
 		}
 
 		var existingAggregate U.CacheEventPropertyValuesAggregate
-		existingAggCache, isExists, err := cacheRedis.GetIfExistsPersistent(eventPropertyValuesAggCacheKey)
+		existingAggCache, isExists, err := pCache.GetIfExists(eventPropertyValuesAggCacheKey, true)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to get cache aggregate on API.")
 			return []string{}, err
@@ -738,14 +738,14 @@ func getPropertyValuesByEventPropertyFromCache(projectID int64, eventName string
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
-	values, _, err := cacheRedis.GetIfExistsPersistent(eventPropertyValuesKey)
+	values, _, err := pCache.GetIfExists(eventPropertyValuesKey, true)
 	if values == "" {
 		eventNameWithSlash := fmt.Sprintf("%s/", eventName)
 		eventPropertyValuesKeyWithSlash, err := model.GetValuesByEventPropertyRollUpCacheKey(projectID, eventNameWithSlash, propertyName, dateKey)
 		if err != nil {
 			return U.CachePropertyValueWithTimestamp{}, err
 		}
-		valuesWithSlash, _, err := cacheRedis.GetIfExistsPersistent(eventPropertyValuesKeyWithSlash)
+		valuesWithSlash, _, err := pCache.GetIfExists(eventPropertyValuesKeyWithSlash, true)
 		if valuesWithSlash == "" {
 			logCtx.WithField("date_key", dateKey).Info("MISSING ROLLUP EPV")
 			return U.CachePropertyValueWithTimestamp{}, nil
@@ -894,14 +894,14 @@ func getPropertiesByEventFromCache(projectID int64, eventName string, dateKey st
 	if err != nil {
 		return U.CachePropertyWithTimestamp{}, err
 	}
-	eventProperties, _, err := cacheRedis.GetIfExistsPersistent(eventPropertiesKey)
+	eventProperties, _, err := pCache.GetIfExists(eventPropertiesKey, true)
 	if eventProperties == "" {
 		eventNameWithSlash := fmt.Sprintf("%s/", eventName)
 		eventPropertiesKeyWithSlash, err := model.GetPropertiesByEventCategoryRollUpCacheKey(projectID, eventNameWithSlash, dateKey)
 		if err != nil {
 			return U.CachePropertyWithTimestamp{}, err
 		}
-		eventPropertiesWithSlash, _, err := cacheRedis.GetIfExistsPersistent(eventPropertiesKeyWithSlash)
+		eventPropertiesWithSlash, _, err := pCache.GetIfExists(eventPropertiesKeyWithSlash, true)
 		if eventPropertiesWithSlash == "" {
 			logCtx.WithField("date_key", dateKey).Info("MISSING ROLLUP EP")
 			return U.CachePropertyWithTimestamp{}, nil
@@ -1134,7 +1134,7 @@ func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID int64, dateKey
 	if err != nil {
 		return model.CacheEventNamesWithTimestamp{}, err
 	}
-	eventNames, _, err := cacheRedis.GetIfExistsPersistent(eventNamesKey)
+	eventNames, _, err := pCache.GetIfExists(eventNamesKey, true)
 	if eventNames == "" {
 		logCtx.WithField("date_key", dateKey).Info("MISSING ROLLUP EN")
 		return model.CacheEventNamesWithTimestamp{}, nil

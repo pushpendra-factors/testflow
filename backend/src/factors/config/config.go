@@ -366,6 +366,8 @@ type Configuration struct {
 	HubspotEnrichSkipContactUpdatesByProjectID           string
 	EnableSalesforceDeletedRecordByProjectID             string
 	EnableEnrichmentDebugLogsByProjectID                 string
+	EnableCacheDBWriteProjects                           string
+	EnableCacheDBReadProjects                            string
 }
 
 type Services struct {
@@ -3299,4 +3301,22 @@ func IsEnrichmentDebugLogsEnabled(projectId int64) bool {
 	}
 
 	return false
+}
+
+func IsCacheDBWriteEnabled(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableCacheDBWriteProjects, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
+}
+
+func IsCacheDBReadEnabled(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableCacheDBReadProjects, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
 }

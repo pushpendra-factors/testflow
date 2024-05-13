@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"factors/cache"
 	cacheRedis "factors/cache/redis"
 	"factors/company_enrichment/factors_deanon"
 	"factors/model/model"
@@ -193,7 +194,7 @@ func AccountLimitCountIncrementForTesting(projectId int64, count int) {
 func DeleteAlertAndAccLimitRedisKeyAfterTesting(projectId int64, exhaustType string, logCtx *log.Entry) {
 	alertKey, _ := factors_deanon.GetAccountLimitEmailAlertCacheKey(projectId, 10, exhaustType, util.TimeZoneStringIST, logCtx)
 	limitKey, _ := model.GetFactorsDeanonMonthlyUniqueEnrichmentKey(projectId, util.GetCurrentMonthYear(util.TimeZoneStringIST))
-	var keys []*cacheRedis.Key
+	var keys []*cache.Key
 	keys = append(keys, alertKey, limitKey)
 
 	cacheRedis.DelPersistent(keys...)
