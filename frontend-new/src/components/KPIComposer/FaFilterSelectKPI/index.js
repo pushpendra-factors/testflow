@@ -244,33 +244,30 @@ const FAFilterSelect = ({
     //           MomentTz(toVal).format('MMM DD, YYYY'));
   };
 
-  const matchEventName = (item) => {
-    let findItem =
-      eventPropNames?.[item] || userPropNames?.[item] || groupPropNames?.[item];
-    return findItem ? findItem : _.startCase(item);
-  };
   const getGroupLabel = (grp) => {
     if (grp === 'event') return 'Event Properties';
     if (grp === 'user') return 'User Properties';
     if (!grp || !grp.length) return 'Properties';
     return grp;
   };
-  const renderGroupDisplayName = (propState) => {
-    // propState?.name ? userPropNames[propState?.name] ? userPropNames[propState?.name] : propState?.name : 'Select Property'
-    let propertyName = '';
-    // if(propState.name && propState.icon === 'user') {
-    //   propertyName = userPropNames[propState.name]?  userPropNames[propState.name] : propState.name;
-    // }
-    // if(propState.name && propState.icon === 'event') {
-    //   propertyName = eventPropNames[propState.name]?  eventPropNames[propState.name] : propState.name;
-    // }
 
-    propertyName = matchEventName(propState?.name);
-
-    if (!propState.name) {
-      propertyName = 'Select Property';
+  const renderGroupDisplayName = (state) => {
+    if (!state.name) {
+      return 'Select Property';
     }
-    return propertyName;
+
+    switch (state.icon) {
+      case 'event':
+        return eventPropNames[state.name] || _.startCase(state.name);
+      case 'user' || 'user_g':
+        return userPropNames[state.name] || _.startCase(state.name);
+      case 'group':
+        return (
+          groupPropNames[state.groupName][state.name] || _.startCase(state.name)
+        );
+      default:
+        return _.startCase(state.name);
+    }
   };
 
   const renderPropSelect = () => {

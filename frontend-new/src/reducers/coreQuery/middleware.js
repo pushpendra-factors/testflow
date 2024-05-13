@@ -67,6 +67,7 @@ import {
   convertUserPropsToOptions,
   formatGroups
 } from './utils';
+import logger from 'Utils/logger';
 
 export const fetchEventNames = (projectId, isSpecialEvent = false) => {
   return (dispatch) => {
@@ -97,74 +98,59 @@ export const fetchEventNames = (projectId, isSpecialEvent = false) => {
   };
 };
 
-export const getGroupProperties = (projectId, groupName) => {
-  return (dispatch) => {
-    return new Promise((resolve, reject) => {
-      fetchGroupProperties(projectId, groupName)
-        .then((response) => {
-          const options = convertPropsToOptions(
-            response.data?.properties,
-            response.data?.display_names
-          );
-          resolve(
-            dispatch(
-              setGroupPropertiesNamesAction(response.data?.display_names)
-            )
-          );
-          resolve(dispatch(fetchGroupPropertiesAction(options, groupName)));
-        })
-        .catch((err) => {
-          resolve(dispatch(fetchGroupPropertiesAction({})));
-        });
-    });
+export const getGroupProperties =
+  (projectId, groupName) => async (dispatch) => {
+    try {
+      const response = await fetchGroupProperties(projectId, groupName);
+      const options = convertPropsToOptions(
+        response.data?.properties,
+        response.data?.display_names
+      );
+
+      dispatch(
+        setGroupPropertiesNamesAction(groupName, response.data?.display_names)
+      );
+      dispatch(fetchGroupPropertiesAction(options, groupName));
+    } catch (err) {
+      logger.error(err);
+    }
   };
-};
-export const getUserPropertiesV2 = (projectId, queryType = '') => {
-  return (dispatch) => {
-    return new Promise((resolve, reject) => {
-      fetchUserPropertiesV2(projectId, queryType)
-        .then((response) => {
-          const options = convertUserPropsToOptions(
-            response.data?.properties,
-            response.data?.display_names,
-            response.data?.disabled_event_user_properties
-          );
-          resolve(
-            dispatch(setUserPropertiesNamesAction(response.data?.display_names))
-          );
-          resolve(dispatch(fetchUserPropertiesActionV2(options.userOptions)));
-          resolve(
-            dispatch(fetchEventUserPropertiesActionV2(options.eventUserOptions))
-          );
-        })
-        .catch((err) => {
-          // resolve(dispatch(fetchEventPropertiesAction({})));
-        });
-    });
+
+export const getUserPropertiesV2 =
+  (projectId, queryType = '') =>
+  async (dispatch) => {
+    try {
+      const response = await fetchUserPropertiesV2(projectId, queryType);
+      const options = convertUserPropsToOptions(
+        response.data?.properties,
+        response.data?.display_names,
+        response.data?.disabled_event_user_properties
+      );
+
+      dispatch(setUserPropertiesNamesAction(response.data?.display_names));
+      dispatch(fetchUserPropertiesActionV2(options.userOptions));
+      dispatch(fetchEventUserPropertiesActionV2(options.eventUserOptions));
+    } catch (err) {
+      logger.error(err);
+    }
   };
-};
-export const getEventPropertiesV2 = (projectId, eventName) => {
-  return (dispatch) => {
-    return new Promise((resolve, reject) => {
-      fetchEventPropertiesV2(projectId, eventName)
-        .then((response) => {
-          const options = convertEventsPropsToOptions(
-            response.data.properties,
-            response.data?.display_names
-          );
-          resolve(
-            dispatch(
-              setEventPropertiesNamesAction(response.data?.display_names)
-            )
-          );
-          resolve(dispatch(fetchEventPropertiesActionV2(options, eventName)));
-        })
-        .catch((err) => {
-          // resolve(dispatch(fetchEventPropertiesAction({})));
-        });
-    });
+
+export const getEventPropertiesV2 =
+  (projectId, eventName) => async (dispatch) => {
+    try {
+      const response = await fetchEventPropertiesV2(projectId, eventName);
+      const options = convertEventsPropsToOptions(
+        response.data.properties,
+        response.data?.display_names
+      );
+      dispatch(
+        setEventPropertiesNamesAction(eventName, response.data?.display_names)
+      );
+      dispatch(fetchEventPropertiesActionV2(options, eventName));
+    } catch (err) {
+      logger.error(err);
+    }
   };
-};
 
 export const getButtonClickProperties = (projectId) => {
   return (dispatch) => {
