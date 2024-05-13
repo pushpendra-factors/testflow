@@ -468,8 +468,8 @@ func (store *MemSQL) GetGlobalProjectAnalyticsEventDataByProjectId(projectID int
 	return result, nil
 }
 
-func (store *MemSQL) GetIntegrationStatusesCount(settings model.ProjectSetting, projectID int64, agentUUID string) []map[string]interface{} {
-	integrations := make([]map[string]interface{}, 0)
+func (store *MemSQL) GetIntegrationStatusesCount(settings model.ProjectSetting, projectID int64, agentUUID string) (map[string]interface{}, map[string]interface{}) {
+
 	connected := make([]string, 0)
 	disconnected := make([]string, 0)
 	if *settings.IntSegment {
@@ -567,7 +567,5 @@ func (store *MemSQL) GetIntegrationStatusesCount(settings model.ProjectSetting, 
 		disconnected = append(disconnected, "Teams")
 	}
 
-	integrations = append(integrations, map[string]interface{}{"connected": connected}, map[string]interface{}{"disconnected": disconnected})
-
-	return integrations
+	return map[string]interface{}{"connected": connected}, map[string]interface{}{"disconnected": disconnected}
 }

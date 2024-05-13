@@ -123,7 +123,7 @@ func GetFactorsAnalyticsByprojectIDHandler(c *gin.Context) {
 		return
 	}
 
-	integrationList := store.GetStore().GetIntegrationStatusesCount(*settings, projectID, agentUUID)
+	connected, disconnected := store.GetStore().GetIntegrationStatusesCount(*settings, projectID, agentUUID)
 
 	project, _ := store.GetStore().GetProject(projectID)
 
@@ -131,6 +131,7 @@ func GetFactorsAnalyticsByprojectIDHandler(c *gin.Context) {
 	integrations := make(map[string][]map[string]interface{})
 
 	globalData["metrics"] = data
+	integrationList := []map[string]interface{}{connected, disconnected}
 	integrations["integrations"] = integrationList
 
 	resultJson, err := json.Marshal(analytics)
