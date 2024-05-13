@@ -12,6 +12,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import Attributions from './Attributions';
 import ExplainDP from './ExplainDataPoints';
 import Alerts from './Alerts';
+import Workflows from './Workflows';
 import Sharing from './Sharing';
 
 const MenuTabs = {
@@ -23,6 +24,7 @@ const MenuTabs = {
   Attributions: 'Attributions',
   CustomKPI: 'Custom KPIs',
   Alerts: 'Alerts',
+  Workflows: 'Workflows',
   Sharing: 'Sharing',
 };
 

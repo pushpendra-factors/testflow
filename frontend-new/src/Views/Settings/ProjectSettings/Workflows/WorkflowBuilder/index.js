@@ -1,0 +1,561 @@
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo
+} from 'react';
+import { connect, useDispatch, useSelector } from 'react-redux';
+import {
+  Row,
+  Col,
+  Menu,
+  Dropdown,
+  Button,
+  Table,
+  notification,
+  Tabs,
+  Badge,
+  Switch,
+  Modal,
+  Space,
+  Input,
+  Tag,
+  Collapse,
+  Select,
+  Form
+} from 'antd';
+import { Text, SVG } from 'factorsComponents';
+import QueryBlock from '../../../ProjectSettings/Alerts/EventBasedAlert/QueryBlock';
+import {
+  QUERY_TYPE_EVENT,
+  INITIAL_SESSION_ANALYTICS_SEQ,
+  QUERY_OPTIONS_DEFAULT_VALUE,
+  TOTAL_EVENTS_CRITERIA,
+  TOTAL_USERS_CRITERIA
+} from 'Utils/constants';
+import {
+  DefaultDateRangeFormat,
+  formatBreakdownsForQuery,
+  formatFiltersForQuery,
+  processBreakdownsFromQuery,
+  processFiltersFromQuery
+} from 'Views/CoreQuery/utils';
+import {
+  deleteGroupByForEvent,
+  setGroupBy,
+  delGroupBy,
+  getUserPropertiesV2,
+  resetGroupBy,
+  getGroupProperties,
+  getEventPropertiesV2,
+  getGroups,
+  fetchEventNames
+} from 'Reducers/coreQuery/middleware';
+import WorkflowHubspotThumbnail from '../../../../../../src/assets/images/workflow-hubspot-thumbnail.png';
+import { reorderDefaultDomainSegmentsToTop } from 'Components/Profile/AccountProfiles/accountProfiles.helpers';
+import { selectSegments } from 'Reducers/timelines/selectors';
+import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
+import { getSavedSegments } from 'Reducers/timelines/middleware';
+import { getSegmentColorCode } from 'Views/AppSidebar/appSidebar.helpers';
+import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
+import cx from 'classnames';
+import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
+import WorkflowTrigger from './trigger';
+import { filterOptions } from '../Stub';
+import MapComponent from './MapComponent';
+import { paragon } from '@useparagon/connect/dist/src/index';
+import useParagon from 'hooks/useParagon';
+import { get, getHostUrl } from 'Utils/request';
+import FactorsHubspotCompany from './Templates/FactorsHubspotCompany';
+import FactorsApolloHubspotContacts from './Templates/FactorsApolloHubspotContacts';
+import { fetchSavedWorkflows, saveWorkflow } from 'Reducers/workflows';
+import { TemplateIDs } from './../utils';
+
+const host = getHostUrl();
+
+const { Panel } = Collapse;
+const SegmentIcon = (name) => defaultSegmentIconsMapping[name] || 'pieChart';
+
+const WorkflowBuilder = ({
+  setBuilderMode,
+  groups,
+  getGroups,
+  fetchEventNames,
+  activeProject,
+  getSavedSegments,
+  selectedTemp,
+  fetchSavedWorkflows,
+  saveWorkflow,
+}) => {
+  const [loading, setLoading] = useState(false);
+  const [queries, setQueries] = useState([]);
+  const [workflowName, setWorkflowName] = useState("");
+  const [isTemplate, setIsTemplate] = useState(false);
+  const [queryType, setQueryType] = useState(QUERY_TYPE_EVENT);
+  const [activeGrpBtn, setActiveGrpBtn] = useState(QUERY_TYPE_EVENT);
+  const [queryOptions, setQueryOptions] = useState({
+    ...QUERY_OPTIONS_DEFAULT_VALUE,
+    session_analytics_seq: INITIAL_SESSION_ANALYTICS_SEQ,
+    date_range: { ...DefaultDateRangeFormat }
+  });
+  const [form] = Form.useForm();
+  // Segment Support
+  const [segmentType, setSegmentType] = useState('action_event');
+  const [selectedSegment, setSelectedSegment] = useState('');
+  const [segmentOptions, setSegmentOptions] = useState([]);
+  const segments = useSelector(selectSegments);
+
+  const [propertyMapMandatory, setPropertyMapMandatory] = useState([]);
+  const [propertyMapAdditional, setPropertyMapAdditional] = useState([]);
+  const [propertyMapAdditional2, setPropertyMapAdditional2] = useState([]);
+  
+  const [apolloFormDetails, setApolloFormDetails] = useState(false);
+
+  //paragon hook and states
+  const [state, setState] = useState({
+    token: ''
+  });
+  const { user, error, isLoaded } = useParagon(state.token);
+
+  const fetchToken = async () => {
+    get(null, `${host}projects/${activeProject?.id}/paragon/auth`)
+      .then((res) => {
+        if (!res?.data) {
+          console.error('JWT Token not found');
+          return;
+        }
+        setState((prev) => {
+          return {
+            ...prev,
+            token: res?.data
+          };
+        });
+      })
+      .catch((err) => {
+        console.error(err);
+        message.error('Token not found!');
+      });
+  };
+  useEffect(() => {
+    // Authenticate();
+    fetchToken();
+  }, []);
+
+
+  useEffect(() => {
+    if (selectedTemp) {
+      // console.log("selectedTemp insdeUeffect===", selectedTemp);
+      const queryData = [];
+      let isTemplateWorkflow = selectedTemp?.is_workflow ? true : false
+      console.log("isTemplateWorkflow===", isTemplateWorkflow);
+      if(selectedTemp?.workflow_config?.trigger?.event || selectedTemp?.event){
+        queryData.push({
+          alias: '',
+          label: isTemplateWorkflow ? selectedTemp?.workflow_config?.trigger?.event : selectedTemp?.event,
+          filters: processFiltersFromQuery(isTemplateWorkflow ? selectedTemp?.workflow_config?.trigger?.filter : selectedTemp?.filters),
+          group: ''
+        });
+        setQueries(queryData); 
+        console.log("queryData===", queryData);
+      }
+      setWorkflowName(isTemplateWorkflow ? "" : selectedTemp?.title)
+      setIsTemplate(isTemplateWorkflow);
+    }
+    return () => {
+      setIsTemplate(false);
+    };
+  }, [selectedTemp]);
+
+
+  // fetch segments and on Change functions
+  useEffect(() => {
+    getSavedSegments(activeProject?.id);
+  }, [activeProject?.id]);
+
+  const segmentsList = useMemo(
+    () => reorderDefaultDomainSegmentsToTop(segments[GROUP_NAME_DOMAINS]) || [],
+    [segments]
+  );
+
+  const renderOptions = (segment) => {
+    const iconColor = getSegmentColorCode(segment?.name);
+    const icon = SegmentIcon(segment?.name);
+    return (
+      <div className={cx('flex col-gap-1 items-center w-full')}>
+        <ControlledComponent controller={icon != null}>
+          <SVG name={icon} size={20} color={iconColor} />
+        </ControlledComponent>
+        {segment?.name}
+      </div>
+    );
+  };
+
+  const getSegmentNameFromId = (Id) => {
+    const segmentName = segmentsList.find((segment) => segment?.id === Id);
+    if (segmentName) return segmentName?.name;
+    return '';
+  };
+
+
+  useEffect(() => {
+    const segmentListWithLabels = segmentsList.map((segment) => ({
+      value: segment?.id,
+      label: renderOptions(segment)
+    }));
+    setSegmentOptions(segmentListWithLabels);
+  }, [segmentsList]);
+
+  useEffect(() => {
+    const segmentListWithLabels = segmentsList.map((segment) => ({
+      value: segment?.id,
+      label: renderOptions(segment)
+    }));
+    setSegmentOptions(segmentListWithLabels);
+  }, [segmentsList]);
+
+  useEffect(() => {
+    if (!groups || Object.keys(groups).length === 0) {
+      getGroups(activeProject?.id);
+    }
+  }, [activeProject?.id, groups]);
+
+  useEffect(() => {
+    fetchEventNames(activeProject?.id, true);
+  }, [activeProject]);
+
+
+  const groupsList = useMemo(() => {
+    let listGroups = [];
+    Object.entries(groups?.all_groups || {}).forEach(
+      ([group_name, display_name]) => {
+        listGroups.push([display_name, group_name]);
+      }
+    );
+    return listGroups;
+  }, [groups]);
+
+
+  const fetchGroups = async () => {
+    if (!groups || Object.keys(groups).length === 0) {
+      await getGroups(activeProject?.id);
+    }
+  };
+
+  useEffect(() => {
+    fetchGroups();
+  }, [activeProject?.id, groups]);
+
+  const queryChange = useCallback(
+    (newEvent, index, changeType = 'add', flag = null) => {
+      const queryupdated = [...queries];
+      if (queryupdated[index]) {
+        if (changeType === 'add') {
+          if (
+            JSON.stringify(queryupdated[index]) !== JSON.stringify(newEvent)
+          ) {
+            deleteGroupByForEvent(newEvent, index);
+            resetGroupBy();
+            // setEventPropertyDetails({});
+          }
+          queryupdated[index] = newEvent;
+        } else if (changeType === 'filters_updated') {
+          // dont remove group by if filter is changed
+          queryupdated[index] = newEvent;
+        } else {
+          deleteGroupByForEvent(newEvent, index);
+          resetGroupBy();
+          queryupdated.splice(index, 1);
+          // setEventPropertyDetails({});
+        }
+      } else {
+        if (flag) {
+          Object.assign(newEvent, { pageViewVal: flag });
+        }
+        queryupdated.push(newEvent);
+      }
+      setQueries(queryupdated);
+    },
+    [queries]
+  );
+
+
+  const queryList = () => {
+    const blockList = [];
+    queries.forEach((event, index) => {
+      blockList.push(
+        <div key={index}>
+          <QueryBlock
+            availableGroups={groupsList}
+            index={index + 1}
+            queryType={queryType}
+            event={event}
+            queries={queries}
+            eventChange={queryChange}
+            groupAnalysis={activeGrpBtn}
+          />
+        </div>
+      );
+    });
+
+    if (queries.length < 1) {
+      blockList.push(
+        <div key='init'>
+          <QueryBlock
+            availableGroups={groupsList}
+            queryType={queryType}
+            index={queries.length + 1}
+            queries={queries}
+            eventChange={queryChange}
+            groupBy={queryOptions.groupBy}
+            groupAnalysis={activeGrpBtn}
+          />
+        </div>
+      );
+    }
+
+    return blockList;
+  };
+
+  const onChangeSegmentType = (value) => {
+    setSegmentType(value);
+  };
+
+  const onChangeSegment = (segment) => {
+    setSelectedSegment(segment?.value);
+  };
+
+  const dropdownOptions = filterOptions?.map((item) => {
+    return {
+      label: item.label,
+      options: item.values
+    }
+  })
+
+
+  const saveWorkflowFn = (value) => {
+
+    let message_propertiesObj = {};
+    if (selectedTemp?.id == TemplateIDs.FACTORS_HUBSPOT_COMPANY || selectedTemp?.template_id == TemplateIDs.FACTORS_HUBSPOT_COMPANY) {
+      message_propertiesObj = {
+        mandatory_properties: propertyMapMandatory,
+        additional_properties_company: propertyMapAdditional,
+      }
+    }
+    if (selectedTemp?.id == TemplateIDs.FACTORS_APOLLO_HUBSPOT_CONTACTS || selectedTemp?.template_id == TemplateIDs.FACTORS_APOLLO_HUBSPOT_CONTACTS) {
+      message_propertiesObj = {
+        mandatory_properties: propertyMapMandatory,
+        additional_properties_company: propertyMapAdditional,
+        additional_properties_contact: propertyMapAdditional2,
+        addtional_configuration: value, 
+      }
+    }
+    
+
+    let payload =
+    {
+      action_performed: segmentType,
+      alert_limit: 5,
+      breakdown_properties: [
+        {
+          "en": "user",
+          "ena": "$session",
+          "pr": "$6Signal_domain",
+          "pty": "categorical"
+        }
+      ],
+      cool_down_time: 1800,
+      event: queries[0]?.label,
+      event_level: "active",
+      filters: formatFiltersForQuery(queries?.[0]?.filters),
+      notifications: false,
+      repeat_alerts: true,
+      template_title: selectedTemp?.title,
+      template_description: selectedTemp?.description,
+      title: workflowName ? workflowName : "",
+      description: workflowName ? workflowName : "",
+      template_id: selectedTemp?.id,
+      message_properties: message_propertiesObj
+    }
+
+    saveWorkflow(activeProject?.id, payload).then((res) => {
+      console.log("workflows save success!", res.data);
+      fetchSavedWorkflows(activeProject?.id);
+      setBuilderMode(false);
+    }).catch((err) => console.log('workflow save error=>', err));
+
+  }
+
+  console.log("apolloFormDetails==>",apolloFormDetails);
+
+  const returnIntegrationComponent = (workflowItem) => {
+    if (workflowItem?.id == TemplateIDs.FACTORS_HUBSPOT_COMPANY || workflowItem?.template_id == TemplateIDs.FACTORS_HUBSPOT_COMPANY) {
+      return <FactorsHubspotCompany
+        user={user}
+        propertyMapMandatory={propertyMapMandatory}
+        setPropertyMapMandatory={setPropertyMapMandatory}
+        filterOptions={filterOptions}
+        dropdownOptions={dropdownOptions}
+        propertyMapAdditional={propertyMapAdditional}
+        setPropertyMapAdditional={setPropertyMapAdditional}
+        saveWorkflowFn={saveWorkflowFn}
+        selectedTemp={selectedTemp}
+        isTemplate={isTemplate}
+      />
+    }
+    else
+     if (workflowItem?.id == TemplateIDs.FACTORS_APOLLO_HUBSPOT_CONTACTS || workflowItem?.template_id == TemplateIDs.FACTORS_APOLLO_HUBSPOT_CONTACTS) {
+      return <FactorsApolloHubspotContacts
+        user={user}
+        propertyMapMandatory={propertyMapMandatory}
+        setPropertyMapMandatory={setPropertyMapMandatory}
+        filterOptions={filterOptions}
+        dropdownOptions={dropdownOptions}
+        propertyMapAdditional={propertyMapAdditional}
+        setPropertyMapAdditional={setPropertyMapAdditional}
+        saveWorkflowFn={saveWorkflowFn}
+        selectedTemp={selectedTemp}
+        isTemplate={isTemplate}
+        setPropertyMapAdditional2={setPropertyMapAdditional2}
+        propertyMapAdditional2={propertyMapAdditional2}
+        apolloFormDetails={apolloFormDetails} 
+        setApolloFormDetails={setApolloFormDetails}
+      />
+    }
+    else {
+      return null
+    }
+  }
+
+  return (
+    <>
+      <Row className={'border-bottom--thin-2 pt-4 pb-4'}>
+        <Col span={12}>
+          <div className={'flex justify-start'}>
+            <Button
+              disabled={loading}
+              type={'text'}
+              onClick={() => setBuilderMode(false)}
+              icon={<SVG name='ArrowLeft' size={16} />}
+            >
+              Back
+            </Button>
+          </div>
+        </Col>
+        <Col span={12}>
+          <div className={'flex justify-end'}>
+            <Button
+              size={'large'}
+              disabled={loading}
+              onClick={() => setBuilderMode(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              size={'large'}
+              disabled={loading}
+              loading={loading}
+              className={'ml-2'}
+              type={'primary'}
+              onClick={() => saveWorkflowFn()}
+            >
+              Save
+            </Button>
+          </div>
+        </Col>
+      </Row>
+
+      <Row className={'py-6'}>
+        <Col span={12}>
+          <div className={'flex justify-start items-start'}>
+            <div className={'flex flex-col items-start justify-start'}>
+              <Input size='large' placeholder={'Untitled Workflow '} value={workflowName} onChange={(e) => setWorkflowName(e.target.value)} className={'fa-input'} />
+              <Button
+                size={'small'}
+                type='link'
+                disabled={loading}
+                className={'mt-2'}
+              >
+                Add description
+              </Button>
+            </div>
+          </div>
+        </Col>
+        <Col span={12}>
+          <div className={'flex justify-end'}>
+            <div className={'flex items-center justify-end'}>
+              <Text type={'title'} level={8} color={'grey'} extraClass={'m-0 mr-2'} >
+                Not published
+              </Text>
+              <Switch
+                checkedChildren='On'
+                unCheckedChildren='OFF'
+              // onChange={(checked) => setTeamsEnabled(checked)}
+              // checked={teamsEnabled}
+              />
+            </div>
+          </div>
+        </Col>
+      </Row>
+
+      <Row className={'my-6 background-color--mono-color-1 border-radius--sm'}>
+        <Col span={24}>
+          <div className='' style={{ 'min-height': '500px', padding: '5% 5%' }}>
+
+
+            {/* trigger div */}
+            <div className={'relative border--thin-2 border-radius--lg background-color--white flex flex-col fa-line--vertical'} style={{ 'margin-top': '0%', padding: '5%' }}>
+              <Tag className='absolute top-0 mx-auto' style={{ 'margin-top': '-10px' }}>Trigger</Tag>
+
+              <WorkflowTrigger
+                onChangeSegmentType={onChangeSegmentType}
+                segmentType={segmentType}
+                selectedSegment={selectedSegment}
+                onChangeSegment={onChangeSegment}
+                segmentOptions={segmentOptions}
+                queryList={queryList}
+                activeGrpBtn={activeGrpBtn}
+              />
+
+            </div>
+
+            {/* workflow config */}
+            <div className={'z-10 relative border--thin-2 border-radius--lg background-color--white'} style={{ 'margin-top': '8%', 'min-height': '250px' }}>
+              <div className='flex items-center' style={{ padding: '3% 3%' }}>
+                <div className='pr-6'>
+                  <Text type={'title'} level={7} color={'black'} weight={'bold'} extraClass={'m-0'}>{isTemplate ? selectedTemp?.title : selectedTemp?.template_title}</Text>
+                  <Text type={'title'} level={7} color={'grey'} extraClass={'mt-2'}>{isTemplate ? selectedTemp?.description : selectedTemp?.template_description}</Text>
+                  <Button type='primary' extraClass={'mt-2'}>Configure Action</Button>
+                </div>
+                <div className='px-4'>
+                  <img src={WorkflowHubspotThumbnail} style={{ 'height': "150px" }} />
+                </div>
+              </div>
+
+              {
+                returnIntegrationComponent(selectedTemp)
+              }
+
+            </div>
+          </div>
+        </Col>
+      </Row>
+
+    </>
+  )
+}
+
+const mapStateToProps = (state) => ({
+  activeProject: state.global.active_project,
+  groupBy: state.coreQuery.groupBy.event,
+  groups: state.coreQuery.groups,
+});
+
+
+export default connect(mapStateToProps, {
+  getGroups,
+  fetchEventNames,
+  getSavedSegments,
+  fetchSavedWorkflows,
+  saveWorkflow
+})(WorkflowBuilder); 
