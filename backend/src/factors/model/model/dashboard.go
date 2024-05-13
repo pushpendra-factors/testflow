@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/json"
 	"errors"
+	pCache "factors/cache/persistent"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	U "factors/util"
@@ -138,7 +139,7 @@ func GetCacheResultByDashboardIdAndUnitId(reqId string, projectId int64, dashboa
 	if err != nil {
 		return cacheResult, http.StatusInternalServerError, errors.New("Dashboard Cache: Failed to fetch cache key - " + err.Error())
 	}
-	result, status, err := cacheRedis.GetIfExistsPersistent(cacheKey)
+	result, status, err := pCache.GetIfExists(cacheKey, true)
 	if !status {
 		if err != nil {
 			return cacheResult, http.StatusInternalServerError, errors.New("Dashboard Cache: Failed to get data from cache - " + err.Error())
@@ -176,7 +177,7 @@ func GetCacheResultByDashboardIdAndUnitIdWithPreset(reqId string, projectId int6
 	if err != nil {
 		return cacheResult, http.StatusInternalServerError, errors.New("Dashboard Cache: Failed to fetch cache key - " + err.Error())
 	}
-	result, status, err := cacheRedis.GetIfExistsPersistent(cacheKey)
+	result, status, err := pCache.GetIfExists(cacheKey, true)
 	if !status {
 		if err != nil {
 			return cacheResult, http.StatusInternalServerError, errors.New("Dashboard Cache: Failed to get data from cache - " + err.Error())
@@ -253,7 +254,7 @@ func SetCacheResultByDashboardIdAndUnitIdWithPreset(result interface{}, projectI
 		expiryInSecs = U.GetDashboardCacheResultExpiryInSeconds(from, to, timezoneString)
 	}
 
-	err = cacheRedis.SetPersistent(cacheKey, string(enDashboardCacheResult), expiryInSecs)
+	err = pCache.Set(cacheKey, string(enDashboardCacheResult), expiryInSecs, true)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to set cache for channel query")
 		return
@@ -299,13 +300,13 @@ func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId int64, d
 		return
 	}
 	if isAttributionDashboard {
-		err = cacheRedis.SetPersistent(cacheKey, string(enDashboardCacheResult), U.CacheExpiryAttributionDashboardInSeconds)
+		err = pCache.Set(cacheKey, string(enDashboardCacheResult), U.CacheExpiryAttributionDashboardInSeconds, true)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to set cache for channel query")
 			return
 		}
 	} else {
-		err = cacheRedis.SetPersistent(cacheKey, string(enDashboardCacheResult), U.GetDashboardCacheResultExpiryInSeconds(from, to, timezoneString))
+		err = pCache.Set(cacheKey, string(enDashboardCacheResult), U.GetDashboardCacheResultExpiryInSeconds(from, to, timezoneString), true)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to set cache for channel query")
 			return
@@ -317,8 +318,8 @@ func SetCacheResultByDashboardIdAndUnitId(result interface{}, projectId int64, d
 func GetDashboardCacheAnalyticsValidityMap() (map[int64]map[int64]bool, int64, error) {
 	logCtx := log.WithFields(log.Fields{"method": "GetDashboardCacheAnalyticsValidityMap"})
 
+	// TODO: Implement SCAN support on db_cache and move dashboard:analytics keys.
 	cacheKeys, err := cacheRedis.ScanPersistent("dashboard:analytics:*", MaxNumberOfDashboardUnitCacheAccessedIn14Days, MaxNumberOfDashboardUnitCacheAccessedIn14Days)
-
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get cache key")
 		return nil, 0, err
@@ -328,6 +329,7 @@ func GetDashboardCacheAnalyticsValidityMap() (map[int64]map[int64]bool, int64, e
 	totalValidUnits := int64(0)
 	for _, cacheKey := range cacheKeys {
 		var cacheResult *DashboardCacheResult
+		// TODO: Implement SCAN support on db_cache and move dashboard:analytics keys.
 		result, status, err := cacheRedis.GetIfExistsPersistent(cacheKey)
 		if !status && err != nil {
 			logCtx.WithError(err).Error("Failed to get result from cache for key %v", cacheKey)
@@ -396,6 +398,7 @@ func SetDashboardCacheAnalytics(projectId int64, dashboardId int64, unitId int64
 		return
 	}
 
+	// TODO: Implement SCAN support on db_cache and move dashboard:analytics keys.
 	err = cacheRedis.SetPersistent(cacheKey, string(enDashboardCacheResult), DashboardCacheInvalidationDuration14DaysInSecs)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to set cache for dashboard query")

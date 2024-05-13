@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/json"
 	"errors"
+	"factors/cache"
 	cacheRedis "factors/cache/redis"
 	"fmt"
 	"strings"
@@ -33,9 +34,9 @@ const (
 	ETA_ENRICHED_HUBSPOT_COMPANY_OBJECT_URL    = "ignore_eta_hs_c_o_url"
 	ETA_ENRICHED_SALESFORCE_ACCOUNT_OBJECT_URL = "ignore_eta_sf_a_o_url"
 
-	ACTION_EVENT_PERFORMED   = "action_event"
-	ACTION_SEGMENT_ENTRY     = "action_segment_entry"
-	ACTION_SEGMENT_EXIT      = "action_segment_exit"
+	ACTION_EVENT_PERFORMED = "action_event"
+	ACTION_SEGMENT_ENTRY   = "action_segment_entry"
+	ACTION_SEGMENT_EXIT    = "action_segment_exit"
 
 	// cachekey structure = ETA:pid:<project_id>:<alert_id>:<UnixTime>
 	// cacheCounterKey structure = ETA:Counter:pid:<project_id>:<alert_id>:<YYYYMMDD>
@@ -188,7 +189,7 @@ var TeamsErrorStates = map[string]string{
 	"Too Many Requests": "Too many messages sent in a short period. Adjust rules under Advanced settings to control the number of alerts sent.",
 }
 
-func SetCacheForEventTriggerAlert(key *cacheRedis.Key, cacheETA *CachedEventTriggerAlert) error {
+func SetCacheForEventTriggerAlert(key *cache.Key, cacheETA *CachedEventTriggerAlert) error {
 	if cacheETA == nil {
 		log.Error("Nil cache event on setCacheUserLastEventTriggerAlert")
 		return errors.New("nil cache event")
@@ -209,12 +210,12 @@ func SetCacheForEventTriggerAlert(key *cacheRedis.Key, cacheETA *CachedEventTrig
 	return err
 }
 
-func GetEventTriggerAlertCacheKey(projectId, timestamp int64, alertID string) (*cacheRedis.Key, error) {
+func GetEventTriggerAlertCacheKey(projectId, timestamp int64, alertID string) (*cache.Key, error) {
 
 	suffix := fmt.Sprintf("%s:%d", alertID, timestamp)
 	prefix := prefixNameforAlerts
 
-	key, err := cacheRedis.NewKey(projectId, prefix, suffix)
+	key, err := cache.NewKey(projectId, prefix, suffix)
 	if err != nil || key == nil {
 		log.WithError(err).Error("cacheKey NewKey function failure")
 		return nil, err
@@ -223,14 +224,14 @@ func GetEventTriggerAlertCacheKey(projectId, timestamp int64, alertID string) (*
 	return key, err
 }
 
-func GetEventTriggerAlertCacheCounterKey(projectId int64, alertId, date string) (*cacheRedis.Key, error) {
+func GetEventTriggerAlertCacheCounterKey(projectId int64, alertId, date string) (*cache.Key, error) {
 
 	suffix := fmt.Sprintf("%s:%s", alertId, date)
 	prefix := fmt.Sprintf("%s:%s", prefixNameforAlerts, counterIndex)
 
 	log.Info("Fetching redisKey, inside GetEventTriggerAlertCacheKey.")
 
-	key, err := cacheRedis.NewKey(projectId, prefix, suffix)
+	key, err := cache.NewKey(projectId, prefix, suffix)
 	if err != nil || key == nil {
 		log.WithError(err).Error("cacheKey NewKey function failure")
 		return nil, err
@@ -364,7 +365,7 @@ func GetSlackMsgBlock(msg EventTriggerAlertMessage, slackMentions string, isAcco
 		},`, sfAccUrl)
 		hasAttachements = true
 	}
-	
+
 	attachements := ""
 	if hasAttachements && isAccountAlert {
 		attachements = fmt.Sprintf(`{

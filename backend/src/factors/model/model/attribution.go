@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	cacheRedis "factors/cache/redis"
+	"factors/cache"
 	C "factors/config"
 	U "factors/util"
 	"fmt"
@@ -323,16 +323,16 @@ func (q *AttributionQueryUnit) GetQueryCacheHashString() (string, error) {
 	return queryHash, nil
 }
 
-func (q *AttributionQueryUnit) GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key, error) {
+func (q *AttributionQueryUnit) GetQueryCacheRedisKey(projectID int64) (*cache.Key, error) {
 	hashString, err := q.GetQueryCacheHashString()
 	if err != nil {
 		return nil, err
 	}
 	suffix := getQueryCacheRedisKeySuffix(hashString, q.Query.From, q.Query.To, U.TimeZoneString(q.Query.Timezone))
-	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
+	return cache.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
-func GetStringKeyFromCacheRedisKey(Key *cacheRedis.Key) string {
+func GetStringKeyFromCacheRedisKey(Key *cache.Key) string {
 
 	return fmt.Sprintf("pid:%d:puid:%s:%s:%s", Key.ProjectID, Key.ProjectUID, Key.Prefix, Key.Suffix)
 }

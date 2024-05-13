@@ -201,7 +201,7 @@ func associateDealToDomain(projectID int64, document *model.HubspotDocument) {
 		return
 	}
 
-	status := IntHubspot.AssociateDealToDomain(projectID, groupUserID, companyIDs[0])
+	status := IntHubspot.AssociateDealToDomain(projectID, groupUserID, companyIDs[0], "")
 	if status != http.StatusOK {
 		logCtx.Error("Failed to AssociateDealToDomain.")
 	}
@@ -248,7 +248,7 @@ func associateOpportunityToDomain(projectID int64, document *model.SalesforceDoc
 	groupUserID := document.GroupUserID
 	if groupUserID == "" {
 		opportunityGroupUserID, status, _ := IntSalesforce.CreateOrUpdateSalesforceGroupsProperties(projectID, document,
-			model.GROUP_NAME_SALESFORCE_OPPORTUNITY, document.ID)
+			model.GROUP_NAME_SALESFORCE_OPPORTUNITY, document.ID, false, "")
 		if status != http.StatusOK {
 			logCtx.Error("Failed to create or update salesforce opportunity groups properties.")
 			return
@@ -263,7 +263,7 @@ func associateOpportunityToDomain(projectID int64, document *model.SalesforceDoc
 		groupUserID = opportunityGroupUserID
 	}
 
-	enProperties, _, err := IntSalesforce.GetSalesforceDocumentProperties(projectID, document)
+	enProperties, _, err := IntSalesforce.GetSalesforceDocumentProperties(projectID, document, "")
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get opportunity properties.")
 		return
@@ -277,7 +277,7 @@ func associateOpportunityToDomain(projectID int64, document *model.SalesforceDoc
 		return
 	}
 
-	status := IntSalesforce.AssociateOpportunityToDomains(projectID, groupUserID, accountID)
+	status := IntSalesforce.AssociateOpportunityToDomains(projectID, groupUserID, accountID, "")
 	if status != http.StatusOK {
 		logCtx.Error("Failed to AssociateOpportunityToDomains.")
 	}

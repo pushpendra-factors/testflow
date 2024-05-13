@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"factors/cache"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	"factors/metrics"
@@ -425,7 +426,7 @@ func getProjectSettingByKey(key, value string) (*model.ProjectSetting, int) {
 	return &setting, http.StatusFound
 }
 
-func getProjectSettingCacheKey(tokenKey, tokenValue string) (*cacheRedis.Key, error) {
+func getProjectSettingCacheKey(tokenKey, tokenValue string) (*cache.Key, error) {
 	logFields := log.Fields{
 		"token_key":   tokenKey,
 		"token_value": tokenValue,
@@ -433,7 +434,7 @@ func getProjectSettingCacheKey(tokenKey, tokenValue string) (*cacheRedis.Key, er
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	// table_name:column_name
 	prefix := fmt.Sprintf("%s:%s", "project_settings", tokenKey)
-	return cacheRedis.NewKeyWithProjectUID(tokenValue, prefix, "")
+	return cache.NewKeyWithProjectUID(tokenValue, prefix, "")
 }
 
 func getCacheProjectSetting(tokenKey, tokenValue string) (*model.ProjectSetting, int) {

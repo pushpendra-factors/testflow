@@ -3,6 +3,7 @@ package tests
 import (
 	"testing"
 
+	"factors/cache"
 	cacheRedis "factors/cache/redis"
 
 	"github.com/stretchr/testify/assert"
@@ -12,11 +13,11 @@ func TestExists(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	key1 := cacheRedis.Key{
+	key1 := cache.Key{
 		ProjectID: project.ID,
 		Prefix:    "test1",
 	}
-	key2 := cacheRedis.Key{
+	key2 := cache.Key{
 		ProjectID: project.ID,
 		Prefix:    "test2",
 	}
@@ -37,15 +38,15 @@ func TestMGet(t *testing.T) {
 	project, err := SetupProjectReturnDAO()
 	assert.Nil(t, err)
 
-	key1 := cacheRedis.Key{
+	key1 := cache.Key{
 		ProjectID: project.ID,
 		Prefix:    "test1",
 	}
-	key2 := cacheRedis.Key{
+	key2 := cache.Key{
 		ProjectID: project.ID,
 		Prefix:    "test2",
 	}
-	key3 := cacheRedis.Key{
+	key3 := cache.Key{
 		ProjectID: project.ID,
 		Prefix:    "test3",
 	}

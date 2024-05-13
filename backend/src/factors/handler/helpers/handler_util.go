@@ -3,14 +3,16 @@ package helpers
 import (
 	"encoding/json"
 	"errors"
+	"factors/cache"
 	cacheRedis "factors/cache/redis"
 	"factors/model/model"
 	"factors/model/store"
 	"fmt"
-	"github.com/jinzhu/gorm/dialects/postgres"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/jinzhu/gorm/dialects/postgres"
 
 	C "factors/config"
 	U "factors/util"
@@ -227,7 +229,7 @@ func InValidateSavedQueryCache(query *model.Queries) int {
 func InValidateDashboardQueryCache(projectID, dashboardID, unitID int64) []string {
 
 	failedKeys := make([]string, 0)
-	var cacheKeys []*cacheRedis.Key
+	var cacheKeys []*cache.Key
 	var err error
 
 	pattern := fmt.Sprintf("dashboard:*:pid:%d:did:%d:duid:%d:*", projectID, dashboardID, unitID)

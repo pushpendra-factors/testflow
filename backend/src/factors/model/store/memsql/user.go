@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	pCache "factors/cache/persistent"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	"factors/metrics"
@@ -1758,7 +1759,7 @@ func getUserPropertiesByProjectFromCache(projectID int64, dateKey string) (U.Cac
 	if err != nil {
 		return U.CachePropertyWithTimestamp{}, err
 	}
-	userProperties, _, err := cacheRedis.GetIfExistsPersistent(PropertiesKey)
+	userProperties, _, err := pCache.GetIfExists(PropertiesKey, true)
 	if err != nil {
 		return U.CachePropertyWithTimestamp{}, err
 	}
@@ -1845,7 +1846,7 @@ func getPropertyValuesByUserPropertyFromCache(projectID int64, propertyName stri
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
-	values, _, err := cacheRedis.GetIfExistsPersistent(eventPropertyValuesKey)
+	values, _, err := pCache.GetIfExists(eventPropertyValuesKey, true)
 	if err != nil {
 		return U.CachePropertyValueWithTimestamp{}, err
 	}
