@@ -105,19 +105,6 @@ def replace_two_by_one(x, key='qe'):
             x[key] = v1
 
 
-def replace_one_by_two(x, key='qe'):
-    k1 = f'{key}1'
-    k2 = f'{key}2'
-    if key in x:
-        v = x[key]
-        del x[key]
-        try:
-            v1, v2 = v
-            x[k1] = v1
-            x[k2] = v2
-        except ValueError:
-            x[k1] = v
-
 
 def get_reduction_map():
     reduction_map = {'query_type': 'qt',
@@ -149,19 +136,6 @@ def reduce_completion(x):
     # x = x.replace("'", '')
     # x = x.replace(' ', '')
     # x = x.replace('$', '')
-    return x
-
-
-def expand_completion(x):
-    # TODO: Expand better!
-    reduction_map = get_reduction_map()
-    expansion_map = {v: k for k, v in reduction_map.items()}
-    # x = json.loads(x)
-    # for k in ['qe', 'qf', 'qb']:
-    #     replace_one_by_two(x, key=k)
-    # x = json.dumps(x)
-    for a, b in expansion_map.items():
-        x = x.replace(a, b)
     return x
 
 
