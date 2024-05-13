@@ -2,6 +2,7 @@ package memsql
 
 import (
 	billing "factors/billing/chargebee"
+	"factors/cache"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	"factors/model/model"
@@ -1099,9 +1100,9 @@ func delProjectTimezoneCacheForID(ID int64) int64 {
 	return http.StatusAccepted
 }
 
-func getProjectTimezoneCacheKey(ID int64) (*cacheRedis.Key, error) {
+func getProjectTimezoneCacheKey(ID int64) (*cache.Key, error) {
 	prefix := "project_tz"
-	return cacheRedis.NewKeyWithProjectUID(string(ID), prefix, "")
+	return cache.NewKeyWithProjectUID(string(ID), prefix, "")
 }
 
 func (store *MemSQL) OnboardingAccScoring(projectId int64) error {

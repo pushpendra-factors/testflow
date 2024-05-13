@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	"factors/cache"
 	cacheRedis "factors/cache/redis"
 	U "factors/util"
 	"fmt"
@@ -117,7 +118,7 @@ type FailedDashboardUnitReport struct {
 	Preset      string
 }
 
-func GetDashboardUnitQueryResultCacheKeyWithPreset(projectID int64, dashboardID, unitID int64, preset string, from, to int64, timezoneString U.TimeZoneString) (*cacheRedis.Key, error) {
+func GetDashboardUnitQueryResultCacheKeyWithPreset(projectID int64, dashboardID, unitID int64, preset string, from, to int64, timezoneString U.TimeZoneString) (*cache.Key, error) {
 	prefix := "dashboard:query"
 
 	var suffix string
@@ -137,10 +138,10 @@ func GetDashboardUnitQueryResultCacheKeyWithPreset(projectID int64, dashboardID,
 		suffix = s1[0] + a + s1[1]
 	}
 
-	return cacheRedis.NewKey(projectID, prefix, suffix)
+	return cache.NewKey(projectID, prefix, suffix)
 }
 
-func GetDashboardUnitQueryResultCacheKey(projectID int64, dashboardID, unitID int64, from, to int64, timezoneString U.TimeZoneString) (*cacheRedis.Key, error) {
+func GetDashboardUnitQueryResultCacheKey(projectID int64, dashboardID, unitID int64, from, to int64, timezoneString U.TimeZoneString) (*cache.Key, error) {
 	prefix := "dashboard:query"
 
 	var suffix string
@@ -152,10 +153,10 @@ func GetDashboardUnitQueryResultCacheKey(projectID int64, dashboardID, unitID in
 		suffix = fmt.Sprintf("did:%d:duid:%d:from:%d:to:%d", dashboardID, unitID, from, to)
 	}
 
-	return cacheRedis.NewKey(projectID, prefix, suffix)
+	return cache.NewKey(projectID, prefix, suffix)
 }
 
-func GetDashboardCacheAnalyticsCacheKey(projectID int64, dashboardID, unitID int64, from, to int64, timezoneString U.TimeZoneString, preset string) (*cacheRedis.Key, error) {
+func GetDashboardCacheAnalyticsCacheKey(projectID int64, dashboardID, unitID int64, from, to int64, timezoneString U.TimeZoneString, preset string) (*cache.Key, error) {
 	prefix := "dashboard:analytics"
 	var suffix string
 	if U.IsStartOfTodaysRangeIn(from, timezoneString) {
@@ -164,7 +165,7 @@ func GetDashboardCacheAnalyticsCacheKey(projectID int64, dashboardID, unitID int
 	} else {
 		suffix = fmt.Sprintf("did:%d:duid:%d:from:%d:to:%d:preset:%v", dashboardID, unitID, from, to, preset)
 	}
-	return cacheRedis.NewKey(projectID, prefix, suffix)
+	return cache.NewKey(projectID, prefix, suffix)
 }
 
 var SearchKeyPreset = map[string][]string{
@@ -177,13 +178,13 @@ var SearchKeyPreset = map[string][]string{
 }
 
 // GetDashboardUnitQueryLastComputedResultCacheKey return last computed cachekey
-func GetDashboardUnitQueryLastComputedResultCacheKey(projectID int64, dashboardID, unitID int64, preset string, from, to int64, timezoneString U.TimeZoneString) (*cacheRedis.Key, error) {
+func GetDashboardUnitQueryLastComputedResultCacheKey(projectID int64, dashboardID, unitID int64, preset string, from, to int64, timezoneString U.TimeZoneString) (*cache.Key, error) {
 
 	logCtx := log.WithFields(log.Fields{
 		"CacheKey": fmt.Sprintf("PID:%d:DID:%d:DUID:%d:PRESET:%s", projectID, dashboardID, unitID, preset),
 	})
 	logCtx.Info("fetching Last computed")
-	var cacheKeys []*cacheRedis.Key
+	var cacheKeys []*cache.Key
 	var err error
 
 	for _, pre := range SearchKeyPreset[preset] {
@@ -197,7 +198,7 @@ func GetDashboardUnitQueryLastComputedResultCacheKey(projectID int64, dashboardI
 	}
 
 	var latestComputedAt int64 = 0
-	var latestComputedKey *cacheRedis.Key
+	var latestComputedKey *cache.Key
 
 	for _, key := range cacheKeys {
 		//get latest

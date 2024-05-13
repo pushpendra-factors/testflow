@@ -3,14 +3,15 @@ package model
 import (
 	"database/sql"
 	"errors"
-	cacheRedis "factors/cache/redis"
+	"factors/cache"
 	C "factors/config"
 	U "factors/util"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"sort"
 	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type AttributionQueryV1 struct {
@@ -90,13 +91,13 @@ func (q *AttributionQueryUnitV1) GetQueryCacheHashString() (string, error) {
 	return queryHash, nil
 }
 
-func (q *AttributionQueryUnitV1) GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key, error) {
+func (q *AttributionQueryUnitV1) GetQueryCacheRedisKey(projectID int64) (*cache.Key, error) {
 	hashString, err := q.GetQueryCacheHashString()
 	if err != nil {
 		return nil, err
 	}
 	suffix := getQueryCacheRedisKeySuffix(hashString, q.Query.From, q.Query.To, U.TimeZoneString(q.Query.Timezone))
-	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
+	return cache.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
 func (q *AttributionQueryUnitV1) GetQueryCacheExpiry(projectID int64) float64 {

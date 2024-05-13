@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"factors/cache"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	"factors/metrics"
@@ -206,7 +207,7 @@ func (store *MemSQL) AddEventDetailsToCacheWithTime(projectID int64, event *mode
 
 	currentTimeDatePart := currentTime.Format(U.DATETIME_FORMAT_YYYYMMDD)
 
-	var eventNamesKeySortedSet *cacheRedis.Key
+	var eventNamesKeySortedSet *cache.Key
 	if model.IsEventNameTypeSmartEvent(eventNameDetails.Type) {
 		eventNamesKeySortedSet, err = model.GetSmartEventNamesOrderByOccurrenceAndRecencyCacheKeySortedSet(projectID,
 			currentTimeDatePart)

@@ -1,7 +1,7 @@
 package model
 
 import (
-	cacheRedis "factors/cache/redis"
+	"factors/cache"
 	U "factors/util"
 	"net/http"
 	"strings"
@@ -171,13 +171,13 @@ func (q *ChannelQueryUnit) GetQueryCacheHashString() (string, error) {
 	return queryHash, nil
 }
 
-func (q *ChannelQueryUnit) GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key, error) {
+func (q *ChannelQueryUnit) GetQueryCacheRedisKey(projectID int64) (*cache.Key, error) {
 	hashString, err := q.GetQueryCacheHashString()
 	if err != nil {
 		return nil, err
 	}
 	suffix := getQueryCacheRedisKeySuffix(hashString, q.Query.From, q.Query.To, U.TimeZoneString(q.Query.Timezone))
-	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
+	return cache.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
 func (q *ChannelQueryUnit) GetQueryCacheExpiry(projectID int64) float64 {
@@ -263,13 +263,13 @@ func (q *ChannelGroupQueryV1) GetQueryCacheHashString() (string, error) {
 	return queryHash, nil
 }
 
-func (q *ChannelGroupQueryV1) GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key, error) {
+func (q *ChannelGroupQueryV1) GetQueryCacheRedisKey(projectID int64) (*cache.Key, error) {
 	hashString, err := q.GetQueryCacheHashString()
 	if err != nil {
 		return nil, err
 	}
 	suffix := getQueryCacheRedisKeySuffix(hashString, q.Queries[0].From, q.Queries[0].To, U.TimeZoneString(q.Queries[0].Timezone))
-	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
+	return cache.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
 func (q *ChannelGroupQueryV1) GetQueryCacheExpiry(projectID int64) float64 {

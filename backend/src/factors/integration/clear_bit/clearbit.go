@@ -2,6 +2,7 @@ package clear_bit
 
 import (
 	"encoding/json"
+	"factors/cache"
 	cacheRedis "factors/cache/redis"
 	"fmt"
 	"net/http"
@@ -10,7 +11,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-//SetClearBitCacheResult Sets the cache result key in redis.
+// SetClearBitCacheResult Sets the cache result key in redis.
 func SetClearBitCacheResult(projectID int64, userId string, userIP string) {
 	logCtx := log.WithFields(log.Fields{
 		"project_id": projectID,
@@ -37,10 +38,10 @@ func SetClearBitCacheResult(projectID int64, userId string, userIP string) {
 	}
 
 }
-func GetClearbitCacheRedisKey(projectID int64, userId string, userIP string) (*cacheRedis.Key, error) {
+func GetClearbitCacheRedisKey(projectID int64, userId string, userIP string) (*cache.Key, error) {
 	prefix := "ip:enrichment:clearbit"
 	suffix := fmt.Sprintf("userId:%d:userIP:%v", userId, userIP)
-	return cacheRedis.NewKey(projectID, prefix, suffix)
+	return cache.NewKey(projectID, prefix, suffix)
 }
 
 func GetClearbitCacheResult(projectID int64, userId string, userIP string) (bool, int) {

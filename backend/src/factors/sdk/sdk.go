@@ -3,6 +3,8 @@ package sdk
 import (
 	"encoding/json"
 	"errors"
+	"factors/cache"
+	pCache "factors/cache/persistent"
 	cacheRedis "factors/cache/redis"
 	"factors/company_enrichment/clearbit"
 	"factors/company_enrichment/factors_deanon"
@@ -412,7 +414,7 @@ func BackFillEventDataInCacheFromDb(project_id int64, currentTime time.Time, no_
 		}
 		logCtx.Info("Begin:EN:SB")
 		begin = U.TimeNowZ()
-		err = cacheRedis.SetPersistent(eventNamesKey, string(enEventCache), expiry)
+		err = pCache.Set(eventNamesKey, string(enEventCache), expiry, true)
 		end = U.TimeNowZ()
 		logCtx.WithFields(log.Fields{"timeTaken": end.Sub(begin).Milliseconds()}).Info("End:EN:SB")
 		if err != nil {
@@ -427,7 +429,7 @@ func BackFillEventDataInCacheFromDb(project_id int64, currentTime time.Time, no_
 	for event := range allevents {
 		for i := 1; i <= no_of_days; i++ {
 
-			eventPropertyValuesInCache := make(map[*cacheRedis.Key]string)
+			eventPropertyValuesInCache := make(map[*cache.Key]string)
 			var eventProperties U.CachePropertyWithTimestamp
 			eventProperties.Property = make(map[string]U.PropertyWithTimestamp)
 			dateFormat := currentTime.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
@@ -504,7 +506,7 @@ func BackFillEventDataInCacheFromDb(project_id int64, currentTime time.Time, no_
 				eventPropertyValuesInCache[eventPropertiesKey] = string(enEventPropertiesCache)
 				logCtx.Info("Begin:EPV:SB")
 				begin = U.TimeNowZ()
-				err = cacheRedis.SetPersistentBatch(eventPropertyValuesInCache, expiry)
+				err = pCache.SetBatch(eventPropertyValuesInCache, expiry, true)
 				end = U.TimeNowZ()
 				logCtx.WithFields(log.Fields{"timeTaken": end.Sub(begin).Milliseconds()}).Info("End:EN:SB")
 				if err != nil {
@@ -2201,10 +2203,10 @@ func AMPTrackByToken(token string, reqPayload *AMPTrackPayload) (int, *Response)
 		Message: trackResponse.Message, Error: trackResponse.Error}
 }
 
-func getAMPSDKByEventIDCacheKey(projectId int64, userId string, pageURL string) (*cacheRedis.Key, error) {
+func getAMPSDKByEventIDCacheKey(projectId int64, userId string, pageURL string) (*cache.Key, error) {
 	prefix := "amp_sdk_user_event"
 	suffix := "uid:" + userId + ":url:" + pageURL
-	return cacheRedis.NewKey(projectId, prefix, suffix)
+	return cache.NewKey(projectId, prefix, suffix)
 }
 
 func SetCacheAMPSDKEventIDByPageURL(projectId int64, userId string, eventId string, pageURL string) int {

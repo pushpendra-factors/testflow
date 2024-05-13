@@ -1,7 +1,7 @@
 package model
 
 import (
-	cacheRedis "factors/cache/redis"
+	"factors/cache"
 	U "factors/util"
 	"fmt"
 	"strings"
@@ -55,13 +55,13 @@ func (q *ProfileQueryGroup) GetQueryCacheHashString() (string, error) {
 	return queryHash, nil
 }
 
-func (q *ProfileQueryGroup) GetQueryCacheRedisKey(projectID int64) (*cacheRedis.Key, error) {
+func (q *ProfileQueryGroup) GetQueryCacheRedisKey(projectID int64) (*cache.Key, error) {
 	hashString, err := q.GetQueryCacheHashString()
 	if err != nil {
 		return nil, err
 	}
 	suffix := fmt.Sprintf("%s:from:%d:to:%d", hashString, q.From, q.To)
-	return cacheRedis.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
+	return cache.NewKey(projectID, QueryCacheRedisKeyPrefix, suffix)
 }
 
 func (q *ProfileQueryGroup) GetQueryCacheExpiry(projectID int64) float64 {

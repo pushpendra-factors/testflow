@@ -1,6 +1,7 @@
 package main
 
 import (
+	"factors/cache"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	"factors/model/model"
@@ -143,7 +144,7 @@ func main() {
 	min := tt.Minute()
 
 	successfulProjectsCount := 0 //Total number of projects with no failures
-	failedProjectsCount := 0 //Total number of projects with atleast one failure
+	failedProjectsCount := 0     //Total number of projects with atleast one failure
 
 	for _, projectID := range projectIDs {
 		available := true
@@ -255,7 +256,6 @@ func main() {
 		}
 	}
 
-
 	if successfulProjectsCount/3 <= failedProjectsCount {
 		C.PingHealthcheckForFailure(healthcheckPingID, finalStatus)
 	} else {
@@ -276,9 +276,9 @@ func main() {
 
 }
 
-func getSortedSetCacheKey(prefix string, projectId int64) (*cacheRedis.Key, error) {
+func getSortedSetCacheKey(prefix string, projectId int64) (*cache.Key, error) {
 	pre := fmt.Sprintf("%s:pid:%d", prefix, projectId)
-	key, err := cacheRedis.NewKeyWithOnlyPrefix(pre)
+	key, err := cache.NewKeyWithOnlyPrefix(pre)
 	if err != nil {
 		log.WithError(err).Error("Cannot get redis key")
 		return nil, err
@@ -318,7 +318,7 @@ func EventTriggerAlertsSender(projectID int64, configs map[string]interface{},
 	}
 
 	for key := range allKeys {
-		cacheKey, err := cacheRedis.KeyFromStringWithPid(key)
+		cacheKey, err := cache.KeyFromStringWithPid(key)
 		if err != nil {
 			logCtx.WithField("alert_key", key).WithError(err).
 				Error("Failed to get cacheKey from the key string")
@@ -367,7 +367,7 @@ func EventTriggerAlertsSender(projectID int64, configs map[string]interface{},
 	return sendReportForProject, blockedAlertList, ok == len(allKeys)
 }
 
-func SendKeyToRejectedQueue(strKey string, key, ssKey *cacheRedis.Key, projectID int64) error {
+func SendKeyToRejectedQueue(strKey string, key, ssKey *cache.Key, projectID int64) error {
 
 	logFields := log.Fields{
 		"project_id":     projectID,
@@ -485,7 +485,7 @@ error messages, and delivery failures.
 # In case the send for the alert was NOT a total success we execute the
 EventTriggerDeliveryFailureExecution func with the errorMessage and deliveryFailure collected
 */
-func sendHelperForEventTriggerAlert(key *cacheRedis.Key, alert *model.CachedEventTriggerAlert,
+func sendHelperForEventTriggerAlert(key *cache.Key, alert *model.CachedEventTriggerAlert,
 	alertID string, retry bool, sendTo string) (totalSuccess bool, partialSuccess bool, sendReport SendReportLogCount) {
 
 	logCtx := log.WithFields(log.Fields{
@@ -721,7 +721,7 @@ it failed while sending
 
 # Update the last_fail_details column in the DB
 */
-func EventTriggerDeliveryFailureExecution(key *cacheRedis.Key, eta *model.EventTriggerAlert,
+func EventTriggerDeliveryFailureExecution(key *cache.Key, eta *model.EventTriggerAlert,
 	deliveryFailures, errMsg []string, rejected, partialSuccess bool) error {
 
 	logFields := log.Fields{
@@ -773,7 +773,7 @@ ADD KEY TO SORTED SET
 # Rejected queues are retried but they are updated once for all the runs
 # Retries are updated once for each delivery option failure
 */
-func AddKeyToSortedSet(key *cacheRedis.Key, projectID int64, failPoint string, rejected, partialSuccess bool) error {
+func AddKeyToSortedSet(key *cache.Key, projectID int64, failPoint string, rejected, partialSuccess bool) error {
 
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -872,7 +872,7 @@ func sendSlackAlertForEventTriggerAlert(projectID int64, agentUUID string,
 			} else {
 				blockMessage = model.GetSlackMsgBlockWithoutHyperlinks(alert.Message, slackMentionStr)
 			}
-			
+
 			response, status, err := slack.SendSlackAlert(projectID, blockMessage, agentUUID, channel)
 			partialSuccess = partialSuccess || status
 			if err != nil || !status {
@@ -1133,7 +1133,7 @@ RETRY FAILED EVENT TRIGGER ALERTS
 	-> Convert the count to int64
 	-> The Failure key is of the form <fail_point>:ETA:pid:<project_id>:<alert_id>:<UnixTime>
 	-> We segregate the fail_point and original alert key
-	-> Convert the original alert key from string to *cacheRedis.Key type
+	-> Convert the original alert key from string to *cache.Key type
 	-> Find the alertId from the alert key
 	-> Check if the alertId is in blacklisted alerts then don't process it, instead send it to the rejected queue
 	-> Calculate the backoff time from the alert's count and catch time (unix_time) of the alert
@@ -1189,7 +1189,7 @@ func RetryFailedEventTriggerAlerts(projectID int64, blockedAlerts map[string]boo
 
 		orgKey := strings.SplitAfterN(key, ":", 2)
 
-		cacheKey, err := cacheRedis.KeyFromStringWithPid(orgKey[1])
+		cacheKey, err := cache.KeyFromStringWithPid(orgKey[1])
 		if err != nil {
 			logCtx.WithFields(log.Fields{"sorted_set_key": *ssKey, "alert_key": orgKey[1]}).
 				Error("failed to get cacheKey from the key string, retry failed")
@@ -1332,7 +1332,7 @@ func RejectedQueueAlertSender(projectID int64) (SendReportLogCount, string, erro
 	}
 
 	for key := range allKeys {
-		cacheKey, err := cacheRedis.KeyFromStringWithPid(key)
+		cacheKey, err := cache.KeyFromStringWithPid(key)
 		if err != nil {
 			errMsg := "failure while finding cacheKey from string key"
 			logCtx.WithField("alert_key", key).WithError(err).Error(errMsg)
@@ -1389,7 +1389,7 @@ func RejectedQueueAlertSender(projectID int64) (SendReportLogCount, string, erro
 	return report, "", nil
 }
 
-func RemoveContinuouslyFailingRejectedKeys(keys map[string]string, ssKey *cacheRedis.Key) {
+func RemoveContinuouslyFailingRejectedKeys(keys map[string]string, ssKey *cache.Key) {
 	for key, count := range keys {
 		cc, err := strconv.ParseInt(count, 0, 64)
 		if err != nil {
@@ -1401,7 +1401,7 @@ func RemoveContinuouslyFailingRejectedKeys(keys map[string]string, ssKey *cacheR
 				log.WithFields(log.Fields{"sorted_set_key": *ssKey, "alert_key": key}).WithError(err).
 					Error("cannot remove key from sorted set in cache")
 			}
-			cacheKey, err := cacheRedis.KeyFromStringWithPid(key)
+			cacheKey, err := cache.KeyFromStringWithPid(key)
 			if err != nil {
 				log.WithFields(log.Fields{"alert_key": key}).WithError(err).
 					Error("unable to convert string to cacheRedis key")

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"factors/cache"
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
@@ -23,10 +24,10 @@ type oauthState struct {
 	Source    int     `json:"source"`
 }
 
-func GetCacheKeyForSlackIntegration(projectID int64, agentUUID string) (*cacheRedis.Key, error) {
+func GetCacheKeyForSlackIntegration(projectID int64, agentUUID string) (*cache.Key, error) {
 	prefix := "slack:auth:"
 	suffix := fmt.Sprintf("agent_uid:%v", agentUUID)
-	return cacheRedis.NewKey(projectID, prefix, suffix)
+	return cache.NewKey(projectID, prefix, suffix)
 }
 
 func SetCacheForSlackAuthRandomState(projectID int64, agentUUID, randAuthState string) {

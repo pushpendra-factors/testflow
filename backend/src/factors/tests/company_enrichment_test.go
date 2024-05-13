@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"factors/cache"
 	cacheRedis "factors/cache/redis"
 	"factors/company_enrichment/factors_deanon"
 	"factors/model/model"
@@ -160,12 +161,12 @@ func UpdateAccountLimtForTesting(projectId int64, accLimit int64) error {
 
 	updatedFeatureList := addOns
 
-	if _,exists := updatedFeatureList[model.FEATURE_FACTORS_DEANONYMISATION];exists {
+	if _, exists := updatedFeatureList[model.FEATURE_FACTORS_DEANONYMISATION]; exists {
 		feature := model.FeatureDetails{
-			Limit : accLimit,
-			IsEnabledFeature : true,
+			Limit:            accLimit,
+			IsEnabledFeature: true,
 		}
-		updatedFeatureList[model.FEATURE_FACTORS_DEANONYMISATION]= feature
+		updatedFeatureList[model.FEATURE_FACTORS_DEANONYMISATION] = feature
 	}
 
 	_, err = store.GetStore().UpdateAddonsForProject(projectId, updatedFeatureList)
@@ -191,7 +192,7 @@ func AccountLimitCountIncrementForTesting(projectId int64, count int) {
 func DeleteAlertAndAccLimitRedisKeyAfterTesting(projectId int64, exhaustType string) {
 	alertKey, _ := factors_deanon.GetAccountLimitEmailAlertCacheKey(projectId, 10, exhaustType, util.TimeZoneStringIST)
 	limitKey, _ := model.GetSixSignalMonthlyUniqueEnrichmentKey(projectId, util.GetCurrentMonthYear(util.TimeZoneStringIST))
-	var keys []*cacheRedis.Key
+	var keys []*cache.Key
 	keys = append(keys, alertKey, limitKey)
 
 	cacheRedis.DelPersistent(keys...)

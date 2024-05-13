@@ -3,6 +3,7 @@ package memsql
 import (
 	"encoding/json"
 	"errors"
+	"factors/cache"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	E "factors/event_match"
@@ -776,7 +777,7 @@ func (store *MemSQL) getDisplayNamesForUP(projectId int64) map[string]string {
 	return displayNamesOp
 }
 
-func (store *MemSQL) AddAlertToCache(alert *model.EventTriggerAlertConfig, msgProps *U.PropertiesMap, fieldTagsMap map[string]string, key *cacheRedis.Key) (int, error) {
+func (store *MemSQL) AddAlertToCache(alert *model.EventTriggerAlertConfig, msgProps *U.PropertiesMap, fieldTagsMap map[string]string, key *cache.Key) (int, error) {
 	logFields := log.Fields{
 		"event_trigger_alert": alert,
 		"CacheKey":            key,
@@ -804,9 +805,9 @@ func (store *MemSQL) AddAlertToCache(alert *model.EventTriggerAlertConfig, msgPr
 	return http.StatusCreated, nil
 }
 
-func getSortedSetCacheKey(projectId int64) (*cacheRedis.Key, error) {
+func getSortedSetCacheKey(projectId int64) (*cache.Key, error) {
 	prefix := fmt.Sprintf("%s:%d", SortedSetCacheKey, projectId)
-	key, err := cacheRedis.NewKeyWithOnlyPrefix(prefix)
+	key, err := cache.NewKeyWithOnlyPrefix(prefix)
 	if err != nil {
 		log.WithError(err).Error("Cannot adding only prefix key")
 		return nil, err
@@ -914,7 +915,7 @@ func (store *MemSQL) GetMessageAndBreakdownPropertiesAndFieldsTagMap(projectID i
 	if alert.EventLevel == model.EventLevelAccount && event.UserId != "" {
 		groupDomainUserID, _, _ := store.getDomainsGroupUserIDForUser(projectID, event.UserId)
 		msgPropMap[model.ETA_DOMAIN_GROUP_USER_ID] = groupDomainUserID
-		
+
 		// for hubspot company url
 		if hsUrl, exists := (*updatedUserProps)[U.ENRICHED_HUBSPOT_COMPANY_OBJECT_URL]; exists {
 			msgPropMap[model.ETA_ENRICHED_HUBSPOT_COMPANY_OBJECT_URL] = hsUrl
@@ -1116,7 +1117,7 @@ func (store *MemSQL) transformBreakdownPropertiesToPropertyLabels(projectID int6
 
 func getCacheKeyAndSortedSetTupleAndCheckCoolDownTimeCondition(projectID int64, dontRepeatAlerts bool,
 	coolDownTime, unixtime int64, alertID string, breakdownProps *map[string]interface{}) (bool,
-	*cacheRedis.Key, cacheRedis.SortedSetKeyValueTuple, error) {
+	*cache.Key, cacheRedis.SortedSetKeyValueTuple, error) {
 
 	key, err := model.GetEventTriggerAlertCacheKey(projectID, unixtime, alertID)
 	if err != nil {
@@ -1153,7 +1154,7 @@ func getCacheKeyAndSortedSetTupleAndCheckCoolDownTimeCondition(projectID int64, 
 	return check, key, sortedSetTuple, nil
 }
 
-func isCoolDownTimeExhausted(key *cacheRedis.Key, coolDownTime, unixtime int64, breakdownProps *map[string]interface{}) (bool, error) {
+func isCoolDownTimeExhausted(key *cache.Key, coolDownTime, unixtime int64, breakdownProps *map[string]interface{}) (bool, error) {
 
 	// coolDownKeyCounter structure = ETA:CoolDown:pid:<project_id>:<alert_id>:<prop>:<value>:....
 	// remove the unixtime from the alert cache key
@@ -1173,7 +1174,7 @@ func isCoolDownTimeExhausted(key *cacheRedis.Key, coolDownTime, unixtime int64, 
 		suffix = fmt.Sprintf("%s:%s:%v", suffix, prop, (*breakdownProps)[prop])
 	}
 
-	cdKey, err := cacheRedis.NewKey(key.ProjectID, CoolDownPrefix, suffix)
+	cdKey, err := cache.NewKey(key.ProjectID, CoolDownPrefix, suffix)
 	if err != nil {
 		log.WithError(err).Error("error while getting redis key")
 		return false, err
