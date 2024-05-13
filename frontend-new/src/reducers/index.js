@@ -26,6 +26,7 @@ import { USER_LOGOUT } from './types';
 import preBuildDashboardConfig from '../Views/PreBuildDashboard/state/reducer';
 import PlansConfigReducer from './plansConfig';
 import alertTemplates from './alertTemplates';
+import workflows from './workflows';
 
 const appReducer = combineReducers({
   global: GlobalReducer,
@@ -53,7 +54,8 @@ const appReducer = combineReducers({
   userProfilesView: userProfilesViewReducer,
   featureConfig: FeatureConfigReducer,
   plansConfig: PlansConfigReducer,
-  alertTemplates: alertTemplates
+  alertTemplates: alertTemplates,
+  workflows: workflows
 });
 
 const rootReducer = (state, action) => {

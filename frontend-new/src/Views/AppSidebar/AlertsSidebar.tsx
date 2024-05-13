@@ -1,18 +1,25 @@
-import React, { memo, useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import cx from 'classnames';
-import { Button } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import styles from './index.module.scss';
 import { isAlertsUrl } from './appSidebar.helpers';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import { PathUrls } from 'Routes/pathUrls';
 import useQuery from 'hooks/useQuery';
+import { isWorkflowUrl } from 'Views/AppSidebar/appSidebar.helpers';
+import { useSelector } from 'react-redux';
+import { featureLock } from 'Routes/feature';
 
 const AlertsSidebar = () => {
   const history = useHistory();
   const routeQuery = useQuery();
 
+  const location = useLocation();
+  const { pathname } = location;
+
   const [alertType, setAlertType] = useState('realtime');
+
+  const { agent_details } = useSelector((state: any) => state.agent);
 
   useEffect(() => {
     const type = routeQuery.get('type');
@@ -31,7 +38,7 @@ const AlertsSidebar = () => {
           'cursor-pointer rounded-md p-2 flex justify-between gap-x-2 items-center',
           styles['draft-title'],
           {
-            [styles['item-active']]: alertType === 'realtime'
+            [styles['item-active']]: (isAlertsUrl(pathname) && alertType === 'realtime')
           }
         )}
       >
@@ -59,7 +66,7 @@ const AlertsSidebar = () => {
           'cursor-pointer rounded-md p-2 flex justify-between gap-x-2 items-center',
           styles['draft-title'],
           {
-            [styles['item-active']]: alertType === 'weekly'
+            [styles['item-active']]: (isAlertsUrl(pathname) && alertType === 'weekly')
           }
         )}
       >
@@ -78,6 +85,38 @@ const AlertsSidebar = () => {
           </Text>
         </div>
       </div>
+
+      {featureLock(agent_details?.email) && (
+        <div
+          role='button'
+          onClick={() => {
+            history.replace(PathUrls.Workflows);
+          }}
+          className={cx(
+            'cursor-pointer rounded-md p-2 flex justify-between gap-x-2 items-center',
+            styles['draft-title'],
+            {
+              [styles['item-active']]: isWorkflowUrl(pathname)
+            }
+          )}
+        >
+          <div className={cx('flex gap-x-1 items-center w-full')}>
+            {/* <SVG name='settings' /> */}
+            <Text
+              color={
+                isWorkflowUrl(pathname) ? 'brand-color-6' : 'character-primary'
+              }
+              type='title'
+              level={7}
+              weight={isWorkflowUrl(pathname) && 'bold'}
+              extraClass='mb-0'
+            >
+              Workflows
+            </Text>
+          </div>
+        </div>)}
+
+
     </div>
   );
 };

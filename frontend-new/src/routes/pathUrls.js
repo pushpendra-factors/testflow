@@ -9,6 +9,7 @@ export const PathUrls = {
   Analyse2: '/analyse',
   Explain: '/explain',
   Alerts: '/alerts',
+  Workflows: '/workflows',
   ExplainInsightsV2: '/explainV2/insights',
   ProfilePeople: '/profiles/people',
   ProfilePeopleDetailsURL: '/profiles/people/:id',
