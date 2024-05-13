@@ -1,19 +1,35 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { cloneDeep, startCase } from 'lodash';
 import { Button, Input } from 'antd';
 import cx from 'classnames';
 import AppModal from 'Components/AppModal';
-import { Text } from 'Components/factorsComponents';
+import { SVG, Text } from 'Components/factorsComponents';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
-import { useSelector } from 'react-redux';
-import { cloneDeep, startCase } from 'lodash';
 import { processProperties } from 'Utils/dataFormatter';
 import { getNormalizedKpi } from 'Utils/kpiQueryComposer.helpers';
+import { PathUrls } from 'Routes/pathUrls';
 import styles from './index.module.scss';
+
+const getDataTypeNote = (metricDataType) => {
+  if (metricDataType === 'currency') {
+    return '* this metric will be shown in USD currency format. Sample data - $2.4k';
+  }
+  if (metricDataType === 'percentage') {
+    return '* this metric will be shown in % format. Sample data - 24%';
+  }
+  if (metricDataType === 'duration') {
+    return '* this metric will be shown in time format. Sample data - 29d 12h';
+  }
+  return '* this metric will be shown in number format. Sample data - 15';
+};
 
 function EditMetricModal({
   visible,
   onCancel,
   isLoading,
+  metricDataType,
   savedMetricName,
   savedMetric,
   onSave
@@ -63,7 +79,7 @@ function EditMetricModal({
   }, [savedMetricName]);
 
   useEffect(() => {
-    if (kpiEvents != null) {
+    if (kpiEvents != null && visible === true) {
       kpiEvents.forEach((kpiEvent) => {
         const metricIndex = kpiEvent.values.findIndex(
           (elem) => elem.value === savedMetric
@@ -73,17 +89,10 @@ function EditMetricModal({
         }
       });
     }
-  }, [savedMetric, kpiEvents]);
+  }, [savedMetric, kpiEvents, visible]);
 
   return (
-    <AppModal
-      okText='Update'
-      visible={visible}
-      onOk={handleOk}
-      onCancel={onCancel}
-      width={600}
-      isLoading={isLoading}
-    >
+    <AppModal visible={visible} onCancel={onCancel} width={600} footer={null}>
       <div className='flex flex-col gap-y-6'>
         <div className='flex flex-col'>
           <Text
@@ -96,13 +105,13 @@ function EditMetricModal({
             Manage Mapping
           </Text>
           <Text type='title' extraClass='mb-0' color='character-secondary'>
-            Choose the KPI to map to this metric.
+            Choose an existing KPI definition to map to {savedMetricName}.
           </Text>
         </div>
-        <div className='flex flex-col gap-y-5'>
+        <div className='flex gap-x-6 items-center'>
           <div className='flex flex-col gap-y-2'>
-            <Text type='title' extraClass='mb-0' color='character-primary'>
-              Signal name
+            <Text type='title' extraClass='mb-0' color='character-secondary'>
+              Metric
             </Text>
             <Input
               onChange={handleNameChange}
@@ -113,8 +122,14 @@ function EditMetricModal({
               disabled
             />
           </div>
+          <div className={cx('relative', styles['top-3'])}>
+            <SVG name='arrowsLeftRight' color='#8692A3' size={16} />
+          </div>
 
-          <div className='border p-4'>
+          <div className='flex flex-col gap-y-2'>
+            <Text type='title' extraClass='mb-0' color='character-secondary'>
+              KPI Definition
+            </Text>
             <Button
               className='fa-button--truncate fa-button--truncate-lg btn-total-round'
               type='link'
@@ -136,6 +151,42 @@ function EditMetricModal({
                 />
               </div>
             ) : null}
+          </div>
+        </div>
+        <Text
+          type='title'
+          extraClass='mb-0'
+          weight='medium'
+          color='character-secondary'
+        >
+          {getDataTypeNote(metricDataType)}
+        </Text>
+        <div className={cx('pt-4', styles['border-t'])}>
+          <div className='flex justify-between items-center'>
+            <Link
+              className='flex items-center gap-x-1'
+              to={PathUrls.ConfigureCustomKpi}
+            >
+              <SVG size={16} color='#1890FF' name='arrowUpRightSquare' />
+              <Text
+                type='title'
+                extraClass='mb-0'
+                color='brand-color-6'
+                weight='medium'
+              >
+                Create a new definition
+              </Text>
+            </Link>
+            <div className='flex gap-x-2 items-center'>
+              <Button onClick={onCancel}>Cancel</Button>
+              <Button
+                disabled={savedMetric === selectedMetric?.value}
+                loading={isLoading}
+                onClick={handleOk}
+              >
+                Update
+              </Button>
+            </div>
           </div>
         </div>
       </div>

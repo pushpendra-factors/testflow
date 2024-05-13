@@ -136,8 +136,6 @@ func EnrichmentUsingclearBit(projectId int64, clearbitKey string, properties *U.
 	}
 	FillEnrichmentPropertiesForClearbit(results, properties)
 
-	log.WithFields(log.Fields{"project_id": projectId, "role": results.Role, "seniority": results.Seniority, "Domain": results.Domain, "geo": results.Company.Geo.Country}).Info("Clearbit response analysis")
-
 	return results.Domain, nil
 }
 

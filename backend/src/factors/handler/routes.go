@@ -104,6 +104,8 @@ func InitAppRoutes(r *gin.Engine) {
 	r.POST("/billing/hooks/invoice/ksh4jcjw245", mid.LogAuditMid(), V1.BillingInvoiceGeneratedWebhookListner)                 // random string as a part of security measure
 	r.POST("/billing/hooks/subscription/jfdksr32wr3ekfjsd", mid.LogAuditMid(), V1.BillingSubscriptionCancelledWebhookListner) // random string as a part of security measure
 	r.GET("/billing/upgrade/callback", mid.LogAuditMid(), V1.BillingUpgradeCallbackHandler)
+	r.POST("/slack/hooks/app_uninstall", mid.LogAuditMid(), V1.SlackEventListnerHandler)
+
 	// Feature Gates Auth Group
 	// authRouteGroup := r.Group(routePrefix + ROUTE_PROJECTS_ROOT)
 	// authRouteGroup.Use(mid.SetLoggedInAgent())

@@ -40,7 +40,7 @@ func (store *MemSQL) buildObjectAndPropertiesForLinkedinCompanyEngagements(proje
 		if currentObject == model.LinkedinCompany {
 			currentProperties = buildProperties(LinkedinCompanyEngagementsPropertyToRelated)
 		}
-		if currentObject == model.AdwordsCampaign {
+		if currentObject == model.AdwordsCampaign || currentObject == model.AdwordsAdGroup {
 			currentProperties = buildProperties(allChannelsPropertyToRelated)
 		}
 		objectsAndProperties = append(objectsAndProperties, buildObjectsAndProperties(currentProperties, []string{currentObject})...)

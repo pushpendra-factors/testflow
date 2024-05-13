@@ -144,7 +144,7 @@ function FilterWrapper({
   useEffect(() => {
     const [groupName, propertyName, propertyType, entity] =
       newFilterState.props;
-    const propGrp = groupName || groupName !== '' ? groupName : entity;
+    const propGrp = groupName && groupName !== '' ? groupName : entity;
 
     const payload =
       newFilterState?.props?.length === 3
@@ -184,6 +184,8 @@ function FilterWrapper({
 
   const setValuesByProps = (props) => {
     const [groupName, propertyName, propertyType, entity] = props;
+    const propGrp = groupName && groupName !== '' ? groupName : entity;
+
     const payload = props?.length === 3 ? props[0] : props[1];
     if (profileType === 'predefined' && payload) {
       getPredefinedPropertyValues(
@@ -197,7 +199,7 @@ function FilterWrapper({
       } else if (['event', 'page_view', 'button_click'].includes(groupName)) {
         getEventPropertyValues(projectID, event.label, propertyName);
       } else if (
-        !['group', 'user', 'user_g'].includes(groupName) &&
+        !['group', 'user', 'user_g'].includes(propGrp) &&
         ['group', 'user', 'user_g'].includes(entity)
       ) {
         getGroupPropertyValues(projectID, groupName, propertyName);

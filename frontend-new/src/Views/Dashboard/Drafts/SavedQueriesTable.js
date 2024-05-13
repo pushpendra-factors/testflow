@@ -22,7 +22,6 @@ import {
 } from 'Utils/constants';
 import { getQueryType } from 'Utils/dataFormatter';
 // import { fetchWeeklyIngishts } from 'Reducers/insights';
-import styles from './index.module.scss';
 import ConfirmationModal from 'Components/ConfirmationModal';
 import { deleteQuery } from 'Reducers/coreQuery/services';
 import {
@@ -40,6 +39,8 @@ import useAgentInfo from 'hooks/useAgentInfo';
 import EmptyScreen from 'Components/EmptyScreen';
 import NewReportButton from '../NewReportButton';
 import EmptyDraftScreen from './../../../assets/images/illustrations/EmptyDraftScreen.png';
+import styles from './index.module.scss';
+
 const columns = [
   {
     title: 'Type',
@@ -52,7 +53,7 @@ const columns = [
     dataIndex: 'title',
     key: 'title',
     render: (text) => (
-      <Text type={'title'} level={7} weight={'bold'} extraClass={'m-0'}>
+      <Text type='title' level={7} weight='bold' extraClass='m-0'>
         {text}
       </Text>
     )
@@ -62,26 +63,24 @@ const columns = [
     dataIndex: 'author',
     width: 240,
     key: 'author',
-    render: (created_by_user) => {
-      return (
-        <div className='flex items-center'>
-          <Avatar
-            src={
-              typeof created_by_user?.email === 'string' &&
-              created_by_user?.email?.length !== 0 &&
-              created_by_user.email.split('@')[1] === 'factors.ai'
-                ? 'https://s3.amazonaws.com/www.factors.ai/assets/img/product/factors-icon.svg'
-                : !!created_by_user?.image
-                  ? created_by_user?.image
-                  : 'assets/avatar/avatar.png'
-            }
-            size={24}
-            className={'mr-2'}
-          />
-          &nbsp; {created_by_user?.text}
-        </div>
-      );
-    }
+    render: (created_by_user) => (
+      <div className='flex items-center'>
+        <Avatar
+          src={
+            typeof created_by_user?.email === 'string' &&
+            created_by_user?.email?.length !== 0 &&
+            created_by_user.email.split('@')[1] === 'factors.ai'
+              ? 'https://s3.amazonaws.com/www.factors.ai/assets/img/product/factors-icon.svg'
+              : created_by_user?.image
+                ? created_by_user?.image
+                : 'assets/avatar/avatar.png'
+          }
+          size={24}
+          className='mr-2'
+        />
+        &nbsp; {created_by_user?.text}
+      </div>
+    )
   },
   {
     title: 'Date',
@@ -139,14 +138,12 @@ const SavedQueriesTable = ({
     if (query != null) {
       let analyseQueryParamsPath = '/analyse';
       if (query?.query?.query_group?.[0]?.cl === 'events') {
-        analyseQueryParamsPath =
-          analyseQueryParamsPath + '/events/' + query.id_text;
+        analyseQueryParamsPath = `${analyseQueryParamsPath}/events/${query.id_text}`;
       } else if (
         query?.query?.query_group?.[0]?.cl === 'funnel' &&
         featureLock(email)
       ) {
-        analyseQueryParamsPath =
-          analyseQueryParamsPath + '/funnel/' + query.id_text;
+        analyseQueryParamsPath = `${analyseQueryParamsPath}/funnel/${query.id_text}`;
       }
 
       history.push({
@@ -168,7 +165,7 @@ const SavedQueriesTable = ({
           setShowShareToSlackModal(false);
         }
         if (r.status >= 400) {
-          message.error('Error fetching slack redirect url');
+          message.error('Error fetching Slack redirect url');
         }
       })
       .catch((err) => {
@@ -187,7 +184,7 @@ const SavedQueriesTable = ({
       slackChannels = { ...slackChannels, [key]: value };
     }
 
-    let payload = {
+    const payload = {
       alert_name: selectedRow?.title || data?.subject,
       alert_type: 3,
       // "query_id": selectedRow?.key || selectedRow?.id,
@@ -215,7 +212,7 @@ const SavedQueriesTable = ({
         .then((r) => {
           notification.success({
             message: 'Report Sent Successfully',
-            description: 'Report has been sent to the selected slack channel',
+            description: 'Report has been sent to the selected Slack channel',
             duration: 5
           });
         })
@@ -255,15 +252,13 @@ const SavedQueriesTable = ({
 
     let emails = [];
     if (data?.emails) {
-      emails = data.emails.map((item) => {
-        return item.email;
-      });
+      emails = data.emails.map((item) => item.email);
     }
     if (data.email) {
       emails.push(data.email);
     }
 
-    let payload = {
+    const payload = {
       alert_name: selectedRow?.title || data?.subject,
       alert_type: 3,
       // "query_id": selectedRow?.key || selectedRow?.id,
@@ -275,7 +270,7 @@ const SavedQueriesTable = ({
       alert_configuration: {
         email_enabled: true,
         slack_enabled: false,
-        emails: emails,
+        emails,
         slack_channels_and_user_groups: {}
       }
     };
@@ -320,7 +315,7 @@ const SavedQueriesTable = ({
   };
 
   const confirmDelete = useCallback(() => {
-    let queryDetails = {
+    const queryDetails = {
       ...selectedRow,
       project_id: activeProject?.id
     };
@@ -329,62 +324,50 @@ const SavedQueriesTable = ({
     showDeleteModal(false);
   }, [activeProject?.id, selectedRow, dispatch]);
 
-  const getMenu = ({ row }) => {
-    return (
-      <Menu className={`${styles.antdActionMenu}`}>
-        <Menu.Item key='0'>
-          <div onClick={handleRowClick.bind(this, row)}>
+  const getMenu = ({ row }) => (
+    <Menu className={`${styles.antdActionMenu}`}>
+      <Menu.Item key='0'>
+        <div onClick={handleRowClick.bind(this, row)}>
+          <SVG name='eye' size={18} color='grey' extraClass='inline mr-2' />
+          View Report
+        </div>
+      </Menu.Item>
+      {getQueryType(row.query) === QUERY_TYPE_KPI ||
+      getQueryType(row.query) === QUERY_TYPE_EVENT ? (
+        <Menu.Item key='1'>
+          <a onClick={showEmailModal.bind(this, row)} href='#!'>
             <SVG
-              name={'eye'}
+              name='envelope'
               size={18}
-              color={'grey'}
-              extraClass={'inline mr-2'}
+              color='grey'
+              extraClass='inline mr-2'
             />
-            View Report
-          </div>
-        </Menu.Item>
-        {getQueryType(row.query) === QUERY_TYPE_KPI ||
-        getQueryType(row.query) === QUERY_TYPE_EVENT ? (
-          <Menu.Item key='1'>
-            <a onClick={showEmailModal.bind(this, row)} href='#!'>
-              <SVG
-                name={'envelope'}
-                size={18}
-                color={'grey'}
-                extraClass={'inline mr-2'}
-              />
-              Email this report
-            </a>
-          </Menu.Item>
-        ) : null}
-        {getQueryType(row.query) === QUERY_TYPE_KPI ||
-        getQueryType(row.query) === QUERY_TYPE_EVENT ? (
-          <Menu.Item key='2'>
-            <a onClick={showSlackModal.bind(this, row)} href='#!'>
-              <SVG
-                name={'SlackStroke'}
-                size={18}
-                color={'grey'}
-                extraClass={'inline mr-2'}
-              />
-              Share to slack
-            </a>
-          </Menu.Item>
-        ) : null}
-        <Menu.Item key='3'>
-          <a onClick={handleDelete.bind(this, row)} href='#!'>
-            <SVG
-              name={'trash'}
-              size={18}
-              color={'grey'}
-              extraClass={'inline mr-2'}
-            />
-            Delete Report
+            Email this report
           </a>
         </Menu.Item>
-      </Menu>
-    );
-  };
+      ) : null}
+      {getQueryType(row.query) === QUERY_TYPE_KPI ||
+      getQueryType(row.query) === QUERY_TYPE_EVENT ? (
+        <Menu.Item key='2'>
+          <a onClick={showSlackModal.bind(this, row)} href='#!'>
+            <SVG
+              name='SlackStroke'
+              size={18}
+              color='grey'
+              extraClass='inline mr-2'
+            />
+            Share to Slack
+          </a>
+        </Menu.Item>
+      ) : null}
+      <Menu.Item key='3'>
+        <a onClick={handleDelete.bind(this, row)} href='#!'>
+          <SVG name='trash' size={18} color='grey' extraClass='inline mr-2' />
+          Delete Report
+        </a>
+      </Menu.Item>
+    </Menu>
+  );
 
   const getFormattedRow = (q) => {
     const requestQuery = q.query;
@@ -407,7 +390,7 @@ const SavedQueriesTable = ({
     return {
       key: q.id,
       id_text: q.id_text,
-      type: <SVG name={svgName} size={24} color={'blue'} />,
+      type: <SVG name={svgName} size={24} color='blue' />,
       title: q.title,
       author: {
         image: activeProjectProfilePicture,
@@ -430,17 +413,13 @@ const SavedQueriesTable = ({
     };
   };
 
-  const onRow = (record) => {
-    return {
-      onClick: () => handleRowClick(record)
-    };
-  };
+  const onRow = (record) => ({
+    onClick: () => handleRowClick(record)
+  });
 
   const data = queriesState.data
     .filter((q) => !(q.query && q.query.cl === QUERY_TYPE_WEB))
-    .map((q) => {
-      return getFormattedRow(q);
-    });
+    .map((q) => getFormattedRow(q));
 
   useEffect(() => {
     fetchProjectSettingsV1(activeProject.id);
@@ -457,10 +436,10 @@ const SavedQueriesTable = ({
 
   useEffect(() => {
     if (slack?.length > 0) {
-      let tempArr = [];
-      let allArr = [];
+      const tempArr = [];
+      const allArr = [];
       for (let i = 0; i < slack.length; i++) {
-        tempArr.push({ label: '#' + slack[i].name, value: slack[i].id });
+        tempArr.push({ label: `#${slack[i].name}`, value: slack[i].id });
         allArr.push({
           name: slack[i].name,
           id: slack[i].id,
@@ -495,7 +474,7 @@ const SavedQueriesTable = ({
         className='fa-table--basic'
         columns={columns}
         dataSource={data}
-        pagination={true}
+        pagination
         rowClassName='cursor-pointer'
       />
       <ConfirmationModal
@@ -528,61 +507,57 @@ const SavedQueriesTable = ({
           title={null}
           visible={showShareToSlackModal}
           footer={null}
-          centered={true}
-          mask={true}
+          centered
+          mask
           maskClosable={false}
           maskStyle={{ backgroundColor: 'rgb(0 0 0 / 70%)' }}
-          closable={true}
+          closable
           isLoading={loading}
           onCancel={() => setShowShareToSlackModal(false)}
-          className={`fa-modal--regular`}
-          width={'470px'}
+          className='fa-modal--regular'
+          width='470px'
         >
-          <div className={'m-0 mb-2'}>
-            <Row className={'m-0'}>
+          <div className='m-0 mb-2'>
+            <Row className='m-0'>
               <Col>
-                <SVG
-                  name={'Slack'}
-                  size={25}
-                  extraClass={'inline mr-2 -mt-2'}
-                />
+                <SVG name='Slack' size={25} extraClass='inline mr-2 -mt-2' />
                 <Text
-                  type={'title'}
+                  type='title'
                   level={5}
-                  weight={'bold'}
-                  extraClass={'inline m-0'}
+                  weight='bold'
+                  extraClass='inline m-0'
                 >
                   Slack Integration
                 </Text>
               </Col>
             </Row>
-            <Row className={'m-0 mt-4'}>
+            <Row className='m-0 mt-4'>
               <Col>
                 <Text
-                  type={'title'}
+                  type='title'
                   level={6}
-                  color={'grey-2'}
-                  weight={'regular'}
-                  extraClass={'m-0'}
+                  color='grey-2'
+                  weight='regular'
+                  extraClass='m-0'
                 >
                   Slack is not integrated, Do you want to integrate with your
-                  slack account now?
+                  Slack account now?
                 </Text>
               </Col>
             </Row>
             <Col>
-              <Row justify='end' className={'w-full mb-1 mt-4'}>
-                <Col className={'mr-2'}>
+              <Row justify='end' className='w-full mb-1 mt-4'>
+                <Col className='mr-2'>
                   <Button
-                    type={'default'}
+                    type='default'
                     onClick={() => setShowShareToSlackModal(false)}
                   >
                     Cancel
                   </Button>
                 </Col>
-                <Col className={'mr-2'}>
-                  <Button type={'primary'} onClick={onConnectSlack}>
-                    Connect to slack
+                <Col className='mr-2'>
+                  <Button type='primary' onClick={onConnectSlack}>
+                    Connect to Slack
                   </Button>
                 </Col>
               </Row>

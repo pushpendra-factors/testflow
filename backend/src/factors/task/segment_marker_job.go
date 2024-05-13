@@ -153,20 +153,12 @@ func SegmentMarker(projectID int64, projectIdListAllRun []int64) int {
 		return http.StatusOK
 	}
 
-	lastAllRun, errCode := store.GetStore().GetMarkerLastForAllAccounts(projectID)
-
-	if errCode != http.StatusFound {
-		log.WithField("project_id", projectID).Error("Unable to find last_all_run in project_settings.")
-	}
-
 	allAccountsDecodedSegmentRule, ruleExists := decodedSegmentRulesMap[model.GROUP_NAME_DOMAINS]
 	if ruleExists && (domainGroup != nil && domainGroup.ID > 0) {
 
-		shouldSendAlerts := shouldSendAlerts(lastAllRun, allSegmentsMap[model.GROUP_NAME_DOMAINS])
-
 		// process the domains list
 		status, err := processDomainsInBatches(projectID, domainsList, allSegmentsMap[model.GROUP_NAME_DOMAINS],
-			allAccountsDecodedSegmentRule, domainGroup.ID, eventNameIDsMap, fileValuesMap, shouldSendAlerts)
+			allAccountsDecodedSegmentRule, domainGroup.ID, eventNameIDsMap, fileValuesMap)
 
 		if status != http.StatusOK || err != nil {
 			log.WithField("project_id", projectID).Error("Unable to update associated_segments to the domain user.")
@@ -188,26 +180,6 @@ func SegmentMarker(projectID int64, projectIdListAllRun []int64) int {
 	}
 
 	return http.StatusOK
-}
-
-func shouldSendAlerts(lastAllRun time.Time, segments []model.Segment) bool {
-	lastAllRunUTC := lastAllRun.UTC()
-
-	defaultTime := U.DefaultTime()
-	if defaultTime == lastAllRunUTC {
-		// shouldn't send alerts before the first "All Run"
-		return false
-	}
-
-	for _, segment := range segments {
-		// shouldn't send alerts if a segment is created/updated after the "All Run" For the day
-		if segment.UpdatedAt.UTC().After(lastAllRunUTC) {
-			return false
-		}
-	}
-
-	return true
-
 }
 
 func GetDomainsToRunMarkerFor(projectID int64, domainGroup *model.Group, domainGroupStatus int,
@@ -260,7 +232,7 @@ func GetDomainsToRunMarkerFor(projectID int64, domainGroup *model.Group, domainG
 }
 
 func processDomainsInBatches(projectID int64, domainIDList []string, segments []model.Segment, segmentsRulesArr []model.Query,
-	domainGroupId int, eventNameIDsMap map[string]string, fileValuesMap map[string]map[string]bool, shouldSendAlerts bool) (int, error) {
+	domainGroupId int, eventNameIDsMap map[string]string, fileValuesMap map[string]map[string]bool) (int, error) {
 	// Batch size
 	batchSize := C.BatchSizeSegmentMarker()
 
@@ -278,7 +250,7 @@ func processDomainsInBatches(projectID int64, domainIDList []string, segments []
 		wg.Add(len(domainIDChunks[ci]))
 		for _, domID := range domainIDChunks[ci] {
 			go fetchAndProcessFromDomainList(projectID, domID, segments, segmentsRulesArr, domainGroupId,
-				eventNameIDsMap, &wg, &statusArr, userCount, domainUpdateCount, fileValuesMap, shouldSendAlerts)
+				eventNameIDsMap, &wg, &statusArr, userCount, domainUpdateCount, fileValuesMap)
 		}
 		wg.Wait()
 	}
@@ -299,7 +271,7 @@ func processDomainsInBatches(projectID int64, domainIDList []string, segments []
 
 func fetchAndProcessFromDomainList(projectID int64, domainID string, segments []model.Segment, segmentsRulesArr []model.Query,
 	domainGroupId int, eventNameIDsMap map[string]string, waitGroup *sync.WaitGroup, statusArr *[]bool, userCount *int64,
-	domainUpdateCount *int64, fileValuesMap map[string]map[string]bool, shouldSendAlerts bool) {
+	domainUpdateCount *int64, fileValuesMap map[string]map[string]bool) {
 
 	logFields := log.Fields{
 		"project_id":      projectID,
@@ -320,7 +292,7 @@ func fetchAndProcessFromDomainList(projectID int64, domainID string, segments []
 	}
 
 	status, err := domainUsersProcessingWithErrcode(projectID, domainID, users, segments,
-		segmentsRulesArr, eventNameIDsMap, domainUpdateCount, fileValuesMap, shouldSendAlerts)
+		segmentsRulesArr, eventNameIDsMap, domainUpdateCount, fileValuesMap)
 
 	if status != http.StatusOK || err != nil {
 		log.WithField("project_id", projectID).Error("Unable to update associated_segments to the domain user.")
@@ -440,7 +412,7 @@ func userProcessingWithErrcode(projectID int64, user model.User, allSegmentsMap 
 
 func domainUsersProcessingWithErrcode(projectID int64, domId string, usersArray []model.User,
 	segments []model.Segment, segmentsRulesArr []model.Query, eventNameIDsMap map[string]string,
-	domainUpdateCount *int64, fileValuesMap map[string]map[string]bool, shouldSendAlerts bool) (int, error) {
+	domainUpdateCount *int64, fileValuesMap map[string]map[string]bool) (int, error) {
 	associatedSegments := make(map[string]model.AssociatedSegments)
 	decodedPropsArr := make([]map[string]interface{}, 0)
 	for _, user := range usersArray {
@@ -472,7 +444,7 @@ func domainUsersProcessingWithErrcode(projectID int64, domId string, usersArray 
 		}
 	}
 
-	updateAssociatedSegment := IsMapsNotMatching(projectID, domId, associatedSegments, existingAssociatedSegment, shouldSendAlerts)
+	updateAssociatedSegment := IsMapsNotMatching(projectID, domId, associatedSegments, existingAssociatedSegment)
 
 	if !updateAssociatedSegment {
 		return http.StatusOK, nil
@@ -490,8 +462,7 @@ func domainUsersProcessingWithErrcode(projectID int64, domId string, usersArray 
 	return http.StatusOK, nil
 }
 
-func IsMapsNotMatching(projectID int64, domId string, associatedSegments map[string]model.AssociatedSegments, oldAssociatedSegments map[string]interface{},
-	shouldSendAlerts bool) bool {
+func IsMapsNotMatching(projectID int64, domId string, associatedSegments map[string]model.AssociatedSegments, oldAssociatedSegments map[string]interface{}) bool {
 	isDifferent := false
 
 	// length check
@@ -506,10 +477,6 @@ func IsMapsNotMatching(projectID int64, domId string, associatedSegments map[str
 				Info("Entering the segment")
 			isDifferent = true
 
-			if !shouldSendAlerts {
-				continue
-			}
-
 			// alert for entering segment
 			store.GetStore().FindAndCacheAlertForCurrentSegment(projectID, segID, domId, model.ACTION_SEGMENT_ENTRY)
 		}
@@ -522,10 +489,6 @@ func IsMapsNotMatching(projectID int64, domId string, associatedSegments map[str
 				Info("Leaving the segment")
 
 			isDifferent = true
-
-			if !shouldSendAlerts {
-				continue
-			}
 
 			// alert for exiting segment
 			store.GetStore().FindAndCacheAlertForCurrentSegment(projectID, segID, domId, model.ACTION_SEGMENT_EXIT)

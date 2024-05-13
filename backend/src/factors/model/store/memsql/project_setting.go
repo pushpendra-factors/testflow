@@ -1099,6 +1099,7 @@ func (store *MemSQL) GetFacebookEnabledIDsAndProjectSettings() ([]int64, []model
 		log.WithError(err).Error("Failed to get facebook enabled project settings for sync info.")
 		return facebookIDs, facebookProjectSettings, http.StatusInternalServerError
 	}
+
 	for _, facebookProjectSetting := range facebookProjectSettings {
 		facebookIDs = append(facebookIDs, facebookProjectSetting.ProjectId)
 	}
@@ -1120,6 +1121,7 @@ func (store *MemSQL) GetFacebookEnabledIDsAndProjectSettingsForProject(projectID
 		log.WithError(err).Error("Failed to get facebook enabled project settings for sync info.")
 		return facebookIDs, facebookProjectSettings, http.StatusInternalServerError
 	}
+
 	for _, facebookProjectSetting := range facebookProjectSettings {
 		facebookIDs = append(facebookIDs, facebookProjectSetting.ProjectId)
 	}
@@ -1153,6 +1155,7 @@ func (store *MemSQL) GetLinkedinEnabledProjectSettingsForProjects(projectIDs []s
 		log.WithError(err).Error("Failed to get linkedin enabled project settings for sync info.")
 		return linkedinProjectSettings, http.StatusInternalServerError
 	}
+
 	return linkedinProjectSettings, http.StatusOK
 }
 

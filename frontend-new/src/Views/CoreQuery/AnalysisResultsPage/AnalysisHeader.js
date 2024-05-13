@@ -19,15 +19,15 @@ import {
   // QUERY_TYPE_KPI
 } from 'Utils/constants';
 import { QuestionCircleOutlined } from '@ant-design/icons';
+import { PathUrls } from 'Routes/pathUrls';
+import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
+import { RESET_GROUPBY } from 'Reducers/coreQuery/actions';
 import SaveQuery from '../../../components/SaveQuery';
 import { addShadowToHeader } from './analysisResultsPage.helpers';
 import { CoreQueryContext } from '../../../contexts/CoreQueryContext';
 // import FaSelect from 'Components/FaSelect';
 import styles from './index.module.scss';
 import AppModal from '../../../components/AppModal';
-import { PathUrls } from 'Routes/pathUrls';
-import { SHOW_ANALYTICS_RESULT } from 'Reducers/types';
-import { RESET_GROUPBY } from 'Reducers/coreQuery/actions';
 
 const { TabPane } = Tabs;
 
@@ -52,7 +52,7 @@ function AnalysisHeader({
 
   const dispatch = useDispatch();
 
-  let location = useLocation();
+  const location = useLocation();
 
   const history = useHistory();
   const {
@@ -110,7 +110,7 @@ function AnalysisHeader({
 
   // This checks where to route back if came from Dashboard
   const conditionalRouteBackCheck = useCallback(() => {
-    let navigatedFromDashboardExistingReports =
+    const navigatedFromDashboardExistingReports =
       location.state?.navigatedFromDashboardExistingReports;
 
     const navigatedFromDashboardWithId = location.state?.navigatedFromDashboard;
@@ -179,17 +179,14 @@ function AnalysisHeader({
     </Text>
   );
 
-  const renderReportCloseIcon = () => {
+  const renderReportCloseIcon = () => (
     // Here instead of ContextAPIs we can get this state from location state. which makes it simpler to access variables across routes
     // let navigatedFromDashboardExistingReports =
     //   location.state?.navigatedFromDashboardExistingReports;
-    return (
-      <Button size='large' type='default' onClick={handleCloseDashboardQuery}>
-        Close
-      </Button>
-    );
-  };
-
+    <Button size='large' type='default' onClick={handleCloseDashboardQuery}>
+      Close
+    </Button>
+  );
   const renderLogo = () => (
     <Button
       size='large'
@@ -254,7 +251,7 @@ function AnalysisHeader({
     );
   };
 
-  let handleIntercomHelp = () => {
+  const handleIntercomHelp = () => {
     const w = window;
     const ic = w.Intercom;
     if (typeof ic === 'function') {
@@ -279,58 +276,53 @@ function AnalysisHeader({
     >
       <Menu.Item key='1' disabled={!savedQueryId}>
         <SVG
-          name={'envelope'}
+          name='envelope'
           size={18}
           color={`${!savedQueryId ? 'LightGray' : 'grey'}`}
-          extraClass={'inline mr-2'}
+          extraClass='inline mr-2'
         />
         Email this report
       </Menu.Item>
       <Menu.Item key='2' disabled={!savedQueryId}>
         <SVG
-          name={'SlackStroke'}
+          name='SlackStroke'
           size={18}
           color={`${!savedQueryId ? 'LightGray' : 'grey'}`}
-          extraClass={'inline mr-2'}
+          extraClass='inline mr-2'
         />
-        Share to slack
+        Share to Slack
       </Menu.Item>
       <Menu.Item key='3' disabled={!savedQueryId}>
         <SVG
-          name={'addtodash'}
+          name='addtodash'
           size={18}
           color={`${!savedQueryId ? 'LightGray' : 'grey'}`}
-          extraClass={'inline mr-2'}
+          extraClass='inline mr-2'
         />
         Add to Dashboard
       </Menu.Item>
       <Menu.Divider />
       <Menu.Item key='4' disabled={!savedQueryId}>
         <SVG
-          name={'edit'}
+          name='edit'
           size={18}
           color={`${!savedQueryId ? 'LightGray' : 'grey'}`}
-          extraClass={'inline mr-2'}
+          extraClass='inline mr-2'
         />
         Edit Details
       </Menu.Item>
       <Menu.Item key='5' disabled={!savedQueryId}>
         <SVG
-          name={'TrashLight'}
+          name='TrashLight'
           size={18}
           color={`${!savedQueryId ? 'LightGray' : 'grey'}`}
-          extraClass={'inline mr-2'}
+          extraClass='inline mr-2'
         />
         Delete
       </Menu.Item>
       <Menu.Divider />
       <Menu.Item key='6'>
-        <SVG
-          name={'headset'}
-          size={18}
-          color={'grey'}
-          extraClass={'inline mr-2'}
-        />
+        <SVG name='headset' size={18} color='grey' extraClass='inline mr-2' />
         Talk to us
       </Menu.Item>
       <Menu.Item key='7'>
@@ -367,7 +359,7 @@ function AnalysisHeader({
                 <Dropdown overlay={actionMenu} placement='bottomRight'>
                   <Button
                     type='text'
-                    icon={<SVG name={'threedot'} size={25} />}
+                    icon={<SVG name='threedot' size={25} />}
                   />
                 </Dropdown>
               </div>
@@ -393,7 +385,7 @@ function AnalysisHeader({
         >
           <div className='text-center'>
             <div className='text-center mx-24 my-2'>
-              <SVG name={'Files'} />
+              <SVG name='Files' />
             </div>
             <Text
               type='title'
