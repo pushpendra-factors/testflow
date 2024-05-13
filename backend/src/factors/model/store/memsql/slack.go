@@ -80,7 +80,14 @@ func (store *MemSQL) GetSlackAuthToken(projectID int64, agentUUID string) (model
 	return token[projectID], nil
 
 }
-func (store *MemSQL) DeleteSlackIntegration(projectID int64, agentUUID string) error {
+
+func (store *MemSQL) DeleteSlackIntegrationFromAgents(projectID int64, agentUUID string) error {
+
+	logFields := log.Fields{
+		"project_id": projectID,
+		"agent_id":   agentUUID,
+	}
+
 	db := C.GetServices().Db
 	var agent model.Agent
 	err := db.Where("uuid = ?", agentUUID).Find(&agent).Error
@@ -91,7 +98,7 @@ func (store *MemSQL) DeleteSlackIntegration(projectID int64, agentUUID string) e
 	var token model.SlackAuthTokens
 	err = U.DecodePostgresJsonbToStructType(agent.SlackAccessTokens, &token)
 	if err != nil && err.Error() != "Empty jsonb object" {
-		log.Error(err)
+		log.WithFields(logFields).Error(err)
 		return err
 	}
 	if err != nil && err.Error() == "Empty jsonb object" {
@@ -106,13 +113,29 @@ func (store *MemSQL) DeleteSlackIntegration(projectID int64, agentUUID string) e
 	}
 	TokenJson, err := U.EncodeStructTypeToPostgresJsonb(newToken)
 	if err != nil {
-		log.Error(err)
+		log.WithFields(logFields).Error(err)
 		return err
 	}
 	// update the db
 	err = db.Model(&model.Agent{}).Where("uuid = ?", agentUUID).Update("slack_access_tokens", TokenJson).Error
 	if err != nil {
-		log.Error(err)
+		log.WithFields(logFields).Error(err)
+		return err
+	}
+	return nil
+}
+
+func (store *MemSQL) DeleteSlackTeamIDFromProjectAgentMappings(projectID int64, agentUUID string) error {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"agent_id":   agentUUID,
+	}
+	db := C.GetServices().Db
+
+	// update the db
+	err := db.Model(&model.ProjectAgentMapping{}).Where("agent_uuid = ? and project_id = ?", agentUUID, projectID).Update("slack_team_id", "").Error
+	if err != nil {
+		log.WithFields(logFields).Error(err)
 		return err
 	}
 	return nil

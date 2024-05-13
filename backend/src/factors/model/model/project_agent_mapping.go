@@ -4,9 +4,9 @@ import "time"
 
 type ProjectAgentMapping struct {
 	// Composite primary key with project_id and agent_uuid
-	AgentUUID string `gorm:"primary_key:true;type:varchar(255)" json:"agent_uuid"`
-	ProjectID int64  `gorm:"primary_key:true" json:"project_id"`
-
+	AgentUUID   string `gorm:"primary_key:true;type:varchar(255)" json:"agent_uuid"`
+	ProjectID   int64  `gorm:"primary_key:true" json:"project_id"`
+	SlackTeamID string `json:"slack_team_id"`
 	// Foreign key constraints added in creation script
 	// project_id -> projects(id)
 	// agent_uuid -> agents(uuid)
