@@ -160,7 +160,6 @@ func getAllowedProjectIDsAndAllProjectsTimezone() (map[int64]bool, []model.Proje
 		log.WithField("err", err).Warn(errString)
 		return make(map[int64]bool), make([]model.Project, 0), errString, http.StatusInternalServerError
 	}
-	log.WithField("allowedProjectIDs len", len(allowedProjectIDs)).WithField("allowedProjectIDs", allowedProjectIDs).Warn("testing feature flag")
 	allowedProjectIdsMap := make(map[int64]bool)
 	for _, projectID := range allowedProjectIDs {
 		allowedProjectIdsMap[projectID] = true
@@ -172,7 +171,6 @@ func getAllowedProjectIDsAndAllProjectsTimezone() (map[int64]bool, []model.Proje
 		log.Warn("Failed to get projects - events_cube_aggregation_deploy")
 		return make(map[int64]bool), make([]model.Project, 0), errString, http.StatusInternalServerError
 	}
-	log.WithField("allProjects", allProjects).WithField("allowedProjectIdsMap", allowedProjectIdsMap).Warn("testing feature flag 1")
 
 	return allowedProjectIdsMap, allProjects, "", http.StatusOK
 }
