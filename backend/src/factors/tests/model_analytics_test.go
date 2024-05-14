@@ -11397,3 +11397,277 @@ func TestAnalyticsMultipleEventsBucketing(t *testing.T) {
 	assert.Equal(t, http.StatusOK, errCode)
 	assert.True(t, len(result.Rows) > 3)
 }
+
+func TestAnalyticsDomainEvents(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+	r := gin.Default()
+	H.InitAccountRoutes(r)
+	uri := "/sdk/account/event/track"
+
+	startTime := U.TimeNowZ()
+	payload := fmt.Sprintf(`{"domain": "www.xyz.com","properties":{}}`)
+	w := ServePostRequestWithHeaders(r, "/sdk/account/create", []byte(payload), map[string]string{"Authorization": project.PrivateToken})
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	payload = fmt.Sprintf(`{"domain": "www.xyz.com", "event":{"name":"abc","properties":{"a":1},"timestamp":%d}}`,
+		U.TimeNowUnix())
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.PrivateToken})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	payload = fmt.Sprintf(`{"domain": "www.xyz.com", "event":{"name":"abc2","properties":{"a":1},"timestamp":%d}}`,
+		U.TimeNowUnix()+100)
+	w = ServePostRequestWithHeaders(r, uri, []byte(payload), map[string]string{"Authorization": project.PrivateToken})
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	_, status := SDK.TrackGroupWithDomain(project.ID, model.GROUP_NAME_SIX_SIGNAL, "xyz.com", U.PropertiesMap{"a": 2}, util.TimeNowUnix())
+	assert.Equal(t, http.StatusOK, status)
+
+	query := model.Query{
+		From: startTime.Add(-10 * time.Minute).Unix(),
+		To:   startTime.Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
+				Name:       "abc",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		Class:           model.QueryClassEvents,
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+
+	result, errCode, _ := store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Len(t, result.Rows, 1)
+
+	query = model.Query{
+		From: startTime.Add(-10 * time.Minute).Unix(),
+		To:   startTime.Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
+				Name:       "abc",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				Property:  "a",
+				Operator:  "equals",
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Value:     "2",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "OR",
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  "a",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		Class:           model.QueryClassEvents,
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Len(t, result.Rows, 1)
+	assert.Equal(t, "2", result.Rows[0][2])
+
+	query = model.Query{
+		From: startTime.Add(-10 * time.Minute).Unix(),
+		To:   startTime.Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
+				Name:       "abc",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				Property:  "a",
+				Operator:  "equals",
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Value:     "1",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "OR",
+			},
+		},
+		Class:           model.QueryClassEvents,
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Len(t, result.Rows, 0)
+
+	/*
+		WITH step_0 AS ( SELECT COALESCE( step_0_event_users_view.group_user_id,
+		step_0_event_users_view.user_groups_user_id ) as coal_group_user_id, FIRST( step_0_event_users_view.timestamp,
+		FROM_UNIXTIME(step_0_event_users_view.timestamp) ) as timestamp, 1 as step_0 FROM ( SELECT events.project_id, events.id,
+		events.event_name_id, events.user_id, events.timestamp, events.properties as event_properties,
+		events.user_properties as event_user_properties, user_groups.group_1_user_id as group_user_id,
+		user_groups.id as user_groups_user_id FROM events LEFT JOIN users as user_groups on
+		events.user_id = user_groups.id AND user_groups.project_id = '44001400' WHERE
+		events.project_id = '44001400' AND timestamp >= '1715669941' AND timestamp <= '1715671741' AND (
+		( group_user_id IS NOT NULL OR user_groups.source = 9 ) ) AND (
+		events.event_name_id = '67f0280f-032a-426d-9375-f464e7f66a53' ) LIMIT 10000000000 )
+		step_0_event_users_view GROUP BY coal_group_user_id ), step_1 AS ( SELECT COALESCE(
+		step_1_event_users_view.group_user_id, step_1_event_users_view.user_groups_user_id ) as coal_group_user_id,
+		step_1_event_users_view.timestamp, 1 as step_1 FROM ( SELECT events.project_id, events.id, events.event_name_id,
+		events.user_id, events.timestamp, events.properties as event_properties,
+		events.user_properties as event_user_properties, user_groups.group_1_user_id as group_user_id,
+		user_groups.id as user_groups_user_id FROM events LEFT JOIN users as user_groups on
+		events.user_id = user_groups.id AND user_groups.project_id = '44001400' WHERE
+		events.project_id = '44001400' AND timestamp >= '1715669941' AND timestamp <= '1715671741' AND (
+		( group_user_id IS NOT NULL OR user_groups.source = 9 ) ) AND (
+		events.event_name_id = 'afa200ad-d383-460f-9373-e97f59c4a01f' ) LIMIT 10000000000 )
+		step_1_event_users_view GROUP BY coal_group_user_id, timestamp ), step_1_step_0_users AS ( SELECT
+		step_1.coal_group_user_id, FIRST( step_1.timestamp, FROM_UNIXTIME(step_1.timestamp) ) as timestamp,
+		step_1, step_0.timestamp AS step_0_timestamp, FIRST( step_1.timestamp,
+		FROM_UNIXTIME(step_1.timestamp) ) AS step_1_timestamp FROM step_0 LEFT JOIN step_1 ON
+		step_0.coal_group_user_id = step_1.coal_group_user_id WHERE step_1.timestamp >= step_0.timestamp GROUP
+		BY step_1.coal_group_user_id ), funnel AS ( SELECT DISTINCT
+		step_0.coal_group_user_id, step_0, step_1, step_0_timestamp, step_1_timestamp FROM step_0 LEFT JOIN
+		step_1_step_0_users ON step_0.coal_group_user_id = step_1_step_0_users.coal_group_user_id AND
+		timestampdiff( DAY, DATE( CONVERT_TZ( FROM_UNIXTIME(step_0_timestamp), 'UTC', 'Asia/Kolkata'
+		) ), DATE( CONVERT_TZ( FROM_UNIXTIME(step_1_timestamp), 'UTC', 'Asia/Kolkata' )
+		) ) <= '90' ) SELECT SUM(step_0) AS step_0, SUM(step_1) AS step_1,
+		AVG(step_1_timestamp - step_0_timestamp) AS step_0_1_time FROM funnel
+	*/
+	query = model.Query{
+		From: startTime.Add(-10 * time.Minute).Unix(),
+		To:   startTime.Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
+				Name:       "abc",
+				Properties: []model.QueryProperty{},
+			},
+			model.QueryEventWithProperties{
+				Name:       "abc2",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				Property:  "a",
+				Operator:  "equals",
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Value:     "2",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "OR",
+			},
+		},
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Property:  "a",
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		Class: model.QueryClassFunnel,
+
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Len(t, result.Rows, 2)
+	assert.Equal(t, "2", result.Rows[1][0])
+
+	/*
+		WITH step_0 AS ( SELECT COALESCE( step_0_event_users_view.group_user_id,
+		step_0_event_users_view.user_groups_user_id ) as coal_group_user_id, FIRST( step_0_event_users_view.timestamp,
+		FROM_UNIXTIME(step_0_event_users_view.timestamp) ) as timestamp, 1 as step_0, MAX(group_2_id) as max_group_2_id FROM ( SELECT
+		events.project_id, events.id, events.event_name_id, events.user_id, events.timestamp,
+		events.properties as event_properties, events.user_properties as event_user_properties,
+		user_groups.group_1_user_id as group_user_id, group_users.properties as group_properties, user_groups.id
+		as user_groups_user_id, group_users.group_2_id as group_2_id FROM events LEFT
+		JOIN users as user_groups on events.user_id = user_groups.id AND
+		user_groups.project_id = '44001486' LEFT JOIN users as group_users ON
+		COALESCE(user_groups.group_1_user_id, user_groups.id) = group_users.group_1_user_id AND group_users.project_id =
+		'44001486' AND group_users.is_deleted = false AND group_users.is_group_user = true AND
+		group_users.source IN (8) AND (group_users.group_2_id IS NOT NULL) WHERE events.project_id =
+		'44001486' AND timestamp >= '1715677828' AND timestamp <= '1715679628' AND ( (
+		group_user_id IS NOT NULL OR user_groups.source = 9 ) ) AND ( events.event_name_id =
+		'1b1311b0-f0fe-41a5-81dc-2b8e5f1b6938' ) LIMIT 10000000000 ) step_0_event_users_view WHERE ( ( group_2_id is not null
+		AND ( JSON_EXTRACT_STRING(step_0_event_users_view.group_properties, 'a') = '1' ) )
+		OR (group_2_id IS NULL) ) GROUP BY coal_group_user_id HAVING max_group_2_id IS
+		NOT NULL ), step_1 AS ( SELECT COALESCE( step_1_event_users_view.group_user_id,
+		step_1_event_users_view.user_groups_user_id ) as coal_group_user_id, step_1_event_users_view.timestamp, 1 as step_1,
+		MAX(group_2_id) as max_group_2_id FROM ( SELECT events.project_id, events.id,
+		events.event_name_id, events.user_id, events.timestamp, events.properties as event_properties,
+		events.user_properties as event_user_properties, user_groups.group_1_user_id as group_user_id,
+		group_users.properties as group_properties, user_groups.id as user_groups_user_id,
+		group_users.group_2_id as group_2_id FROM events LEFT JOIN users as user_groups on events.user_id =
+		user_groups.id AND user_groups.project_id = '44001486' LEFT JOIN users as group_users ON
+		COALESCE(user_groups.group_1_user_id, user_groups.id) = group_users.group_1_user_id AND group_users.project_id =
+		'44001486' AND group_users.is_deleted = false AND group_users.is_group_user = true AND
+		group_users.source IN (8) AND (group_users.group_2_id IS NOT NULL) WHERE events.project_id =
+		'44001486' AND timestamp >= '1715677828' AND timestamp <= '1715679628' AND ( (
+		group_user_id IS NOT NULL OR user_groups.source = 9 ) ) AND ( events.event_name_id =
+		'740544a0-7e22-4219-964d-481ae795d99d' ) LIMIT 10000000000 ) step_1_event_users_view WHERE ( ( group_2_id is not null
+		AND ( JSON_EXTRACT_STRING(step_1_event_users_view.group_properties, 'a') = '1' ) )
+		OR (group_2_id IS NULL) ) GROUP BY coal_group_user_id, timestamp HAVING
+		max_group_2_id IS NOT NULL ), step_1_step_0_users AS ( SELECT step_1.coal_group_user_id,
+		FIRST( step_1.timestamp, FROM_UNIXTIME(step_1.timestamp) ) as timestamp, step_1,
+		step_0.timestamp AS step_0_timestamp, FIRST( step_1.timestamp, FROM_UNIXTIME(step_1.timestamp)
+		) AS step_1_timestamp FROM step_0 LEFT JOIN step_1 ON step_0.coal_group_user_id
+		= step_1.coal_group_user_id WHERE step_1.timestamp >= step_0.timestamp GROUP BY
+		step_1.coal_group_user_id ), funnel AS ( SELECT DISTINCT step_0.coal_group_user_id, step_0, step_1,
+		step_0_timestamp, step_1_timestamp FROM step_0 LEFT JOIN step_1_step_0_users ON
+		step_0.coal_group_user_id = step_1_step_0_users.coal_group_user_id AND timestampdiff( DAY, DATE(
+		CONVERT_TZ( FROM_UNIXTIME(step_0_timestamp), 'UTC', 'Asia/Kolkata' ) ), DATE( CONVERT_TZ(
+		FROM_UNIXTIME(step_1_timestamp), 'UTC', 'Asia/Kolkata' ) ) ) <= '90' ) SELECT SUM(step_0) AS step_0,
+		SUM(step_1) AS step_1, AVG(step_1_timestamp - step_0_timestamp) AS step_0_1_time FROM
+		funnel
+	*/
+	query = model.Query{
+		From: startTime.Add(-10 * time.Minute).Unix(),
+		To:   startTime.Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			model.QueryEventWithProperties{
+				Name:       "abc",
+				Properties: []model.QueryProperty{},
+			},
+			model.QueryEventWithProperties{
+				Name:       "abc2",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				Property:  "a",
+				Operator:  "equals",
+				GroupName: model.GROUP_NAME_SIX_SIGNAL,
+				Value:     "1",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "OR",
+			},
+		},
+		Class: model.QueryClassFunnel,
+
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondAllGivenEvent,
+	}
+
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Equal(t, float64(0), result.Rows[0][0])
+}
