@@ -197,6 +197,7 @@ type Configuration struct {
 	RunAllAccountsMarkerProjectIDs     string
 	DisableAllAccountsMarkerProjectIDs string
 	UseOptimisedEventsQueryProjectIDs  string
+	LatestSegmentsMarkerRun            string
 	RunForAllAccountsInHours           int
 	JobRunCountPerDayMarker            int
 	DomainsLimitAllRun                 int
@@ -2427,6 +2428,15 @@ func DisableAccountsRuntMarker(projectID int64) bool {
 // UseOptimisedEventsQueryProjectIDs - Checks if segment marker should use optimised query for event filters check for given project
 func MarkerEnableOptimisedEventsQuery(projectID int64) bool {
 	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().UseOptimisedEventsQueryProjectIDs, "")
+	if allProjects || projectIDsMap[projectID] {
+		return true
+	}
+	return false
+}
+
+// EnableLatestSegmentsMarkerRun - Checks if segment marker should run all run for recently updated/created segments
+func EnableLatestSegmentsMarkerRun(projectID int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().LatestSegmentsMarkerRun, "")
 	if allProjects || projectIDsMap[projectID] {
 		return true
 	}
