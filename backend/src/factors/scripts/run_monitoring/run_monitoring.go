@@ -356,6 +356,7 @@ func MonitorSDKHealth(delayedTaskThreshold, sdkQueueThreshold, integrationQueueT
 // RunFactorsDeanonEnrichmentCheck checks the last run and on the basis of that monitor the metrics related to factors deanon enrichment.
 func RunFactorsDeanonEnrichmentCheck() {
 
+	startTime := time.Now().Unix()
 	var factorsDeanonAlertMap map[int64]map[string]float64
 	var err error
 	factorsDeanonAlertLastRun, err := model.GetFactorsDeanonAlertRedisResult()
@@ -363,7 +364,7 @@ func RunFactorsDeanonEnrichmentCheck() {
 		log.WithError(err).Error("failed to get factors deanon last run")
 		return
 	}
-	if time.Now().Unix()-factorsDeanonAlertLastRun > 24*60*60 {
+	if startTime-factorsDeanonAlertLastRun > 24*60*60 {
 		factorsDeanonAlertMap, err = MonitorFactorsDeanonDailyEnrichment()
 		if err != nil {
 			log.Error("Failed to run factors deanon enrichment check ", time.Now())
@@ -371,9 +372,11 @@ func RunFactorsDeanonEnrichmentCheck() {
 		}
 		if len(factorsDeanonAlertMap) > 0 {
 			C.PingHealthcheckForFailure(C.HealthcheckFactorsDeanonAlertPingID, factorsDeanonAlertMap)
+			model.SetFactorsDeanonAlertRedisResult(startTime)
+			return
 		}
-		model.SetFactorsDeanonAlertRedisResult(time.Now().Unix())
-		C.PingHealthcheckForSuccess(C.HealthcheckFactorsDeanonAlertPingID, factorsDeanonAlertLastRun)
+		model.SetFactorsDeanonAlertRedisResult(startTime)
+		C.PingHealthcheckForSuccess(C.HealthcheckFactorsDeanonAlertPingID, factorsDeanonAlertMap)
 	}
 
 }
