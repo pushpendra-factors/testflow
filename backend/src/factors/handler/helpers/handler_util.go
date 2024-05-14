@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"factors/cache"
+	pCache "factors/cache/persistent"
 	cacheRedis "factors/cache/redis"
 	"factors/model/model"
 	"factors/model/store"
@@ -250,7 +251,7 @@ func InValidateDashboardQueryCache(projectID, dashboardID, unitID int64) []strin
 	}
 
 	for _, cacheKey := range cacheKeys {
-		err := cacheRedis.DelPersistent(cacheKey)
+		err := pCache.Del([]*cache.Key{cacheKey}, true)
 		key, _ := cacheKey.Key()
 		if err != nil {
 			failedKeys = append(failedKeys, key)

@@ -92,3 +92,26 @@ func GetIfExists(key *cache.Key, useDB bool) (string, bool, error) {
 	}
 	return v, b, err
 }
+
+func Del(keys []*cache.Key, useDB bool) error {
+	logCtx := log.WithField("tag", "cache_db").WithField("keys", len(keys)).WithField("use_db", useDB)
+
+	if len(keys) == 0 {
+		return nil
+	}
+
+	useCacheDB := config.IsCacheDBWriteEnabled(keys[0].ProjectID) && useDB
+	if !useCacheDB {
+		return redis.Del(keys...)
+	}
+
+	// TODO: Writing to both. Remove redis once migration is completed.
+	redis.Del(keys...)
+
+	logCtx.Info("Writing to cache db.")
+	err := db.Del(keys...)
+	if err != nil {
+		logCtx.WithError(err).Warn("Failed to delete from db cache.")
+	}
+	return err
+}
