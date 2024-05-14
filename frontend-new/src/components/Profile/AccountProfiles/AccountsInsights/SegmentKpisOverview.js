@@ -177,7 +177,17 @@ function SegmentKpisOverview({ widget, dateRange }) {
               </Text>
               <ControlledComponent controller={showComparisonData}>
                 <>
-                  <ComparePercent value={3} />
+                  <ComparePercent
+                    value={
+                      Boolean(compareInsightsDataByKey[queryMetric.q_me]) &&
+                      Boolean(insightsDataByKey[queryMetric.q_me])
+                        ? ((insightsDataByKey[queryMetric.q_me] -
+                            compareInsightsDataByKey[queryMetric.q_me]) /
+                            compareInsightsDataByKey[queryMetric.q_me]) *
+                          100
+                        : 0
+                    }
+                  />
                   <Text
                     extraClass='mb-0'
                     type='title'
