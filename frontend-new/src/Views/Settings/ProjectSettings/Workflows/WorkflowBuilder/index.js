@@ -23,7 +23,8 @@ import {
   Tag,
   Collapse,
   Select,
-  Form
+  Form,
+  message
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import QueryBlock from '../../../ProjectSettings/Alerts/EventBasedAlert/QueryBlock';
@@ -378,16 +379,17 @@ const WorkflowBuilder = ({
       message_properties: message_propertiesObj
     }
 
-    saveWorkflow(activeProject?.id, payload).then((res) => {
-      console.log("workflows save success!", res.data);
+    saveWorkflow(activeProject?.id, payload).then((res) => { 
       fetchSavedWorkflows(activeProject?.id);
       setBuilderMode(false);
-    }).catch((err) => console.log('workflow save error=>', err));
+      notification.success({
+        message: 'Workflow Saved',
+        description: 'New workflow is created and saved successfully.'
+      });
+    }).catch((err) => message.error(err?.data?.error));
 
   }
-
-  console.log("apolloFormDetails==>",apolloFormDetails);
-
+  
   const returnIntegrationComponent = (workflowItem) => {
     if (workflowItem?.id == TemplateIDs.FACTORS_HUBSPOT_COMPANY || workflowItem?.template_id == TemplateIDs.FACTORS_HUBSPOT_COMPANY) {
       return <FactorsHubspotCompany
