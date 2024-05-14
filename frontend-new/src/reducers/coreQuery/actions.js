@@ -89,8 +89,12 @@ export const fetchGroupPropertiesAction = (groupProps, groupName) => {
   };
 };
 
-export const setGroupPropertiesNamesAction = (groupPropsDisplayNames) => {
-  return { type: SET_GROUP_PROP_NAME, payload: groupPropsDisplayNames };
+export const setGroupPropertiesNamesAction = (groupName, displayNames) => {
+  return {
+    type: SET_GROUP_PROP_NAME,
+    payload: displayNames,
+    groupName: groupName
+  };
 };
 
 export const setUserPropertiesNamesAction = (userPropsDisplayNames) => {
@@ -105,8 +109,15 @@ export const fetchEventPropertiesActionV2 = (eventProps, name) => {
   };
 };
 
-export const setEventPropertiesNamesAction = (eventPropDisplayNames) => {
-  return { type: SET_EVENT_PROP_NAME, payload: eventPropDisplayNames };
+export const setEventPropertiesNamesAction = (
+  eventName,
+  eventPropDisplayNames
+) => {
+  return {
+    type: SET_EVENT_PROP_NAME,
+    payload: eventPropDisplayNames,
+    eventName: eventName
+  };
 };
 
 export const setButtonClicksPropertiesNamesAction = (eventPropDisplayNames) => {
