@@ -320,6 +320,8 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 	panicError = false
 
 	for _, state := range syncStatus.Status {
+		log.WithFields(log.Fields{"project_id": state.ProjectId, "message": state.Message, "state": state}).Warn("health check message information")
+
 		if state.IsProcessLimitExceeded {
 			status := store.GetStore().UpdateProjectSettingsIntegrationStatus(state.ProjectId, model.HUBSPOT, model.HEAVY_DELAYED)
 			if status != http.StatusAccepted {
