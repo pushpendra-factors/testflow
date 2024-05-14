@@ -232,7 +232,8 @@ const CoreQuery = () => {
     (
       equivalentQuery,
       navigatedFromDashboard = false,
-      qState: CoreQueryState
+      qState: CoreQueryState,
+      isSavedState = true
     ) => {
       const savedDateRange = { ...equivalentQuery.dateRange };
       const newDateRange = getDashboardDateRange();
@@ -248,7 +249,11 @@ const CoreQuery = () => {
         payload: equivalentQuery.breakdown
       });
       let queryDateRange;
-      if (navigatedFromDashboard && location?.state?.navigatedResultState) {
+      if (
+        navigatedFromDashboard &&
+        location?.state?.navigatedResultState &&
+        isSavedState
+      ) {
         queryDateRange = { date_range: dashboardDateRange };
       } else queryDateRange = { date_range: savedDateRange };
 
@@ -485,7 +490,8 @@ const CoreQuery = () => {
       updateEventFunnelsState(
         equivalentQuery,
         location?.state?.navigatedFromDashboard,
-        queryState
+        queryState,
+        isSavedQuery
       );
       if (queryState.requestQuery.length === 1) {
         dispatch({

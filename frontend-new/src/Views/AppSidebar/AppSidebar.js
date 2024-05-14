@@ -36,7 +36,7 @@ function AppSidebar() {
   const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
   const activeSegment = activeAccountPayload?.segment;
 
-  const isAllAccountsSelected = Boolean(activeSegment) === false;
+  const isAllAccountsSelected = Boolean(activeSegment?.id) === false;
 
   const {
     newSegmentMode: profileNewSegmentMode,

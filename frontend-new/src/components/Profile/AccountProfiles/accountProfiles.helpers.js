@@ -296,14 +296,18 @@ export const getColumns = ({
     render: (item) => MomentTz(item).fromNow()
   };
 
-  const columns = [accountColumn, ...tablePropColumns, lastActivityColumn];
+  let columns = [accountColumn, ...tablePropColumns, lastActivityColumn];
 
-  columns.forEach((column) => {
-    if (column.key === defaultSorterInfo?.key) {
-      column.sortOrder = defaultSorterInfo?.order;
+  columns = columns.map((column) => {
+    const updatedColumn = {
+      ...column
+    };
+    if (updatedColumn.key === defaultSorterInfo?.key) {
+      updatedColumn.sortOrder = defaultSorterInfo?.order;
     } else {
-      delete column.sortOrder;
+      delete updatedColumn.sortOrder;
     }
+    return updatedColumn;
   });
 
   const hasSorter = columns.some((item) =>
@@ -311,10 +315,14 @@ export const getColumns = ({
   );
 
   if (!hasSorter) {
-    columns.forEach((column) => {
-      if (['$engagement_level', 'last_activity'].includes(column.key)) {
-        column.defaultSortOrder = 'descend';
+    columns = columns.map((column) => {
+      const updatedColumn = {
+        ...column
+      };
+      if (['$engagement_level', 'last_activity'].includes(updatedColumn.key)) {
+        updatedColumn.defaultSortOrder = 'descend';
       }
+      return updatedColumn;
     });
   }
 
@@ -355,10 +363,9 @@ export const checkFiltersEquality = ({
           eventsList.length === 0 &&
           secondaryFiltersList.length === 0) ||
         areFiltersDirty === false
-      : applyButtonDisabled === false ||
-        (filtersList.length === 0 &&
-          eventsList.length === 0 &&
-          secondaryFiltersList.length === 0);
+      : filtersList.length === 0 &&
+        eventsList.length === 0 &&
+        secondaryFiltersList.length === 0;
   return { saveButtonDisabled, applyButtonDisabled };
 };
 
