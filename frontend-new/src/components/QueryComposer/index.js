@@ -124,10 +124,10 @@ function QueryComposer({
   }, [activeProject?.id, eventPropertiesV2, getEventPropertiesV2, queries]);
 
   const setEventsCondition = (condition) => {
-    setQueryOptions((prevOptions) => ({
-      ...prevOptions,
+    setQueryOptions({
+      ...queryOptions,
       events_condition: condition
-    }));
+    });
   };
 
   const onOrderChange = (value) => {

@@ -993,7 +993,7 @@ const CoreQuery = () => {
             res.data.result || res.data
           );
         } else {
-          createFunnelStateFromResult(queryToAdd, res, dateRange, false);
+          createFunnelStateFromResult(queryToAdd, res, durationObj, false);
         }
       } catch (err) {
         logger.error(err);
