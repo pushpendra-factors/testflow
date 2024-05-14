@@ -50,11 +50,19 @@ import useAutoFocus from 'hooks/useAutoFocus';
 import { invalidBreakdownPropertiesList } from 'Constants/general.constants';
 import MomentTz from 'Components/MomentTz';
 import useAgentInfo from 'hooks/useAgentInfo';
+import usePrevious from 'hooks/usePrevious';
 import { solutionsEmailId } from 'Utils/constants';
+import { INITIAL_ACCOUNT_PAYLOAD } from 'Reducers/accountProfilesView';
+import { getGroups, getGroupProperties } from 'Reducers/coreQuery/middleware';
+import { fetchProjectSettings, udpateProjectSettings } from 'Reducers/global';
 import {
-  getGroups,
-  getGroupProperties
-} from '../../../reducers/coreQuery/middleware';
+  getProfileAccounts,
+  createNewSegment,
+  getSavedSegments,
+  updateSegmentForId,
+  deleteSegment,
+  getTop100Events
+} from 'Reducers/timelines/middleware';
 import DownloadCSVModal from './DownloadCSVModal';
 import UpdateSegmentModal from './UpdateSegmentModal';
 import {
@@ -65,21 +73,13 @@ import RenameSegmentModal from './RenameSegmentModal';
 import DeleteSegmentModal from './DeleteSegmentModal';
 import SaveSegmentModal from './SaveSegmentModal';
 import UpgradeModal from '../UpgradeModal';
-import { defaultSegmentsList, getColumns } from './accountProfiles.helpers';
+import {
+  defaultSegmentsList,
+  getColumns,
+  checkFiltersEquality
+} from './accountProfiles.helpers';
 import ProfilesWrapper from '../ProfilesWrapper';
 import NoDataWithMessage from '../MyComponents/NoDataWithMessage';
-import {
-  fetchProjectSettings,
-  udpateProjectSettings
-} from '../../../reducers/global';
-import {
-  getProfileAccounts,
-  createNewSegment,
-  getSavedSegments,
-  updateSegmentForId,
-  deleteSegment,
-  getTop100Events
-} from '../../../reducers/timelines/middleware';
 import {
   formatReqPayload,
   getFiltersRequestPayload,
@@ -92,7 +92,6 @@ import AccountsInsights from './AccountsInsights/AccountsInsights';
 import AccountDrawer from './AccountDrawer';
 import InsightsWrapper from './InsightsWrapper';
 import styles from './index.module.scss';
-import { INITIAL_ACCOUNT_PAYLOAD } from 'Reducers/accountProfilesView';
 
 function AccountProfiles({
   createNewSegment,
@@ -181,6 +180,8 @@ function AccountProfiles({
     filtersDirty: areFiltersDirty,
     preview
   } = useSelector((state) => state.accountProfilesView);
+
+  const previousSegmentId = usePrevious(accountPayload?.segment?.id);
 
   const { sixSignalInfo } = useSelector((state) => state.featureConfig);
 
@@ -414,7 +415,10 @@ function AccountProfiles({
         });
         setAppliedFilters(cloneDeep(filters));
         setSelectedFilters(filters);
-        setFiltersDirty(false);
+
+        if (previousSegmentId !== accountPayload?.segment?.id) {
+          setFiltersDirty(false);
+        }
         if (accountPayload?.segment?.id) setFiltersExpanded(false);
       } else {
         restoreFiltersDefaultState();
@@ -759,9 +763,26 @@ function AccountProfiles({
   const handleClearFilters = () => {
     restoreFiltersDefaultState(true);
   };
-  const saveButtonDisabled = useMemo(
-    () => !accountPayload?.isUnsaved,
-    [accountPayload?.isUnsaved]
+
+  const { saveButtonDisabled } = useMemo(
+    () =>
+      checkFiltersEquality({
+        appliedFilters,
+        filtersList: selectedFilters.filters,
+        newSegmentMode,
+        eventsList: selectedFilters.eventsList,
+        eventProp: selectedFilters.eventProp,
+        areFiltersDirty,
+        isActiveSegment: Boolean(accountPayload?.segment?.id),
+        secondaryFiltersList: selectedFilters.secondaryFilters
+      }),
+    [
+      appliedFilters,
+      selectedFilters,
+      newSegmentMode,
+      areFiltersDirty,
+      accountPayload?.segment?.id
+    ]
   );
 
   const disableDiscardButton = useMemo(
