@@ -57,7 +57,6 @@ const Workflows = ({
   useEffect(() => {
     setTableLoading(true);
     fetchSavedWorkflows(activeProject?.id).then((res) => {
-      console.log("saved workflows fetched!", res.data)
       setTableLoading(false);
     }).catch((err) => {
       console.log('saved workflows fetch error=>', err)
@@ -65,7 +64,6 @@ const Workflows = ({
     });
 
     fetchWorkflowTemplates(activeProject?.id).then((res) => {
-      console.log("workflows templates fetched=>", res.data)
       setAlertTemplates(res.data)
     }).catch((err) => console.log('fetch templates error=>', err));
 
@@ -76,7 +74,6 @@ const Workflows = ({
 
 
   const confirmDeleteWorkflow = (item) => {
-    console.log('confirmDeleteWorkflow',item)
     confirm({
       title: 'Do you really want to remove this workflow?',
       icon: <ExclamationCircleOutlined />,
@@ -145,7 +142,6 @@ const Workflows = ({
           charLimit={50}
           extraClass='cursor-pointer m-0'
           onClick={() => {
-            console.log("selected workflow==>>", item)
             setSelectedTemp(item);
             setBuilderMode(true);
           }}
@@ -227,7 +223,6 @@ const Workflows = ({
   ];
 
   const newStep2Comp = (props) => {
-    console.log("newStep2Comp props", props)
     return (<>
       <div className='p-4'>
         <Text
