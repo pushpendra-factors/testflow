@@ -12,8 +12,8 @@ import (
 
 type CacheDBRecord struct {
 	// Using k and v as column name to avoid using keywords.
-	Key          string    `gorm:"k" json:"key"`
-	Value        string    `gorm:"v" json:"value"`
+	Key          string    `gorm:"column:k" json:"key"`
+	Value        string    `gorm:"column:v" json:"value"`
 	ProjectID    int64     `json:"project_id"`
 	ExpiryInSecs float64   `json:"expiry_in_secs"`
 	ExpiresAt    int64     `json:"expires_at"` // unix_timestamp for allowing sorting.
