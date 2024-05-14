@@ -132,6 +132,20 @@ func IntegrationsStatusHandler(c *gin.Context) {
 		}
 	}
 
+	connected, disconnected := store.GetStore().GetIntegrationStatusesCount(*settings, projectId, agentUUID)
+
+	for _, integrationDisplayName := range disconnected["disconnected"].([]string) {
+		result[model.FeatureDisplayNameMap[integrationDisplayName]] = model.IntegrationState{State: model.DISCONNECTED}
+	}
+
+	for _, integrationDisplayName := range connected["connected"].([]string) {
+
+		if _, ok := result[model.FeatureDisplayNameMap[integrationDisplayName]]; !ok {
+			result[model.FeatureDisplayNameMap[integrationDisplayName]] = model.IntegrationState{State: model.CONNECTED}
+		}
+
+	}
+
 	c.JSON(http.StatusOK, result)
 
 }

@@ -219,9 +219,12 @@ func (store *MemSQL) GetDomainsListFromMarker(projectID int64, payload model.Tim
 
 	lastRunTime, lastRunStatusCode := store.GetMarkerLastForAllAccounts(projectID)
 
+	// all run for given segment is completed or not if recently updated/created
+	runForGivenSegmentComplete := C.EnableLatestSegmentsMarkerRun(projectID) && segment.MarkerRunSegment.After(segment.UpdatedAt)
+
 	// Code duplicated to Memsql/segment analytics. Change in here should reflect there as well.
 	// for case - segment is updated but all_run for the day is yet to run
-	if lastRunStatusCode != http.StatusFound || segment.UpdatedAt.After(lastRunTime) {
+	if lastRunStatusCode != http.StatusFound || (segment.UpdatedAt.After(lastRunTime) && !runForGivenSegmentComplete) {
 		if C.IsMarkerPreviewEnabled(projectID) {
 			return store.GetPreviewDomainsListByProjectId(projectID, payload, domainGroupID, downloadLimitGiven)
 		}

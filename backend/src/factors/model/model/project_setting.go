@@ -20,12 +20,33 @@ var IntegrationCheckFrequency = map[string]int64{
 	FEATURE_LINKEDIN:       24 * U.SECONDS_IN_A_HOUR,
 	FEATURE_GOOGLE_ORGANIC: 12 * U.SECONDS_IN_A_HOUR,
 	BINGADS:                12 * U.SECONDS_IN_A_HOUR,
-	FEATURE_LEADSQUARED:    4 * U.SECONDS_IN_A_HOUR,
+	FEATURE_LEADSQUARED:    24 * U.SECONDS_IN_A_HOUR,
 	FEATURE_MARKETO:        24 * U.SECONDS_IN_A_HOUR,
 	FEATURE_G2:             12 * U.SECONDS_IN_A_HOUR,
 	FEATURE_SEGMENT:        1 * U.SECONDS_IN_A_HOUR,
 	FEATURE_RUDDERSTACK:    1 * U.SECONDS_IN_A_HOUR,
 	SDK:                    1 * U.SECONDS_IN_A_HOUR,
+}
+
+var FeatureDisplayNameMap = map[string]string{
+
+	"Slack":           FEATURE_SLACK,
+	"Factors 6Signal": FEATURE_FACTORS_DEANONYMISATION,
+	"Client 6Signal":  FEATURE_SIX_SIGNAL,
+	"Clearbit":        FEATURE_CLEARBIT,
+	"G2":              FEATURE_G2,
+	"Lead Squared":    FEATURE_LEADSQUARED,
+	"Marketo":         FEATURE_MARKETO,
+	"Linkedin":        FEATURE_LINKEDIN,
+	"Google Organic":  FEATURE_GOOGLE_ORGANIC,
+	"Adwords":         ADWORDS,
+	"Facebook":        FEATURE_FACEBOOK,
+	"Bing":            FEATURE_BING_ADS,
+	"Salesforce":      FEATURE_SALESFORCE,
+	"Rudderstack":     FEATURE_RUDDERSTACK,
+	"Drift":           FEATURE_DRIFT,
+	"Segment":         FEATURE_SEGMENT,
+	"Teams":           FEATURE_TEAMS,
 }
 
 type ProjectSetting struct {
@@ -136,11 +157,13 @@ const (
 	PULL_DELAYED         = "delayed"
 	SYNC_PENDING         = "pending"
 	SYNCED               = "synced"
-	ACCOUNT_DELETOIN     = "accountDeletion"
+	ACCOUNT_DELETION     = "accountDeletion"
 	CLIENT_TOKEN_EXPIRED = "client_side_token_expired"
 	HEAVY_DELAYED        = "large_data_delayed"
 	LIMIT_EXCEED         = "limit_exceed"
 	SUCCESS              = "success"
+	DISCONNECTED         = "disconnected"
+	CONNECTED            = "connected"
 )
 
 var ErrorStateToErrorMessageMap = map[string]string{
@@ -149,7 +172,9 @@ var ErrorStateToErrorMessageMap = map[string]string{
 	SYNCED:               "Unhealthy trigger hasn’t occurred",
 	HEAVY_DELAYED:        "“Data will not be lost, just delayed”",
 	CLIENT_TOKEN_EXPIRED: "client side token expired",
-	LIMIT_EXCEED:         "SixSignal Limit Exhausted",
+	LIMIT_EXCEED:         "Factors Deanomysation Limit Exhausted",
+	DISCONNECTED:         "Disconnected",
+	CONNECTED:            "Connected",
 }
 
 /* Sample Attribution Setting

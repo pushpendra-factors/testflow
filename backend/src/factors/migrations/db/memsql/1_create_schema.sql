@@ -1262,6 +1262,7 @@ CREATE TABLE IF NOT EXISTS segments(
     query json,
     type text,
     updated_at timestamp(6) DEFAULT '2024-01-01 00:00:00',
+    marker_run_segment timestamp(6) DEFAULT '1971-01-01 00:00:00',
     PRIMARY KEY (project_id, id),
     SHARD KEY (project_id, id)
 );

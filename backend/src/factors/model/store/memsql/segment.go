@@ -137,6 +137,74 @@ func (store *MemSQL) GetAllSegments(projectId int64) (map[string][]model.Segment
 	return allSegmentsMap, http.StatusFound
 }
 
+func (store *MemSQL) GetSegmentByGivenIds(projectId int64, segmentIds []string) (map[string][]model.Segment, int) {
+	logFields := log.Fields{
+		"project_id": projectId,
+		"ids":        segmentIds,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
+	if projectId == 0 || len(segmentIds) == 0 {
+		logCtx.Error("Failed to get segment by IDs. Invalid parameters.")
+		return map[string][]model.Segment{}, http.StatusBadRequest
+	}
+
+	var segments []model.Segment
+	db := C.GetServices().Db
+	err := db.Where("project_id = ? AND id IN (?) ",
+		projectId, segmentIds).Find(&segments).Error
+
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return map[string][]model.Segment{}, http.StatusNotFound
+		}
+
+		logCtx.WithError(err).Error(
+			"Failed at getting segment on GetSegmentByGivenIds.")
+		return map[string][]model.Segment{}, http.StatusInternalServerError
+	}
+
+	allSegmentsMap := make(map[string][]model.Segment, 0)
+	for _, segment := range segments {
+		if _, ok := allSegmentsMap[segment.Type]; !ok {
+			allSegmentsMap[segment.Type] = make([]model.Segment, 0)
+		}
+		allSegmentsMap[segment.Type] = append(allSegmentsMap[segment.Type], segment)
+	}
+	return allSegmentsMap, http.StatusFound
+}
+
+func (store *MemSQL) UpdateMarkerRunSegment(projectID int64, ids []string, updateTime time.Time) int {
+	logFields := log.Fields{
+		"project_id": projectID,
+		"id":         ids,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
+	if projectID == 0 || len(ids) == 0 {
+		logCtx.Error("Failed to update marker_run_segment by ID. Invalid parameters.")
+		return http.StatusBadRequest
+	}
+
+	db := C.GetServices().Db
+
+	query := "UPDATE segments SET marker_run_segment = ? WHERE project_id = ? AND id IN (?);"
+
+	params := []interface{}{updateTime, projectID, ids}
+
+	err := db.Exec(query, params...).Error
+
+	if err != nil {
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusAccepted
+}
+
 // NOTE: used for testing only.
 func (store *MemSQL) GetSegmentByName(projectId int64, name string) (*model.Segment, int) {
 	if projectId == 0 || name == "" {
