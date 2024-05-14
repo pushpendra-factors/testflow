@@ -41,7 +41,7 @@ class AppConfig(Config):
 
     @classmethod
     def get_factors_admin_gsc_redirect_url(cls, status=None):
-        url = cls.app_host_url + "/settings/integration"
+        url = cls.app_host_url + "/callback/integration/google_organic"
         if status is not None:
             url = url + "?status=" + status
         return url
