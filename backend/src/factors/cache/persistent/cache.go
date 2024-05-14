@@ -11,7 +11,7 @@ import (
 )
 
 func Set(key *cache.Key, value string, expiryInSecs float64, useDB bool) error {
-	logCtx := log.WithField("key", key).
+	logCtx := log.WithField("tag", "cache_db").WithField("key", key).
 		WithField("expirty_in_secs", expiryInSecs).
 		WithField("use_db", useDB)
 
@@ -32,7 +32,7 @@ func Set(key *cache.Key, value string, expiryInSecs float64, useDB bool) error {
 }
 
 func SetBatch(keyValue map[*cache.Key]string, expiryInSecs float64, useDB bool) error {
-	logCtx := log.WithField("keys", len(keyValue)).
+	logCtx := log.WithField("tag", "cache_db").WithField("keys", len(keyValue)).
 		WithField("expirty_in_secs", expiryInSecs).
 		WithField("use_db", useDB)
 
@@ -62,7 +62,7 @@ func SetBatch(keyValue map[*cache.Key]string, expiryInSecs float64, useDB bool) 
 }
 
 func Get(key *cache.Key, useDB bool) (string, error) {
-	logCtx := log.WithField("key", key).WithField("use_db", useDB)
+	logCtx := log.WithField("tag", "cache_db").WithField("key", key).WithField("use_db", useDB)
 
 	useCacheDB := config.IsCacheDBReadEnabled(key.ProjectID) && useDB
 	if !useCacheDB {
@@ -78,7 +78,7 @@ func Get(key *cache.Key, useDB bool) (string, error) {
 }
 
 func GetIfExists(key *cache.Key, useDB bool) (string, bool, error) {
-	logCtx := log.WithField("key", key).WithField("use_db", useDB)
+	logCtx := log.WithField("tag", "cache_db").WithField("key", key).WithField("use_db", useDB)
 
 	useCacheDB := config.IsCacheDBReadEnabled(key.ProjectID) && useDB
 	if !useCacheDB {
