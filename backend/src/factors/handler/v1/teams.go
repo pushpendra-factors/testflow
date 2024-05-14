@@ -127,7 +127,7 @@ func getTeamsCallbackURL() string {
 	return C.GetProtocol() + C.GetAPIDomain() + "/integrations/teams/callback"
 }
 func buildTeamsRedirectURL(errMsg string) string {
-	return C.GetProtocol() + C.GetAPPDomain() + "/settings/integration?error=" + url.QueryEscape(errMsg)
+	return C.GetProtocol() + C.GetAPPDomain() + "/callback/integration/teams?error=" + url.QueryEscape(errMsg)
 }
 func DeleteTeamsIntegrationHandler(c *gin.Context) {
 	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
