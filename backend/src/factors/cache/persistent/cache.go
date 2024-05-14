@@ -6,9 +6,15 @@ import (
 	"factors/cache/db"
 	"factors/cache/redis"
 	"factors/config"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func Set(key *cache.Key, value string, expiryInSecs float64, useDB bool) error {
+	logCtx := log.WithField("key", key).
+		WithField("expirty_in_secs", expiryInSecs).
+		WithField("use_db", useDB)
+
 	useCacheDB := config.IsCacheDBWriteEnabled(key.ProjectID) && useDB
 	if !useCacheDB {
 		return redis.SetPersistent(key, value, expiryInSecs)
@@ -16,10 +22,20 @@ func Set(key *cache.Key, value string, expiryInSecs float64, useDB bool) error {
 
 	// TODO: Writing to both. Remove redis once migration is completed.
 	redis.SetPersistent(key, value, expiryInSecs)
-	return db.Set(key, value, expiryInSecs)
+
+	logCtx.Info("Writing to cache db.")
+	err := db.Set(key, value, expiryInSecs)
+	if err != nil {
+		logCtx.WithError(err).Warn("Failed to write to db cache.")
+	}
+	return err
 }
 
 func SetBatch(keyValue map[*cache.Key]string, expiryInSecs float64, useDB bool) error {
+	logCtx := log.WithField("keys", len(keyValue)).
+		WithField("expirty_in_secs", expiryInSecs).
+		WithField("use_db", useDB)
+
 	if len(keyValue) == 0 {
 		return errors.New("invalid key values")
 	}
@@ -36,23 +52,43 @@ func SetBatch(keyValue map[*cache.Key]string, expiryInSecs float64, useDB bool) 
 
 	// TODO: Writing to both. Remove redis once migration is completed.
 	redis.SetPersistentBatch(keyValue, expiryInSecs)
-	return db.SetBatch(keyValue, expiryInSecs)
+
+	logCtx.Info("Writing to cache db.")
+	err := db.SetBatch(keyValue, expiryInSecs)
+	if err != nil {
+		logCtx.WithError(err).Warn("Failed to write to db cache.")
+	}
+	return err
 }
 
 func Get(key *cache.Key, useDB bool) (string, error) {
+	logCtx := log.WithField("key", key).WithField("use_db", useDB)
+
 	useCacheDB := config.IsCacheDBReadEnabled(key.ProjectID) && useDB
 	if !useCacheDB {
 		return redis.GetPersistent(key)
 	}
 
-	return db.Get(key)
+	logCtx.Info("Getting from cache db.")
+	v, err := db.Get(key)
+	if err != nil {
+		logCtx.WithError(err).Warn("Failed to get from cache.")
+	}
+	return v, err
 }
 
 func GetIfExists(key *cache.Key, useDB bool) (string, bool, error) {
+	logCtx := log.WithField("key", key).WithField("use_db", useDB)
+
 	useCacheDB := config.IsCacheDBReadEnabled(key.ProjectID) && useDB
 	if !useCacheDB {
 		return redis.GetIfExistsPersistent(key)
 	}
 
-	return db.GetIfExists(key)
+	logCtx.Info("Getting from cache db.")
+	v, b, err := db.GetIfExists(key)
+	if err != nil {
+		logCtx.WithError(err).Warn("Failed to get from cache.")
+	}
+	return v, b, err
 }
