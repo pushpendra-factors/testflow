@@ -46,7 +46,12 @@ import {
   setActivePageviewEvent
 } from '../../../reducers/timelines/middleware';
 import { udpateProjectSettings } from '../../../reducers/global';
-import { eventsFormattedForGranularity, getHost, getPropType } from '../utils';
+import {
+  eventsFormattedForGranularity,
+  flattenObjects,
+  getHost,
+  getPropType
+} from '../utils';
 import AccountTimelineBirdView from './AccountTimelineBirdView';
 import { Text, SVG } from '../../factorsComponents';
 import styles from './index.module.scss';
@@ -591,8 +596,9 @@ function AccountDetails({
       ) || [];
     showProps.forEach((prop) => {
       const propType = getPropType(listProperties, prop);
-      const propDisplayName = groupPropNames[prop]
-        ? groupPropNames[prop]
+      const mergedGroupPropNames = flattenObjects(groupPropNames);
+      const propDisplayName = mergedGroupPropNames[prop]
+        ? mergedGroupPropNames[prop]
         : PropTextFormat(prop);
       const value = props[prop];
       propsList.push(

@@ -164,29 +164,30 @@ function EventGroupBlock({
     );
   };
 
+  const renderGroupDisplayName = (state) => {
+    if (!state.property) {
+      return 'Select Property';
+    }
+    switch (state.prop_category) {
+      case 'event':
+        return eventPropNames[state.property] || PropTextFormat(state.property);
+      case 'user' || 'user_g':
+        return userPropNames[state.property] || PropTextFormat(state.property);
+      case 'group':
+        return (
+          groupPropNames[eventGroup][state.property] ||
+          PropTextFormat(state.property)
+        );
+      default:
+        return PropTextFormat(state.property);
+    }
+  };
+
   const renderGroupContent = () => {
-    let propName = '';
-    if (groupByEvent.property && groupByEvent.prop_category === 'user') {
-      propName = userPropNames[groupByEvent.property]
-        ? userPropNames[groupByEvent.property]
-        : groupByEvent.property;
-    }
-
-    if (groupByEvent.property && groupByEvent.prop_category === 'event') {
-      propName = eventPropNames[groupByEvent.property]
-        ? eventPropNames[groupByEvent.property]
-        : groupByEvent.property;
-    }
-
-    if (groupByEvent.property && groupByEvent.prop_category === 'group') {
-      propName = groupPropNames[groupByEvent.property]
-        ? groupPropNames[groupByEvent.property]
-        : groupByEvent.property;
-    }
-
+    const title = renderGroupDisplayName(groupByEvent);
     return isGroupByDDVisible ? (
       <div className='relative'>
-        <Tooltip title={propName}>
+        <Tooltip title={title}>
           <Button
             icon={
               <SVG name={groupByEvent.prop_category} size={16} color='purple' />
@@ -194,7 +195,7 @@ function EventGroupBlock({
             type='link'
             className='fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin'
           >
-            {propName}
+            {title}
           </Button>
         </Tooltip>
         <div className={styles.group_block__event_selector}>
@@ -208,7 +209,7 @@ function EventGroupBlock({
       </div>
     ) : (
       <>
-        <Tooltip title={propName}>
+        <Tooltip title={title}>
           <Button
             icon={
               <SVG name={groupByEvent.prop_category} size={16} color='purple' />
@@ -217,7 +218,7 @@ function EventGroupBlock({
             className='fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin'
             onClick={() => setGroupByDDVisible(true)}
           >
-            {propName}
+            {title}
           </Button>
         </Tooltip>
         {renderGroupPropertyOptions(groupByEvent)}

@@ -3,7 +3,10 @@ import {
   convertAndAddPropertiesToGroupSelectOptions,
   processProperties
 } from 'Utils/dataFormatter';
-import { CustomGroupDisplayNames, GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
+import {
+  CustomGroupDisplayNames,
+  GROUP_NAME_DOMAINS
+} from 'Components/GlobalFilter/FilterWrapper/utils';
 import getGroupIcon from 'Utils/getGroupIcon';
 import _ from 'lodash';
 
@@ -80,7 +83,6 @@ export const alertsGroupPropertyList = (
   event
 ) => {
   const filterOptsObj = {};
-
   const eventGroups = eventPropertiesV2[event?.label] || {};
   convertAndAddPropertiesToGroupSelectOptions(
     eventGroups,
@@ -89,10 +91,10 @@ export const alertsGroupPropertyList = (
   );
 
   if (groupProperties) {
-    let groupsList = groups
-    if(groupProperties?.hasOwnProperty(GROUP_NAME_DOMAINS)){
-      groupsList['$domains'] = 'All Accounts';
-    } 
+    const groupsList = groups;
+    if (groupProperties[GROUP_NAME_DOMAINS]) {
+      groupsList.$domains = 'All Accounts';
+    }
     Object.entries(groupProperties || {}).forEach(([group, properties]) => {
       if (Object.keys(groupsList).includes(group)) {
         const groupLabel =
