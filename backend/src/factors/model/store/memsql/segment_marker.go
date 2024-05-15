@@ -180,6 +180,7 @@ func didNotEventQuery(projectID int64, segmentId string, eventNameIDsMap map[str
 
 	if isAllAccounts {
 		userIDS := userIdsList(*segmentQuery, userArray, didEvent)
+		userIDS = append(userIDS, userID)
 		if len(userIDS) == 0 {
 			return isMatched
 		}
