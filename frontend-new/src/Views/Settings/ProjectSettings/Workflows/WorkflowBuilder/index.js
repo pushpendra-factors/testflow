@@ -511,11 +511,11 @@ const WorkflowBuilder = ({
 
       <Row className={'my-6 background-color--mono-color-1 border-radius--sm'}>
         <Col span={24}>
-          <div className='' style={{ 'min-height': '500px', padding: '5% 5%' }}>
+          <div className='flex flex-col' style={{ 'min-height': '500px', padding: '5% 5%' }}>
 
 
             {/* trigger div */}
-            <div className={'relative border--thin-2 border-radius--lg background-color--white flex flex-col fa-line--vertical'} style={{ 'margin-top': '0%', padding: '5%' }}>
+            <div className={`relative border--thin-2 border-radius--lg background-color--white flex flex-col`} style={{ 'margin-top': '0%', padding: '5%' }}>
               <Tag className='absolute top-0 mx-auto' style={{ 'margin-top': '-10px' }}>Trigger</Tag>
 
               <WorkflowTrigger
@@ -531,9 +531,11 @@ const WorkflowBuilder = ({
             </div>
 
             {/* workflow config */}
-
             
-            {queries?.length>0 ?  <div className={'z-10 relative border--thin-2 border-radius--lg background-color--white'} style={{ 'margin-top': '8%', 'min-height': '250px' }}>
+            
+            {queries?.length>0 ? <>
+              <div className={'fa-line--vertical'} />
+             <div className={'z-10 relative border--thin-2 border-radius--lg background-color--white'} style={{  'margin-top': '0%','min-height': '250px' }}>
               <div className='flex items-center' style={{ padding: '3% 3%' }}>
                 <div className='pr-6'>
                   <Text type={'title'} level={7} color={'black'} weight={'bold'} extraClass={'m-0'}>{isTemplate ? selectedTemp?.title : selectedTemp?.template_title}</Text>
@@ -549,7 +551,7 @@ const WorkflowBuilder = ({
               { showConfigureOptions && returnIntegrationComponent(selectedTemp)} 
               </div>
 
-            </div> : <></>}
+            </div></> : <></>}
           </div>
         </Col>
       </Row>
