@@ -1992,6 +1992,7 @@ var STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	EP_TIMESTAMP:                             "Timestamp",
 	EP_HOUR_OF_DAY:                           "Hour of occurrence",
 	EP_DAY_OF_WEEK:                           "Day of occurrence",
+	EP_EMAIL:                                 "UTM Email",
 	EP_SESSION_COUNT:                         "Session Count",
 	EP_TERM:                                  "Term",
 	EP_CHANNEL:                               "Channel",
