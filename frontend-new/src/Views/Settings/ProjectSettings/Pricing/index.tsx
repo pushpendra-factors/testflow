@@ -81,7 +81,11 @@ function Pricing() {
         </div>
       </div>
       <div className='mt-6'>
-        <Tabs activeKey={activeKey} onChange={handleTabChange}>
+        <Tabs
+          activeKey={activeKey}
+          onChange={handleTabChange}
+          tabBarStyle={{ marginBottom: 8 }}
+        >
           <Tabs.TabPane tab='Billing' key={PRICING_PAGE_TABS.BILLING}>
             <BillingTab
               handleBuyAddonClick={handleBuyAddonClick}

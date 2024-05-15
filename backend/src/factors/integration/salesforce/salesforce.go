@@ -15,7 +15,7 @@ const (
 	// RefreshTokenURL URL for salesforce refresh token
 	RefreshTokenURL = "https://login.salesforce.com/services/oauth2/token"
 	// AppSettingsURL URL for factors salesforce settings page
-	AppSettingsURL = "/#/settings/salesforce"
+	AppSettingsURL = "/callback/integration/salesforce"
 	// RefreshToken refresh_token
 	RefreshToken = "refresh_token"
 )

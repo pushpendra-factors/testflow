@@ -16,7 +16,8 @@ const SlackIntegration = ({
   fetchProjectSettingsV1,
   enableSlackIntegration,
   disableSlackIntegration,
-  projectSettings
+  projectSettings,
+  integrationCallback
 }) => {
   const [loading, setLoading] = useState(false);
 
@@ -36,6 +37,7 @@ const SlackIntegration = ({
               message.success('Slack integration disconnected!');
             }, 500);
             fetchProjectSettingsV1(activeProject.id);
+            integrationCallback();
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);

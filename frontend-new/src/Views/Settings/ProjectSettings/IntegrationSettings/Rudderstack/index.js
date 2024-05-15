@@ -12,8 +12,8 @@ function RudderstackIntegration({
   udpateProjectSettings,
   activeProject,
   currentProjectSettings,
-  kbLink = false,
-  currentAgent
+  currentAgent,
+  integrationCallback
 }) {
   const [loading, setLoading] = useState(false);
   const textAreaRef = useRef(null);
@@ -58,7 +58,7 @@ function RudderstackIntegration({
         setTimeout(() => {
           message.success('Rudderstack integration enabled!');
         }, 500);
-        setIsActive(true);
+        integrationCallback();
         sendSlackNotification(
           currentAgent.email,
           activeProject.name,
@@ -68,7 +68,6 @@ function RudderstackIntegration({
       .catch((err) => {
         setLoading(false);
         message.error(`${err?.data?.error}`);
-        setIsActive(false);
       });
   };
 
@@ -90,7 +89,7 @@ function RudderstackIntegration({
             setTimeout(() => {
               message.success('Rudderstack integration disabled!');
             }, 500);
-            setIsActive(false);
+            integrationCallback();
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);

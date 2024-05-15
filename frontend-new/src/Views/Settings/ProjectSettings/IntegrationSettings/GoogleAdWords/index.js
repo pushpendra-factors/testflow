@@ -42,8 +42,8 @@ const GoogleIntegration = ({
   fetchAdwordsCustomerAccounts,
   udpateProjectSettings,
   fetchProjectSettings,
-  kbLink = false,
-  deleteIntegration
+  deleteIntegration,
+  integrationCallback
 }) => {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
@@ -78,6 +78,7 @@ const GoogleIntegration = ({
             setTimeout(() => {
               message.success('Google integration disconnected!');
             }, 500);
+            integrationCallback();
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);
@@ -317,6 +318,15 @@ const GoogleIntegration = ({
     setCustomerAccountsLoaded(false);
     // history.push(INTEGRATION_HOME_PAGE);
   };
+  console.log(
+    '-------- log 12',
+    isIntAdwordsEnabled(),
+    showManageBtn,
+    !currentProjectSettings?.int_adwords_enabled_agent_uuid,
+    isIntAdwordsEnabled() &&
+      showManageBtn &&
+      !currentProjectSettings?.int_adwords_enabled_agent_uuid
+  );
   return (
     <ErrorBoundary
       fallback={
@@ -480,21 +490,22 @@ const GoogleIntegration = ({
                 /> */}
         </div>
       )}
-      {!currentProjectSettings?.int_adwords_customer_account_id && (
-        <div className='mt-4'>
-          <Button
-            type='primary'
-            loading={loading}
-            onClick={() => {
-              renderSettingInfo();
-              setShowURLModal(true);
-              // setShowManageBtn(false);
-            }}
-          >
-            Connect Account(s)
-          </Button>
-        </div>
-      )}
+      {isIntAdwordsEnabled() &&
+        !currentProjectSettings?.int_adwords_customer_account_id && (
+          <div className='mt-4'>
+            <Button
+              type='primary'
+              loading={loading}
+              onClick={() => {
+                renderSettingInfo();
+                setShowURLModal(true);
+                // setShowManageBtn(false);
+              }}
+            >
+              Connect Account(s)
+            </Button>
+          </div>
+        )}
 
       <div className='w-full'>
         {!showManageBtn && !customerAccountsLoaded && <Skeleton />}
@@ -502,9 +513,7 @@ const GoogleIntegration = ({
       {/* <div>{customerAccountsLoaded && renderAccountsList()}</div> */}
 
       <div className='mt-4 flex'>
-        {isIntAdwordsEnabled() &&
-        showManageBtn &&
-        !currentProjectSettings?.int_adwords_enabled_agent_uuid ? (
+        {!currentProjectSettings?.int_adwords_enabled_agent_uuid ? (
           <Button
             className='mr-2'
             type='primary'

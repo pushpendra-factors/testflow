@@ -1,0 +1,1 @@
+ALTER TABLE segments ADD COLUMN marker_run_segment timestamp(6) DEFAULT '1971-01-01 00:00:00';

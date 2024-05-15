@@ -12,7 +12,8 @@ import {
   Badge,
   Switch,
   Modal,
-  Space
+  Space,
+  Tag
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
@@ -28,6 +29,7 @@ import { Stub, StubOld } from './Stub';
 import { fetchSavedWorkflows, fetchWorkflowTemplates, removeSavedWorkflow } from 'Reducers/workflows';
 import MomentTz from 'Components/MomentTz';
 import TableSearchAndRefresh from 'Components/TableSearchAndRefresh';
+import WorkflowHubspotThumbnail from '../../../../assets/images/workflow-hubspot-thumbnail.png';
 
 const Workflows = ({
   fetchSavedWorkflows,
@@ -57,7 +59,6 @@ const Workflows = ({
   useEffect(() => {
     setTableLoading(true);
     fetchSavedWorkflows(activeProject?.id).then((res) => {
-      console.log("saved workflows fetched!", res.data)
       setTableLoading(false);
     }).catch((err) => {
       console.log('saved workflows fetch error=>', err)
@@ -65,7 +66,6 @@ const Workflows = ({
     });
 
     fetchWorkflowTemplates(activeProject?.id).then((res) => {
-      console.log("workflows templates fetched=>", res.data)
       setAlertTemplates(res.data)
     }).catch((err) => console.log('fetch templates error=>', err));
 
@@ -76,7 +76,6 @@ const Workflows = ({
 
 
   const confirmDeleteWorkflow = (item) => {
-    console.log('confirmDeleteWorkflow',item)
     confirm({
       title: 'Do you really want to remove this workflow?',
       icon: <ExclamationCircleOutlined />,
@@ -145,8 +144,7 @@ const Workflows = ({
           charLimit={50}
           extraClass='cursor-pointer m-0'
           onClick={() => {
-            console.log("selected workflow==>>", item)
-            setSelectedTemp(item);
+            setSelectedTemp(item?.alert_body);
             setBuilderMode(true);
           }}
         >
@@ -175,13 +173,8 @@ const Workflows = ({
       dataIndex: 'status',
       key: 'status',
       render: (item) => (
-        <div className='flex items-center'>
-          <Badge
-            className='fa-custom-badge fa-custom-badge--green'
-            status='success'
-            text='Published'
-          />
-          {/* {item?.status === 'paused' || item?.status === 'disabled' ? (
+        <div className='flex items-center'> 
+          {item?.status === 'paused' || item?.status === 'disabled' ? (
             <Badge
               className='fa-custom-badge fa-custom-badge--orange'
               status='processing'
@@ -191,12 +184,12 @@ const Workflows = ({
             <Badge
               className='fa-custom-badge fa-custom-badge--green'
               status='success'
-              text='Active'
+              text='Published'
             />
           )}
           {item?.error && (
             <SVG name='InfoCircle' extraClass='ml-2' size={18} color='red' />
-          )} */}
+          )}
         </div>
       )
     },
@@ -227,29 +220,60 @@ const Workflows = ({
   ];
 
   const newStep2Comp = (props) => {
-    console.log("newStep2Comp props", props)
     return (<>
-      <div className='p-4'>
-        <Text
-          type={'title'}
-          level={4}
-          weight={'bold'}
-          extraClass={'m-0'}
-        >
-          {props?.template?.title}
-        </Text>
-        <Text
-          type={'title'}
-          level={7}
-          extraClass={'m-0 mb-2'}
-        >
-          {props?.template?.description}
-        </Text>
-        <Button onClick={() => {
+      <div>
+      
+
+      <div className='p-6'>
+
+      <div className='flex items-center p-4'>
+      <Button 
+      type={'text'} 
+      icon={<SVG name={'ArrowLeft'} color={'grey'} size={4} />}
+      onClick={() => {
+          props.onCancel(); 
+        }}>Back</Button>
+      </div>
+
+      <div className='flex items-center p-4'>
+              <div className='p-2'>
+                  <img src={WorkflowHubspotThumbnail} style={{ 'max-height': "300px" }} />
+                </div>
+
+                <div className='pl-6'>
+                  <Text type={'title'} level={7} color={'black'} weight={'bold'} extraClass={'m-0'}>  {props?.template?.title}</Text>
+                  <Text type={'title'} level={7} extraClass={'mt-2'}>  {props?.template?.description}</Text>
+                  {props?.template?.categories.map((item)=><><Tag>{item}</Tag></>)} 
+                </div>
+        </div>
+
+        <div className='flex items-center p-4'>
+            {/* <Text type={'title'} level={7} extraClass={'mt-2'}>  {props?.template?.description}</Text> */}
+            <Text type={'title'} level={7}  color={'grey'} extraClass={'mt-2'}>Appcues' HubSpot Integration makes it easy to target marketing campaigns based on how users interact with Appcues flows and set up flows, goals, and segments based on HubSpot Contact Record properties. It can also help your teams identify how individual contacts are interacting with in-product experiences.
+Target and segment in-product experiences based on virtually any attribute in HubSpot—including plan tier, account owner, and lifecycle stage
+Update HubSpot contacts in real-time as they interact with Appcues content—including NPS and survey responses, flow completion, and goals
+Send emails to users who completed, skipped, or interacted with in-product experiences (such as emailing those who didn't complete an onboarding flow)</Text>
+
+        </div>
+      </div>
+
+
+        <div className='flex items-center justify-end p-4 border-top--thin-2'>
+              <Button type={'default'} onClick={() => {
+          props.onCancel(); 
+        }}>Cancel</Button>
+
+        <Button 
+        type={'primary'}
+        className='ml-2'
+        onClick={() => {
           setSelectedTemp(props?.template);
           props.onCancel();
-          setBuilderMode(true);
-        }}>Use this Workflow</Button>
+          setBuilderMode(true);  
+        }}>Use this template</Button>
+      </div>
+
+
       </div>
 
     </>)

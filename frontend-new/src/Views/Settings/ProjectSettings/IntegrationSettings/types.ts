@@ -24,6 +24,7 @@ export interface IntegrationContextData {
   integrationStatus: IntegrationStatusData;
   dataLoading: boolean;
   integrationStatusLoading: boolean;
+  fetchIntegrationStatus?: () => void;
 }
 
 export interface IntegrationStatusData {
@@ -33,6 +34,8 @@ export interface IntegrationStatusData {
 export interface IntegrationStatus {
   state:
     | ''
+    | 'connected'
+    | 'disconnected'
     | 'synced'
     | 'delayed'
     | 'pull_delayed'

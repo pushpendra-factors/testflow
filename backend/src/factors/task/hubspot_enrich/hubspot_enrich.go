@@ -335,6 +335,14 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 
 			}
 		}
+
+		if state.Status == model.SUCCESS {
+			status := store.GetStore().UpdateProjectSettingsIntegrationStatus(state.ProjectId, model.HUBSPOT, model.SUCCESS)
+			if status != http.StatusAccepted {
+				log.WithFields(log.Fields{"project_id": state.ProjectId}).Warn("Failed to update integration status")
+
+			}
+		}
 	}
 
 	return jobStatus, true

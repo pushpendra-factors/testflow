@@ -1404,6 +1404,6 @@ func HubspotCallbackHandler(c *gin.Context) {
 		}
 	}
 
-	redirectURL := C.GetProtocol() + C.GetAPPDomain() + "/settings/integration"
+	redirectURL := C.GetProtocol() + C.GetAPPDomain() + "/callback/integration/hubspot"
 	c.Redirect(http.StatusPermanentRedirect, redirectURL)
 }

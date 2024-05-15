@@ -156,15 +156,15 @@ function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
     );
   }
   return (
-    <div className='py-4'>
+    <div className='py-2'>
       <div className='mb-6'>
-        <div className='flex justify-between'>
+        <div className='flex justify-between items-center'>
           <div className='w-9/12'>
             <Text
               type='title'
               level={4}
               weight='bold'
-              extraClass='m-0 mb-2'
+              extraClass='m-0'
               color='character-primary'
             >
               Upgrade to get more out of Factors

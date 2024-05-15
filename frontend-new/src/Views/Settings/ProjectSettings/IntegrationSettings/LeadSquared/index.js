@@ -19,7 +19,8 @@ const LeadSquaredIntegration = ({
   currentProjectSettings,
   currentAgent,
   enableLeadSquaredIntegration,
-  disableLeadSquaredIntegration
+  disableLeadSquaredIntegration,
+  integrationCallback
 }) => {
   const [form] = Form.useForm();
   const [errorInfo, seterrorInfo] = useState(null);
@@ -50,6 +51,7 @@ const LeadSquaredIntegration = ({
           activeProject.name,
           'Leadsquared'
         );
+        integrationCallback();
       })
       .catch((err) => {
         setLoading(false);
@@ -73,6 +75,7 @@ const LeadSquaredIntegration = ({
             setTimeout(() => {
               message.success('LeadSquared integration disconnected!');
             }, 500);
+            integrationCallback();
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);

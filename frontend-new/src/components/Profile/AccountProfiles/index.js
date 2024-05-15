@@ -55,10 +55,17 @@ import { invalidBreakdownPropertiesList } from 'Constants/general.constants';
 import useAgentInfo from 'hooks/useAgentInfo';
 import { INITIAL_ACCOUNT_PAYLOAD } from 'Reducers/accountProfilesView';
 import { featureLock } from 'Routes/feature';
+import usePrevious from 'hooks/usePrevious';
+import { getGroups, getGroupProperties } from 'Reducers/coreQuery/middleware';
+import { fetchProjectSettings } from 'Reducers/global';
 import {
-  getGroups,
-  getGroupProperties
-} from '../../../reducers/coreQuery/middleware';
+  getProfileAccounts,
+  createNewSegment,
+  getSavedSegments,
+  updateSegmentForId,
+  deleteSegment,
+  getTop100Events
+} from 'Reducers/timelines/middleware';
 import DownloadCSVModal from './DownloadCSVModal';
 import UpdateSegmentModal from './UpdateSegmentModal';
 import {
@@ -72,22 +79,11 @@ import UpgradeModal from '../UpgradeModal';
 import {
   defaultSegmentsList,
   getColumns,
-  renderValue
+  renderValue,
+  checkFiltersEquality
 } from './accountProfiles.helpers';
 import ProfilesWrapper from '../ProfilesWrapper';
 import NoDataWithMessage from '../MyComponents/NoDataWithMessage';
-import {
-  fetchProjectSettings,
-  udpateProjectSettings
-} from '../../../reducers/global';
-import {
-  getProfileAccounts,
-  createNewSegment,
-  getSavedSegments,
-  updateSegmentForId,
-  deleteSegment,
-  getTop100Events
-} from '../../../reducers/timelines/middleware';
 import {
   formatReqPayload,
   getFiltersRequestPayload,
@@ -108,7 +104,6 @@ function AccountProfiles({
   getSavedSegments,
   fetchProjectSettings,
   getGroups,
-  udpateProjectSettings,
   getProfileAccounts,
   getGroupProperties,
   updateSegmentForId,
@@ -121,7 +116,6 @@ function AccountProfiles({
   const { segment_id: segmentID } = useParams();
 
   // General
-  const [timelineConfig, setTimelineConfig] = useState({});
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
   const [errMsg, setErrMsg] = useState('');
   const { email } = useAgentInfo();
@@ -187,6 +181,8 @@ function AccountProfiles({
     preview
   } = useSelector((state) => state.accountProfilesView);
 
+  const previousSegmentId = usePrevious(accountPayload?.segment?.id);
+
   const { sixSignalInfo } = useSelector((state) => state.featureConfig);
 
   const { isFeatureLocked: isScoringLocked } = useFeatureLock(
@@ -251,11 +247,6 @@ function AccountProfiles({
     }));
   }, [accounts, segmentID]);
 
-  const saveButtonDisabled = useMemo(
-    () => !accountPayload?.isUnsaved,
-    [accountPayload?.isUnsaved]
-  );
-
   const disableDiscardButton = useMemo(
     () => isEqual(selectedFilters, appliedFilters),
     [selectedFilters, appliedFilters]
@@ -269,6 +260,27 @@ function AccountProfiles({
         currentProjectSettings
       ),
     [currentProjectSettings, sixSignalInfo?.limit, sixSignalInfo?.usage]
+  );
+
+  const { saveButtonDisabled } = useMemo(
+    () =>
+      checkFiltersEquality({
+        appliedFilters,
+        filtersList: selectedFilters.filters,
+        newSegmentMode,
+        eventsList: selectedFilters.eventsList,
+        eventProp: selectedFilters.eventProp,
+        areFiltersDirty,
+        isActiveSegment: Boolean(accountPayload?.segment?.id),
+        secondaryFiltersList: selectedFilters.secondaryFilters
+      }),
+    [
+      appliedFilters,
+      selectedFilters,
+      newSegmentMode,
+      areFiltersDirty,
+      accountPayload?.segment?.id
+    ]
   );
 
   const setAccountPayload = (payload) => {
@@ -448,11 +460,6 @@ function AccountProfiles({
   }, [activeProject.id, groups]);
 
   useEffect(() => {
-    if (!currentProjectSettings?.timelines_config) return;
-    setTimelineConfig(currentProjectSettings.timelines_config);
-  }, [currentProjectSettings?.timelines_config]);
-
-  useEffect(() => {
     if (!accountPayload?.search_filter?.length) {
       setSearchTerm('');
       setSearchBarOpen(false);
@@ -499,7 +506,10 @@ function AccountProfiles({
         });
         setAppliedFilters(cloneDeep(filters));
         setSelectedFilters(filters);
-        setFiltersDirty(false);
+
+        if (previousSegmentId !== accountPayload?.segment?.id) {
+          setFiltersDirty(false);
+        }
         if (accountPayload?.segment?.id) setFiltersExpanded(false);
       } else {
         restoreFiltersDefaultState();
@@ -1393,7 +1403,6 @@ const mapDispatchToProps = (dispatch) =>
       getSavedSegments,
       getGroupProperties,
       fetchProjectSettings,
-      udpateProjectSettings,
       updateSegmentForId,
       deleteSegment,
       getTop100Events

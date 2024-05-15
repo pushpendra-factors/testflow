@@ -174,7 +174,7 @@ func buildRedirectURL(errMsg string, source int) string {
 	if source == 2 {
 		return C.GetProtocol() + C.GetAPPDomain() + "/welcome/visitoridentification/3?error=" + url.QueryEscape(errMsg)
 	}
-	return C.GetProtocol() + C.GetAPPDomain() + "/settings/integration?error=" + url.QueryEscape(errMsg)
+	return C.GetProtocol() + C.GetAPPDomain() + "/callback/integration/slack?error=" + url.QueryEscape(errMsg)
 }
 
 func GetSlackChannelsListHandler(c *gin.Context) {

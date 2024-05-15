@@ -132,6 +132,7 @@ func TestMain(m *testing.M) {
 		AllAccountsProjectId:                                "*",
 		TimelinesTablePropsQueryOpt:                         "*",
 		UseMarkerByProjectID:                                "*",
+		LatestSegmentsMarkerRun:                             "*",
 		AllowEmailDomainsByProjectID:                        "*",
 		UseHubspotCompaniesV3APIByProjectID:                 "*",
 		UseHubspotEngagementsV3APIByProjectID:               "*",

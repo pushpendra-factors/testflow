@@ -2,11 +2,11 @@ package memsql
 
 import (
 	C "factors/config"
+	"factors/model/model"
 	"fmt"
 	"net/http"
-	"time"
 	"strconv"
-	"factors/model/model"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -15,8 +15,8 @@ var DefaultDateFromObj = time.Date(0001, 01, 01, 00, 00, 00, 00, time.UTC)
 
 type MaxTimestampStruct struct{ MaxTimestamp []uint8 }
 
-const maxTimestampFromWebsiteAggregationSql = "select CASE WHEN max(timestamp_at_day) IS NULL THEN " + 
- 	"UNIX_TIMESTAMP(date_trunc('day', NOW() - INTERVAL 32 day) ) ELSE " + 
+const maxTimestampFromWebsiteAggregationSql = "select CASE WHEN max(timestamp_at_day) IS NULL THEN " +
+	"UNIX_TIMESTAMP(date_trunc('day', NOW() - INTERVAL 32 day) ) ELSE " +
 	"max(timestamp_at_day) END AS max_timestamp from website_aggregation " +
 	"WHERE timestamp_at_day >= UNIX_TIMESTAMP(date_trunc('day', NOW() - INTERVAL 32 day) ) AND project_id = %v;"
 
@@ -41,7 +41,10 @@ func (store *MemSQL) GetMaxTimestampOfDataPresenceFromWebsiteAggregation(project
 	}
 	epochValue := valueInInt64
 	valueInTime := time.Unix(epochValue, 0).UTC()
-	location, _ := time.LoadLocation(timezone)
+	location, err := time.LoadLocation(timezone)
+	if err != nil {
+		log.WithField("projectID", projectID).WithField("timezone", timezone).WithField("err", err.Error()).Warn("Failed with timezone")
+	}
 	valueInTimeZone := time.Date(valueInTime.Year(), valueInTime.Month(), valueInTime.Day(), 0, 0, 0, 0, location)
 	return valueInTimeZone, http.StatusOK
 }

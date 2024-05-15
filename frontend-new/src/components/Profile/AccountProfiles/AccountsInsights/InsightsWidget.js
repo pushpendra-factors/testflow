@@ -4,6 +4,7 @@ import cx from 'classnames';
 import { Spin } from 'antd';
 import {
   selectAccountPayload,
+  selectEditInsightsMetricStatus,
   selectInsightsByWidgetGroupId,
   selectInsightsCompareSegmentBySegmentId
 } from 'Reducers/accountProfilesView/selectors';
@@ -11,6 +12,7 @@ import { fetchInsights } from 'Reducers/accountProfilesView/services';
 import { SVG, Text } from 'Components/factorsComponents';
 import ControlledComponent from 'Components/ControlledComponent';
 import { selectSegments } from 'Reducers/timelines/selectors';
+import { resetEditMetricStatus } from 'Reducers/accountProfilesView/actions';
 import {
   getCompareDate,
   getSegmentName,
@@ -19,7 +21,12 @@ import {
 import QueryMetric from './QueryMetric';
 import styles from './index.module.scss';
 
-function InsightsWidget({ widget, dateRange, onEditMetricClick }) {
+function InsightsWidget({
+  widget,
+  dateRange,
+  onEditMetricClick,
+  editWidgetGroupId
+}) {
   const dispatch = useDispatch();
   const activeProject = useSelector((state) => state.global.active_project);
   const accountPayload = useSelector((state) => selectAccountPayload(state));
@@ -28,6 +35,7 @@ function InsightsWidget({ widget, dateRange, onEditMetricClick }) {
     selectInsightsCompareSegmentBySegmentId(state, accountPayload.segment.id)
   );
   const segments = useSelector(selectSegments);
+  const editMetricStatus = useSelector(selectEditInsightsMetricStatus);
 
   const insights = useSelector((state) =>
     selectInsightsByWidgetGroupId(
@@ -137,6 +145,54 @@ function InsightsWidget({ widget, dateRange, onEditMetricClick }) {
     compareInsights.completed,
     compareInsights.loading,
     accountPayload?.segment?.id
+  ]);
+
+  useEffect(() => {
+    if (
+      editMetricStatus.completed === true &&
+      editWidgetGroupId === widget.wid_g_id
+    ) {
+      dispatch(resetEditMetricStatus());
+      dispatch(
+        fetchInsights({
+          projectId: activeProject.id,
+          segmentId: accountPayload?.segment?.id,
+          widgetGroupId: widget.wid_g_id,
+          dateFrom: dateRange.startDate,
+          dateTo: dateRange.endDate
+        })
+      );
+      if (comparedSegmentId != null) {
+        dispatch(
+          fetchInsights({
+            projectId: activeProject.id,
+            segmentId: comparedSegmentId,
+            widgetGroupId: widget.wid_g_id,
+            dateFrom: dateRange.startDate,
+            dateTo: dateRange.endDate
+          })
+        );
+      } else {
+        dispatch(
+          fetchInsights({
+            projectId: activeProject.id,
+            segmentId: accountPayload?.segment?.id,
+            widgetGroupId: widget.wid_g_id,
+            dateFrom: compareDateRange.startDate,
+            dateTo: compareDateRange.endDate
+          })
+        );
+      }
+    }
+  }, [
+    editMetricStatus.completed,
+    activeProject.id,
+    comparedSegmentId,
+    widget,
+    dateRange,
+    accountPayload?.segment?.id,
+    compareDateRange,
+    editWidgetGroupId
   ]);
 
   const comparedSegmentName = useMemo(

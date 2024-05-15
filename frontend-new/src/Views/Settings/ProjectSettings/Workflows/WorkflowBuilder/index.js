@@ -23,7 +23,8 @@ import {
   Tag,
   Collapse,
   Select,
-  Form
+  Form,
+  message
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import QueryBlock from '../../../ProjectSettings/Alerts/EventBasedAlert/QueryBlock';
@@ -88,6 +89,7 @@ const WorkflowBuilder = ({
   fetchSavedWorkflows,
   saveWorkflow,
 }) => {
+  const configureRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [queries, setQueries] = useState([]);
   const [workflowName, setWorkflowName] = useState("");
@@ -111,12 +113,14 @@ const WorkflowBuilder = ({
   const [propertyMapAdditional2, setPropertyMapAdditional2] = useState([]);
   
   const [apolloFormDetails, setApolloFormDetails] = useState(false);
+  const [showConfigureOptions, setShowConfigureOptions] = useState(false);
 
   //paragon hook and states
   const [state, setState] = useState({
     token: ''
   });
   const { user, error, isLoaded } = useParagon(state.token);
+  
 
   const fetchToken = async () => {
     get(null, `${host}projects/${activeProject?.id}/paragon/auth`)
@@ -144,11 +148,9 @@ const WorkflowBuilder = ({
 
 
   useEffect(() => {
-    if (selectedTemp) {
-      // console.log("selectedTemp insdeUeffect===", selectedTemp);
+    if (selectedTemp) { 
       const queryData = [];
-      let isTemplateWorkflow = selectedTemp?.is_workflow ? true : false
-      console.log("isTemplateWorkflow===", isTemplateWorkflow);
+      let isTemplateWorkflow = selectedTemp?.is_workflow ? true : false 
       if(selectedTemp?.workflow_config?.trigger?.event || selectedTemp?.event){
         queryData.push({
           alias: '',
@@ -156,11 +158,12 @@ const WorkflowBuilder = ({
           filters: processFiltersFromQuery(isTemplateWorkflow ? selectedTemp?.workflow_config?.trigger?.filter : selectedTemp?.filters),
           group: ''
         });
-        setQueries(queryData); 
-        console.log("queryData===", queryData);
+        setQueries(queryData);
       }
       setWorkflowName(isTemplateWorkflow ? "" : selectedTemp?.title)
-      setIsTemplate(isTemplateWorkflow);
+      setIsTemplate(isTemplateWorkflow); 
+      setShowConfigureOptions(!isTemplateWorkflow); 
+
     }
     return () => {
       setIsTemplate(false);
@@ -378,16 +381,17 @@ const WorkflowBuilder = ({
       message_properties: message_propertiesObj
     }
 
-    saveWorkflow(activeProject?.id, payload).then((res) => {
-      console.log("workflows save success!", res.data);
+    saveWorkflow(activeProject?.id, payload).then((res) => { 
       fetchSavedWorkflows(activeProject?.id);
       setBuilderMode(false);
-    }).catch((err) => console.log('workflow save error=>', err));
+      notification.success({
+        message: 'Workflow Saved',
+        description: 'New workflow is created and saved successfully.'
+      });
+    }).catch((err) => message.error(err?.data?.error));
 
   }
-
-  console.log("apolloFormDetails==>",apolloFormDetails);
-
+  
   const returnIntegrationComponent = (workflowItem) => {
     if (workflowItem?.id == TemplateIDs.FACTORS_HUBSPOT_COMPANY || workflowItem?.template_id == TemplateIDs.FACTORS_HUBSPOT_COMPANY) {
       return <FactorsHubspotCompany
@@ -425,6 +429,13 @@ const WorkflowBuilder = ({
     else {
       return null
     }
+  }
+
+  const handleConfigure = () =>{
+    setShowConfigureOptions(true);
+    setTimeout(() => {
+      configureRef.current.scrollIntoView({ behavior: 'smooth' }); 
+    }, 300);
   }
 
   return (
@@ -500,11 +511,11 @@ const WorkflowBuilder = ({
 
       <Row className={'my-6 background-color--mono-color-1 border-radius--sm'}>
         <Col span={24}>
-          <div className='' style={{ 'min-height': '500px', padding: '5% 5%' }}>
+          <div className='flex flex-col' style={{ 'min-height': '500px', padding: '5% 5%' }}>
 
 
             {/* trigger div */}
-            <div className={'relative border--thin-2 border-radius--lg background-color--white flex flex-col fa-line--vertical'} style={{ 'margin-top': '0%', padding: '5%' }}>
+            <div className={`relative border--thin-2 border-radius--lg background-color--white flex flex-col`} style={{ 'margin-top': '0%', padding: '5%' }}>
               <Tag className='absolute top-0 mx-auto' style={{ 'margin-top': '-10px' }}>Trigger</Tag>
 
               <WorkflowTrigger
@@ -520,23 +531,27 @@ const WorkflowBuilder = ({
             </div>
 
             {/* workflow config */}
-            <div className={'z-10 relative border--thin-2 border-radius--lg background-color--white'} style={{ 'margin-top': '8%', 'min-height': '250px' }}>
+            
+            
+            {queries?.length>0 ? <>
+              <div className={'fa-line--vertical'} />
+             <div className={'z-10 relative border--thin-2 border-radius--lg background-color--white'} style={{  'margin-top': '0%','min-height': '250px' }}>
               <div className='flex items-center' style={{ padding: '3% 3%' }}>
                 <div className='pr-6'>
                   <Text type={'title'} level={7} color={'black'} weight={'bold'} extraClass={'m-0'}>{isTemplate ? selectedTemp?.title : selectedTemp?.template_title}</Text>
                   <Text type={'title'} level={7} color={'grey'} extraClass={'mt-2'}>{isTemplate ? selectedTemp?.description : selectedTemp?.template_description}</Text>
-                  <Button type='primary' extraClass={'mt-2'}>Configure Action</Button>
+                  <Button type='primary' extraClass={'mt-2'} onClick={()=>handleConfigure()}>Configure Action</Button>
                 </div>
                 <div className='px-4'>
                   <img src={WorkflowHubspotThumbnail} style={{ 'height': "150px" }} />
                 </div>
               </div>
 
-              {
-                returnIntegrationComponent(selectedTemp)
-              }
+              <div ref={configureRef}> 
+              { showConfigureOptions && returnIntegrationComponent(selectedTemp)} 
+              </div>
 
-            </div>
+            </div></> : <></>}
           </div>
         </Col>
       </Row>

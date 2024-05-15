@@ -443,6 +443,14 @@ func main() {
 
 				}
 			}
+
+			if state.Status == model.SUCCESS {
+				status := store.GetStore().UpdateProjectSettingsIntegrationStatus(state.ProjectID, model.SALESFORCE, model.SUCCESS)
+				if status != http.StatusAccepted {
+					log.WithFields(log.Fields{"project_id": state.ProjectID}).Warn("Failed to update integration status")
+
+				}
+			}
 		}
 
 		if anyFailure {

@@ -12,7 +12,8 @@ const G2Intergration = ({
   udpateProjectSettings,
   activeProject,
   currentProjectSettings,
-  currentAgent
+  currentAgent,
+  integrationCallback
 }) => {
   const [form] = Form.useForm();
   const [errorInfo, seterrorInfo] = useState(null);
@@ -39,6 +40,7 @@ const G2Intergration = ({
           message.success('G2 integration successful');
         }, 500);
         sendSlackNotification(currentAgent.email, activeProject.name, 'G2');
+        integrationCallback();
       })
       .catch((err) => {
         setShowForm(false);
@@ -66,6 +68,7 @@ const G2Intergration = ({
             setTimeout(() => {
               message.success('G2 integration disconnected!');
             }, 500);
+            integrationCallback();
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);

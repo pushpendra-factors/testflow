@@ -13,8 +13,8 @@ function SegmentIntegration({
   udpateProjectSettings,
   activeProject,
   currentProjectSettings,
-  kbLink = false,
-  currentAgent
+  currentAgent,
+  integrationCallback
 }) {
   const [loading, setLoading] = useState(false);
   const textAreaRef = useRef(null);
@@ -63,6 +63,7 @@ function SegmentIntegration({
           activeProject.name,
           'Segment'
         );
+        integrationCallback();
       })
       .catch((err) => {
         setLoading(false);
@@ -89,6 +90,7 @@ function SegmentIntegration({
             setTimeout(() => {
               message.success('Segment integration disabled!');
             }, 500);
+            integrationCallback();
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);

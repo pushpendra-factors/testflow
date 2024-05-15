@@ -12,7 +12,8 @@ const DriftIntegration = ({
   udpateProjectSettings,
   activeProject,
   currentProjectSettings,
-  currentAgent
+  currentAgent,
+  integrationCallback
 }) => {
   const [loading, setLoading] = useState(false);
 
@@ -32,6 +33,7 @@ const DriftIntegration = ({
           message.success('Drift integration enabled!');
         }, 500);
         sendSlackNotification(currentAgent.email, activeProject.name, 'Drift');
+        integrationCallback();
       })
       .catch((err) => {
         setLoading(false);
@@ -54,6 +56,7 @@ const DriftIntegration = ({
             setTimeout(() => {
               message.success('Drift integration disabled!');
             }, 500);
+            integrationCallback();
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);

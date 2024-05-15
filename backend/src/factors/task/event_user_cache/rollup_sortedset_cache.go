@@ -305,14 +305,15 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 				}
 
 				if isCurrentDay == false {
-					err = cacheRedis.DelPersistent(
+					err = pCache.Del([]*cache.Key{
 						eventNamesSmartKeySortedSet,
 						eventNamesPageViewSortedSet,
 						eventNamesKeySortedSet,
 						propertyCategoryKeySortedSet,
 						valueKeySortedSet,
 						userPropertyCategoryKeySortedSet,
-						userValueKeySortedSet,
+						userValueKeySortedSet},
+						true,
 					)
 					if err != nil {
 						logCtx.WithError(err).Error("Failed to del cache keys")
@@ -422,9 +423,10 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 				logCtx.Info("Cached group property values rollup.")
 
 				if isCurrentDay == false {
-					err = cacheRedis.DelPersistent(
+					err = pCache.Del([]*cache.Key{
 						groupPropertyCategoryKeySortedSet,
 						groupValueKeySortedSet,
+					}, true,
 					)
 					if err != nil {
 						logCtx.WithError(err).Error("Failed to del cache keys")
@@ -503,9 +505,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 
 		// Delete rollups only if enabled for backward compatibility on rollback.
 		if deleteRollupAfterAddingToAggregate == 1 {
-			err := cacheRedis.DelPersistent(
-				rollupsAddedToAggregate...,
-			)
+			err := pCache.Del(rollupsAddedToAggregate, true)
 			if err != nil {
 				logCtx.WithError(err).Error("Failed to delete the rollup after added to aggregate.")
 				continue

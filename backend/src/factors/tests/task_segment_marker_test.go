@@ -952,8 +952,9 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 	assert.True(t, nameFound7)
 
 	// Process all user
-	pIDList := []int64{project.ID}
-	errCode = T.SegmentMarker(project.ID, pIDList)
+
+	pIDList := map[int64]bool{project.ID: true}
+	errCode = T.SegmentMarker(project.ID, pIDList, map[int64][]string{})
 	assert.Equal(t, errCode, http.StatusOK)
 
 	status, updatedUsers, associatedSegmentsList := store.GetStore().FetchAssociatedSegmentsFromUsers(project.ID)
@@ -1082,14 +1083,14 @@ func TestProjectIDsListForMarker(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 
 	totalProjects := 0
-	for _, pID := range projectIDListRes {
+	for pID, _ := range projectIDListRes {
 		if projectIDList[pID] {
 			totalProjects++
 		}
 	}
 
 	notCount := 0
-	for _, pID := range projectIDListRes {
+	for pID, _ := range projectIDListRes {
 		if notInProjectIDList[pID] {
 			notCount++
 		}

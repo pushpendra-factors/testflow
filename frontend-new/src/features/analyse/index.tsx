@@ -232,7 +232,8 @@ const CoreQuery = () => {
     (
       equivalentQuery,
       navigatedFromDashboard = false,
-      qState: CoreQueryState
+      qState: CoreQueryState,
+      isSavedState = true
     ) => {
       const savedDateRange = { ...equivalentQuery.dateRange };
       const newDateRange = getDashboardDateRange();
@@ -248,7 +249,11 @@ const CoreQuery = () => {
         payload: equivalentQuery.breakdown
       });
       let queryDateRange;
-      if (navigatedFromDashboard && location?.state?.navigatedResultState) {
+      if (
+        navigatedFromDashboard &&
+        location?.state?.navigatedResultState &&
+        isSavedState
+      ) {
         queryDateRange = { date_range: dashboardDateRange };
       } else queryDateRange = { date_range: savedDateRange };
 
@@ -485,7 +490,8 @@ const CoreQuery = () => {
       updateEventFunnelsState(
         equivalentQuery,
         location?.state?.navigatedFromDashboard,
-        queryState
+        queryState,
+        isSavedQuery
       );
       if (queryState.requestQuery.length === 1) {
         dispatch({
@@ -1002,7 +1008,14 @@ const CoreQuery = () => {
   const setQueryOptions = (opts: {} | any) => {
     const qState = _.cloneDeep(coreQueryState);
 
-    qState.queryOptions = opts;
+    if (opts.group_analysis !== qState.queryOptions.group_analysis) {
+      qState.queries = [];
+      qState.queryOptions.globalFilters = [];
+      qState.queryOptions.groupBy = [];
+      qState.queryOptions.group_analysis = opts.group_analysis;
+    } else {
+      qState.queryOptions = opts;
+    }
     if (opts?.globalFilters) {
       qState.queryOptions.globalFilters = opts.globalFilters;
     }
@@ -1165,7 +1178,7 @@ const CoreQuery = () => {
             res.data.result || res.data
           );
         } else {
-          createFunnelStateFromResult(queryToAdd, res, dateRange, false);
+          createFunnelStateFromResult(queryToAdd, res, durationObj, false);
         }
       } catch (err) {
         logger.error(err);
