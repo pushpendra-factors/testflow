@@ -75,7 +75,7 @@ func GetSlackChannels(accessTokens model.SlackAccessTokens, nextCursor string) (
 	}
 	request.URL.RawQuery = q.Encode()
 	request.Header.Set("Content-Type", "application/json; charset=utf-8")
-	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessTokens.UserAccessToken))
+	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessTokens.BotAccessToken))
 	client := &http.Client{}
 	resp, err := client.Do(request)
 	if err != nil {
@@ -219,7 +219,7 @@ func getSlackUsers(projectID int64, agentID string, nextCursor string) (response
 
 	request.URL.RawQuery = q.Encode()
 	request.Header.Set("Content-Type", "application/json; charset=utf-8")
-	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessTokens.UserAccessToken))
+	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessTokens.BotAccessToken))
 	client := &http.Client{}
 	resp, err := client.Do(request)
 	if err != nil {
