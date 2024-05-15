@@ -5,7 +5,6 @@ import (
 	"errors"
 	"factors/cache"
 	pCache "factors/cache/persistent"
-	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	U "factors/util"
 	"fmt"
@@ -968,7 +967,7 @@ func DeleteQueryCacheKey(projectID int64, query BaseQuery) {
 		return
 	}
 
-	cacheRedis.DelPersistent(cacheKey)
+	pCache.Del([]*cache.Key{cacheKey}, true)
 }
 
 // TransformQueryPlaceholdersForContext Converts ? in queries to $1, $2 format.

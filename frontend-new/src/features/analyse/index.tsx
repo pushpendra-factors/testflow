@@ -1008,7 +1008,14 @@ const CoreQuery = () => {
   const setQueryOptions = (opts: {} | any) => {
     const qState = _.cloneDeep(coreQueryState);
 
-    qState.queryOptions = opts;
+    if (opts.group_analysis !== qState.queryOptions.group_analysis) {
+      qState.queries = [];
+      qState.queryOptions.globalFilters = [];
+      qState.queryOptions.groupBy = [];
+      qState.queryOptions.group_analysis = opts.group_analysis;
+    } else {
+      qState.queryOptions = opts;
+    }
     if (opts?.globalFilters) {
       qState.queryOptions.globalFilters = opts.globalFilters;
     }
