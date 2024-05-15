@@ -9,6 +9,8 @@ import React, {
   useMemo
 } from 'react';
 import cx from 'classnames';
+import MetricChart from 'Components/MetricChart/MetricChart';
+import ColumnChart from 'Components/ColumnChart/ColumnChart';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
 import {
   getDefaultDateSortProp,
@@ -32,8 +34,6 @@ import LineChart from '../../../../components/HCLineChart';
 import NoBreakdownTable from './NoBreakdownTable';
 import SparkChartWithCount from '../../../../components/SparkChartWithCount/SparkChartWithCount';
 import { getKpiLabel } from '../kpiAnalysis.helpers';
-import MetricChart from 'Components/MetricChart/MetricChart';
-import ColumnChart from 'Components/ColumnChart/ColumnChart';
 
 const colors = generateColors(MAX_ALLOWED_VISIBLE_PROPERTIES);
 const NoBreakdownChartsComponent = forwardRef(
@@ -97,7 +97,7 @@ const NoBreakdownChartsComponent = forwardRef(
       const series = [
         {
           data: aggregateData[currentEventIndex]?.dataOverTime?.map(
-            (elem) => elem[kpis[currentEventIndex].label]
+            (elem) => elem[aggregateData[currentEventIndex].name]
           )
         }
       ];
@@ -219,23 +219,21 @@ const NoBreakdownChartsComponent = forwardRef(
           )}
         >
           {aggregateData &&
-            aggregateData.map((eachAggregateData, eachIndex) => {
-              return (
-                <MetricChart
-                  key={eachAggregateData.name}
-                  headerTitle={eachAggregateData.name}
-                  value={eachAggregateData.total}
-                  iconColor={colors[eachIndex]}
-                  compareValue={eachAggregateData.compareTotal}
-                  showComparison={comparisonData.data != null}
-                  valueType={
-                    eachAggregateData.metricType === 'percentage_type'
-                      ? 'percentage'
-                      : 'numerical'
-                  }
-                />
-              );
-            })}
+            aggregateData.map((eachAggregateData, eachIndex) => (
+              <MetricChart
+                key={eachAggregateData.name}
+                headerTitle={eachAggregateData.name}
+                value={eachAggregateData.total}
+                iconColor={colors[eachIndex]}
+                compareValue={eachAggregateData.compareTotal}
+                showComparison={comparisonData.data != null}
+                valueType={
+                  eachAggregateData.metricType === 'percentage_type'
+                    ? 'percentage'
+                    : 'numerical'
+                }
+              />
+            ))}
         </div>
       );
     } else if (chartType === CHART_TYPE_BARCHART) {
