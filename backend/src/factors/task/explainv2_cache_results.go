@@ -3,7 +3,6 @@ package task
 import (
 	"factors/cache"
 	pCache "factors/cache/persistent"
-	ch "factors/cache/redis"
 	M "factors/model/model"
 	"strconv"
 
@@ -81,7 +80,7 @@ func RemoveCachedKey(projectId int64, modelId uint64) (bool, error) {
 		return false, err
 	}
 
-	err = ch.DelPersistent(cacheKey)
+	err = pCache.Del([]*cache.Key{cacheKey}, true)
 	if err != nil {
 		return false, err
 	}
