@@ -20,3 +20,37 @@
     right: 1.5em;
     bottom: 1.5em;
 }
+
+
+.fa-line--vertical{ 
+    position: relative; 
+
+width: 2px; /* line-width */
+height: 50px; /* line length */
+margin-left: 50%;
+margin-top: 7px;
+margin-bottom: 7px;
+float: left;
+background: #1890FF;
+
+    &::after,&::before{
+        content: "";
+        position: absolute;
+        width: 0px;
+        height: 0px;
+        border: 5px solid transparent;
+    }
+
+    &::after {
+        top: -12px;
+        border-bottom: 12px solid #1890FF;
+        left: -4px;
+    }
+    &::before{
+        bottom: -12px;
+        border-top: 12px solid #1890FF;
+        left: -4px;
+    }
+ 
+    
+}
