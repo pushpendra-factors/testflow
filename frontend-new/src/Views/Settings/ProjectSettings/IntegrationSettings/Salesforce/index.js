@@ -19,7 +19,8 @@ const SalesForceIntegration = ({
   currentProjectSettings,
   enableSalesforceIntegration,
   fetchSalesforceRedirectURL,
-  currentAgent
+  currentAgent,
+  integrationCallback
 }) => {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -74,6 +75,7 @@ const SalesForceIntegration = ({
             setTimeout(() => {
               message.success('Salesforce integration disconnected!');
             }, 500);
+            integrationCallback();
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);

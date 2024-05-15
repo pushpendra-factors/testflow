@@ -24,9 +24,9 @@ const LinkedInIntegration = ({
   activeProject,
   currentProjectSettings,
   addLinkedinAccessToken,
-  kbLink = false,
   deleteIntegration,
-  currentAgent
+  currentAgent,
+  integrationCallback
 }) => {
   const [loading, setLoading] = useState(false);
   const [FbResponse, SetFbResponse] = useState(null);
@@ -196,6 +196,7 @@ const LinkedInIntegration = ({
             setTimeout(() => {
               message.success('LinkedIn integration disconnected!');
             }, 500);
+            integrationCallback();
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);

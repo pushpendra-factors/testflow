@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useRef } from 'react';
-import { Alert, Divider, message } from 'antd';
+import { Alert, Divider, Skeleton, message } from 'antd';
 import { ErrorBoundary } from 'react-error-boundary';
 import { FaErrorComp, FaErrorLog } from 'Components/factorsComponents';
 import { useHistory, useParams } from 'react-router-dom';
@@ -10,12 +10,14 @@ import { fetchQueries } from 'Reducers/coreQuery/services';
 import logger from 'Utils/logger';
 import moment from 'moment';
 import useIntegrationCheck from 'hooks/useIntegrationCheck';
+import useAgentInfo from 'hooks/useAgentInfo';
 import { IntegrationProviderData } from './integrations.constants';
 import IntegrationHeader from './IntegrationHeader';
 import IntegrationInstruction from './IntegrationInstruction';
 import {
   createDashboardsFromTemplatesForRequiredIntegration,
-  getIntegrationStatus
+  getIntegrationStatus,
+  showIntegrationStatus
 } from './util';
 import { IntegrationContext } from './IntegrationContext';
 
@@ -29,20 +31,28 @@ const IntegrationWithId = ({
 }: IntegrationWithIdProps) => {
   const { integration_id: integrationId } = useParams();
   const history = useHistory();
+  const { email: userEmail } = useAgentInfo();
   const Integration = IntegrationProviderData.find(
     (integration) => integration.id === integrationId
   );
   const templateDashboardStatusRef = useRef(false);
-  const { integrationStatus } = useContext(IntegrationContext);
+  const {
+    integrationStatus,
+    fetchIntegrationStatus,
+    integrationStatusLoading
+  } = useContext(IntegrationContext);
   const integrationStatusValue = getIntegrationStatus(
     integrationStatus?.[integrationId]
   );
   const integrationInfo = useIntegrationCheck();
   const isIntegrated = integrationInfo?.[integrationId];
+  const showIntegrationStatusFlag = showIntegrationStatus(userEmail);
 
   const integrationStatusMessage = integrationStatus?.[integrationId]?.message;
   const lastSyncDetail =
-    integrationStatus?.[integrationId]?.last_synced_at && isIntegrated
+    showIntegrationStatusFlag &&
+    integrationStatus?.[integrationId]?.last_synced_at &&
+    isIntegrated
       ? `Last sync: ${moment
           .unix(integrationStatus?.[integrationId]?.last_synced_at)
           .fromNow()}`
@@ -53,6 +63,12 @@ const IntegrationWithId = ({
   const handleBackClick = () => {
     sessionStorage.setItem('integration-card', integrationId);
     history.goBack();
+  };
+
+  const integrationCallback = () => {
+    if (fetchIntegrationStatus) {
+      fetchIntegrationStatus();
+    }
   };
 
   // effect for creating dashboards from templates based on the integrations
@@ -134,6 +150,16 @@ const IntegrationWithId = ({
       }
     }
   }, []);
+  if (integrationStatusLoading) {
+    return (
+      <>
+        <Skeleton />
+        <Skeleton />
+        <Skeleton />
+        <Skeleton />
+      </>
+    );
+  }
 
   if (Integration?.id && Integration?.Component) {
     return (
@@ -156,7 +182,7 @@ const IntegrationWithId = ({
             lastSyncDetail={lastSyncDetail}
           />
           <Divider style={{ margin: '16px 0px' }} />
-          {isIntegrated && isErrorState && (
+          {showIntegrationStatusFlag && isIntegrated && isErrorState && (
             <Alert message={integrationStatusMessage} type='error' showIcon />
           )}
           {Integration.showInstructionMenu && (
@@ -167,7 +193,7 @@ const IntegrationWithId = ({
             />
           )}
 
-          <Integration.Component />
+          <Integration.Component integrationCallback={integrationCallback} />
           <Divider style={{ margin: '16px 0px' }} />
         </div>
       </ErrorBoundary>
