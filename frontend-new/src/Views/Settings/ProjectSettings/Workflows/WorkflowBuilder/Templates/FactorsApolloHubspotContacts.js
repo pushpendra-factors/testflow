@@ -122,7 +122,7 @@ const FactorsApolloHubspotContacts = ({
 
     return (
       <>
-        <Collapse accordion bordered={false}>
+        <Collapse accordion bordered={false} defaultActiveKey={[isHubspotIntEnabled ? "2" : "1"]}>
 
           <Panel header="Integrate Hubspot" className='bg-white' key="1" extra={isHubspotInt()}>
             <div className='flex flex-col p-4'>
