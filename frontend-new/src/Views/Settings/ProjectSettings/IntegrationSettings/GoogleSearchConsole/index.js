@@ -34,8 +34,8 @@ const GoogleSearchConsole = ({
   fetchSearchConsoleCustomerAccounts,
   udpateProjectSettings,
   fetchProjectSettings,
-  kbLink = false,
-  deleteIntegration
+  deleteIntegration,
+  integrationCallback
 }) => {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
@@ -68,6 +68,7 @@ const GoogleSearchConsole = ({
             setTimeout(() => {
               message.success('Google integration disconnected!');
             }, 500);
+            integrationCallback();
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);

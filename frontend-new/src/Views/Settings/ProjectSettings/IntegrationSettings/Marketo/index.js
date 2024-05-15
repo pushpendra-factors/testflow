@@ -17,7 +17,8 @@ const MarketoIntegration = ({
   createMarketoIntegration,
   fetchMarketoIntegration,
   disableMarketoIntegration,
-  marketo
+  marketo,
+  integrationCallback
 }) => {
   const [loading, setLoading] = useState(false);
   const [accounts, setAccounts] = useState(null);
@@ -37,6 +38,7 @@ const MarketoIntegration = ({
             setTimeout(() => {
               message.success('Marketo integration disconnected!');
             }, 500);
+            integrationCallback();
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);

@@ -5,6 +5,7 @@ import {
 import { createDashboardFromTemplate } from 'Reducers/dashboard_templates/services';
 import logger from 'Utils/logger';
 import { get, getHostUrl } from 'Utils/request';
+import { AdminLock } from 'Routes/feature';
 import { IntegrationPageCategories } from './integrations.constants';
 import { IntegrationStatus } from './types';
 
@@ -168,6 +169,7 @@ export const getBackendHost = () => {
 export const getIntegrationStatus = (integrationStatus: IntegrationStatus) => {
   let status = '';
   switch (integrationStatus?.state) {
+    case 'connected':
     case 'synced':
       status = 'connected';
       break;
@@ -193,6 +195,9 @@ export const getIntegrationActionText = (
 ) => {
   let actionText = '';
   switch (integrationStatus?.state) {
+    case 'connected':
+      actionText = 'Connected';
+      break;
     case 'synced':
       actionText = 'Receiving Data';
       break;
@@ -212,3 +217,6 @@ export const getIntegrationActionText = (
   }
   return actionText;
 };
+
+export const showIntegrationStatus = (email: string) => true;
+// return AdminLock(email);

@@ -15,9 +15,9 @@ import {
   IntegrationProviderData
 } from './integrations.constants';
 import { getIntegrationCategoryNameFromId } from './util';
-import CommonIntegrationCard from './CommonIntegrationCard';
 import { IntegrationConfig } from './types';
 import { IntegrationContext } from './IntegrationContext';
+import IntegrationCard from './IntegrationCard';
 
 const IntegrationSettings = () => {
   const defaultCategory = 'all';
@@ -59,7 +59,7 @@ const IntegrationSettings = () => {
       });
     }
     // categorising data
-    const categorizedData = {};
+    const categorizedData: { [key: string]: IntegrationConfig[] } = {};
     Items.forEach((item) => {
       if (categorizedData?.[item.categoryId]) {
         categorizedData[item.categoryId].push(item);
@@ -83,7 +83,7 @@ const IntegrationSettings = () => {
           </Text>
           <div className='mt-4'>
             {_categories.map((c: IntegrationConfig) => (
-              <CommonIntegrationCard
+              <IntegrationCard
                 integrationConfig={c}
                 integrationInfo={integrationInfo}
               />
@@ -108,6 +108,7 @@ const IntegrationSettings = () => {
       <div className={styles.integrationContainer}>
         {integrationStatusLoading && (
           <>
+            <Skeleton />
             <Skeleton />
             <Skeleton />
             <Skeleton />

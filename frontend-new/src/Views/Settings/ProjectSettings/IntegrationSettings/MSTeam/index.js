@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { connect } from 'react-redux';
 import { Button, message, Input, Avatar, Popover, Modal } from 'antd';
 import { Text, FaErrorComp, FaErrorLog, SVG } from 'factorsComponents';
@@ -16,7 +16,8 @@ const MSTeamIntegration = ({
   fetchProjectSettingsV1,
   enableTeamsIntegration,
   disableTeamsIntegration,
-  projectSettings
+  projectSettings,
+  integrationCallback
 }) => {
   const [loading, setLoading] = useState(false);
 
@@ -36,6 +37,7 @@ const MSTeamIntegration = ({
               message.success('Microsoft Teams integration disconnected!');
             }, 500);
             fetchProjectSettingsV1(activeProject.id);
+            integrationCallback();
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);

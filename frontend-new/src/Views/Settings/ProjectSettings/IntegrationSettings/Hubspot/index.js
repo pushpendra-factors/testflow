@@ -26,7 +26,8 @@ const HubspotIntegration = ({
   activeProject,
   currentProjectSettings,
   currentAgent,
-  enableHubspotIntegration
+  enableHubspotIntegration,
+  integrationCallback
 }) => {
   const [errorInfo, seterrorInfo] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -81,6 +82,7 @@ const HubspotIntegration = ({
             setTimeout(() => {
               message.success('Hubspot integration disconnected!');
             }, 500);
+            integrationCallback();
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);

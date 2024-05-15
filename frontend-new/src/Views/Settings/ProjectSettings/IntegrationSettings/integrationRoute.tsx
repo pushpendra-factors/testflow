@@ -1,4 +1,10 @@
-import React, { Suspense, useEffect, useState } from 'react';
+import React, {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState
+} from 'react';
 import { Switch, Route, useRouteMatch } from 'react-router-dom';
 import { ErrorBoundary } from 'react-error-boundary';
 import { FaErrorComp, FaErrorLog } from 'factorsComponents';
@@ -38,22 +44,35 @@ function IntegrationMain({
 
   // fetching integration status data
 
+  const fetchIntegrationStatus = useCallback(async () => {
+    try {
+      setContextData((cData) => ({
+        ...cData,
+        integrationStatusLoading: true
+      }));
+      const res = await getIntegrationStatus(activeProject.id);
+      const integrationStatusData = res?.data as IntegrationStatusData;
+      setContextData((cData) => ({
+        ...cData,
+        integrationStatus: integrationStatusData,
+        integrationStatusLoading: false
+      }));
+    } catch (error) {
+      logger.error('Error in fetching integration stagus', error);
+    }
+  }, []);
+
   useEffect(() => {
-    const fetchIntegrationStatus = async () => {
-      try {
-        const res = await getIntegrationStatus(activeProject.id);
-        const integrationStatusData = res?.data as IntegrationStatusData;
-        setContextData((cData) => ({
-          ...cData,
-          integrationStatus: integrationStatusData,
-          integrationStatusLoading: false
-        }));
-      } catch (error) {
-        logger.error('Error in fetching integration stagus', error);
-      }
-    };
     fetchIntegrationStatus();
   }, []);
+
+  const ContextData = useMemo(
+    () => ({
+      ...contextData,
+      fetchIntegrationStatus
+    }),
+    [contextData, fetchIntegrationStatus]
+  );
 
   return (
     <ErrorBoundary
@@ -67,7 +86,7 @@ function IntegrationMain({
       onError={FaErrorLog}
     >
       <Suspense fallback={<PageSuspenseLoader />}>
-        <IntegrationContext.Provider value={contextData}>
+        <IntegrationContext.Provider value={ContextData}>
           <Switch>
             <Route exact path={`${path}`} component={BaseComponent} />
             <Route

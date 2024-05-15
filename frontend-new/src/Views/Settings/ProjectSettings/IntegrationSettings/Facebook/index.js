@@ -20,9 +20,9 @@ const FacebookIntegration = ({
   activeProject,
   currentProjectSettings,
   addFacebookAccessToken,
-  kbLink = false,
   deleteIntegration,
-  currentAgent
+  currentAgent,
+  integrationCallback
 }) => {
   const [loading, setLoading] = useState(false);
   const [FbResponse, SetFbResponse] = useState(null);
@@ -56,6 +56,7 @@ const FacebookIntegration = ({
               }));
               SetFbAdAccounts(adAccounts);
               setShowForm(true);
+              integrationCallback();
             } else {
               message.error(
                 "You don't have any ad accounts associated to the id you logged in with."

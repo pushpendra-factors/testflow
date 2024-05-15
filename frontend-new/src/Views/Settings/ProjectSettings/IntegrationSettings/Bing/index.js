@@ -23,9 +23,9 @@ import { ErrorBoundary } from 'react-error-boundary';
 const BingIntegration = ({
   activeProject,
   agent_details,
+  integrationCallback,
   enableBingAdsIntegration,
   createBingAdsIntegration,
-  kbLink = false,
   fetchBingAdsIntegration,
   disableBingAdsIntegration,
   bingAds
@@ -48,6 +48,7 @@ const BingIntegration = ({
             setTimeout(() => {
               message.success('Bing Ads integration disconnected!');
             }, 500);
+            integrationCallback();
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);
@@ -74,6 +75,7 @@ const BingIntegration = ({
           const url = new URL(r.data.redirect_uri);
           url.searchParams.set('redirect_uri', redirectURL);
           window.location = url.href;
+          integrationCallback();
         }
         if (r.status >= 400) {
           message.error('Error fetching Bing Ads accounts');
