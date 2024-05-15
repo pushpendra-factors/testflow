@@ -22,7 +22,8 @@ import {
   SET_INSIGHTS_COMPARE_SEGMENT,
   EDIT_INSIGHTS_METRIC_LOADING,
   EDIT_INSIGHTS_METRIC_SUCCESS,
-  EDIT_INSIGHTS_METRIC_ERROR
+  EDIT_INSIGHTS_METRIC_ERROR,
+  RESET_EDIT_INSIGHTS_METRIC
 } from './types';
 
 export function generateInsightsKey({
@@ -277,6 +278,14 @@ export default function (state = initialState, action) {
         editInsightsMetric: {
           ...apiStates,
           error: true
+        }
+      };
+    }
+    case RESET_EDIT_INSIGHTS_METRIC: {
+      return {
+        ...state,
+        editInsightsMetric: {
+          ...apiStates
         }
       };
     }

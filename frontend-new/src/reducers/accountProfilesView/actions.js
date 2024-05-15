@@ -7,7 +7,8 @@ import {
   SET_FILTERS_DIRTY,
   TOGGLE_ACCOUNTS_TAB,
   SET_INSIGHTS_DURATION,
-  SET_INSIGHTS_COMPARE_SEGMENT
+  SET_INSIGHTS_COMPARE_SEGMENT,
+  RESET_EDIT_INSIGHTS_METRIC
 } from './types';
 
 export const setAccountPayloadAction = (payload) => ({
@@ -60,4 +61,8 @@ export const setDrawerVisibleAction = (isVisible) => ({
 export const setActiveDomainAction = (domainData) => ({
   type: 'SET_ACTIVE_DOMAIN',
   payload: domainData
+});
+
+export const resetEditMetricStatus = () => ({
+  type: RESET_EDIT_INSIGHTS_METRIC
 });

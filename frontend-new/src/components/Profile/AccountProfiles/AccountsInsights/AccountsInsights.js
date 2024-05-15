@@ -198,6 +198,7 @@ export default function AccountsInsights() {
             key={widget.wid_g_id}
             widget={widget}
             onEditMetricClick={handleEditMetric}
+            editWidgetGroupId={editWidgetGroupId}
           />
         ))}
         <EditMetricModal
