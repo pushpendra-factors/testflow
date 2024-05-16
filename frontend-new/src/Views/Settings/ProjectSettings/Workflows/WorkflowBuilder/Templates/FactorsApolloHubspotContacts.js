@@ -33,7 +33,7 @@ const FactorsApolloHubspotContacts = ({
   isTemplate,
   setPropertyMapAdditional2,
   propertyMapAdditional2,
-  apolloFormDetails, 
+  apolloFormDetails,
   setApolloFormDetails
 }) => {
 
@@ -108,13 +108,13 @@ const FactorsApolloHubspotContacts = ({
     }
   }, selectedTemp);
 
-  const saveFormValidateApollo = () =>{
+  const saveFormValidateApollo = () => {
     form
-    .validateFields()
-    .then((value) => {
-      setApolloFormDetails(value);
-      saveWorkflowFn(value)
-    });
+      .validateFields()
+      .then((value) => {
+        setApolloFormDetails(value);
+        saveWorkflowFn(value)
+      });
   }
 
   try {
@@ -178,83 +178,75 @@ const FactorsApolloHubspotContacts = ({
 
 
 
-            
+
                 <div className='mt-6'>
                   <Text type={'title'} weight={'bold'} level={7} color={'black'} extraClass={'m-0'}>{`Apollo Configuration`}</Text>
                   <Form
-                  form={form}
-                  name='apollo'
-                  className='w-full'
-                  onFinish={saveFormValidateApollo}
-                >
-
-                  <div className='mt-4'>
-                  <Text type={'title'} weight={'thin'} level={8} extraClass={'m-0'}>{`Apollo API key`}</Text>
-                   <Form.Item
-                      label={null}
-                      name='ApiKey'
-                      className='w-full'
-                      rules={[
-                        {
-                          required: true,
-                          message: 'Please enter API key'
-                        }
-                      ]}
-                    >
-                      <Input
-                        className='fa-input w-full'
-                        placeholder='API key'
-                      />
-                    </Form.Item>
+                    form={form}
+                    name='apollo'
+                    className='w-full'
+                    onFinish={saveFormValidateApollo}
+                  >
+                    <div className='mt-4'>
+                      <Text type={'title'} weight={'thin'} level={8} extraClass={'m-0'}>{`Apollo API key`}</Text>
+                      <Form.Item
+                        label={null}
+                        name='ApiKey'
+                        className='w-full'
+                        rules={[
+                          {
+                            required: true,
+                            message: 'Please enter API key'
+                          }
+                        ]}
+                      >
+                        <Input
+                          className='fa-input w-full'
+                          placeholder='API key'
+                        />
+                      </Form.Item>
                     </div>
-                 
-                  <div className='mt-4'>
-                  <Text type={'title'} weight={'thin'} level={8}  extraClass={'m-0'}>{`Job title list`}</Text>
-                   <Form.Item
-                      label={null}
-                      name='PersonTitles'
-                      className='w-full'
-                    >
-                      <Input
-                        className='fa-input w-full'
-                        placeholder={`Marketing,CEO,Founder`}
-                      />
-                    </Form.Item>
+                    <div className='mt-4'>
+                      <Text type={'title'} weight={'thin'} level={8} extraClass={'m-0'}>{`Job title list`}</Text>
+                      <Form.Item
+                        label={null}
+                        name='PersonTitles'
+                        className='w-full'
+                      >
+                        <Input
+                          className='fa-input w-full'
+                          placeholder={`Marketing,CEO,Founder`}
+                        />
+                      </Form.Item>
                     </div>
-
-                  <div className='mt-4'>
-                  <Text type={'title'} weight={'thin'} level={8}  extraClass={'m-0'}>{`Seniorities to include`}</Text>
-                   <Form.Item
-                      label={null}
-                      name='PersonSeniorities'
-                      className='w-full'
-                    >
-                      <Input
-                        className='fa-input w-full'
-                        placeholder={`manager,vp,c_suite,director`}
-                      />
-                    </Form.Item>
+                    <div className='mt-4'>
+                      <Text type={'title'} weight={'thin'} level={8} extraClass={'m-0'}>{`Seniorities to include`}</Text>
+                      <Form.Item
+                        label={null}
+                        name='PersonSeniorities'
+                        className='w-full'
+                      >
+                        <Input
+                          className='fa-input w-full'
+                          placeholder={`manager,vp,c_suite,director`}
+                        />
+                      </Form.Item>
                     </div>
-                 
-                  <div className='mt-4'>
-                  <Text type={'title'} weight={'thin'} level={8}  extraClass={'m-0'}>{`Maximum number of contacts to enrich for a company`}</Text>
-                   <Form.Item
-                      label={null}
-                      name='MaxContacts'
-                      className='w-full'
-                    >
-                      <Input
-                        className='fa-input w-full'
-                        placeholder={`10`}
-                      />
-                    </Form.Item>
+                    <div className='mt-4'>
+                      <Text type={'title'} weight={'thin'} level={8} extraClass={'m-0'}>{`Maximum number of contacts to enrich for a company`}</Text>
+                      <Form.Item
+                        label={null}
+                        name='MaxContacts'
+                        className='w-full'
+                      >
+                        <Input
+                          className='fa-input w-full'
+                          placeholder={`10`}
+                        />
+                      </Form.Item>
                     </div>
-
-
-                </Form>
-                  
+                  </Form>
                 </div>
-            
                 <div className='mt-6'>
                   <Text type={'title'} weight={'bold'} level={7} color={'black'} extraClass={'m-0'}>{`Additional fields (for Contact)`}</Text>
                   <MapComponent
@@ -267,18 +259,13 @@ const FactorsApolloHubspotContacts = ({
                 </div>
 
               </div>
-
-
+            </div>
+            <div className='border-top--thin-2 p-4 mt-4 flex items-center justify-end'>
+              <Button type={'primary'} className='mt-2' onClick={() => saveWorkflowFn()}>Save and Publish</Button>
             </div>
 
 
-          </Panel>
 
-          <Panel header="Final Section" className='bg-white' key="3" disabled={!isHubspotIntEnabled}>
-            <div className='p-4'>
-              <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mb-2'}>{`Factors is a secure partner with Zapier. Your credentials are encrypted & can be removed at any time. You can manage all of your connected accounts here.`}</Text>
-              <Button type={'primary'} className='mt-2' onClick={() => saveFormValidateApollo()}>Save and Continue</Button>
-            </div>
           </Panel>
         </Collapse>
       </>

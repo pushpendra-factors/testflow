@@ -231,7 +231,7 @@ const Workflows = ({
       type={'text'} 
       icon={<SVG name={'ArrowLeft'} color={'grey'} size={4} />}
       onClick={() => {
-          props.onCancel(); 
+          props.handleBack(); 
         }}>Back</Button>
       </div>
 
