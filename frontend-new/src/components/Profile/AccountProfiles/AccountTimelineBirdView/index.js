@@ -13,6 +13,7 @@ import {
 import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
 import { SVG, Text } from '../../../factorsComponents';
 import {
+  flattenObjects,
   getEventCategory,
   getIconForCategory,
   toggleCellCollapse
@@ -30,6 +31,7 @@ function AccountTimelineBirdView({
 }) {
   const { groupPropNames } = useSelector((state) => state.coreQuery);
   const { projectDomainsList } = useSelector((state) => state.global);
+  const mergedGroupPropNames = flattenObjects(groupPropNames);
 
   const renderIcon = (event) => {
     const eventIcon = eventIconsColorMap[event.icon]
@@ -132,8 +134,8 @@ function AccountTimelineBirdView({
           <div className={`green-stripe ${showText ? '' : 'opaque'}`}>
             {showText ? (
               <div className='text'>
-                {groupPropNames[milestone.name]
-                  ? groupPropNames[milestone.name]
+                {mergedGroupPropNames[milestone.name]
+                  ? mergedGroupPropNames[milestone.name]
                   : milestone.name}
               </div>
             ) : null}

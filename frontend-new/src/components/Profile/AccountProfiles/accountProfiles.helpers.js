@@ -10,6 +10,7 @@ import { ACCOUNTS_TABLE_COLUMN_TYPES, COLUMN_TYPE_PROPS } from 'Utils/table';
 import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
 import { EngagementTag, headerClassStr, placeholderIcon } from '../constants';
 import {
+  flattenObjects,
   getHost,
   getPropType,
   propValueFormat,
@@ -104,8 +105,9 @@ const getTablePropColumn = ({
   listProperties,
   projectDomainsList
 }) => {
-  const propDisplayName = groupPropNames[prop]
-    ? groupPropNames[prop]
+  const mergedGroupPropNames = flattenObjects(groupPropNames);
+  const propDisplayName = mergedGroupPropNames[prop]
+    ? mergedGroupPropNames[prop]
     : PropTextFormat(prop);
   const propType = getPropType(listProperties, prop);
 

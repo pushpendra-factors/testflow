@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Button, Tooltip } from 'antd';
 import { connect } from 'react-redux';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
+import { PropTextFormat } from 'Utils/dataFormatter';
 import FaSelect from '../../FaSelect';
 import styles from './index.module.scss';
 import { SVG, Text } from '../../factorsComponents';
@@ -27,8 +28,7 @@ function EventGroupBlock({
   noMargin = false,
   groups,
   userPropertiesV2,
-  groupAnalysis = false,
-  eventNames
+  groupAnalysis = false
 }) {
   const [filterOptions, setFilterOptions] = useState([]);
   const [propSelVis, setSelVis] = useState(false);
@@ -36,28 +36,8 @@ function EventGroupBlock({
 
   useEffect(() => {
     let filterOptsObj = {};
-    // moved calculating options logic to uitls file
-    if (groupAnalysis) {
-      if (groupAnalysis == 'users') {
-        filterOptsObj = defaultPropertyList(
-          eventPropertiesV2,
-          eventUserPropertiesV2,
-          groupProperties,
-          eventGroup,
-          groups?.all_groups,
-          event
-        );
-      } else {
-        filterOptsObj = alertsGroupPropertyList(
-          eventPropertiesV2,
-          userPropertiesV2,
-          groupProperties,
-          eventGroup,
-          groups?.all_groups,
-          event
-        );
-      }
-    } else {
+
+    if (!groupAnalysis || groupAnalysis === 'users') {
       filterOptsObj = defaultPropertyList(
         eventPropertiesV2,
         eventUserPropertiesV2,
@@ -66,9 +46,28 @@ function EventGroupBlock({
         groups?.all_groups,
         event
       );
+    } else {
+      filterOptsObj = alertsGroupPropertyList(
+        eventPropertiesV2,
+        userPropertiesV2,
+        groupProperties,
+        eventGroup,
+        groups?.all_groups,
+        event
+      );
     }
+
     setFilterOptions(Object.values(filterOptsObj));
-  }, [eventUserPropertiesV2, eventPropertiesV2, groups, groupProperties]);
+  }, [
+    userPropertiesV2,
+    eventPropertiesV2,
+    eventUserPropertiesV2,
+    groups,
+    groupProperties,
+    groupAnalysis,
+    eventGroup,
+    event
+  ]);
 
   const onChange = (option, group, ind) => {
     const newGroupByState = { ...groupByEvent };
@@ -158,61 +157,46 @@ function EventGroupBlock({
     );
   };
 
-  const getIcon = (groupByEvent) => {
-    const { property, prop_category } = groupByEvent || {};
+  const getIcon = (state) => {
+    const { property, prop_category } = state || {};
     if (!property) return null;
     const iconName = prop_category === 'group' ? 'user' : prop_category;
     return <SVG name={iconName} size={16} color='purple' />;
   };
 
+  const renderGroupDisplayName = (state) => {
+    if (!state.property) {
+      return 'Select Property';
+    }
+    switch (state.prop_category) {
+      case 'event':
+        return eventPropNames[state.property] || PropTextFormat(state.property);
+      case 'user' || 'user_g':
+        return userPropNames[state.property] || PropTextFormat(state.property);
+      case 'group':
+        return (
+          groupPropNames[eventGroup][state.property] ||
+          PropTextFormat(state.property)
+        );
+      default:
+        return PropTextFormat(state.property);
+    }
+  };
+
   const renderGroupContent = () => {
-    let item = groupByEvent?.property;
-
-    let findItem =
-      eventPropNames?.[item] ||
-      userPropNames?.[item] ||
-      groupPropNames?.[item] ||
-      eventNames?.[item];
-
-    let propName = findItem ? findItem : item;
-
-    // let propName = '';
-    // if (groupByEvent.property && groupByEvent.prop_category === 'user') {
-    //   propName = userPropNames[groupByEvent.property]
-    //     ? userPropNames[groupByEvent.property]
-    //     : groupByEvent.property;
-    // }
-
-    // if (groupByEvent.property && groupByEvent.prop_category === 'event') {
-    //   propName = eventPropNames[groupByEvent.property]
-    //     ? eventPropNames[groupByEvent.property]
-    //     : groupByEvent.property;
-    // }
-
-    // if (groupByEvent.property && groupByEvent.prop_category === 'group') {
-    //   propName = groupPropNames[groupByEvent.property]
-    //     ? groupPropNames[groupByEvent.property]
-    //     : groupByEvent.property;
-    // }
-
-    // if (groupByEvent.property && groupByEvent.groupName === '$domains') {
-    //   propName = groupPropNames[groupByEvent.property]
-    //     ? groupPropNames[groupByEvent.property]
-    //     : groupByEvent.property;
-    // }
-
+    const title = renderGroupDisplayName(groupByEvent);
     return isGroupByDDVisible ? (
       <div className='relative'>
-        <Tooltip title={propName}>
+        <Tooltip title={title}>
           <Button
             icon={getIcon(groupByEvent)}
             type='link'
             className='fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin'
           >
-            {propName}
+            {title}
           </Button>
         </Tooltip>
-        <div className={`${styles.group_block__event_selector}`}>
+        <div className={styles.group_block__event_selector}>
           <GroupSelect
             options={filterOptions}
             searchPlaceHolder='Select Property'
@@ -222,22 +206,20 @@ function EventGroupBlock({
             onClickOutside={() => setGroupByDDVisible(false)}
             allowSearch
             allowSearchTextSelection={false}
-            extraClass={`${styles.group_block__event_selector__select}`}
+            extraClass={styles.group_block__event_selector__select}
           />
         </div>
       </div>
     ) : (
       <>
-        <Tooltip title={propName}>
+        <Tooltip title={title}>
           <Button
-            icon={
-              <SVG name={groupByEvent.prop_category} size={16} color='purple' />
-            }
+            icon={getIcon(groupByEvent)}
             type='link'
             className='fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin'
             onClick={() => setGroupByDDVisible(true)}
           >
-            {propName}
+            {title}
           </Button>
         </Tooltip>
         {renderGroupPropertyOptions(groupByEvent)}
@@ -260,11 +242,11 @@ function EventGroupBlock({
   );
   return (
     <div
-      className={`flex items-center relative ${styles['draghandleparent']} ${
+      className={`flex items-center relative ${styles.draghandleparent} ${
         noMargin ? '' : 'ml-6'
       }`}
     >
-      <div className={`p-1 flex ${styles['draghandle']}`}>
+      <div className={`p-1 flex ${styles.draghandle}`}>
         <div style={{ margin: 'auto 0', cursor: 'pointer' }}>
           <SVG name='drag' />
         </div>
