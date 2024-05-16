@@ -223,7 +223,7 @@ func (store *MemSQL) CreateWidgetGroup(widgetGroup model.WidgetGroup) (model.Wid
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logCtx.Data)
 	db := C.GetServices().Db
 
-	if err := db.Create(widgetGroup).Error; err != nil {
+	if err := db.Create(&widgetGroup).Error; err != nil {
 		logCtx.WithError(err).Error("Failed to create widget group.")
 		return widgetGroup, http.StatusInternalServerError
 	}

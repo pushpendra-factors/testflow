@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/json"
 	"factors/cache"
+	C "factors/config"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -819,9 +820,12 @@ func ValidateKPIQueryGroupByForAnyEventType(kpiQueryGroupBys []KPIGroupBy, confi
 	return true
 }
 
-func GetNonGBTResultsFromGBTResultsAndMaps(reqID string, kpiQueryGroup KPIQueryGroup, mapOfNonGBTDerivedKPIToInternalKPIToResults map[string]map[string][]QueryResult,
+// Todo refactor later
+// Considering that we have only one metric per query. Hence hashMapOfQueryToResult will be accessed via [0]-> internalResults
+func GetNonGBTResultsFromGBTResultsAndMaps(projectID int64, reqID string, kpiQueryGroup KPIQueryGroup, mapOfNonGBTDerivedKPIToInternalKPIToResults map[string]map[string][]QueryResult,
 	mapOfGBTDerivedKPIToInternalKPIToResults map[string]map[string][]QueryResult, mapOfNonGBTKPINormalQueryToResults map[string][]QueryResult,
-	mapOfGBTKPINormalQueryToResults map[string][]QueryResult, externalGBTQueryToInternalQueries, externalNonGBTQueryToInternalQueries map[string]KPIQueryGroup) (
+	mapOfGBTKPINormalQueryToResults map[string][]QueryResult, externalGBTQueryToInternalQueries,
+	externalNonGBTQueryToInternalQueries map[string]KPIQueryGroup, mapOfhashToProfileGBTResults map[string][][]QueryResult) (
 	int, map[string]map[string][]QueryResult, map[string][]QueryResult) {
 	logFields := log.Fields{
 		"query":  kpiQueryGroup,
@@ -886,6 +890,52 @@ func GetNonGBTResultsFromGBTResultsAndMaps(reqID string, kpiQueryGroup KPIQueryG
 					}
 				}
 			}
+		} else if C.IsV1AvgKPIEnabled(projectID) {
+			if externalQuery.GroupByTimestamp == "" && externalQuery.Category == ProfileCategory {
+				queryHashCode, _ := externalQuery.GetQueryCacheHashString()
+				logEntry = logEntry.WithField("externalQuery", externalQuery).WithField("queryHashCode", queryHashCode)
+				modifiedHeaders := make([]string, 0)
+				if resultsWithGbt, exists := mapOfGBTKPINormalQueryToResults[queryHashCode]; exists {
+					modifiedHeaders = U.RemoveElementFromArray(resultsWithGbt[0].Headers, AliasDateTime)
+				}
+
+				if internalResults, exists := mapOfhashToProfileGBTResults[queryHashCode]; exists {
+
+					if len(internalResults[0]) == 1 {
+						nonGBTResults, err := GetNonGBTResultsFromGBTResults(mapOfGBTKPINormalQueryToResults, externalQuery)
+						logEntry = logEntry.WithField("nonGBTResults", nonGBTResults)
+						if err != "" {
+							logEntry.Warn("Error in getting non GBT from GBT 2: " + err)
+							finalStatusCode = http.StatusInternalServerError
+							break
+						}
+
+						mapOfNonGBTKPINormalQueryToResults[queryHashCode] = nonGBTResults
+
+					} else {
+						internalResult1 := internalResults[0][0]
+						internalResult2 := internalResults[0][1]
+						// Sum all of the groups and then do divide.
+						result1HashMap := make(map[string][]interface{})
+						result2HashMap := make(map[string][]interface{})
+
+						results1Rows := getResultRowsByMergingDate(internalResult1, result1HashMap)
+						results2Rows := getResultRowsByMergingDate(internalResult2, result2HashMap)
+
+						internalResults := make([]QueryResult, 2)
+						internalResults[0].Rows = results1Rows
+						internalResults[1].Rows = results2Rows
+						// Divide
+						finalResult := HandlingProfileResultsByApplyingOperations(internalResults, "Division", externalQuery.Timezone)
+						finalResult.Headers = modifiedHeaders
+						finalResultantQueryResults := make([]QueryResult, 0, 0)
+						finalResultantQueryResults = append(finalResultantQueryResults, finalResult)
+						mapOfNonGBTKPINormalQueryToResults[queryHashCode] = finalResultantQueryResults
+					}
+				} else {
+					logEntry.Error("Error in getting internalResults in GetNonGBTResultsFromGBTResultsAndMaps")
+				}
+			}
 		} else {
 			if externalQuery.GroupByTimestamp == "" {
 				queryHashCode, _ := externalQuery.GetQueryCacheHashString()
@@ -902,6 +952,7 @@ func GetNonGBTResultsFromGBTResultsAndMaps(reqID string, kpiQueryGroup KPIQueryG
 					mapOfNonGBTKPINormalQueryToResults[queryHashCode] = nonGBTResults
 				}
 			}
+
 		}
 	}
 	return finalStatusCode, mapOfNonGBTDerivedKPIToInternalKPIToResults, mapOfNonGBTKPINormalQueryToResults
@@ -922,26 +973,7 @@ func GetNonGBTResultsFromGBTResults(hashMapOfQueryToResult map[string][]QueryRes
 			currentResultantRows := make([][]interface{}, 0, 0)
 			currentQueryResult := QueryResult{}
 
-			for _, row := range queryResult.Rows {
-				currentRow := getRowAfterDeletionOfDateTime(row, queryResult.Headers)
-				key := getKeyWithoutDateTime(currentRow)
-
-				if val, ok := resultAsMap[key]; ok {
-					totalValue, err := U.SafeAddition(val[len(currentRow)-1], currentRow[len(currentRow)-1])
-					if err != nil {
-						resultAsMap = make(map[string][]interface{})
-						break
-					}
-					currentRow[len(currentRow)-1] = totalValue
-					resultAsMap[key] = currentRow
-				} else {
-					resultAsMap[key] = currentRow
-				}
-			}
-
-			for _, val := range resultAsMap {
-				currentResultantRows = append(currentResultantRows, val)
-			}
+			currentResultantRows = getResultRowsByMergingDate(queryResult, resultAsMap)
 			currentQueryResult.Rows = currentResultantRows
 			currentQueryResult.Headers = U.RemoveElementFromArray(queryResult.Headers, AliasDateTime)
 			finalResultantQueryResults = append(finalResultantQueryResults, currentQueryResult)
@@ -950,6 +982,32 @@ func GetNonGBTResultsFromGBTResults(hashMapOfQueryToResult map[string][]QueryRes
 		return []QueryResult{{}, {}}, "Query group doesnt contain all the gbt and non gbt pair of query."
 	}
 	return finalResultantQueryResults, ""
+}
+
+func getResultRowsByMergingDate(queryResult QueryResult, resultAsMap map[string][]interface{}) [][]interface{} {
+
+	for _, row := range queryResult.Rows {
+		currentRow := getRowAfterDeletionOfDateTime(row, queryResult.Headers)
+		key := getKeyWithoutDateTime(currentRow)
+
+		if val, ok := resultAsMap[key]; ok {
+			totalValue, err := U.SafeAddition(val[len(currentRow)-1], currentRow[len(currentRow)-1])
+			if err != nil {
+				resultAsMap = make(map[string][]interface{})
+				break
+			}
+			currentRow[len(currentRow)-1] = totalValue
+			resultAsMap[key] = currentRow
+		} else {
+			resultAsMap[key] = currentRow
+		}
+	}
+
+	currentResultantRows := make([][]interface{}, 0, 0)
+	for _, val := range resultAsMap {
+		currentResultantRows = append(currentResultantRows, val)
+	}
+	return currentResultantRows
 }
 
 func GetFinalResultantResultsForKPI(reqID string, kpiQueryGroup KPIQueryGroup, mapOfNonGBTDerivedKPIToInternalKPIToResults map[string]map[string][]QueryResult,
