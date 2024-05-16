@@ -54,7 +54,7 @@ function TableRow({ event, eventPropsType = {}, onEventClick }: TableRowProps) {
   return (
     <tr
       className={`table-row ${
-        event.is_group_user && !hasEventProperties
+        !event.is_group_user && !hasEventProperties
           ? 'pointer-events-none'
           : 'clickable'
       } cursor-pointer`}

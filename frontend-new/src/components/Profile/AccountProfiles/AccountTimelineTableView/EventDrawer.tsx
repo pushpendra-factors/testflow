@@ -226,9 +226,10 @@ function EventDrawer({
             />
           </Tabs.TabPane>
         )}
-        {currentProjectSettings?.timelines_config?.events_config?.[
+        {(currentProjectSettings?.timelines_config?.events_config?.[
           event?.display_name === 'Page View' ? 'PageView' : event?.name
-        ]?.length > 0 && (
+        ]?.length > 0 ||
+          event?.is_group_user) && (
           <Tabs.TabPane
             tab={
               <span className='fa-activity-filter--tabname'>
