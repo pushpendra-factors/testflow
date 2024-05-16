@@ -139,7 +139,7 @@ function FirstScreen({
     if (data && Array.isArray(data)) {
       const tmpSet = new Set();
       data.forEach((eachFlowItem) => {
-        eachFlowItem.categories.forEach((eachCategory) => {
+        eachFlowItem.categories?.forEach((eachCategory) => {
           if (eachCategory) tmpSet.add(eachCategory);
         });
       });

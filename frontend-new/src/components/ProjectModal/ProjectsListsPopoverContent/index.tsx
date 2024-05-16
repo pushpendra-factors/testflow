@@ -10,6 +10,9 @@ import useKeyboardNavigation from 'hooks/useKeyboardNavigation';
 import useAutoFocus from 'hooks/useAutoFocus';
 import { useProductFruitsApi } from 'react-product-fruits';
 import { ProjectListsPopoverContentType } from './types';
+import { useSelector } from 'react-redux';
+import { PLANS, PLANS_V0 } from 'Constants/plans.constants';
+import { meetLink } from 'Utils/meetLink';
 const renderProjectImage = (project: any) => {
   return project.profile_picture ? (
     <img
@@ -51,6 +54,13 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
     projects
   } = props;
   const history = useHistory();
+
+  const { plan } = useSelector((state: any) => state.featureConfig);
+  let isFreePlan = true;
+  if (plan) {
+    isFreePlan =
+      plan?.name === PLANS.PLAN_FREE || plan?.name === PLANS_V0?.PLAN_FREE;
+  }
 
   const containerListRef = useRef<any>();
   const onKeydownEvent = (e: any) => useKeyboardNavigation(containerListRef, e);
@@ -233,11 +243,10 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
       items: [
         {
           id: 'item-1',
-          text: 'Customer Support',
+          text: 'Schedule a call',
           props: {
             onClick: () => {
-              if (window && window.Intercom)
-                window.Intercom('showNewMessage', `Hey, I need help with ...`);
+              window.open(meetLink(isFreePlan), '_blank');
               setShowPopOver(false);
             }
           }
@@ -254,7 +263,7 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
         },
         {
           id: 'item-3',
-          text: 'Raise an Issue',
+          text: 'Raise an issue',
           props: {
             onClick: () => setOpenRaiseIssue(true)
           }
