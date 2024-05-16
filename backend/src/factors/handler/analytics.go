@@ -41,6 +41,7 @@ curl -i -H 'cookie: factors-sid=<COOKIE>' -H "Content-UnitType: application/json
 // @Param dashboard_id query integer false "Dashboard ID"
 // @Param dashboard_unit_id query integer false "Dashboard Unit ID"
 // @Param query_group body model.QueryGroup true "Query group"
+// @Param download query integer true "Set download limit"
 // @Success 200 {string} json "{"result": model.QueryResult, "cache": false, "refreshed_at": timestamp}"
 // @Router /{project_id}/v1/query [post]
 func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool) {
@@ -79,6 +80,12 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		hardRefresh, _ = strconv.ParseBool(refreshParam)
 	}
 
+	downloadLimitParam := c.Query("download")
+	var downloadLimit int64
+	if downloadLimitParam != "" {
+		downloadLimit, _ = strconv.ParseInt(downloadLimitParam, 10, 64)
+	}
+
 	requestPayload, statusCode, errorCode, errMsg, isErr = setTimezoneForAnalyticsRequest(logCtx, requestPayload, projectId)
 	if statusCode != http.StatusOK {
 		return nil, statusCode, errorCode, errMsg, isErr
@@ -94,6 +101,11 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 
 	enableOptimisedFilterOnEventUserQuery := c.Request.Header.Get(H.HeaderUserFilterOptForEventsAndUsers) == "true" ||
 		C.EnableOptimisedFilterOnEventUserQuery()
+
+	// download limit given
+	for index := range requestPayload.Queries {
+		requestPayload.Queries[index].DownloadAccountsLimit = downloadLimit
+	}
 
 	if isDashboardQueryLocked {
 		err = requestPayload.TransformDateTypeFilters()
@@ -169,8 +181,11 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		}
 	}
 
-	// If not found, set a placeholder for the query hash key that it has been running to avoid running again.
-	model.SetQueryCachePlaceholder(projectId, &requestPayload)
+	// skipping cache if download limit given
+	if downloadLimit == 0 {
+		// If not found, set a placeholder for the query hash key that it has been running to avoid running again.
+		model.SetQueryCachePlaceholder(projectId, &requestPayload)
+	}
 	H.SleepIfHeaderSet(c)
 
 	resultGroup, errCode := store.GetStore().RunEventsGroupQuery(requestPayload.Queries, projectId, enableOptimisedFilterOnEventUserQuery)
@@ -195,7 +210,11 @@ func EventsQueryHandler(c *gin.Context) (interface{}, int, string, string, bool)
 		resultGroup.Results[i].CacheMeta = meta
 	}
 	resultGroup.CacheMeta = meta
-	model.SetQueryCacheResult(projectId, &requestPayload, resultGroup)
+
+	// skipping result cache if download limit given
+	if downloadLimit == 0 {
+		model.SetQueryCacheResult(projectId, &requestPayload, resultGroup)
+	}
 	// if it is a dashboard query, cache it
 	if isDashboardQueryRequest {
 

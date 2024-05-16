@@ -910,7 +910,7 @@ func buildAddJoinForEventAnalyticsGroupQuery(projectID int64, groupID, scopeGrou
 
 		if hasGlobalGroupPropertiesFilter || (isAccountSegment) {
 			groupUsersJoin := fmt.Sprintf(" LEFT JOIN users as user_groups on events.user_id = user_groups.id AND user_groups.project_id = ? LEFT JOIN "+
-				"users as group_users ON user_groups.group_%d_user_id = group_users.group_%d_user_id AND group_users.project_id = ? "+
+				"users as group_users ON COALESCE(user_groups.group_%d_user_id, user_groups.id) = group_users.group_%d_user_id AND group_users.project_id = ? "+
 				"AND group_users.is_group_user = true AND group_users.is_deleted = false ", scopeGroupID, scopeGroupID)
 
 			jointStmnt = groupUsersJoin
@@ -928,7 +928,7 @@ func buildAddJoinForEventAnalyticsGroupQuery(projectID int64, groupID, scopeGrou
 			}
 
 			if isAccountSegment {
-				jointStmnt = jointStmnt + fmt.Sprintf(" JOIN users as domains ON user_groups.group_%d_user_id = domains.id "+
+				jointStmnt = jointStmnt + fmt.Sprintf(" JOIN users as domains ON COALESCE(user_groups.group_%d_user_id, user_groups.id) = domains.id "+
 					"AND domains.project_id = ? AND domains.is_group_user = true AND domains.source = ?", scopeGroupID)
 
 				params = append(params, projectID, model.UserSourceDomains)
@@ -936,7 +936,7 @@ func buildAddJoinForEventAnalyticsGroupQuery(projectID int64, groupID, scopeGrou
 		}
 
 		if hasDomainPropertiesFilter {
-			jointStmnt = jointStmnt + fmt.Sprintf(" LEFT JOIN users as domain_users on user_groups.group_%d_user_id  = domain_users.id AND domain_users.project_id = ? AND domain_users.source = 9", scopeGroupID)
+			jointStmnt = jointStmnt + fmt.Sprintf(" LEFT JOIN users as domain_users on COALESCE(user_groups.group_%d_user_id, user_groups.id)  = domain_users.id AND domain_users.project_id = ? AND domain_users.source = 9", scopeGroupID)
 			params = append(params, projectID)
 		}
 
@@ -1010,10 +1010,10 @@ func GetUserSelectStmntForUserORGroup(caller string, scopeGroupID int, isGroupEv
 	selectEventUserID := "FIRST(%s, FROM_UNIXTIME(events.timestamp)) as event_user_id"
 	if isScopeDomains {
 		if isExistGlobalGroupByProperties && isExistGlobalUserPropertiesFilter {
-			return fmt.Sprintf("user_groups.group_%d_user_id  as coal_group_user_id, GROUP_CONCAT(group_users.id) as group_users_user_ids", scopeGroupID) +
+			return fmt.Sprintf("COALESCE(user_groups.group_%d_user_id, user_groups.id)  as coal_group_user_id, GROUP_CONCAT(group_users.id) as group_users_user_ids", scopeGroupID) +
 				", " + fmt.Sprintf(selectEventUserID, "events.user_id")
 		}
-		return fmt.Sprintf("user_groups.group_%d_user_id  as coal_group_user_id", scopeGroupID) + ", " + fmt.Sprintf(selectEventUserID, "events.user_id")
+		return fmt.Sprintf("COALESCE(user_groups.group_%d_user_id, user_groups.id)  as coal_group_user_id", scopeGroupID) + ", " + fmt.Sprintf(selectEventUserID, "events.user_id")
 	}
 
 	if scopeGroupID > 0 {
@@ -1627,11 +1627,13 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 		aggregateSelect = appendOrderByAggr(aggregateSelect)
 	}
 
-	var domLimit int
-	if query.DownloadAccountsLimitGiven {
-		domLimit = 10000
-	} else {
-		domLimit = 1000
+	var domLimit int64
+	if model.IsAnyProfiles(query.Caller) {
+		if query.DownloadAccountsLimit > 0 {
+			domLimit = query.DownloadAccountsLimit
+		} else {
+			domLimit = 1000
+		}
 	}
 
 	if model.IsUserProfiles(query.Caller) {
@@ -1643,6 +1645,9 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 		if scopeGroupID > 0 && isScopeDomains {
 			aggregateSelect = fmt.Sprintf("SELECT coal_group_user_id as identity, last_activity, domain_name FROM final_res GROUP BY identity ORDER BY last_activity DESC LIMIT %d", domLimit)
 		}
+	} else if query.DownloadAccountsLimit > 0 {
+		downloadLimit := fmt.Sprintf("LIMIT %d", query.DownloadAccountsLimit)
+		aggregateSelect = appendStatement(aggregateSelect, downloadLimit)
 	} else {
 		// Limit is applicable only on the following. Because attribution calls this.
 		if !query.IsLimitNotApplicable {
@@ -1718,7 +1723,11 @@ func buildEventsOccurrenceSingleEventQuery(projectId int64,
 
 	qStmnt = appendGroupByTimestampIfRequired(qStmnt, isGroupByTimestamp, egKeys)
 	qStmnt = appendOrderByAggr(qStmnt)
-	if !q.IsLimitNotApplicable {
+
+	if q.DownloadAccountsLimit > 0 {
+		downloadLimit := fmt.Sprintf("LIMIT %d", q.DownloadAccountsLimit)
+		qStmnt = appendStatement(qStmnt, downloadLimit)
+	} else if !q.IsLimitNotApplicable {
 		qStmnt = appendLimitByCondition(qStmnt, q.GroupByProperties, isGroupByTimestamp)
 	}
 
@@ -2654,7 +2663,10 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID int64, q model.Query,
 	}
 
 	aggregateSelect = aggregateSelect + fmt.Sprintf(", %s DESC", model.AliasAggr)
-	if !q.IsLimitNotApplicable {
+	if q.DownloadAccountsLimit > 0 {
+		downloadLimit := fmt.Sprintf("LIMIT %d", q.DownloadAccountsLimit)
+		aggregateSelect = appendStatement(aggregateSelect, downloadLimit)
+	} else if !q.IsLimitNotApplicable {
 		aggregateSelect = appendLimitByCondition(aggregateSelect, q.GroupByProperties, isGroupByTimestamp)
 	}
 
@@ -3138,7 +3150,10 @@ func addEventCountAggregationQuery(projectID int64, query *model.Query, qStmnt *
 	} else {
 		aggregateSelect = appendOrderByAggr(aggregateSelect)
 	}
-	if !query.IsLimitNotApplicable {
+	if query.DownloadAccountsLimit > 0 {
+		downloadLimit := fmt.Sprintf("LIMIT %d", query.DownloadAccountsLimit)
+		aggregateSelect = appendStatement(aggregateSelect, downloadLimit)
+	} else if !query.IsLimitNotApplicable {
 		aggregateSelect = appendLimitByCondition(aggregateSelect, query.GroupByProperties, isGroupByTimestamp)
 	}
 
