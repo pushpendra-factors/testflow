@@ -50,7 +50,7 @@ const getMenuItems = ({ showSavedReport }) => {
     items.push({
       label: 'Add from draft',
       key: SAVED_QUERY,
-      icon: <SVG name='FileSignature' size={24} color='#8C8C8C' />,
+      icon: <SVG name='AddFromDraft' size={24} color='#8C8C8C' />,
       description: 'Select from saved Reports',
       bgColor: '#F5F5F5'
     });

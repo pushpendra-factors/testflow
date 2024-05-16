@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useSelector } from 'react-redux';
 import { Select, Radio } from 'antd';
@@ -18,8 +18,15 @@ function AddToDashboardForm({
   dashboardPresentation,
   setDashboardPresentation
 }) {
-  const { dashboards } = useSelector((state) => state.dashboard);
-
+  const { dashboards, activeDashboard } = useSelector(
+    (state) => state.dashboard
+  );
+  useEffect(() => {
+    setSelectedDashboards([activeDashboard.id]);
+    return () => {
+      setSelectedDashboards([]);
+    };
+  }, []);
   const handlePresentationChange = (e) => {
     setDashboardPresentation(e.target.value);
   };
@@ -61,8 +68,8 @@ function AddToDashboardForm({
       mode='multiple'
       style={{ width: '100%' }}
       placeholder='Please Select'
+      size='large'
       onChange={handleSelectChange}
-      className={styles.multiSelectStyles}
       value={getSelectedDashboards()}
     >
       {dashboards.data

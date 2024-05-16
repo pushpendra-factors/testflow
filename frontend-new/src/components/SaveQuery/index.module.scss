@@ -33,52 +33,12 @@
   row-gap: 0.5rem;
 }
 
-.multiSelectStyles,
-.singleSelectStyles {
-  cursor: pointer;
-
-  :global(.ant-select-selector) {
-    border-radius: 6px !important;
-    padding-left: 12px !important;
-    padding-top: 4px !important;
-    padding-bottom: 4px !important;
-
-    :global(.ant-select-selection-item) {
-      border-radius: 4px !important;
-    }
-
-    :global(.ant-select-selection-item-content) {
-      padding: 4px 8px 4px 8px !important;
-    }
-
-    :global(.ant-select-selection-item-remove) {
-      display: none !important;
-    }
-  }
-}
-
-.multiSelectStyles {
-  :global(.ant-select-selector) {
-    :global(.ant-select-selection-item) {
-      background-color: #e7e9ed !important;
-      height: unset !important;
-    }
-  }
-}
-
 .singleSelectStyles {
   min-width: 120px;
   :global(.ant-select-selector) {
     display: flex;
     align-items: center;
     height: 40px !important;
-  }
-  :global(.ant-select-selection-item) {
-    font-weight: 600;
-    font-size: 14px;
-    line-height: 20px;
-    letter-spacing: -0.01em;
-    color: #3e516c;
   }
 }
 
@@ -109,23 +69,23 @@
   }
 }
 
-.antdIcon{
+.antdIcon {
   :global(.ant-btn.ant-btn-icon-only) {
     border-radius: 0px 4px 4px 0px !important;
     margin-left: 1px;
-    &:disabled{
+    &:disabled {
       background-color: rgb(221, 219, 219) !important;
-      border-right: 1px solid var(--functional-colours-white, #FFF);
+      border-right: 1px solid var(--functional-colours-white, #fff);
       border: none;
     }
   }
 
-  :global(.ant-btn.ant-btn-primary:first-child:not(:last-child)){
+  :global(.ant-btn.ant-btn-primary:first-child:not(:last-child)) {
     border-radius: 4px 0px 0px 4px !important;
-    &:disabled{
+    &:disabled {
       color: white !important;
       background-color: rgb(221, 219, 219) !important;
-      border-right: 1px solid var(--functional-colours-white, #FFF);
+      border-right: 1px solid var(--functional-colours-white, #fff);
       border: none;
     }
   }
@@ -134,53 +94,50 @@
 .antdActionMenu {
   min-width: 200px;
   border-radius: 5px;
- 
-  :global(.ant-dropdown-menu-item)
-  {
-      border-radius: 10px;
-      padding: 10px 12px !important;
+
+  :global(.ant-dropdown-menu-item) {
+    border-radius: 10px;
+    padding: 10px 12px !important;
   }
 
   :global(.anticon) {
     vertical-align: 0px !important;
   }
-    
 }
 
 .buttonContainer {
   display: flex;
   justify-content: flex-end;
-  gap: 8px; 
-  margin-top: 16px; 
+  gap: 8px;
+  margin-top: 16px;
   padding: '24px';
 }
 
-.messageBox{
+.messageBox {
   width: 320px;
   height: 102px;
 }
-.boxParaContent{
+.boxParaContent {
   padding: '20px';
   font-size: '16px';
   font-weight: '24px';
 }
 .customWhiteButton {
-  background-color: white !important; 
-  color: #333; 
+  background-color: white !important;
+  color: #333;
   font-weight: normal;
-  border: 1px solid #d9d9d9; 
+  border: 1px solid #d9d9d9;
 }
 
 .customWhiteButton:hover {
-  background-color: white !important; 
-  border: 1px solid #d9d9d9; 
+  background-color: white !important;
+  border: 1px solid #d9d9d9;
 }
 
 .additionalText {
-  font-size: 18px; 
-  font-weight: normal; 
-  color: grey; 
-  margin-top: -30px; 
-  margin-bottom: 8px; 
+  font-size: 18px;
+  font-weight: normal;
+  color: grey;
+  margin-top: -30px;
+  margin-bottom: 8px;
 }
-

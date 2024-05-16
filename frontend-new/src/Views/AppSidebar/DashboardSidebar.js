@@ -27,6 +27,7 @@ import SidebarSearch from './SidebarSearch';
 import DashboardNewFolderModal from './DashboardNewFolderModal';
 import styles from './index.module.scss';
 import DashboardFoldersLayout from './DashboardFoldersLayout';
+import { PlusOutlined } from '@ant-design/icons';
 
 function DashboardSidebar() {
   const dispatch = useDispatch();
@@ -159,28 +160,13 @@ function DashboardSidebar() {
           />
         </div>
         <Button
-          className={cx(
-            'flex gap-x-2 items-center w-full',
-            styles.sidebar_action_button
-          )}
           onClick={() => {
             dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_OPEN });
           }}
-          id='fa-at-btn--new-dashboard'
+          type='dashed'
+          icon={<PlusOutlined />}
         >
-          <SVG
-            name='plus'
-            size={16}
-            extraClass={styles.sidebar_action_button__content}
-            isFill={false}
-          />
-          <Text
-            level={6}
-            type='title'
-            extraClass={cx('m-0', styles.sidebar_action_button__content)}
-          >
-            New Dashboard
-          </Text>
+          New Dashboard
         </Button>
       </div>
       <DashboardNewFolderModal

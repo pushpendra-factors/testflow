@@ -453,13 +453,6 @@ const SavedQueriesTable = ({
         image={<img src={EmptyDraftScreen} width={182} />}
         title='A place for your ad-hoc queries 📝'
         description='Save any ad-hoc under drafts to access later'
-        ActionButton={{
-          text: 'New Report',
-          onClick: () => {},
-          component: (
-            <NewReportButton showSavedReport={false} placement='bottom' />
-          )
-        }}
       />
     );
   }

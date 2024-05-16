@@ -96,7 +96,7 @@ function SaveQueryModal({
       isLoading={isLoading}
       okButtonProps={{ disabled: isSaveBtnDisabled() }}
     >
-      <div className='flex flex-col gap-y-10'>
+      <div className='flex flex-col gap-y-5'>
         <Text
           color='black'
           extraClass='m-0'
@@ -107,9 +107,9 @@ function SaveQueryModal({
           {modalTitle}
         </Text>
         <div className='flex flex-col gap-y-8'>
-        <div className={`${styles.additionalText}`}>
+          <div className={`${styles.additionalText}`}>
             Save this report to keep your efforts safe
-        </div>
+          </div>
           <Input
             onChange={handleTitleChange}
             value={title}
