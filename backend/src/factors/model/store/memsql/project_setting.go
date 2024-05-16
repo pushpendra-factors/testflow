@@ -2083,9 +2083,15 @@ func getQueryStmntFromIntegrationName(integrationName string, projectID int64) (
 		params = append(params, projectID)
 		return stmt, params
 
-	case model.FEATURE_FACEBOOK, model.ADWORDS, model.FEATURE_G2, model.FEATURE_GOOGLE_ORGANIC:
+	case model.FEATURE_FACEBOOK, model.FEATURE_G2, model.FEATURE_GOOGLE_ORGANIC:
 
 		stmt = fmt.Sprintf("SELECT 1 synced,MAX(created_at) last_at from %s_documents where project_id= ? ", integrationName)
+		params = append(params, projectID)
+		return stmt, params
+
+	case model.FEATURE_GOOGLE_ADS:
+
+		stmt = fmt.Sprintf("SELECT 1 synced,MAX(created_at) last_at from adwords_documents where project_id= ? ")
 		params = append(params, projectID)
 		return stmt, params
 
