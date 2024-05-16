@@ -688,13 +688,13 @@ func buildAddSelectForFunnelGroup(stepName string, stepIndex int, groupID, scope
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	if isScopeDomains {
-		addSelect := fmt.Sprintf("user_groups.group_%d_user_id as coal_group_user_id,"+
+		addSelect := fmt.Sprintf("COALESCE(user_groups.group_%d_user_id, user_groups.id) as coal_group_user_id,"+
 			" FIRST(events.timestamp, FROM_UNIXTIME(events.timestamp)) as timestamp, 1 as %s", scopeGroupID, stepName)
 		if isDependentBreakdown {
 			addSelect = addSelect + ", " + "GROUP_CONCAT(group_users.id) as group_users_user_ids"
 		}
 		if stepIndex > 0 {
-			addSelect = fmt.Sprintf("user_groups.group_%d_user_id as coal_group_user_id, events.timestamp, 1 as %s", scopeGroupID, stepName)
+			addSelect = fmt.Sprintf("COALESCE(user_groups.group_%d_user_id, user_groups.id) as coal_group_user_id, events.timestamp, 1 as %s", scopeGroupID, stepName)
 		}
 		return addSelect
 	}
@@ -763,7 +763,7 @@ func buildAddJoinForFunnelGroup(projectID int64, groupID, scopeGroupID int, isSc
 		if hasGlobalGroupPropertiesFilter {
 			globalGroupIDColumns, globalGroupSource := model.GetDomainsAsscocaitedGroupSourceANDColumnIDs(filteredGlobalGroupPropertiesFilter, nil)
 			jointStmnt := fmt.Sprintf(" LEFT JOIN users as user_groups on events.user_id = user_groups.id AND user_groups.project_id = ? LEFT JOIN "+
-				"users as group_users ON user_groups.group_%d_user_id = group_users.group_%d_user_id AND group_users.project_id = ? AND group_users.is_deleted = false "+
+				"users as group_users ON COALESCE(user_groups.group_%d_user_id, user_groups.id) = group_users.group_%d_user_id AND group_users.project_id = ? AND group_users.is_deleted = false "+
 				"AND group_users.is_group_user = true AND group_users.source IN ( %s ) AND ( %s )", scopeGroupID, scopeGroupID, globalGroupSource,
 				globalGroupIDColumns)
 
@@ -771,7 +771,7 @@ func buildAddJoinForFunnelGroup(projectID int64, groupID, scopeGroupID int, isSc
 				return jointStmnt, []interface{}{projectID, projectID}
 			}
 
-			jointStmnt = jointStmnt + fmt.Sprintf(" LEFT JOIN users as domain_users on user_groups.group_%d_user_id = domain_users.id AND domain_users.project_id = ? AND domain_users.source = 9", scopeGroupID)
+			jointStmnt = jointStmnt + fmt.Sprintf(" LEFT JOIN users as domain_users on COALESCE(user_groups.group_%d_user_id, user_groups.id) = domain_users.id AND domain_users.project_id = ? AND domain_users.source = 9", scopeGroupID)
 			return jointStmnt, []interface{}{projectID, projectID, projectID}
 		}
 
@@ -780,7 +780,7 @@ func buildAddJoinForFunnelGroup(projectID int64, groupID, scopeGroupID int, isSc
 			return jointStmnt, []interface{}{projectID}
 		}
 
-		jointStmnt = jointStmnt + fmt.Sprintf(" LEFT JOIN users as domain_users on user_groups.group_%d_user_id = domain_users.id AND domain_users.project_id = ? AND domain_users.source = 9", scopeGroupID)
+		jointStmnt = jointStmnt + fmt.Sprintf(" LEFT JOIN users as domain_users on COALESCE(user_groups.group_%d_user_id, user_groups.id) = domain_users.id AND domain_users.project_id = ? AND domain_users.source = 9", scopeGroupID)
 		return jointStmnt, []interface{}{projectID, projectID}
 	}
 
