@@ -242,10 +242,10 @@ type Query struct {
 	ConversionTime       string                     `json:"cnvtm"`
 
 	// For EventsWithProperties in segments
-	Caller                string   `gorm:"default:null" json:"caller"`
-	Source                string   `json:"source"`
-	TableProps            []string `json:"table_props"`
-	DownloadAccountsLimit int64    `json:"dalg"`
+	Caller                     string   `gorm:"default:null" json:"caller"`
+	Source                     string   `json:"source"`
+	TableProps                 []string `json:"table_props"`
+	DownloadAccountsLimitGiven bool     `gorm:"default:false" json:"dalg"`
 
 	// Deprecated: Keeping it for old dashboard units.
 	OverridePeriod    bool  `json:"ovp"`
