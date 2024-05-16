@@ -99,11 +99,8 @@ const FactorsHubspotCompany = ({
               </div>
             </div>
           </Panel>
-
           <Panel header="Configurations" key="2" className='bg-white' disabled={!isHubspotIntEnabled}>
             <div className='flex p-4'>
-
-
               <div className='flex flex-col'>
                 <Text type={'title'} weight={'bold'} level={7} color={'black'} extraClass={'m-0'}>{`Mandatory fields`}</Text>
                 <div className='flex justify-between items-center mt-4'>
@@ -127,7 +124,6 @@ const FactorsHubspotCompany = ({
                   limit={2}
                   isTemplate={isTemplate}
                 />
-
                 <div className='mt-6'>
                   <Text type={'title'} weight={'bold'} level={7} color={'black'} extraClass={'m-0'}>{`Additional fields (Optional)`}</Text>
                   <MapComponent
@@ -138,19 +134,10 @@ const FactorsHubspotCompany = ({
                     isTemplate={isTemplate}
                   />
                 </div>
-
               </div>
-
-
             </div>
-
-
-          </Panel>
-
-          <Panel header="Final Section" className='bg-white' key="3" disabled={!isHubspotIntEnabled}>
-            <div className='p-4'>
-              <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mb-2'}>{`Factors is a secure partner with Zapier. Your credentials are encrypted & can be removed at any time. You can manage all of your connected accounts here.`}</Text>
-              <Button type={'primary'} className='mt-2' onClick={() => saveWorkflowFn()}>Save and Continue</Button>
+            <div className='border-top--thin-2 p-4 mt-4 flex items-center justify-end'>
+              <Button type={'primary'} className='mt-2' onClick={() => saveWorkflowFn()}>Save and Publish</Button>
             </div>
           </Panel>
         </Collapse>
