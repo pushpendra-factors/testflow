@@ -10,7 +10,30 @@ import useKeyboardNavigation from 'hooks/useKeyboardNavigation';
 import useAutoFocus from 'hooks/useAutoFocus';
 import { useProductFruitsApi } from 'react-product-fruits';
 import { ProjectListsPopoverContentType } from './types';
-
+const renderProjectImage = (project: any) => {
+  return project.profile_picture ? (
+    <img
+      src={project.profile_picture}
+      style={{
+        borderRadius: '4px',
+        width: '28px',
+        height: '28px'
+      }}
+    />
+  ) : (
+    <Avatar
+      size={28}
+      shape='square'
+      style={{
+        background: '#83D2D2',
+        fontSize: '14px',
+        textTransform: 'uppercase',
+        fontWeight: '400',
+        borderRadius: '4px'
+      }}
+    >{`${project?.name?.charAt(0)}`}</Avatar>
+  );
+};
 function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
   const {
     variant,
@@ -46,8 +69,13 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
     <div className={styles.projects_list_container}>
       <div style={{ overflow: 'hidden' }}>
         {showProjectsList === false ? (
-          <div className={`${styles.active_project_div}`}>
-            <div>
+          <div
+            className={`${styles.active_project_div}`}
+            onClick={() => setShowProjectsList(true)}
+          >
+            <div className='flex items-center gap-2'>
+              {renderProjectImage(active_project)}
+
               <Text
                 type='title'
                 level={7}
@@ -58,7 +86,7 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
                 {active_project?.name}{' '}
               </Text>
             </div>
-            <div onClick={() => setShowProjectsList(true)}>
+            <div>
               <RightOutlined />
             </div>
           </div>
@@ -129,28 +157,7 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
                     }
                   >
                     <div className='flex items-center flex-nowrap'>
-                      {project.profile_picture ? (
-                        <img
-                          src={project.profile_picture}
-                          style={{
-                            borderRadius: '4px',
-                            width: '28px',
-                            height: '28px'
-                          }}
-                        />
-                      ) : (
-                        <Avatar
-                          size={28}
-                          shape='square'
-                          style={{
-                            background: '#83D2D2',
-                            fontSize: '14px',
-                            textTransform: 'uppercase',
-                            fontWeight: '400',
-                            borderRadius: '4px'
-                          }}
-                        >{`${project?.name?.charAt(0)}`}</Avatar>
-                      )}
+                      {renderProjectImage(project)}
 
                       <span className='font-bold ml-3'>{project?.name}</span>
                     </div>
@@ -201,6 +208,22 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
             href: '/settings/user',
             onClick: handleClosePopover
           }
+        },
+        {
+          id: 'item-3',
+          text: 'Enrichment Rules',
+          props: {
+            href: '/settings/engagements',
+            onClick: handleClosePopover
+          }
+        },
+        {
+          id: 'item-4',
+          text: 'Setup Assist',
+          props: {
+            href: '/checklist',
+            onClick: handleClosePopover
+          }
         }
       ]
     },
@@ -209,7 +232,7 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
       group: 'Help and Support',
       items: [
         {
-          id: 'item-3',
+          id: 'item-1',
           text: 'Customer Support',
           props: {
             onClick: () => {
@@ -220,7 +243,7 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
           }
         },
         {
-          id: 'item-4',
+          id: 'item-2',
           props: {
             href: 'https://help.factors.ai/en/',
             target: '_blank',
@@ -230,7 +253,7 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
           text: 'Product Documentation'
         },
         {
-          id: 'item-5',
+          id: 'item-3',
           text: 'Raise an Issue',
           props: {
             onClick: () => setOpenRaiseIssue(true)
@@ -238,9 +261,11 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
         },
 
         {
-          id: 'item-6',
+          id: 'item-4',
           text: 'Privacy and Security',
           props: {
+            target: '_blank',
+            rel: 'noreferrer',
             href: 'https://www.factors.ai/privacy-policy'
           }
         }
@@ -292,25 +317,24 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
 
       {variant === 'app' && showProjectsList === false && (
         <>
-          {actionsList.map((eachGroup) => {
+          {actionsList.map((eachGroup, eachGroupIndex) => {
             return (
               <React.Fragment key={eachGroup.id}>
-                <div className='px-4 py-2'>{eachGroup.group}</div>
+                <div className='px-4 py-2 text-xs'>{eachGroup.group}</div>
                 {eachGroup.items.map((eachItem) => {
                   return (
                     <div
-                      key={eachItem.id}
+                      key={eachGroup.id + eachItem.id}
                       className={` ${styles.popover_content__additionalActions}`}
                     >
-                      <a {...eachItem?.props} target='_blank' rel='noreferrer'>
-                        {eachItem.text}
-                      </a>
+                      <a {...eachItem?.props}>{eachItem.text}</a>
                     </div>
                   );
                 })}
+
                 <div
                   className='fa-popupcard-divider'
-                  style={{ margin: 0 }}
+                  style={{ margin: '4px 0' }}
                 ></div>
               </React.Fragment>
             );
@@ -318,7 +342,7 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
         </>
       )}
 
-      <div style={{ borderTop: variant === 'app' ? 'thin solid #e7e9ed' : '' }}>
+      <div>
         {showProjectsList === true ? (
           <Button
             size='large'

@@ -64,7 +64,7 @@
     width: 100%;
     border-radius: 0 0 12px 12px;
     text-align: left;
-    height: 48px;
+    height: 38px;
   }
 }
 .projects_list_container {
@@ -76,19 +76,18 @@
   & .active_project_div {
     display: flex;
     justify-content: space-between;
+    transition-duration: 200ms;
+    cursor: pointer;
 
+    &:hover {
+      background-color: #f7f7f7;
+    }
     & > div:first-child {
       padding: 16px;
       text-transform: capitalize;
     }
     & > div:nth-child(2) {
-      border-left: 1px solid #e7e9ed;
-      transition-duration: 200ms;
       padding: 16px;
-      cursor: pointer;
-      &:hover {
-        background-color: #f7f7f7;
-      }
     }
   }
   & .active_project_div_active {
