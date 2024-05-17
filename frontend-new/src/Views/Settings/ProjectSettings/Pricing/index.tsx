@@ -13,6 +13,7 @@ import InvoiceTab from './InvoiceTab';
 import UpgradeTab from './UpgradeTab';
 import { PRICING_PAGE_TABS, showV2PricingVersion } from './utils';
 import BillingTab from './BillingTab';
+import styles from './index.module.scss';
 
 function Pricing() {
   const [activeKey, setActiveKey] = useState(PRICING_PAGE_TABS.BILLING);
@@ -80,11 +81,11 @@ function Pricing() {
           </Breadcrumb>
         </div>
       </div>
-      <div className='mt-6'>
+      <div className={`mt-6 ${styles.tab_container}`}>
         <Tabs
           activeKey={activeKey}
           onChange={handleTabChange}
-          tabBarStyle={{ marginBottom: 8 }}
+          style={{overflow: 'none'}}
         >
           <Tabs.TabPane tab='Billing' key={PRICING_PAGE_TABS.BILLING}>
             <BillingTab
