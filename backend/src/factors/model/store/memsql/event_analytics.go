@@ -1643,6 +1643,9 @@ func addUniqueUsersAggregationQuery(projectID int64, query *model.Query, qStmnt 
 		if scopeGroupID > 0 && isScopeDomains {
 			aggregateSelect = fmt.Sprintf("SELECT coal_group_user_id as identity, last_activity, domain_name FROM final_res GROUP BY identity ORDER BY last_activity DESC LIMIT %d", domLimit)
 		}
+	} else if query.DownloadAccountsLimit > 0 {
+		downloadLimit := fmt.Sprintf("LIMIT %d", query.DownloadAccountsLimit)
+		aggregateSelect = appendStatement(aggregateSelect, downloadLimit)
 	} else {
 		// Limit is applicable only on the following. Because attribution calls this.
 		if !query.IsLimitNotApplicable {
@@ -1718,7 +1721,11 @@ func buildEventsOccurrenceSingleEventQuery(projectId int64,
 
 	qStmnt = appendGroupByTimestampIfRequired(qStmnt, isGroupByTimestamp, egKeys)
 	qStmnt = appendOrderByAggr(qStmnt)
-	if !q.IsLimitNotApplicable {
+
+	if q.DownloadAccountsLimit > 0 {
+		downloadLimit := fmt.Sprintf("LIMIT %d", q.DownloadAccountsLimit)
+		qStmnt = appendStatement(qStmnt, downloadLimit)
+	} else if !q.IsLimitNotApplicable {
 		qStmnt = appendLimitByCondition(qStmnt, q.GroupByProperties, isGroupByTimestamp)
 	}
 
@@ -2654,7 +2661,10 @@ func buildEventsOccurrenceWithGivenEventQuery(projectID int64, q model.Query,
 	}
 
 	aggregateSelect = aggregateSelect + fmt.Sprintf(", %s DESC", model.AliasAggr)
-	if !q.IsLimitNotApplicable {
+	if q.DownloadAccountsLimit > 0 {
+		downloadLimit := fmt.Sprintf("LIMIT %d", q.DownloadAccountsLimit)
+		aggregateSelect = appendStatement(aggregateSelect, downloadLimit)
+	} else if !q.IsLimitNotApplicable {
 		aggregateSelect = appendLimitByCondition(aggregateSelect, q.GroupByProperties, isGroupByTimestamp)
 	}
 
@@ -3138,7 +3148,10 @@ func addEventCountAggregationQuery(projectID int64, query *model.Query, qStmnt *
 	} else {
 		aggregateSelect = appendOrderByAggr(aggregateSelect)
 	}
-	if !query.IsLimitNotApplicable {
+	if query.DownloadAccountsLimit > 0 {
+		downloadLimit := fmt.Sprintf("LIMIT %d", query.DownloadAccountsLimit)
+		aggregateSelect = appendStatement(aggregateSelect, downloadLimit)
+	} else if !query.IsLimitNotApplicable {
 		aggregateSelect = appendLimitByCondition(aggregateSelect, query.GroupByProperties, isGroupByTimestamp)
 	}
 

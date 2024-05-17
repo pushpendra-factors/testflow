@@ -246,6 +246,7 @@ type Query struct {
 	Source                     string   `json:"source"`
 	TableProps                 []string `json:"table_props"`
 	DownloadAccountsLimitGiven bool     `gorm:"default:false" json:"dalg"`
+	DownloadAccountsLimit      int64    `json:"dal"`
 
 	// Deprecated: Keeping it for old dashboard units.
 	OverridePeriod    bool  `json:"ovp"`

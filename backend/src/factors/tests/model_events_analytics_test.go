@@ -1033,7 +1033,7 @@ func sendEventsQueryHandler(r *gin.Engine, projectId int64, agent *model.Agent, 
 	if err != nil {
 		log.WithError(err).Error("Error creating cookie data.")
 	}
-	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/v1/query", projectId)).
+	rb := C.NewRequestBuilderWithPrefix(http.MethodPost, fmt.Sprintf("/projects/%d/v1/query?download=40", projectId)).
 		WithPostParams(queryGroup).
 		WithCookie(&http.Cookie{
 			Name:   C.GetFactorsCookieName(),
