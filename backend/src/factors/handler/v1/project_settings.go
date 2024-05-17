@@ -127,8 +127,6 @@ func IntegrationsStatusHandler(c *gin.Context) {
 				State:   statusString,
 				Message: model.ErrorStateToErrorMessageMap[statusString],
 			}
-		} else {
-			result[integrationName] = model.IntegrationState{}
 		}
 	}
 

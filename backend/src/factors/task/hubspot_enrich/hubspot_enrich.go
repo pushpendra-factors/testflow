@@ -319,32 +319,38 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 	}
 	panicError = false
 
-	for _, state := range syncStatus.Status {
-		if state.IsProcessLimitExceeded {
-			status := store.GetStore().UpdateProjectSettingsIntegrationStatus(state.ProjectId, model.HUBSPOT, model.HEAVY_DELAYED)
-			if status != http.StatusAccepted {
-				log.WithFields(log.Fields{"project_id": state.ProjectId}).Warn("Failed to update integration status")
-
-			}
-		}
-
-		if state.Message == model.CLIENT_TOKEN_EXPIRED {
-			status := store.GetStore().UpdateProjectSettingsIntegrationStatus(state.ProjectId, model.HUBSPOT, model.CLIENT_TOKEN_EXPIRED)
-			if status != http.StatusAccepted {
-				log.WithFields(log.Fields{"project_id": state.ProjectId}).Warn("Failed to update integration status")
-
-			}
-		}
-
-		if state.Status == model.SUCCESS {
-			status := store.GetStore().UpdateProjectSettingsIntegrationStatus(state.ProjectId, model.HUBSPOT, model.SUCCESS)
-			if status != http.StatusAccepted {
-				log.WithFields(log.Fields{"project_id": state.ProjectId}).Warn("Failed to update integration status")
-
-			}
-		}
-	}
+	UpdateProjectSettingsIntefrationStatusFromJobStatusForHubspot(syncStatus)
 
 	return jobStatus, true
 
+}
+
+func UpdateProjectSettingsIntefrationStatusFromJobStatusForHubspot(syncStatus SyncStatus) {
+
+	var jobStatusByProjectIdMap map[int64]string
+	for _, state := range syncStatus.Status {
+
+		if state.Message == model.CLIENT_TOKEN_EXPIRED {
+			jobStatusByProjectIdMap[state.ProjectId] = model.CLIENT_TOKEN_EXPIRED
+		}
+
+		if state.Status == model.SUCCESS {
+			if _, ok := jobStatusByProjectIdMap[state.ProjectId]; !ok {
+				jobStatusByProjectIdMap[state.ProjectId] = model.SUCCESS
+			}
+
+		}
+
+		if state.IsProcessLimitExceeded {
+			jobStatusByProjectIdMap[state.ProjectId] = model.HEAVY_DELAYED
+		}
+	}
+
+	for projectId, state := range jobStatusByProjectIdMap {
+		status := store.GetStore().UpdateProjectSettingsIntegrationStatus(projectId, model.HUBSPOT, state)
+		if status != http.StatusAccepted {
+			log.WithFields(log.Fields{"project_id": projectId}).Warn("Failed to update integration status")
+
+		}
+	}
 }
