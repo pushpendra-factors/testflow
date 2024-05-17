@@ -130,22 +130,30 @@ func checkIntegrationsDataAvailabilityAndHardPull(allSupportedIntegrations []str
 				var eventsPull bool = true
 				var errStr string
 				for _, integration := range []string{M.HUBSPOT, M.SALESFORCE} {
-					intStatus := integrationsStatus[integration]
-					if !intStatus.IntegrationStatus {
+					latestData := integrationsStatus[integration].LatestData
+					intStatus, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, integration, false)
+					if err != nil {
+						eventsPull = false
+						success = false
+						errStr += integration + " "
+						status[integration+"-error"] = "error getting feature status"
+						continue
+					}
+					if !intStatus {
 						status[integration+"-info"] = "Not Integrated"
 					} else {
-						if int64(intStatus.LatestData) < endTimestampInProjectTimezone {
+						if int64(latestData) < endTimestampInProjectTimezone {
 							eventsPull = false
 							success = false
 							errStr += integration + " "
-							noOfDaysFromNow := (U.TimeNowUnix() - int64(intStatus.LatestData)) / U.Per_day_epoch
+							noOfDaysFromNow := (U.TimeNowUnix() - int64(latestData)) / U.Per_day_epoch
 							var key string
 							if noOfDaysFromNow > DATA_FAILURE_ALERT_LIMIT {
 								key = integration + "-error"
 							} else {
 								key = integration + "-info"
 							}
-							status[key] = fmt.Sprintf("Data not available after %s", time.Unix(int64(intStatus.LatestData), 0).Format("01-02-2006 15:04:05"))
+							status[key] = fmt.Sprintf("Data not available after %s", time.Unix(int64(latestData), 0).Format("01-02-2006 15:04:05"))
 						}
 					}
 				}
@@ -162,23 +170,30 @@ func checkIntegrationsDataAvailabilityAndHardPull(allSupportedIntegrations []str
 						continue
 					}
 				}
-				intStatus := integrationsStatus[fileType]
+				latestData := integrationsStatus[fileType].LatestData
+				intStatus, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, fileType, false)
+				if err != nil {
+					pullFileTypes[fileType] = false
+					success = false
+					status[fileType+"error"] = "error getting feature status"
+					continue
+				}
 				pullFileTypes[fileType] = true
-				if !intStatus.IntegrationStatus {
+				if !intStatus {
 					pullFileTypes[fileType] = false
 					status[fileType+"-info"] = "Not Integrated"
 				} else {
-					if int64(intStatus.LatestData) < endTimestampInProjectTimezone {
+					if int64(latestData) < endTimestampInProjectTimezone {
 						pullFileTypes[fileType] = false
 						success = false
-						noOfDays := (U.TimeNowUnix() - int64(intStatus.LatestData)) / U.Per_day_epoch
+						noOfDays := (U.TimeNowUnix() - int64(latestData)) / U.Per_day_epoch
 						var key string
 						if noOfDays > DATA_FAILURE_ALERT_LIMIT {
 							key = fileType + "-error"
 						} else {
 							key = fileType + "-info"
 						}
-						status[key] = fmt.Sprintf("Data not available after %s", time.Unix(int64(intStatus.LatestData), 0).Format("01-02-2006 15:04:05"))
+						status[key] = fmt.Sprintf("Data not available after %s", time.Unix(int64(latestData), 0).Format("01-02-2006 15:04:05"))
 					}
 				}
 			}

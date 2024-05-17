@@ -638,6 +638,14 @@ func getAptId(event *P.CounterEventFormat, num int) string {
 		return event.Group3UserId
 	case 4:
 		return event.Group4UserId
+	case 5:
+		return event.Group5UserId
+	case 6:
+		return event.Group6UserId
+	case 7:
+		return event.Group7UserId
+	case 8:
+		return event.Group8UserId
 	default:
 		return event.UserId
 	}
