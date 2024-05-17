@@ -13,7 +13,7 @@ import {
 } from './saveQuery.constants';
 
 function AddToDashboardForm({
-  selectedDashboards,
+  selectedDashboards = [],
   setSelectedDashboards,
   dashboardPresentation,
   setDashboardPresentation
@@ -21,6 +21,7 @@ function AddToDashboardForm({
   const { dashboards, activeDashboard } = useSelector(
     (state) => state.dashboard
   );
+
   useEffect(() => {
     setSelectedDashboards([activeDashboard.id]);
     return () => {
@@ -33,9 +34,9 @@ function AddToDashboardForm({
 
   const handleSelectChange = useCallback(
     (value) => {
-      const resp = value.map(
-        (v) => dashboards.data.find((d) => d.name === v).id
-      );
+      const resp = value
+        .map((v) => dashboards.data.find((d) => d.name === v)?.id)
+        .filter((v) => v != null);
       setSelectedDashboards(resp);
     },
     [dashboards.data]
@@ -43,9 +44,9 @@ function AddToDashboardForm({
 
   const getSelectedDashboards = useCallback(
     () =>
-      selectedDashboards.map(
-        (s) => dashboards.data.find((d) => d.id === s).name
-      ),
+      selectedDashboards
+        .map((s) => dashboards.data.find((d) => d.id === s)?.name)
+        .filter((s) => s != null),
     [dashboards.data, selectedDashboards]
   );
 
