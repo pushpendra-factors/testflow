@@ -43,6 +43,7 @@ var FeatureDisplayNameMap = map[string]string{
 	"Facebook":        FEATURE_FACEBOOK,
 	"Bing":            FEATURE_BING_ADS,
 	"Salesforce":      FEATURE_SALESFORCE,
+	"Hubspot":         FEATURE_HUBSPOT,
 	"Rudderstack":     FEATURE_RUDDERSTACK,
 	"Drift":           FEATURE_DRIFT,
 	"Segment":         FEATURE_SEGMENT,
