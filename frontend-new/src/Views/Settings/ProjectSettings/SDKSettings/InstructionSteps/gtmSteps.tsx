@@ -94,7 +94,7 @@ const GtmSteps = ({
 }: GtmStepsProps) => (
   <CollapsibleContainer
     showBorder
-    key='gtm'
+    keyName='gtm'
     BodyComponent={
       <GtmStepsBody
         projectToken={projectToken}

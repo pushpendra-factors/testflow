@@ -171,6 +171,7 @@ export const getIntegrationStatus = (integrationStatus: IntegrationStatus) => {
   switch (integrationStatus?.state) {
     case 'connected':
     case 'synced':
+    case 'success':
       status = 'connected';
       break;
     case 'client_token_expired':
@@ -196,6 +197,7 @@ export const getIntegrationActionText = (
   let actionText = '';
   switch (integrationStatus?.state) {
     case 'connected':
+    case 'success':
       actionText = 'Connected';
       break;
     case 'synced':

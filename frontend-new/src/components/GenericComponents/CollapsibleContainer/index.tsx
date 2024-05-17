@@ -4,29 +4,31 @@ import style from './index.module.scss';
 
 const { Panel } = Collapse;
 
-interface GTMStepsContainerProps {
-  key: string;
+interface CollapsibleContainerProps {
+  keyName: string;
   BodyComponent: React.ReactNode;
   HeaderComponent: React.ReactNode;
   expandIcon?: (panelProps: any) => React.ReactNode;
   showBorder: boolean;
+  openByDefault?: boolean;
 }
 
 const CollapsibleContainer = ({
-  key,
+  keyName,
   BodyComponent,
   HeaderComponent,
   expandIcon,
-  showBorder = true
-}: GTMStepsContainerProps) => (
+  showBorder = true,
+  openByDefault = false
+}: CollapsibleContainerProps) => (
   <Collapse
     bordered={showBorder}
-    key={key}
+    defaultActiveKey={openByDefault ? [keyName] : undefined}
     expandIconPosition='right'
     className={`${style.collapse} ${showBorder ? style.border : ''}`}
     expandIcon={expandIcon}
   >
-    <Panel key={key} header={HeaderComponent}>
+    <Panel key={keyName} header={HeaderComponent}>
       {BodyComponent}
     </Panel>
   </Collapse>
