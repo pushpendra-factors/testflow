@@ -145,12 +145,24 @@ export const getProfileData = (
   return post(null, url, query);
 };
 
-export const getKPIData = (projectId, query, dashboard, isQuery = false) => {
+export const getKPIData = (
+  projectId,
+  query,
+  dashboard,
+  isQuery = false,
+  query_id
+) => {
   let url;
   if (!dashboard) {
-    url = `${host}projects/${projectId}/v1/kpi/query`;
+    url = `${host}projects/${projectId}/v1/kpi/query${
+      query_id ? `?&query_id=${query_id}` : ''
+    }`;
   } else {
-    url = `${host}projects/${projectId}/v1/kpi/query?refresh=${dashboard.refresh}&dashboard_id=${dashboard.id}&dashboard_unit_id=${dashboard.unit_id}&is_query=${isQuery}`;
+    url = `${host}projects/${projectId}/v1/kpi/query?refresh=${
+      dashboard.refresh
+    }&dashboard_id=${dashboard.id}&dashboard_unit_id=${
+      dashboard.unit_id
+    }&is_query=${isQuery}${query_id ? `&query_id=${query_id}` : ''}`;
   }
   return post(null, url, query);
 };

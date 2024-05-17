@@ -1300,9 +1300,7 @@ const CoreQuery = () => {
   const renderEmptyHeader = () => (
     <div
       id='app-header'
-      className={cx('bg-white z-50 flex-col  px-8 w-full', {
-        fixed: true
-      })}
+      className={cx('bg-white z-50 flex-col w-full')}
       style={{
         borderBottom: true ? '1px solid lightgray' : 'none'
       }}
