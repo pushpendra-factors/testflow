@@ -305,9 +305,9 @@ function AppLayout({
       strict: false
     });
   });
-
+  // 3.5rem is used because Top Navbar is 3.5rem
   return (
-    <Layout className='bg-white'>
+    <Layout className={styles['parent-layout']}> 
       <ErrorBoundary
         fallback={
           <FaErrorComp
@@ -343,6 +343,7 @@ function AppLayout({
             )}
           >
             <Content
+              style={{minHeight: 'auto'}}
               className={cx('bg-white', {
                 'py-6 px-10':
                   !checkMatchPath(

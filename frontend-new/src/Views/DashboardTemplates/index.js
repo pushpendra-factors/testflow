@@ -108,7 +108,7 @@ function DashboardTemplates() {
                 {' '}
                 <Button
                   type='link'
-                  icon={<PlayCircleFilled size={18} />}
+                  icon={<PlayCircleFilled style={{fontSize:'18px'}} />}
                   onClick={() => setHowToModal(true)}
                 >
                   How to create a dashboard?

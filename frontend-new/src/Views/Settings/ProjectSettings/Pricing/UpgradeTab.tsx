@@ -19,6 +19,7 @@ import PriceUpgradeModal from './PriceUpgradeModal';
 import { PRICING_HELP_LINK } from './utils';
 import { PhoneFilled } from '@ant-design/icons';
 import TalktousPNG from './../../../../assets/images/illustrations/Talktous.png';
+import styles from './index.module.scss';
 
 function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -156,8 +157,8 @@ function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
     );
   }
   return (
-    <div className='py-2'>
-      <div className='mb-6'>
+    <div>
+      <div className={`mb-6 pt-4 ${styles.upgrade_bookacall}`}>
         <div className='flex justify-between items-center'>
           <div className='w-9/12'>
             <Text
