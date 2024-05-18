@@ -440,10 +440,10 @@ func SortUnsortedEventsFile(tmpCloudManager, sortedCloudManager *filestore.FileM
 		return 0, err
 	}
 	sort.Slice(eventsList, func(i, j int) bool {
-		if getAptId(eventsList[i], sortOnGroup) == getAptId(eventsList[j], sortOnGroup) {
+		if GetAptId(eventsList[i], sortOnGroup) == GetAptId(eventsList[j], sortOnGroup) {
 			return eventsList[i].EventTimestamp < eventsList[j].EventTimestamp
 		}
-		return getAptId(eventsList[i], sortOnGroup) < getAptId(eventsList[j], sortOnGroup)
+		return GetAptId(eventsList[i], sortOnGroup) < GetAptId(eventsList[j], sortOnGroup)
 	})
 	cloudWriter, err := (*sortedCloudManager).GetWriter(sortedDir, sortedName)
 	if err != nil {
@@ -628,7 +628,7 @@ func SortUnsortedUsersFile(tmpCloudManager, sortedCloudManager *filestore.FileMa
 // get the corresponding id from events based on num
 //
 // 0:uid, 1:group_1_id, 2:group_2_id, 3:group_3_id, 4:group_4_id
-func getAptId(event *P.CounterEventFormat, num int) string {
+func GetAptId(event *P.CounterEventFormat, num int) string {
 	switch num {
 	case 1:
 		return event.Group1UserId

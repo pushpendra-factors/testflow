@@ -10,12 +10,13 @@ import (
 	D "factors/delta"
 	"factors/filestore"
 	"factors/merge"
-	"factors/model/model"
+	M "factors/model/model"
 	"factors/model/store"
 	"factors/pattern"
 	"factors/pull"
 	serviceDisk "factors/services/disk"
 	serviceGCS "factors/services/gcstorage"
+	T "factors/task"
 	taskWrapper "factors/task/task_wrapper"
 	"factors/util"
 	"flag"
@@ -96,197 +97,319 @@ func mainRunDeltaInsights() {
 	projectsFromDB := flag.Bool("projects_from_db", false, "")
 	isMailerRun := flag.Bool("is_mailer_run", false, "")
 
+	startTimestamp := flag.Int64("start_timetamp", 0, "start time stamp")
+	endTimestamp := flag.Int64("end_timetamp", 0, "end time stamp")
+	createNewProps := flag.Bool("create_new_props", false, "whether to recreate creating properties and events filter list")
+	mode := flag.String("mode", "delta", "delta or predict")
+
 	flag.Parse()
 
-	if *envFlag != "development" &&
-		*envFlag != "staging" &&
-		*envFlag != "production" {
-		err := fmt.Errorf("env [ %s ] not recognised", *envFlag)
-		panic(err)
-	}
+	if *mode == "delta" {
+		if *envFlag != "development" &&
+			*envFlag != "staging" &&
+			*envFlag != "production" {
+			err := fmt.Errorf("env [ %s ] not recognised", *envFlag)
+			panic(err)
+		}
 
-	defer util.NotifyOnPanic("Task#DeltaInsights", *envFlag)
+		defer util.NotifyOnPanic("Task#DeltaInsights", *envFlag)
 
-	//init beam
-	var beamConfig merge.RunBeamConfig
-	if *runBeam == 1 {
-		log.Info("Initializing all beam constructs")
-		registerStructs()
-		beam.Init()
-		beamConfig.RunOnBeam = true
-		beamConfig.Env = *envFlag
-		beamConfig.Ctx = context.Background()
-		beamConfig.Pipe = beam.NewPipeline()
-		beamConfig.Scp = beamConfig.Pipe.Root()
-		beamConfig.NumWorker = *numWorkersFlag
-		if beam.Initialized() {
-			log.Info("Initalized all Beam Inits")
+		//init beam
+		var beamConfig merge.RunBeamConfig
+		if *runBeam == 1 {
+			log.Info("Initializing all beam constructs")
+			registerStructs()
+			beam.Init()
+			beamConfig.RunOnBeam = true
+			beamConfig.Env = *envFlag
+			beamConfig.Ctx = context.Background()
+			beamConfig.Pipe = beam.NewPipeline()
+			beamConfig.Scp = beamConfig.Pipe.Root()
+			beamConfig.NumWorker = *numWorkersFlag
+			if beam.Initialized() {
+				log.Info("Initalized all Beam Inits")
+			} else {
+				log.Fatal("unable to initialize runners")
+			}
 		} else {
-			log.Fatal("unable to initialize runners")
+			beamConfig.RunOnBeam = false
 		}
-	} else {
-		beamConfig.RunOnBeam = false
-	}
 
-	// init Config and DB.
-	var appName = "compute_delta_insights"
-	healthcheckPingID := C.HealthCheckWeeklyInsightsPingID
-	defer C.PingHealthcheckForPanic(appName, *envFlag, healthcheckPingID)
+		// init Config and DB.
+		var appName = "compute_delta_insights"
+		healthcheckPingID := C.HealthCheckWeeklyInsightsPingID
+		defer C.PingHealthcheckForPanic(appName, *envFlag, healthcheckPingID)
 
-	config := &C.Configuration{
-		AppName: appName,
-		Env:     *envFlag,
-		MemSQLInfo: C.DBConf{
-			Host:        *memSQLHost,
-			IsPSCHost:   *isPSCHost,
-			Port:        *memSQLPort,
-			User:        *memSQLUser,
-			Name:        *memSQLName,
-			Password:    *memSQLPass,
-			Certificate: *memSQLCertificate,
-			AppName:     appName,
-		},
-		PrimaryDatastore:                *primaryDatastore,
-		RedisHost:                       *redisHost,
-		RedisPort:                       *redisPort,
-		RedisHostPersistent:             *redisHostPersistent,
-		RedisPortPersistent:             *redisPortPersistent,
-		LookbackWindowForEventUserCache: *lookbackWindowForEventUserCache,
-	}
-
-	C.InitConf(config)
-	beamConfig.DriverConfig = config
-	C.InitSentryLogging(config.SentryDSN, config.AppName)
-	err := C.InitDB(*config)
-	if err != nil {
-		log.WithError(err).Fatal("Failed to initialize DB")
-	}
-	// db := C.GetServices().Db
-	// defer db.Close()
-
-	C.InitRedis(config.RedisHost, config.RedisPort)
-	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
-	log.WithFields(log.Fields{
-		"Env":             *envFlag,
-		"localDiskTmpDir": *localDiskTmpDirFlag,
-		"ModelBucket":     *modelBucketNameFlag,
-	}).Infoln("Initialising")
-
-	diskManager := serviceDisk.New(*localDiskTmpDirFlag)
-
-	projectIdsToRun := make(map[int64]bool, 0)
-	if *projectsFromDB {
-		//wi_projects, _ := store.GetStore().GetAllWeeklyInsightsEnabledProjects()
-		wi_projects, _ := store.GetStore().GetAllProjectsWithFeatureEnabled(model.FEATURE_WEEKLY_INSIGHTS, false)
-		for _, id := range wi_projects {
-			projectIdsToRun[id] = true
+		config := &C.Configuration{
+			AppName: appName,
+			Env:     *envFlag,
+			MemSQLInfo: C.DBConf{
+				Host:        *memSQLHost,
+				IsPSCHost:   *isPSCHost,
+				Port:        *memSQLPort,
+				User:        *memSQLUser,
+				Name:        *memSQLName,
+				Password:    *memSQLPass,
+				Certificate: *memSQLCertificate,
+				AppName:     appName,
+			},
+			PrimaryDatastore:                *primaryDatastore,
+			RedisHost:                       *redisHost,
+			RedisPort:                       *redisPort,
+			RedisHostPersistent:             *redisHostPersistent,
+			RedisPortPersistent:             *redisPortPersistent,
+			LookbackWindowForEventUserCache: *lookbackWindowForEventUserCache,
 		}
-	} else {
-		var allProjects bool
-		allProjects, projectIdsToRun, _ = C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
-		if allProjects {
-			projectIDs, errCode := store.GetStore().GetAllProjectIDs()
-			if errCode != http.StatusFound {
-				log.Fatal("Failed to get all projects and project_ids set to '*'.")
+
+		C.InitConf(config)
+		beamConfig.DriverConfig = config
+		C.InitSentryLogging(config.SentryDSN, config.AppName)
+		err := C.InitDB(*config)
+		if err != nil {
+			log.WithError(err).Fatal("Failed to initialize DB")
+		}
+		// db := C.GetServices().Db
+		// defer db.Close()
+
+		C.InitRedis(config.RedisHost, config.RedisPort)
+		C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
+		log.WithFields(log.Fields{
+			"Env":             *envFlag,
+			"localDiskTmpDir": *localDiskTmpDirFlag,
+			"ModelBucket":     *modelBucketNameFlag,
+		}).Infoln("Initialising")
+
+		diskManager := serviceDisk.New(*localDiskTmpDirFlag)
+
+		projectIdsToRun := make(map[int64]bool, 0)
+		if *projectsFromDB {
+			//wi_projects, _ := store.GetStore().GetAllWeeklyInsightsEnabledProjects()
+			wi_projects, _ := store.GetStore().GetAllProjectsWithFeatureEnabled(M.FEATURE_WEEKLY_INSIGHTS, false)
+			for _, id := range wi_projects {
+				projectIdsToRun[id] = true
 			}
-			for _, projectID := range projectIDs {
-				projectIdsToRun[projectID] = true
+		} else {
+			var allProjects bool
+			allProjects, projectIdsToRun, _ = C.GetProjectsFromListWithAllProjectSupport(*projectIdFlag, "")
+			if allProjects {
+				projectIDs, errCode := store.GetStore().GetAllProjectIDs()
+				if errCode != http.StatusFound {
+					log.Fatal("Failed to get all projects and project_ids set to '*'.")
+				}
+				for _, projectID := range projectIDs {
+					projectIdsToRun[projectID] = true
+				}
 			}
 		}
-	}
-	projectIdsArray := make([]int64, 0)
-	for projectId, _ := range projectIdsToRun {
-		projectIdsArray = append(projectIdsArray, projectId)
-	}
+		projectIdsArray := make([]int64, 0)
+		for projectId, _ := range projectIdsToRun {
+			projectIdsArray = append(projectIdsArray, projectId)
+		}
 
-	log.Info("config :", config)
-	configs := make(map[string]interface{})
+		log.Info("config :", config)
+		configs := make(map[string]interface{})
 
-	var cloudManagerTmp filestore.FileManager
-	if *envFlag == "development" {
-		cloudManagerTmp = serviceDisk.New(*tmpBucketNameFlag)
-	} else {
-		cloudManagerTmp, err = serviceGCS.New(*tmpBucketNameFlag)
+		var cloudManagerTmp filestore.FileManager
+		if *envFlag == "development" {
+			cloudManagerTmp = serviceDisk.New(*tmpBucketNameFlag)
+		} else {
+			cloudManagerTmp, err = serviceGCS.New(*tmpBucketNameFlag)
+			if err != nil {
+				log.WithField("error", err).Fatal("Failed to init cloud manager for tmp.")
+			}
+		}
+		configs["tmpCloudManager"] = &cloudManagerTmp
+		var archiveCloudManager filestore.FileManager
+		var sortedCloudManager filestore.FileManager
+		var modelCloudManager filestore.FileManager
+		if *envFlag == "development" {
+			modelCloudManager = serviceDisk.New(*modelBucketNameFlag)
+			archiveCloudManager = serviceDisk.New(*archiveBucketNameFlag)
+			sortedCloudManager = serviceDisk.New(*sortedBucketNameFlag)
+		} else {
+			modelCloudManager, err = serviceGCS.New(*modelBucketNameFlag)
+			if err != nil {
+				log.WithField("error", err).Fatal("Failed to init model cloud manager.")
+			}
+			archiveCloudManager, err = serviceGCS.New(*archiveBucketNameFlag)
+			if err != nil {
+				log.WithField("error", err).Fatal("Failed to init archive cloud manager")
+			}
+			sortedCloudManager, err = serviceGCS.New(*sortedBucketNameFlag)
+			if err != nil {
+				log.WithField("error", err).Fatal("Failed to init sorted data cloud manager")
+			}
+		}
+		configs["modelCloudManager"] = &modelCloudManager
+		configs["archiveCloudManager"] = &archiveCloudManager
+		configs["sortedCloudManager"] = &sortedCloudManager
+
+		configs["hardPull"] = *hardPull
+		configs["diskManager"] = diskManager
+		configs["beamConfig"] = &beamConfig
+		configs["useSortedFilesMerge"] = *useSortedFilesMerge
+
+		allDashboard, allDashboards, _ := C.GetProjectsFromListWithAllProjectSupport(*whitelistedDashboardIds, "")
+		whitelistedIds := make(map[string]bool)
+		if allDashboard {
+			whitelistedIds["*"] = true
+		} else {
+			for id, _ := range allDashboards {
+				whitelistedIds[fmt.Sprintf("%v", id)] = true
+			}
+		}
+		configs["whitelistedDashboardUnits"] = whitelistedIds
+		var k int = *kValue // Selecting all top features if k = -1.
+		configs["k"] = k
+		configs["skipWpi"] = (*skipWpi)
+		configs["skipWpi2"] = (*skipWpi2)
+		configs["runKpi"] = (*runKpi)
+
+		fileTypesList := strings.TrimSpace(*fileTypesFlag)
+		var fileTypes []int64
+		if fileTypesList == "*" {
+			fileTypes = []int64{1, 2, 3, 4, 5, 6, 7}
+		} else {
+			fileTypes = C.GetTokensFromStringListAsUint64(fileTypesList)
+		}
+		fileTypesMap := make(map[int64]bool)
+		for _, i := range fileTypes {
+			fileTypesMap[i] = true
+		}
+		configs["fileTypes"] = fileTypesMap
+
+		// This job has dependency on pull_data
+		if *isWeeklyEnabled && !(*isMailerRun) {
+			taskName := "WIWeeklyV2"
+			C.PingHealthcheckForStart(healthcheckPingID)
+			status := taskWrapper.TaskFuncWithProjectId(taskName, *lookback, projectIdsArray, D.ComputeDeltaInsights, configs)
+			log.Info(status)
+			C.PingHealthCheckBasedOnStatus(status, healthcheckPingID)
+		}
+
+		if *isWeeklyEnabled && *isMailerRun {
+			healthcheckPingID = C.HealthcheckMailWIPingID
+			taskName := "WIWeeklyMailerV2"
+			configs["run_type"] = "mailer"
+			C.PingHealthcheckForStart(healthcheckPingID)
+			status := taskWrapper.TaskFuncWithProjectId(taskName, *lookback, projectIdsArray, D.ComputeDeltaInsights, configs)
+			log.Info(status)
+			C.PingHealthCheckBasedOnStatus(status, healthcheckPingID)
+		}
+	} else if *mode == "predict" {
+		// init DB, etcd
+		appName := "pred_score_job"
+		healthcheckPingID := C.HealthcheckAccScoringJobPingID
+		defer C.PingHealthcheckForPanic(appName, *envFlag, healthcheckPingID)
+
+		config := &C.Configuration{
+			AppName: appName,
+			Env:     *envFlag,
+			MemSQLInfo: C.DBConf{
+				Host:        *memSQLHost,
+				IsPSCHost:   *isPSCHost,
+				Port:        *memSQLPort,
+				User:        *memSQLUser,
+				Name:        *memSQLName,
+				Password:    *memSQLPass,
+				Certificate: *memSQLCertificate,
+				AppName:     appName,
+			},
+			PrimaryDatastore:    *primaryDatastore,
+			RedisHost:           *redisHost,
+			RedisPort:           *redisPort,
+			RedisHostPersistent: *redisHostPersistent,
+			RedisPortPersistent: *redisPortPersistent,
+		}
+
+		C.InitConf(config)
+
+		// db is used by M.GetEventNames to build eventInfo.
+		err := C.InitDB(*config)
 		if err != nil {
-			log.WithField("error", err).Fatal("Failed to init cloud manager for tmp.")
+			log.WithError(err).Fatal("Failed to initialize DB")
 		}
-	}
-	configs["tmpCloudManager"] = &cloudManagerTmp
-	var archiveCloudManager filestore.FileManager
-	var sortedCloudManager filestore.FileManager
-	var modelCloudManager filestore.FileManager
-	if *envFlag == "development" {
-		modelCloudManager = serviceDisk.New(*modelBucketNameFlag)
-		archiveCloudManager = serviceDisk.New(*archiveBucketNameFlag)
-		sortedCloudManager = serviceDisk.New(*sortedBucketNameFlag)
-	} else {
-		modelCloudManager, err = serviceGCS.New(*modelBucketNameFlag)
-		if err != nil {
-			log.WithField("error", err).Fatal("Failed to init model cloud manager.")
+		db := C.GetServices().Db
+		defer db.Close()
+
+		C.InitRedis(config.RedisHost, config.RedisPort)
+		C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
+		log.WithFields(log.Fields{
+			"Env":             *envFlag,
+			"localDiskTmpDir": *localDiskTmpDirFlag,
+		}).Infoln("Initialising")
+
+		var tmpCloudManager filestore.FileManager
+		if *envFlag == "development" {
+			tmpCloudManager = serviceDisk.New(*tmpBucketNameFlag)
+		} else {
+			tmpCloudManager, err = serviceGCS.New(*tmpBucketNameFlag)
+			if err != nil {
+				log.WithError(err).Errorln("Failed to init New GCS Client")
+				panic(err)
+			}
 		}
-		archiveCloudManager, err = serviceGCS.New(*archiveBucketNameFlag)
-		if err != nil {
-			log.WithField("error", err).Fatal("Failed to init archive cloud manager")
+
+		projectIdList := *projectIdFlag
+		projectIdsArray := make([]int64, 0)
+
+		if projectIdList == "*" {
+			projectIdsArray, err = store.GetStore().GetAllProjectsWithFeatureEnabled(M.FEATURE_ACCOUNT_SCORING, false)
+			if err != nil {
+				errString := fmt.Errorf("failed to get feature status for all projects")
+				log.WithError(err).Error(errString)
+			}
+		} else {
+			projectIds := C.GetTokensFromStringListAsUint64(projectIdList)
+			for _, projectId := range projectIds {
+				// available := false
+				// available, err = store.GetStore().GetFeatureStatusForProjectV2(projectId, M.FEATURE_WEEKLY_INSIGHTS, false)
+				// if err != nil {
+				// 	log.WithFields(log.Fields{"projectID": projectId}).WithError(err).Error("Failed to get feature status in account scoring job for project")
+				// 	continue
+				// }
+				// if available {
+				projectIdsArray = append(projectIdsArray, projectId)
+				// }
+			}
 		}
-		sortedCloudManager, err = serviceGCS.New(*sortedBucketNameFlag)
-		if err != nil {
-			log.WithField("error", err).Fatal("Failed to init sorted data cloud manager")
+
+		diskManager := serviceDisk.New(*localDiskTmpDirFlag)
+
+		configs := make(map[string]interface{})
+		configs["env"] = *envFlag
+		configs["db"] = db
+		configs["diskManger"] = diskManager
+		configs["tmpCloudManager"] = &tmpCloudManager
+		configs["startTimestamp"] = startTimestamp
+		configs["endTimestamp"] = endTimestamp
+		configs["lookback"] = *lookback
+		configs["createNewProps"] = *createNewProps
+
+		var archiveCloudManager filestore.FileManager
+		if *envFlag == "development" {
+			archiveCloudManager = serviceDisk.New(*archiveBucketNameFlag)
+		} else {
+			archiveCloudManager, err = serviceGCS.New(*archiveBucketNameFlag)
+			if err != nil {
+				log.WithField("error", err).Fatal("Failed to init archive cloud manager")
+			}
 		}
-	}
-	configs["modelCloudManager"] = &modelCloudManager
-	configs["archiveCloudManager"] = &archiveCloudManager
-	configs["sortedCloudManager"] = &sortedCloudManager
+		configs["archiveCloudManager"] = &archiveCloudManager
 
-	configs["hardPull"] = *hardPull
-	configs["diskManager"] = diskManager
-	configs["beamConfig"] = &beamConfig
-	configs["useSortedFilesMerge"] = *useSortedFilesMerge
+		configs["diskManager"] = diskManager
+		// configs["beamConfig"] = &beamConfig
 
-	allDashboard, allDashboards, _ := C.GetProjectsFromListWithAllProjectSupport(*whitelistedDashboardIds, "")
-	whitelistedIds := make(map[string]bool)
-	if allDashboard {
-		whitelistedIds["*"] = true
-	} else {
-		for id, _ := range allDashboards {
-			whitelistedIds[fmt.Sprintf("%v", id)] = true
+		log.WithField("projects", projectIdsArray).Info("Running acc scoring for these projects")
+
+		for _, projectId := range projectIdsArray {
+
+			status, _ := T.PredictiveScoring2(projectId, configs)
+			log.Info(status)
+			if status["err"] != nil {
+				C.PingHealthcheckForFailure(healthcheckPingID, status)
+			}
+			C.PingHealthcheckForSuccess(healthcheckPingID, status)
 		}
-	}
-	configs["whitelistedDashboardUnits"] = whitelistedIds
-	var k int = *kValue // Selecting all top features if k = -1.
-	configs["k"] = k
-	configs["skipWpi"] = (*skipWpi)
-	configs["skipWpi2"] = (*skipWpi2)
-	configs["runKpi"] = (*runKpi)
-
-	fileTypesList := strings.TrimSpace(*fileTypesFlag)
-	var fileTypes []int64
-	if fileTypesList == "*" {
-		fileTypes = []int64{1, 2, 3, 4, 5, 6, 7}
-	} else {
-		fileTypes = C.GetTokensFromStringListAsUint64(fileTypesList)
-	}
-	fileTypesMap := make(map[int64]bool)
-	for _, i := range fileTypes {
-		fileTypesMap[i] = true
-	}
-	configs["fileTypes"] = fileTypesMap
-
-	// This job has dependency on pull_data
-	if *isWeeklyEnabled && !(*isMailerRun) {
-		taskName := "WIWeeklyV2"
-		C.PingHealthcheckForStart(healthcheckPingID)
-		status := taskWrapper.TaskFuncWithProjectId(taskName, *lookback, projectIdsArray, D.ComputeDeltaInsights, configs)
-		log.Info(status)
-		C.PingHealthCheckBasedOnStatus(status, healthcheckPingID)
-	}
-
-	if *isWeeklyEnabled && *isMailerRun {
-		healthcheckPingID = C.HealthcheckMailWIPingID
-		taskName := "WIWeeklyMailerV2"
-		configs["run_type"] = "mailer"
-		C.PingHealthcheckForStart(healthcheckPingID)
-		status := taskWrapper.TaskFuncWithProjectId(taskName, *lookback, projectIdsArray, D.ComputeDeltaInsights, configs)
-		log.Info(status)
-		C.PingHealthCheckBasedOnStatus(status, healthcheckPingID)
 	}
 }
