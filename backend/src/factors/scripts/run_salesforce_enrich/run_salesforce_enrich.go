@@ -427,31 +427,7 @@ func main() {
 		jobStatus.SyncStatus = syncStatus
 		jobStatus.PropertyDetailStatus = propertyDetailSyncStatus
 
-		for _, state := range jobStatus.EnrichStatus {
-			if state.LimitExceeded {
-				status := store.GetStore().UpdateProjectSettingsIntegrationStatus(state.ProjectID, model.SALESFORCE, model.HEAVY_DELAYED)
-				if status != http.StatusAccepted {
-					log.WithFields(log.Fields{"project_id": state.ProjectID}).Warn("Failed to update integration status")
-
-				}
-			}
-
-			if state.Message == model.CLIENT_TOKEN_EXPIRED {
-				status := store.GetStore().UpdateProjectSettingsIntegrationStatus(state.ProjectID, model.SALESFORCE, model.CLIENT_TOKEN_EXPIRED)
-				if status != http.StatusAccepted {
-					log.WithFields(log.Fields{"project_id": state.ProjectID}).Warn("Failed to update integration status")
-
-				}
-			}
-
-			if state.Status == model.SUCCESS {
-				status := store.GetStore().UpdateProjectSettingsIntegrationStatus(state.ProjectID, model.SALESFORCE, model.SUCCESS)
-				if status != http.StatusAccepted {
-					log.WithFields(log.Fields{"project_id": state.ProjectID}).Warn("Failed to update integration status")
-
-				}
-			}
-		}
+		UpdateProjectSettingsIntefrationStatusFromJobStatusForSalesforce(jobStatus)
 
 		if anyFailure {
 			C.PingHealthcheckForFailure(enrichHealthcheckPingID, jobStatus)
@@ -460,5 +436,35 @@ func main() {
 
 		C.PingHealthcheckForSuccess(enrichHealthcheckPingID, jobStatus)
 		log.WithFields(log.Fields{"jobStatus": jobStatus}).Info("Job completed.")
+	}
+}
+
+func UpdateProjectSettingsIntefrationStatusFromJobStatusForSalesforce(jobStatus salesforceJobStatus) {
+
+	var jobStatusByProjectIdMap map[int64]string
+	for _, state := range jobStatus.EnrichStatus {
+
+		if state.Message == model.CLIENT_TOKEN_EXPIRED {
+			jobStatusByProjectIdMap[state.ProjectID] = model.CLIENT_TOKEN_EXPIRED
+		}
+
+		if state.Status == model.SUCCESS {
+			if _, ok := jobStatusByProjectIdMap[state.ProjectID]; !ok {
+				jobStatusByProjectIdMap[state.ProjectID] = model.SUCCESS
+			}
+
+		}
+
+		if state.LimitExceeded {
+			jobStatusByProjectIdMap[state.ProjectID] = model.HEAVY_DELAYED
+		}
+	}
+
+	for projectId, state := range jobStatusByProjectIdMap {
+		status := store.GetStore().UpdateProjectSettingsIntegrationStatus(projectId, model.SALESFORCE, state)
+		if status != http.StatusAccepted {
+			log.WithFields(log.Fields{"project_id": projectId}).Warn("Failed to update integration status")
+
+		}
 	}
 }

@@ -2416,9 +2416,7 @@ func (store *MemSQL) GetAnalyzeResultForSegments(projectId int64, profileType st
 	query.Class = model.QueryClassEvents
 	query.From = U.TimeNowZ().AddDate(0, 0, -90).Unix()
 	query.To = U.TimeNowZ().Unix()
-	if downloadLimitGiven {
-		query.DownloadAccountsLimit = 10000
-	}
+	query.DownloadAccountsLimitGiven = downloadLimitGiven
 	err := query.TransformDateTypeFilters()
 	if err != nil {
 		log.WithFields(logFields).Error("Failed to transform query payload filters.")

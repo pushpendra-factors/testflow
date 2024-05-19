@@ -131,6 +131,7 @@ export const PLANS_COFIG: PLANS_COFIG_INTERFACE = {
       'Track & prioritise your target accounts with custom scoring models',
     uniqueFeatures: [
       'Everything in Basic +',
+      'Segment Insights',
       'ABM Analytics',
       'Account Scoring',
       'LinkedIn Attribution',

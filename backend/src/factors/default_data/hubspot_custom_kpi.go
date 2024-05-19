@@ -524,7 +524,7 @@ var defaultHubspotCustomKPITransformations = []model.CustomMetricTransformation{
 				LogicalOp:        "AND",
 			},
 		},
-		DateField: "$hubspot_deal_closedate",
+		DateField: "$hubspot_deal_hs_v2_date_entered_closedwon",
 		EventName: "",
 		Entity:    model.UserEntity,
 	},
@@ -552,7 +552,7 @@ var defaultHubspotCustomKPITransformations = []model.CustomMetricTransformation{
 				LogicalOp:        "AND",
 			},
 		},
-		DateField: "$hubspot_deal_closedate",
+		DateField: "$hubspot_deal_hs_v2_date_entered_closedwon",
 		EventName: "",
 		Entity:    model.UserEntity,
 	},
@@ -670,9 +670,8 @@ var defaultHubspotDerivedKPITransformations = []model.KPIQueryGroup{
 		Class: model.QueryClassKPI,
 		Queries: []model.KPIQuery{
 			{
-				Category:        model.ProfileCategory,
-				DisplayCategory: model.HubspotDealsDisplayCategory,
-				// There?
+				Category:         model.ProfileCategory,
+				DisplayCategory:  model.HubspotDealsDisplayCategory,
 				Metrics:          []string{model.HubspotClosedWonDeals},
 				Filters:          []model.KPIFilter{},
 				GroupBy:          []model.KPIGroupBy{},
