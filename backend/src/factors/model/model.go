@@ -375,6 +375,7 @@ type Model interface {
 		imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]model.ValueForEventLookupMap,
 		map[int64]map[string]map[string]model.ValueForEventLookupMap, error)
 	IsEventPresentAfterGivenTimestamp(projectId int64, timestamp int64) (int, string)
+	GetActiveProjectByEventsPerformedTimeStamp(timestamp int64) ([]int64, error)
 
 	// clickable_elements
 	UpsertCountAndCheckEnabledClickableElement(projectID int64, payload *model.CaptureClickPayload) (isEnabled bool, status int, err error)
@@ -1176,4 +1177,7 @@ type Model interface {
 	CreateWorkflow(projectID int64, agentID, oldIDIfEdit string, alertBody model.WorkflowAlertBody) (*model.Workflow, int, error)
 	UpdateWorkflow(projectID int64, id, agentID string, fieldsToUpdate map[string]interface{}) (int, error)
 	DeleteWorkflow(projectID int64, id, agentID string) (int, error)
+
+	//Weekly Mailmodo Emails
+	GetWeeklyMailmodoEmailsMetrics(projectId, startTimeStamp, endTimeStamp int64) (model.WeeklyMailmodoEmailMetrics, error)
 }
