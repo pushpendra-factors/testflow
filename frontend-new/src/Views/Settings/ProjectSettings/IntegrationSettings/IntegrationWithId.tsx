@@ -128,10 +128,12 @@ const IntegrationWithId = ({
       const searchParams = new URLSearchParams(window.location.search);
       if (searchParams) {
         const error = searchParams.get('error');
-        const str = error.replace('_', ' ');
-        const finalmsg = str.toLocaleLowerCase();
-        if (finalmsg) {
-          message.error(finalmsg);
+        if (error) {
+          const str = error.replace('_', ' ');
+          const finalmsg = str.toLocaleLowerCase();
+          if (finalmsg) {
+            message.error(finalmsg);
+          }
         }
       }
     }
@@ -140,12 +142,14 @@ const IntegrationWithId = ({
       const searchParams = new URLSearchParams(window.location.search);
       if (searchParams) {
         const error = searchParams.get('status');
-        const str = error.replace('_', ' ');
-        const finalmsg = str.toLocaleLowerCase();
-        if (finalmsg) {
-          message.error(
-            `Error: ${finalmsg}. Sorry! That doesn’t seem right. Please try again`
-          );
+        if (error) {
+          const str = error.replace('_', ' ');
+          const finalmsg = str.toLocaleLowerCase();
+          if (finalmsg) {
+            message.error(
+              `Error: ${finalmsg}. Sorry! That doesn’t seem right. Please try again`
+            );
+          }
         }
       }
     }
@@ -194,7 +198,9 @@ const IntegrationWithId = ({
           )}
 
           <Integration.Component integrationCallback={integrationCallback} />
-          <Divider style={{ margin: '16px 0px' }} />
+          {Integration.showInstructionMenu && (
+            <Divider style={{ margin: '16px 0px' }} />
+          )}
         </div>
       </ErrorBoundary>
     );

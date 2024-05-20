@@ -65,7 +65,7 @@ const ManualSteps = ({
 }: ManualStepsProps) => (
   <CollapsibleContainer
     showBorder
-    key='manual'
+    keyName='manual'
     BodyComponent={
       <ManualStepsBody
         projectToken={projectToken}

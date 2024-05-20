@@ -6,7 +6,7 @@ import ThirdPartyStepsBody from './thirdPartyStepsBody';
 const ThirdPartySteps = () => (
   <CollapsibleContainer
     showBorder
-    key='thirdparty'
+    keyName='thirdparty'
     BodyComponent={<ThirdPartyStepsBody />}
     HeaderComponent={
       <Header

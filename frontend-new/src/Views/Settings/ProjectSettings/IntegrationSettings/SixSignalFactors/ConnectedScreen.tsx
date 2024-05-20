@@ -60,7 +60,7 @@ function ConnectedScreen() {
     }
   };
   return (
-    <div className=' flex flex-col  w-full'>
+    <div className='mt-5 flex flex-col  w-full'>
       {/* <div>
         <Text
           type='title'

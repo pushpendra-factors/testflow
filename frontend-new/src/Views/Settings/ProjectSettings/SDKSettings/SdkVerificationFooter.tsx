@@ -47,13 +47,13 @@ const SdkVerificationFooter = ({
         setSdkVerified(true);
         notification.success({
           message: 'Success',
-          description: 'SDK Verified!',
+          description: 'We are receiving data from your website',
           duration: 3
         });
       } else {
         notification.error({
           message: 'Error',
-          description: 'SDK not Verified!',
+          description: 'We are not receiving data from your website',
           duration: 3
         });
         setErrorState(true);

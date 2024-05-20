@@ -1,0 +1,9 @@
+.collapse {
+  :global(.ant-collapse-header) {
+    padding: 0px !important;
+  }
+
+  :global(.ant-collapse-content-box) {
+    padding: 0px;
+  }
+}

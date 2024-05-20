@@ -47,6 +47,7 @@ const IntegrationCard = ({
 
   const isPendingState = integrationStatusValue === 'pending';
   const isConnectedState = integrationStatusValue === 'connected';
+  const isNotConnectedState = integrationStatusValue === 'not_connected';
   const isFeatureIntegrated = integrationInfo?.[featureName];
 
   const handleCardClick = () => {
@@ -107,7 +108,9 @@ const IntegrationCard = ({
     ) {
       return ConnectNowButton;
     }
-
+    if (isNotConnectedState) {
+      return ConnectNowButton;
+    }
     return (
       <Button type='text' onClick={handleCardClick}>
         <div className='flex items-center gap-2'>

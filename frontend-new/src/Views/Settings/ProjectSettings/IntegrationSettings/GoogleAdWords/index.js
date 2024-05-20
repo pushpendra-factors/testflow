@@ -318,15 +318,7 @@ const GoogleIntegration = ({
     setCustomerAccountsLoaded(false);
     // history.push(INTEGRATION_HOME_PAGE);
   };
-  console.log(
-    '-------- log 12',
-    isIntAdwordsEnabled(),
-    showManageBtn,
-    !currentProjectSettings?.int_adwords_enabled_agent_uuid,
-    isIntAdwordsEnabled() &&
-      showManageBtn &&
-      !currentProjectSettings?.int_adwords_enabled_agent_uuid
-  );
+
   return (
     <ErrorBoundary
       fallback={

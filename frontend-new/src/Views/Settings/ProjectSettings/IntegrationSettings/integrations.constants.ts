@@ -62,7 +62,7 @@ export const IntegrationProviderData: IntegrationConfig[] = [
     id: INTEGRATION_ID.sdk,
     categoryId: INTEGRATION_CATEGORY_ID.sdk,
     name: 'Javascript SDK',
-    desc: 'Your website data will be visible on the platform from the time the your javascript SDK is placed on your site. Hence, no historical data prior to the setup would be available on the platform. The website data you see in Factors is real-time.',
+    desc: 'Place Factors SDK on your website to identify accounts visiting your website and track their activity',
     icon: 'Brand',
     featureName: 'sdk',
     Component: SDKSettings,
@@ -363,34 +363,42 @@ export const AccountIdentificationProviderData: IntegrationConfig[] = [
 export const IntegrationPageCategories: IntegrationCategroryType[] = [
   {
     name: 'SDK',
-    id: INTEGRATION_CATEGORY_ID.sdk
+    id: INTEGRATION_CATEGORY_ID.sdk,
+    sortOrder: 1
   },
   {
     name: 'Account Identification',
-    id: INTEGRATION_CATEGORY_ID.accountIdentification
+    id: INTEGRATION_CATEGORY_ID.accountIdentification,
+    sortOrder: 2
+  },
+  {
+    name: 'CRMs & MAPs',
+    id: INTEGRATION_CATEGORY_ID.crm,
+    sortOrder: 3
   },
   {
     name: 'Ad Platforms',
-    id: INTEGRATION_CATEGORY_ID.adsPlatforms
-  },
-  {
-    name: 'CRMs',
-    id: INTEGRATION_CATEGORY_ID.crm
+    id: INTEGRATION_CATEGORY_ID.adsPlatforms,
+    sortOrder: 4
   },
   {
     name: 'Review Platforms',
-    id: INTEGRATION_CATEGORY_ID.review
+    id: INTEGRATION_CATEGORY_ID.review,
+    sortOrder: 5
   },
   {
     name: 'Communication Apps',
-    id: INTEGRATION_CATEGORY_ID.communication
+    id: INTEGRATION_CATEGORY_ID.communication,
+    sortOrder: 6
   },
   {
     name: 'Customer Data Platforms (CDP)',
-    id: INTEGRATION_CATEGORY_ID.cdp
+    id: INTEGRATION_CATEGORY_ID.cdp,
+    sortOrder: 7
   },
   {
     name: 'Chatbot',
-    id: INTEGRATION_CATEGORY_ID.chatbot
+    id: INTEGRATION_CATEGORY_ID.chatbot,
+    sortOrder: 8
   }
 ];
