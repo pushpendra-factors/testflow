@@ -102,7 +102,7 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 
 	for i := 0; i < 5; i++ {
 		var props postgres.Jsonb
-		if i == 1 || i == 2 {
+		if i <= 2 {
 			props = postgres.Jsonb{RawMessage: json.RawMessage(fmt.Sprintf(`{"$domain_name":"%s",
 			"$engagement_level":"Hot","$engagement_score":125.300000,"$joinTime":1681211371,
 			"$total_enagagement_score":196.000000}`, accountPropertiesMap[i]["$salesforce_account_website"]))}
@@ -936,8 +936,10 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 	assert.Equal(t, http.StatusFound, status)
 	nameFound7 := false
 
+	var segmentID11 string
 	for _, segment := range getSegementFinal["$domains"] {
-		if segment10.Name == segment.Name {
+		if segment11.Name == segment.Name {
+			segmentID11 = segment.Id
 			nameFound7 = true
 			break
 		}
@@ -1005,6 +1007,88 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 		// 	assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["Hubspot User Performed Event"])
 		// }
 	}
+
+	// realtime segmentation test
+
+	// editing segment11
+
+	editedSegment := &model.SegmentPayload{
+		Name: "Domain Level Support",
+		Query: model.Query{
+			GlobalUserProperties: []model.QueryProperty{
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$domain_name",
+					Operator:  "equals",
+					Value:     "adpushup.com",
+					LogicalOp: "AND",
+					GroupName: "$domains",
+				},
+				{
+					Entity:    "user_g",
+					Type:      "categorical",
+					Property:  "$domain_name",
+					Operator:  "equals",
+					Value:     "madstreetden.com",
+					LogicalOp: "OR",
+					GroupName: "$domains",
+				},
+			},
+			Source: "$domains",
+		},
+		Type: "$domains",
+	}
+
+	err, status = store.GetStore().UpdateSegmentById(project.ID, segmentID11, *editedSegment)
+	assert.Nil(t, err)
+	assert.Equal(t, status, http.StatusOK)
+
+	// Process all user
+
+	editedSegments := map[int64][]string{project.ID: {segmentID11}}
+	errCode = T.SegmentMarker(project.ID, map[int64]bool{}, editedSegments)
+	assert.Equal(t, errCode, http.StatusOK)
+
+	status, updatedUsers, associatedSegmentsListNew := store.GetStore().FetchAssociatedSegmentsFromUsers(project.ID)
+	assert.Equal(t, http.StatusFound, status)
+
+	allAccountsSegmentNameIDs = make(map[string]string)
+	for _, segmentList := range getSegementFinal {
+		for _, segment := range segmentList {
+			allAccountsSegmentNameIDs[segment.Name] = segment.Id
+		}
+	}
+
+	// after editing, domain
+	// segment11 -> domain1id.com, domain0id.com
+
+	for index, checkUser := range updatedUsers {
+		if checkUser.Source == nil || *checkUser.Source != model.UserSourceDomains {
+			continue
+		}
+		if checkUser.Group4ID == "domain0id.com" {
+			assert.Contains(t, associatedSegmentsListNew[index], allAccountsSegmentNameIDs["User Group props"])
+			assert.Contains(t, associatedSegmentsListNew[index], allAccountsSegmentNameIDs["Group AND User Group props"])
+			assert.Contains(t, associatedSegmentsListNew[index], allAccountsSegmentNameIDs["Hubspot Group Performed Event"])
+			// domain0 should enter the segment
+			assert.Contains(t, associatedSegmentsList[index], allAccountsSegmentNameIDs["Domain Level Support"])
+		} else if checkUser.Group4ID == "domain1id.com" {
+			assert.Contains(t, associatedSegmentsListNew[index], allAccountsSegmentNameIDs["User Group props"])
+			assert.Contains(t, associatedSegmentsListNew[index], allAccountsSegmentNameIDs["Group AND User Group props"])
+			assert.Contains(t, associatedSegmentsListNew[index], allAccountsSegmentNameIDs["All accounts segment"])
+			assert.Contains(t, associatedSegmentsListNew[index], allAccountsSegmentNameIDs["All Group Performed Event"])
+			assert.Contains(t, associatedSegmentsListNew[index], allAccountsSegmentNameIDs["Hubspot Group Performed Event"])
+			// domain1 should remain in the segment
+			assert.Contains(t, associatedSegmentsListNew[index], allAccountsSegmentNameIDs["Domain Level Support"])
+		} else if checkUser.Group4ID == "domain2id.com" {
+			assert.Contains(t, associatedSegmentsListNew[index], allAccountsSegmentNameIDs["User Group props"])
+			assert.Contains(t, associatedSegmentsListNew[index], allAccountsSegmentNameIDs["All accounts segment"])
+			// domain2 should leave the segment
+			assert.NotContains(t, associatedSegmentsListNew[index], allAccountsSegmentNameIDs["Domain Level Support"])
+		}
+	}
+
 }
 
 func createSegmentPostReq(r *gin.Engine, request model.SegmentPayload, projectId int64, agent *model.Agent) *httptest.ResponseRecorder {
