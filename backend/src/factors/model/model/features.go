@@ -31,6 +31,7 @@ const (
 	FEATURE_FILTERS                 = "filters"
 	FEATURE_SHAREABLE_URL           = "shareable_url"
 	FEATURE_CUSTOM_METRICS          = "custom_metrics"
+	FEATURE_SEGMENTKPI_OVERVIEW     = "segment_kpi"
 	FEATURE_SMART_PROPERTIES        = "smart_properties"
 	FEATURE_CONTENT_GROUPS          = "content_groups"
 	FEATURE_DISPLAY_NAMES           = "display_names"
