@@ -75,7 +75,7 @@ func TestSampleWebsiteAggregation(t *testing.T) {
 		result, statusCode, _ := store.GetStore().ExecuteQueryGroupForPredefinedWebsiteAggregation(project.ID, model.PredefWebsiteAggregationQueryGroup{
 			Class:   "predefined_dashboard",
 			Queries: queries,
-		})
+		}, false)
 		assert.Equal(t, http.StatusOK, statusCode)
 
 		assert.Equal(t, 2, len(result[0].Headers))
@@ -118,7 +118,7 @@ func TestSampleWebsiteAggregation(t *testing.T) {
 		result, statusCode, _ := store.GetStore().ExecuteQueryGroupForPredefinedWebsiteAggregation(project.ID, model.PredefWebsiteAggregationQueryGroup{
 			Class:   "predefined_dashboard",
 			Queries: queries,
-		})
+		}, false)
 		assert.Equal(t, http.StatusOK, statusCode)
 
 		assert.Equal(t, 2, len(result[0].Headers))
@@ -162,7 +162,7 @@ func TestSampleWebsiteAggregation(t *testing.T) {
 		result, statusCode, _ := store.GetStore().ExecuteQueryGroupForPredefinedWebsiteAggregation(project.ID, model.PredefWebsiteAggregationQueryGroup{
 			Class:   "predefined_dashboard",
 			Queries: queries,
-		})
+		}, false)
 		assert.Equal(t, http.StatusOK, statusCode)
 
 		assert.Equal(t, 3, len(result[0].Headers))
@@ -208,7 +208,7 @@ func TestSampleWebsiteAggregation(t *testing.T) {
 		result, statusCode, _ := store.GetStore().ExecuteQueryGroupForPredefinedWebsiteAggregation(project.ID, model.PredefWebsiteAggregationQueryGroup{
 			Class:   "predefined_dashboard",
 			Queries: queries,
-		})
+		}, false)
 		assert.Equal(t, http.StatusOK, statusCode)
 
 		assert.Equal(t, 2, len(result[0].Headers))
