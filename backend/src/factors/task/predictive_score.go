@@ -257,6 +257,9 @@ func PredictiveScoring2(projectId int64, configs map[string]interface{}) (map[st
 				propCounts := userPropCounts[AccID]
 				for uKey, uVal := range eventDetails.UserProperties {
 					uKey = "up#" + uKey
+					if uVal == "" || uVal == nil {
+						continue
+					}
 					if val, ok := props[uKey]; !ok {
 						continue
 					} else {
@@ -275,15 +278,15 @@ func PredictiveScoring2(projectId int64, configs map[string]interface{}) (map[st
 							if evType != val {
 								continue
 							}
-							if uVal == "" || uVal == nil {
-								continue
-							}
 							dataPoint[uKey] = uVal
 						}
 					}
 				}
 				for eKey, eVal := range eventDetails.EventProperties {
 					eKey = "ep#" + eKey
+					if eVal == "" || eVal == nil {
+						continue
+					}
 					if val, ok := props[eKey]; !ok {
 						continue
 					} else {
@@ -304,9 +307,6 @@ func PredictiveScoring2(projectId int64, configs map[string]interface{}) (map[st
 							dataPoint[eKey] = dataPoint[eKey].(float64) + floatVal
 						} else if val == "first" || val == "last" {
 							if evType != val {
-								continue
-							}
-							if eVal == "" || eVal == nil {
 								continue
 							}
 							dataPoint[eKey] = eVal
@@ -381,6 +381,9 @@ func PredictiveScoring2(projectId int64, configs map[string]interface{}) (map[st
 				propCounts := userPropCounts[AccID]
 				for uKey, uVal := range eventDetails.UserProperties {
 					uKey = "up#" + uKey
+					if uVal == "" || uVal == nil {
+						continue
+					}
 					if val, ok := props[uKey]; !ok {
 						continue
 					} else {
@@ -399,15 +402,15 @@ func PredictiveScoring2(projectId int64, configs map[string]interface{}) (map[st
 							if evType != val {
 								continue
 							}
-							if uVal == "" || uVal == nil {
-								continue
-							}
 							dataPoint[uKey] = uVal
 						}
 					}
 				}
 				for eKey, eVal := range eventDetails.EventProperties {
 					eKey = "ep#" + eKey
+					if eVal == "" || eVal == nil {
+						continue
+					}
 					if val, ok := props[eKey]; !ok {
 						continue
 					} else {
@@ -424,9 +427,6 @@ func PredictiveScoring2(projectId int64, configs map[string]interface{}) (map[st
 							dataPoint[eKey] = dataPoint[eKey].(float64) + floatVal
 						} else if val == "first" || val == "last" {
 							if evType != val {
-								continue
-							}
-							if eVal == "" || eVal == nil {
 								continue
 							}
 							dataPoint[eKey] = eVal
