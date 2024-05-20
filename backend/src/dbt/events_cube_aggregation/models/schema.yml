@@ -4,3 +4,6 @@ version: 2
 models:
   - name: website_aggregation
     description: "Website aggregation dbt model"
+
+  - name: website_aggregation_test
+    description: "Website aggregation dbt model - test"

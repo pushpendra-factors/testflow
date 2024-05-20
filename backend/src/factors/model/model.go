@@ -195,7 +195,7 @@ type Model interface {
 	GetTimedOutUnitsByProject(cacheReports []model.CachingUnitReport) map[int64][]model.FailedDashboardUnitReport
 
 	// Predefined dashboards
-	ExecuteQueryGroupForPredefinedWebsiteAggregation(projectID int64, request model.PredefWebsiteAggregationQueryGroup) ([]model.QueryResult, int, string)
+	ExecuteQueryGroupForPredefinedWebsiteAggregation(projectID int64, request model.PredefWebsiteAggregationQueryGroup, useTestTable bool) ([]model.QueryResult, int, string)
 	CreateWebsiteAggregation(websiteAggregation model.WebsiteAggregation) (model.WebsiteAggregation, string, int)
 	CreatePredefWebAggDashboardIfNotExists(projectID int64) int
 	TableOfWebsiteAggregationExists() (bool, int)
