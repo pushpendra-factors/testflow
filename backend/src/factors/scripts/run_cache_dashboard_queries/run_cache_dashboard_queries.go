@@ -80,6 +80,9 @@ func main() {
 		"*", "List of projects customer enabled forLast Computed")
 	allowEventAnalyticsGroupsByProjectID := flag.String("allow_event_analytics_groups_by_project_id", "", "")
 
+	enableCacheDBWriteProjects := flag.String("cache_db_write_projects", "", "")
+	enableCacheDBReadProjects := flag.String("cache_db_read_projects", "", "")
+
 	flag.Parse()
 
 	taskID := "dashboard_caching"
@@ -146,6 +149,8 @@ func main() {
 		CustomDateStart:                       *customDateStart,
 		CustomDateEnd:                         *customDateEnd,
 		AllowEventAnalyticsGroupsByProjectID:  *allowEventAnalyticsGroupsByProjectID,
+		EnableCacheDBWriteProjects:            *enableCacheDBWriteProjects,
+		EnableCacheDBReadProjects:             *enableCacheDBReadProjects,
 	}
 
 	C.InitConf(config)
