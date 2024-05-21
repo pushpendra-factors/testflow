@@ -17,6 +17,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const MASKED_CHANNEL_NAME_STRING = "PRIVATE_CHANNEL"
+
 type InternalStatus struct {
 	Status string `json:"status"`
 }
@@ -27,10 +29,45 @@ func GetAllAlertsInOneHandler(c *gin.Context) (interface{}, int, string, string,
 	if projectID == 0 {
 		return nil, http.StatusForbidden, "", "Get request failed. Invalid project ID.", true
 	}
+	agentUUID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 
 	triggers, errCode := store.GetStore().GetAllEventTriggerAlertsByProject(projectID)
 	if errCode != http.StatusFound {
 		return nil, errCode, "", "Get trigger alerts failed", true
+	}
+
+	// logic to mask the private slack channels for other users of the project and show it only to the user who have created it.
+	for _, alert := range triggers {
+		if alert.CreatedBy != agentUUID {
+			var eventTriggeredAlertConfig model.EventTriggerAlertConfig
+			err := U.DecodePostgresJsonbToStructType(alert.Alert, &eventTriggeredAlertConfig)
+			if err != nil {
+				return nil, http.StatusInternalServerError, "", "Failed to decode alerts", true
+			}
+			if eventTriggeredAlertConfig.Slack {
+				var slackChannels []model.SlackChannel
+				err := U.DecodePostgresJsonbToStructType(eventTriggeredAlertConfig.SlackChannels, &slackChannels)
+				if err != nil {
+					return nil, http.StatusInternalServerError, "", "Failed to decode slack channels", true
+				}
+				for idx, slackChannel := range slackChannels {
+					if slackChannel.IsPrivate {
+						slackChannels[idx].Name = MASKED_CHANNEL_NAME_STRING
+					}
+				}
+				maskedSlackChannelsJson, err := U.EncodeStructTypeToPostgresJsonb(&slackChannels)
+				if err != nil {
+					return nil, http.StatusInternalServerError, "", "Failed to mask slack channel names", true
+				}
+				eventTriggeredAlertConfig.SlackChannels = maskedSlackChannelsJson
+
+				eventTriggerdAlertConfigJson, err := U.EncodeStructTypeToPostgresJsonb(&slackChannels)
+				if err != nil {
+					return nil, http.StatusInternalServerError, "", "Failed to mask slack channel names", true
+				}
+				alert.Alert = eventTriggerdAlertConfigJson
+			}
+		}
 	}
 
 	excludeSavedQueriesFlag := true

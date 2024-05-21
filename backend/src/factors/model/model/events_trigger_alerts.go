@@ -100,6 +100,7 @@ type AlertInfo struct {
 	Alert           *postgres.Jsonb `json:"alert"`
 	Type            string          `json:"type"`
 	CreatedAt       time.Time       `json:"created_at"`
+	CreatedBy       string          `json:"created_by"`
 }
 
 type CachedEventTriggerAlert struct {
