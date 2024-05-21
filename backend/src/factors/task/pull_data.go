@@ -131,7 +131,7 @@ func checkIntegrationsDataAvailabilityAndHardPull(allSupportedIntegrations []str
 				var errStr string
 				for _, integration := range []string{M.HUBSPOT, M.SALESFORCE} {
 					latestData := integrationsStatus[integration].LatestData
-					intStatus, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, integration, false)
+					intStatus, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, integration, true)
 					if err != nil {
 						eventsPull = false
 						success = false
@@ -171,7 +171,7 @@ func checkIntegrationsDataAvailabilityAndHardPull(allSupportedIntegrations []str
 					}
 				}
 				latestData := integrationsStatus[fileType].LatestData
-				intStatus, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, fileType, false)
+				intStatus, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, fileType, true)
 				if err != nil {
 					pullFileTypes[fileType] = false
 					success = false

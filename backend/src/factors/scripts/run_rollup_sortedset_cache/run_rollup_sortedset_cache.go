@@ -41,6 +41,9 @@ func main() {
 	gcpProjectLocation := flag.String("gcp_project_location", "", "Location of google cloud project cluster")
 	aggrEventPropertyValuesCacheByProjectID := flag.String("aggr_event_property_values_project_ids", "", "")
 
+	enableCacheDBWriteProjects := flag.String("cache_db_write_projects", "", "")
+	enableCacheDBReadProjects := flag.String("cache_db_read_projects", "", "")
+
 	flag.Parse()
 	if *env != "development" &&
 		*env != "staging" &&
@@ -74,6 +77,8 @@ func main() {
 		PrimaryDatastore:                        *primaryDatastore,
 		AggrEventPropertyValuesCacheByProjectID: *aggrEventPropertyValuesCacheByProjectID,
 		LookbackWindowForEventUserCache:         *lookbackWindowForEventUserCache,
+		EnableCacheDBWriteProjects:              *enableCacheDBWriteProjects,
+		EnableCacheDBReadProjects:               *enableCacheDBReadProjects,
 	}
 
 	C.InitConf(config)
