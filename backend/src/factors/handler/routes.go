@@ -49,6 +49,9 @@ func InitAppRoutes(r *gin.Engine) {
 		return
 	})
 
+	r.GET(routePrefix+"/saml/login", V1.SamlLoginRequestHandler)
+	r.POST(routePrefix+"/project/:project_id/saml/acs", V1.SamlCallbackHandler)
+
 	// Initialize swagger api docs only for development / staging.
 	if C.GetConfig().Env != C.PRODUCTION {
 		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

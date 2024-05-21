@@ -743,6 +743,20 @@ func (store *MemSQL) UpdateProjectSettings(projectId int64, settings *model.Proj
 		}
 	}
 
+	// validate saml config
+
+	if settings.SamlConfiguration != nil {
+		var SAMLConfig model.SAMLConfiguration
+		err := U.DecodePostgresJsonbToStructType(settings.SamlConfiguration, &SAMLConfig)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectId, "setting": settings}).WithError(
+				err).Error("Failed decoding saml config json. Aborting.")
+			return nil, http.StatusInternalServerError
+		}
+
+		// func call to validate saml url, certificate 
+	}
+
 	var updatedProjectSetting model.ProjectSetting
 	if err := db.Model(&updatedProjectSetting).Where("project_id = ?",
 		projectId).Updates(settings).Error; err != nil {
