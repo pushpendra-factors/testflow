@@ -294,7 +294,7 @@ function AccountProfiles({
     if (location.pathname === PathUrls.ProfileAccounts && !newSegmentMode) {
       setAccountPayload(INITIAL_ACCOUNT_PAYLOAD);
     }
-  }, [location.pathname]);
+  }, [location.pathname, newSegmentMode]);
 
   const getAccountPayload = () => {
     if (newSegmentMode) {
