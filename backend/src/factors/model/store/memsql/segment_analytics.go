@@ -19,8 +19,12 @@ func (store *MemSQL) ExecuteWidgetGroup(projectID int64, widgetGroup model.Widge
 	}
 
 	lastRunTime, lastRunStatusCode := store.GetMarkerLastForAllAccounts(projectID)
+
+	// all run for given segment is completed or not if recently updated/created
+	runForGivenSegmentComplete := segment.MarkerRunSegment.After(segment.UpdatedAt)
+
 	// for case - segment is updated but all_run for the day is yet to run
-	if lastRunStatusCode != http.StatusFound || segment.UpdatedAt.After(lastRunTime) {
+	if lastRunStatusCode != http.StatusFound || (segment.UpdatedAt.After(lastRunTime) && !runForGivenSegmentComplete) {
 		return results, http.StatusUnprocessableEntity
 	}
 
