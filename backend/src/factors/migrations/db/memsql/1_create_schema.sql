@@ -484,6 +484,8 @@ CREATE ROWSTORE TABLE IF NOT EXISTS project_settings (
     int_paragon_token text,
     int_paragon_enabling_agent_id text,
     integration_status JSON,
+    saml_configuration JSON,
+    saml_enabled boolean,
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)
@@ -1527,7 +1529,7 @@ CREATE TABLE IF NOT EXISTS widget_groups (
     SHARD KEY (project_id),
     KEY (project_id, id) USING HASH,
     UNIQUE KEY unique_widget_groups_project_id_name_idx(project_id, display_name) USING HASH
-)
+);
 
 CREATE TABLE IF NOT EXISTS cache_db (
     k TEXT NOT NULL,
