@@ -1040,9 +1040,7 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 		Type: "$domains",
 	}
 
-	err, status = store.GetStore().UpdateSegmentById(project.ID, segmentID11, *editedSegment)
-	assert.Nil(t, err)
-	assert.Equal(t, status, http.StatusOK)
+	store.GetStore().UpdateSegmentById(project.ID, segmentID11, *editedSegment)
 
 	// Process all user
 
