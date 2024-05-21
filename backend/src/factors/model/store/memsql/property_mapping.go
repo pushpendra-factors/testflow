@@ -5,6 +5,7 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -200,7 +201,7 @@ func (store *MemSQL) GenerateSectionBitMap(displayCategories []string, projectID
 			sectionBitMap = sectionBitMap | (1 << (bitPosition - 1))
 		} else {
 			if U.ContainsStringInArray(sources, displayCategory) {
-				baseForCustomAds := 30
+				baseForCustomAds := 25
 				for i, source := range sources {
 					if source == displayCategory {
 						log.WithField("displayCategory", displayCategory).WithField("source", source).WithField("sources", sources).Warn("kark2-2")
@@ -215,6 +216,7 @@ func (store *MemSQL) GenerateSectionBitMap(displayCategories []string, projectID
 
 		}
 	}
+	log.WithField("binary", strconv.FormatInt(sectionBitMap, 2)).Warn("kark2-3")
 
 	return sectionBitMap, ""
 }
