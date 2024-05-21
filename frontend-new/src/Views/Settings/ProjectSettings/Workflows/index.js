@@ -26,7 +26,11 @@ import {
 } from 'Reducers/types';
 import { getAlertTemplatesTransformation } from './utils';
 import { Stub, StubOld } from './Stub';
-import { fetchSavedWorkflows, fetchWorkflowTemplates, removeSavedWorkflow } from 'Reducers/workflows';
+import {
+  fetchSavedWorkflows,
+  fetchWorkflowTemplates,
+  removeSavedWorkflow
+} from 'Reducers/workflows';
 import MomentTz from 'Components/MomentTz';
 import TableSearchAndRefresh from 'Components/TableSearchAndRefresh';
 import WorkflowHubspotThumbnail from '../../../../assets/images/workflow-hubspot-thumbnail.png';
@@ -38,7 +42,6 @@ const Workflows = ({
   removeSavedWorkflow,
   savedWorkflows
 }) => {
-
   const dispatch = useDispatch();
   const { confirm } = Modal;
   const [alertTemplates, setAlertTemplates] = useState(false);
@@ -52,28 +55,28 @@ const Workflows = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [searchTableData, setSearchTableData] = useState([]);
 
-
   const dashboard_templates_modal_state = useSelector(
     (state) => state.dashboardTemplatesController
   );
   useEffect(() => {
     setTableLoading(true);
-    fetchSavedWorkflows(activeProject?.id).then((res) => {
-      setTableLoading(false);
-    }).catch((err) => {
-      console.log('saved workflows fetch error=>', err)
-      setTableLoading(false);
-    });
+    fetchSavedWorkflows(activeProject?.id)
+      .then((res) => {
+        setTableLoading(false);
+      })
+      .catch((err) => {
+        console.log('saved workflows fetch error=>', err);
+        setTableLoading(false);
+      });
 
-    fetchWorkflowTemplates(activeProject?.id).then((res) => {
-      setAlertTemplates(res.data)
-    }).catch((err) => console.log('fetch templates error=>', err));
+    fetchWorkflowTemplates(activeProject?.id)
+      .then((res) => {
+        setAlertTemplates(res.data);
+      })
+      .catch((err) => console.log('fetch templates error=>', err));
 
     // setAlertTemplates(StubOld);
-  }, [activeProject])
-
-
-
+  }, [activeProject]);
 
   const confirmDeleteWorkflow = (item) => {
     confirm({
@@ -101,7 +104,6 @@ const Workflows = ({
       }
     });
   };
-
 
   const menu = (item) => (
     <Menu>
@@ -157,13 +159,7 @@ const Workflows = ({
       dataIndex: 'last_edit',
       key: 'last_edit',
       render: (item) => (
-        <Text
-          type='title'
-          level={7}
-          truncate
-          charLimit={50}
-          extraClass='m-0'
-        >
+        <Text type='title' level={7} truncate charLimit={50} extraClass='m-0'>
           {item}
         </Text>
       )
@@ -173,7 +169,7 @@ const Workflows = ({
       dataIndex: 'status',
       key: 'status',
       render: (item) => (
-        <div className='flex items-center'> 
+        <div className='flex items-center'>
           {item?.status === 'paused' || item?.status === 'disabled' ? (
             <Badge
               className='fa-custom-badge fa-custom-badge--orange'
@@ -220,64 +216,87 @@ const Workflows = ({
   ];
 
   const newStep2Comp = (props) => {
-    return (<>
-      <div>
-      
+    return (
+      <>
+        <div>
+          <div className='p-6'>
+            <div className='flex items-center p-4'>
+              <Button
+                type={'text'}
+                icon={<SVG name={'ArrowLeft'} color={'grey'} size={4} />}
+                onClick={() => {
+                  props.handleBack();
+                }}
+              >
+                Back
+              </Button>
+            </div>
 
-      <div className='p-6'>
-
-      <div className='flex items-center p-4'>
-      <Button 
-      type={'text'} 
-      icon={<SVG name={'ArrowLeft'} color={'grey'} size={4} />}
-      onClick={() => {
-          props.handleBack(); 
-        }}>Back</Button>
-      </div>
-
-      <div className='flex items-center p-4'>
+            <div className='flex items-center p-4'>
               <div className='p-2'>
-                  <img src={WorkflowHubspotThumbnail} style={{ 'max-height': "300px" }} />
-                </div>
+                <img
+                  src={WorkflowHubspotThumbnail}
+                  style={{ 'max-height': '300px' }}
+                />
+              </div>
 
-                <div className='pl-6'>
-                  <Text type={'title'} level={7} color={'black'} weight={'bold'} extraClass={'m-0'}>  {props?.template?.title}</Text>
-                  <Text type={'title'} level={7} extraClass={'mt-2'}>  {props?.template?.description}</Text>
-                  {props?.template?.categories.map((item)=><><Tag>{item}</Tag></>)} 
-                </div>
+              <div className='pl-6'>
+                <Text
+                  type={'title'}
+                  level={7}
+                  color={'black'}
+                  weight={'bold'}
+                  extraClass={'m-0'}
+                >
+                  {' '}
+                  {props?.template?.title}
+                </Text>
+                <Text type={'title'} level={7} extraClass={'mt-2'}>
+                  {' '}
+                  {props?.template?.description}
+                </Text>
+                {props?.template?.categories.map((item) => (
+                  <>
+                    <Tag>{item}</Tag>
+                  </>
+                ))}
+              </div>
+            </div>
+
+            <div className='flex items-center p-4'>
+              <Text type={'title'} level={7} color={'grey'} extraClass={'mt-2'}>
+                {' '}
+                {props?.template?.alert?.long_description}
+              </Text>
+            </div>
+          </div>
+
+          <div className='flex items-center justify-end p-4 border-top--thin-2'>
+            <Button
+              type={'default'}
+              onClick={() => {
+                props.onCancel();
+              }}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              type={'primary'}
+              className='ml-2'
+              onClick={() => {
+                setSelectedTemp(props?.template);
+                props.onCancel();
+                setBuilderMode(true);
+              }}
+            >
+              Use this template
+            </Button>
+          </div>
         </div>
-
-        <div className='flex items-center p-4'>
-            {/* <Text type={'title'} level={7} extraClass={'mt-2'}>  {props?.template?.description}</Text> */}
-            <Text type={'title'} level={7}  color={'grey'} extraClass={'mt-2'}>Appcues' HubSpot Integration makes it easy to target marketing campaigns based on how users interact with Appcues flows and set up flows, goals, and segments based on HubSpot Contact Record properties. It can also help your teams identify how individual contacts are interacting with in-product experiences.
-Target and segment in-product experiences based on virtually any attribute in HubSpot—including plan tier, account owner, and lifecycle stage
-Update HubSpot contacts in real-time as they interact with Appcues content—including NPS and survey responses, flow completion, and goals
-Send emails to users who completed, skipped, or interacted with in-product experiences (such as emailing those who didn't complete an onboarding flow)</Text>
-
-        </div>
-      </div>
-
-
-        <div className='flex items-center justify-end p-4 border-top--thin-2'>
-              <Button type={'default'} onClick={() => {
-          props.onCancel(); 
-        }}>Cancel</Button>
-
-        <Button 
-        type={'primary'}
-        className='ml-2'
-        onClick={() => {
-          setSelectedTemp(props?.template);
-          props.onCancel();
-          setBuilderMode(true);  
-        }}>Use this template</Button>
-      </div>
-
-
-      </div>
-
-    </>)
-  }
+      </>
+    );
+  };
 
   const onSearch = (e) => {
     const term = e.target.value;
@@ -315,107 +334,124 @@ Send emails to users who completed, skipped, or interacted with in-product exper
     <div className={'fa-container'}>
       <Row gutter={[24, 24]} justify='center'>
         <Col span={22}>
-
-          {!builderMode ? <>
-            <Row>
-              <Col span={12}>
-                <Text
-                  type={'title'}
-                  level={3}
-                  weight={'bold'}
-                  extraClass={'m-0'}
-                  id={'fa-at-text--page-title'}
-                >
-                  Workflows
-                </Text>
-              </Col>
-              <Col span={12}>
-                <div className={'flex justify-end'}>
-                  <Button type='primary'
-                    disabled={!alertTemplates} onClick={() => {
-                      // setBuilderMode(true)
-                      dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_OPEN });
-                    }}>
-                    <Space>
-                      <SVG name={'plus'} size={16} color='white' />
-                      New Workflow
-                    </Space>
-                  </Button>
-                </div>
-              </Col>
-            </Row>
-            <Row>
-              <Col span={24}>
-                <Text
-                  type={'title'}
-                  level={7}
-                  color={'grey-2'}
-                  extraClass={'m-0'}
-                >
-                  Set up automatic workflows for your platforms such as your CRM. Learn more &nbsp;
-                  <a
-                    href='https://help.factors.ai/en/articles/7284705-alerts'
-                    target='_blank'
+          {!builderMode ? (
+            <>
+              <Row>
+                <Col span={12}>
+                  <Text
+                    type={'title'}
+                    level={3}
+                    weight={'bold'}
+                    extraClass={'m-0'}
+                    id={'fa-at-text--page-title'}
                   >
-                    Learn more
-                  </a>
-                </Text>
-
-                {tableData ? <div className='mt-8'>
-                  <TableSearchAndRefresh
-                    showSearch={showSearch}
-                    setShowSearch={setShowSearch}
-                    searchTerm={searchTerm}
-                    setSearchTerm={setSearchTerm}
-                    onSearch={onSearch}
-                    onRefresh={onRefresh}
-                    tableLoading={tableLoading}
-                  />
-                  <Table
-                    className='fa-table--basic mt-2'
-                    loading={tableLoading}
-                    columns={columns}
-                    dataSource={searchTerm ? searchTableData : tableData}
-                    pagination
-                  />
-                </div> : <div className={'flex flex-col items-center mt-10'}>
-                  <img src={WorkflowEmptyImg} width='350' />
+                    Workflows
+                  </Text>
+                </Col>
+                <Col span={12}>
+                  <div className={'flex justify-end'}>
+                    <Button
+                      type='primary'
+                      disabled={!alertTemplates}
+                      onClick={() => {
+                        // setBuilderMode(true)
+                        dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_OPEN });
+                      }}
+                    >
+                      <Space>
+                        <SVG name={'plus'} size={16} color='white' />
+                        New Workflow
+                      </Space>
+                    </Button>
+                  </div>
+                </Col>
+              </Row>
+              <Row>
+                <Col span={24}>
                   <Text
                     type={'title'}
                     level={7}
-                    color={'grey'}
-                    extraClass={'mt-2'}
+                    color={'grey-2'}
+                    extraClass={'m-0'}
                   >
-                    Lorem ipsum dolor sit amet consectetur. Morbi enim eget egestas nulla aliquet sodales quisque
-                  </Text> </div>}
+                    Set up automatic workflows for your platforms such as your
+                    CRM. Learn more &nbsp;
+                    <a
+                      href='https://help.factors.ai/en/articles/7284705-alerts'
+                      target='_blank'
+                    >
+                      Learn more
+                    </a>
+                  </Text>
 
+                  {tableData ? (
+                    <div className='mt-8'>
+                      <TableSearchAndRefresh
+                        showSearch={showSearch}
+                        setShowSearch={setShowSearch}
+                        searchTerm={searchTerm}
+                        setSearchTerm={setSearchTerm}
+                        onSearch={onSearch}
+                        onRefresh={onRefresh}
+                        tableLoading={tableLoading}
+                      />
+                      <Table
+                        className='fa-table--basic mt-2'
+                        loading={tableLoading}
+                        columns={columns}
+                        dataSource={searchTerm ? searchTableData : tableData}
+                        pagination
+                      />
+                    </div>
+                  ) : (
+                    <div className={'flex flex-col items-center mt-10'}>
+                      <img src={WorkflowEmptyImg} width='350' />
+                      <Text
+                        type={'title'}
+                        level={7}
+                        color={'grey'}
+                        extraClass={'mt-2'}
+                      >
+                        Lorem ipsum dolor sit amet consectetur. Morbi enim eget
+                        egestas nulla aliquet sodales quisque
+                      </Text>{' '}
+                    </div>
+                  )}
 
-
-                {alertTemplates &&
-                  <ModalFlow
-                    data={getAlertTemplatesTransformation(alertTemplates)}
-                    visible={dashboard_templates_modal_state.isNewDashboardTemplateModal}
-                    onCancel={() => {
-                      dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_CLOSE });
-                    }}
-                    Step2Screen={newStep2Comp}
-                  />}
-
-              </Col>
-            </Row> </> : <WorkflowBuilder
-            setBuilderMode={setBuilderMode}
-            selectedTemp={selectedTemp}
-          />
-          }
+                  {alertTemplates && (
+                    <ModalFlow
+                      data={getAlertTemplatesTransformation(alertTemplates)}
+                      visible={
+                        dashboard_templates_modal_state.isNewDashboardTemplateModal
+                      }
+                      onCancel={() => {
+                        dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_CLOSE });
+                      }}
+                      Step2Screen={newStep2Comp}
+                    />
+                  )}
+                </Col>
+              </Row>{' '}
+            </>
+          ) : (
+            <WorkflowBuilder
+              setBuilderMode={setBuilderMode}
+              selectedTemp={selectedTemp}
+            />
+          )}
         </Col>
       </Row>
-    </div>)
-}
+    </div>
+  );
+};
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   savedWorkflows: state.workflows.savedWorkflows
 });
 
-
-export default connect(mapStateToProps, { fetchSavedWorkflows, fetchWorkflowTemplates, removeSavedWorkflow })(Workflows)
+export default connect(mapStateToProps, {
+  fetchSavedWorkflows,
+  fetchWorkflowTemplates,
+  removeSavedWorkflow
+})(Workflows);

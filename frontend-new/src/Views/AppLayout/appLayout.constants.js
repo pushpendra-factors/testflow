@@ -19,6 +19,7 @@ export const routesWithSidebar = [
   PathUrls.ConfigureProperties,
   PathUrls.ConfigureTouchPoints,
   PathUrls.Alerts,
+  PathUrls.Workflows,
   PathUrls.SettingsPricing,
   PathUrls.ConfigureEngagements,
   PathUrls.ConfigurePlans,

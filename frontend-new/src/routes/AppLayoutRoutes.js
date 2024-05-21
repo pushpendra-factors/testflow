@@ -380,7 +380,7 @@ const FeatureLockedReportSharing = withFeatureLockHOC(Sharing, {
 
 const FeatureLockConfigurationAlerts = withFeatureLockHOC(Alerts, {
   featureName: FEATURES.FEATURE_EVENT_BASED_ALERTS,
-LockedComponent: (props) => (
+  LockedComponent: (props) => (
     <CommonLockedComponent
       title='Alerts'
       description='With real-time alerts in Slack, stay informed the moment a prospect visits a high-intent page on your website or when a significant change occurs in a KPI that matters to your organization. Be instantly notified, take immediate action, and seize every opportunity to drive conversions, optimize performance, and achieve your business objectives.'

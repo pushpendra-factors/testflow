@@ -47,10 +47,7 @@ export const isReportsMainUrl = (pathname) =>
   isAttributionsUrl(pathname);
 
 export const isAlertsUrl = (pathname) =>
-  checkMatchPath(pathname, PathUrls.Alerts);
-
-  export const isWorkflowUrl = (pathname) =>
-  checkMatchPath(pathname, PathUrls.Workflows);
+  pathname === PathUrls.Alerts || pathname === PathUrls.Workflows;
 
 export const isAttributionsUrl = (pathname) =>
   pathname === ATTRIBUTION_ROUTES.base ||

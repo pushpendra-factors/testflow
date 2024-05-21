@@ -6,7 +6,6 @@ import { isAlertsUrl } from './appSidebar.helpers';
 import { useHistory, useLocation } from 'react-router-dom';
 import { PathUrls } from 'Routes/pathUrls';
 import useQuery from 'hooks/useQuery';
-import { isWorkflowUrl } from 'Views/AppSidebar/appSidebar.helpers';
 import { useSelector } from 'react-redux';
 import { featureLock } from 'Routes/feature';
 
@@ -25,6 +24,8 @@ const AlertsSidebar = () => {
     const type = routeQuery.get('type');
     if (type && ['realtime', 'weekly'].includes(type)) {
       setAlertType(type);
+    } else {
+      setAlertType('workflows');
     }
   }, [routeQuery]);
   return (
@@ -38,7 +39,8 @@ const AlertsSidebar = () => {
           'cursor-pointer rounded-md p-2 flex justify-between gap-x-2 items-center',
           styles['draft-title'],
           {
-            [styles['item-active']]: (isAlertsUrl(pathname) && alertType === 'realtime')
+            [styles['item-active']]:
+              isAlertsUrl(pathname) && alertType === 'realtime'
           }
         )}
       >
@@ -66,7 +68,8 @@ const AlertsSidebar = () => {
           'cursor-pointer rounded-md p-2 flex justify-between gap-x-2 items-center',
           styles['draft-title'],
           {
-            [styles['item-active']]: (isAlertsUrl(pathname) && alertType === 'weekly')
+            [styles['item-active']]:
+              isAlertsUrl(pathname) && alertType === 'weekly'
           }
         )}
       >
@@ -91,12 +94,14 @@ const AlertsSidebar = () => {
           role='button'
           onClick={() => {
             history.replace(PathUrls.Workflows);
+            setAlertType('workflows');
           }}
           className={cx(
             'cursor-pointer rounded-md p-2 flex justify-between gap-x-2 items-center',
             styles['draft-title'],
             {
-              [styles['item-active']]: isWorkflowUrl(pathname)
+              [styles['item-active']]:
+                isAlertsUrl(pathname) && alertType === 'workflows'
             }
           )}
         >
@@ -104,19 +109,20 @@ const AlertsSidebar = () => {
             {/* <SVG name='settings' /> */}
             <Text
               color={
-                isWorkflowUrl(pathname) ? 'brand-color-6' : 'character-primary'
+                alertType === 'workflows'
+                  ? 'brand-color-6'
+                  : 'character-primary'
               }
               type='title'
               level={7}
-              weight={isWorkflowUrl(pathname) && 'bold'}
+              weight={alertType === 'workflows' && 'bold'}
               extraClass='mb-0'
             >
               Workflows
             </Text>
           </div>
-        </div>)}
-
-
+        </div>
+      )}
     </div>
   );
 };

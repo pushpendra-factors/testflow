@@ -12,8 +12,7 @@ import {
   isConfigurationUrl,
   isReportsMainUrl,
   isReportsUrl,
-  isSettingsUrl,
-  isWorkflowUrl
+  isSettingsUrl
 } from 'Views/AppSidebar/appSidebar.helpers';
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import { useSelector } from 'react-redux';
