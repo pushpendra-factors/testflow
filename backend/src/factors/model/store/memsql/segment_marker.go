@@ -20,8 +20,11 @@ import (
 func EventsPerformedCheck(projectID int64, segmentId string, eventNameIDsMap map[string]string,
 	segmentQuery *model.Query, userID string, isAllAccounts bool, userArray []model.User) bool {
 
-	// to be removed, default value true to all the events
+	// default value to be set true
 	for index := range segmentQuery.EventsWithProperties {
+		if segmentQuery.EventsWithProperties[index].FrequencyOperator != "" {
+			continue
+		}
 		segmentQuery.EventsWithProperties[index].IsEventPerformed = true
 	}
 
@@ -111,6 +114,7 @@ func didEventQuery(projectID int64, segmentId string, eventNameIDsMap map[string
 	if status != http.StatusFound {
 		log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "segment_id": segmentId}).
 			Error("Error while validating for performed events")
+		return isMatched
 	}
 
 	endTime := time.Now().UnixMilli()
@@ -138,6 +142,8 @@ func didEventQuery(projectID int64, segmentId string, eventNameIDsMap map[string
 			continue
 		}
 
+		log.Info("Debug logs for Frequency operator")
+
 		checkValue, err := strconv.ParseFloat(event.Frequency, 64)
 		if err != nil {
 			log.WithFields(log.Fields{"project_id": projectID, "domain_id": userID, "segment_id": segmentId}).
@@ -147,6 +153,10 @@ func didEventQuery(projectID int64, segmentId string, eventNameIDsMap map[string
 		}
 		count := result[eventNameIDsMap[event.Name]]
 		eventConditionMatched = NumericalPropCheck(event.FrequencyOperator, float64(count), checkValue)
+
+		log.WithFields(log.Fields{"project_id": projectID, "domain_id": userID, "segment_id": segmentId,
+			"condition_matched": eventConditionMatched, "check_val": checkValue, "count": float64(count)}).
+			Info("Debug logs for condition check")
 
 		if index == 0 {
 			isMatched = eventConditionMatched
