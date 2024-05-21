@@ -369,11 +369,6 @@ func (store *MemSQL) GetPreviewDomainsListByProjectId(projectID int64, payload m
 		return []model.Profile{}, status, "Failed to get domains list"
 	}
 
-	if len(payload.Query.EventsWithProperties) > 0 {
-		log.WithFields(log.Fields{"project_id": projectID, "payload": payload.Query.EventsWithProperties}).
-			Info("Debug logs for payload")
-	}
-
 	// breaking total domains list in small batches and running one at a time
 	domainIDsList := U.GetStringListAsBatch(domainIDs, C.DomainsToProcessForPreview())
 
