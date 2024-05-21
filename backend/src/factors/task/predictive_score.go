@@ -273,8 +273,8 @@ func PredictiveScoring2(projectId int64, configs map[string]interface{}) (map[st
 								status["err"] = err.Error()
 								return status, false
 							}
-							if fval, ok := dataPoint[uKey]; !ok || fval == "" || fval == nil {
-								dataPoint[uKey] = 0
+							if _, ok := dataPoint[uKey]; !ok {
+								dataPoint[uKey] = 0.0
 							}
 							dataPoint[uKey] = dataPoint[uKey].(float64) + floatVal
 						} else if val == "first" || val == "last" {
@@ -307,8 +307,8 @@ func PredictiveScoring2(projectId int64, configs map[string]interface{}) (map[st
 								status["err"] = err.Error()
 								return status, false
 							}
-							if fval, ok := dataPoint[eKey]; !ok || fval == "" || fval == nil {
-								dataPoint[eKey] = 0
+							if _, ok := dataPoint[eKey]; !ok {
+								dataPoint[eKey] = 0.0
 							}
 							dataPoint[eKey] = dataPoint[eKey].(float64) + floatVal
 						} else if val == "first" || val == "last" {
@@ -403,8 +403,8 @@ func PredictiveScoring2(projectId int64, configs map[string]interface{}) (map[st
 								status["err"] = err.Error()
 								return status, false
 							}
-							if fval, ok := dataPoint[uKey]; !ok || fval == "" || fval == nil {
-								dataPoint[uKey] = 0
+							if _, ok := dataPoint[uKey]; !ok {
+								dataPoint[uKey] = 0.0
 							}
 							dataPoint[uKey] = dataPoint[uKey].(float64) + floatVal
 						} else if val == "first" || val == "last" {
@@ -433,8 +433,8 @@ func PredictiveScoring2(projectId int64, configs map[string]interface{}) (map[st
 								status["err"] = err.Error()
 								return status, false
 							}
-							if fval, ok := dataPoint[eKey]; !ok || fval == "" || fval == nil {
-								dataPoint[eKey] = 0
+							if _, ok := dataPoint[eKey]; !ok {
+								dataPoint[eKey] = 0.0
 							}
 							dataPoint[eKey] = dataPoint[eKey].(float64) + floatVal
 						} else if val == "first" || val == "last" {
