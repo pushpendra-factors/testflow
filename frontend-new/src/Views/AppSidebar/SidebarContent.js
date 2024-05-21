@@ -36,7 +36,10 @@ function SidebarContent() {
   if (isSettingsUrl(pathname) || isConfigurationUrl(pathname)) {
     return <SettingsSidebar />;
   }
-  if (isAlertsUrl(pathname)) {
+  if (
+    checkMatchPath(pathname, PathUrls.Alerts) ||
+    checkMatchPath(pathname, PathUrls.Workflows)
+  ) {
     return <AlertsSidebar />;
   }
   return null;
