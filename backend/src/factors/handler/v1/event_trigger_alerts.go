@@ -64,11 +64,11 @@ func GetAllAlertsInOneHandler(c *gin.Context) (interface{}, int, string, string,
 				log.Info("$$$$$ masked channels json ", maskedSlackChannelsJson)
 				eventTriggeredAlertConfig.SlackChannels = maskedSlackChannelsJson
 
-				eventTriggerdAlertConfigJson, err := U.EncodeStructTypeToPostgresJsonb(&slackChannels)
+				eventTriggerdAlertConfigJson, err := U.EncodeStructTypeToPostgresJsonb(&eventTriggeredAlertConfig)
 				if err != nil {
 					return nil, http.StatusInternalServerError, "", "Failed to mask slack channel names", true
 				}
-				log.Info("$$$$$ masked alert config json ", eventTriggerdAlertConfigJson)
+
 				alert.Alert = eventTriggerdAlertConfigJson
 			}
 		}
