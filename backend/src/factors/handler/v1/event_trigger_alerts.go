@@ -39,6 +39,7 @@ func GetAllAlertsInOneHandler(c *gin.Context) (interface{}, int, string, string,
 	// logic to mask the private slack channels for other users of the project and show it only to the user who have created it.
 	for _, alert := range triggers {
 		if alert.CreatedBy != agentUUID {
+			log.Info("$$$$$ masking channels")
 			var eventTriggeredAlertConfig model.EventTriggerAlertConfig
 			err := U.DecodePostgresJsonbToStructType(alert.Alert, &eventTriggeredAlertConfig)
 			if err != nil {
@@ -53,18 +54,21 @@ func GetAllAlertsInOneHandler(c *gin.Context) (interface{}, int, string, string,
 				for idx, slackChannel := range slackChannels {
 					if slackChannel.IsPrivate {
 						slackChannels[idx].Name = MASKED_CHANNEL_NAME_STRING
+						log.Info("$$$$$ masked channel ", slackChannel.Name, slackChannels[idx].Name)
 					}
 				}
 				maskedSlackChannelsJson, err := U.EncodeStructTypeToPostgresJsonb(&slackChannels)
 				if err != nil {
 					return nil, http.StatusInternalServerError, "", "Failed to mask slack channel names", true
 				}
+				log.Info("$$$$$ masked channels json ", maskedSlackChannelsJson)
 				eventTriggeredAlertConfig.SlackChannels = maskedSlackChannelsJson
 
 				eventTriggerdAlertConfigJson, err := U.EncodeStructTypeToPostgresJsonb(&slackChannels)
 				if err != nil {
 					return nil, http.StatusInternalServerError, "", "Failed to mask slack channel names", true
 				}
+				log.Info("$$$$$ masked alert config json ", eventTriggerdAlertConfigJson)
 				alert.Alert = eventTriggerdAlertConfigJson
 			}
 		}
