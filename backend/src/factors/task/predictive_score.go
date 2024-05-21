@@ -18,6 +18,19 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var avgProps = []string{"ep#$initial_page_load_time",
+	"ep#$initial_page_spent_time",
+	"ep#$initial_page_scroll_percent",
+	"ep#$page_load_time",
+	"ep#$page_spent_time",
+	"ep#$page_scroll_percent",
+	"up#$initial_page_load_time",
+	"up#$initial_page_spent_time",
+	"up#$initial_page_scroll_percent",
+	"up#$latest_page_load_time",
+	"up#$latest_page_spent_time",
+	"up#$latest_page_scroll_percent"}
+
 var props = map[string]string{
 	"ep#$initial_referrer_domain":                                "first",
 	"ep#$is_first_session":                                       "first",
@@ -240,7 +253,7 @@ func PredictiveScoring2(projectId int64, configs map[string]interface{}) (map[st
 
 				eName := "ev#" + eventDetails.EventName
 				if freq, ok := dataPoint[eName]; !ok {
-					dataPoint[eName] = 1
+					dataPoint[eName] = int64(1)
 				} else {
 					dataPoint[eName] = freq.(int64) + 1
 				}
@@ -370,7 +383,7 @@ func PredictiveScoring2(projectId int64, configs map[string]interface{}) (map[st
 
 				eName := "ev#" + eventDetails.EventName
 				if freq, ok := dataPoint[eName]; !ok {
-					dataPoint[eName] = 1
+					dataPoint[eName] = int64(1)
 				} else {
 					dataPoint[eName] = freq.(int64) + 1
 				}
@@ -461,7 +474,12 @@ func PredictiveScoring2(projectId int64, configs map[string]interface{}) (map[st
 	}
 
 	countIds := 0
-	for _, dataPoint := range accountInfos {
+	for accId, dataPoint := range accountInfos {
+		for _, prop := range avgProps {
+			if val, ok := dataPoint[prop]; ok && val != 0 {
+				dataPoint[prop] = dataPoint[prop].(float64) / float64(userPropCounts[accId][prop])
+			}
+		}
 		if dataPointBytes, err := json.Marshal(dataPoint); err != nil {
 			log.WithFields(log.Fields{"dataPoint": dataPoint, "err": err}).Error("Marshal failed")
 			status["err"] = err.Error()
