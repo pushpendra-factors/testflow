@@ -620,7 +620,7 @@ func (store *MemSQL) CacheWorkflowToBeSent(workflow *model.Workflow, event *mode
 
 	if wfBody.SetAlertLimit && count > wfBody.AlertLimit {
 		logCtx.WithFields(logFields).
-			Info("Alert was not sent for current EventTriggerAlert as daily AlertLimit has been reached.")
+			Info("Alert was not cached for current workflow as daily AlertLimit has been reached.")
 
 		return true
 	}
@@ -630,9 +630,17 @@ func (store *MemSQL) CacheWorkflowToBeSent(workflow *model.Workflow, event *mode
 		return false
 	}
 
+	logCtx.WithFields(log.Fields{
+		"breakdown_props": breakdownProps,
+		"message_props":   messageProps,
+		"workflow_id":     workflow.ID,
+		"counter_key":     *counterKey,
+		"cache_key":       *key,
+	}).Info("$$Check workflow message props.")
+
 	successCode, err := store.AddWorkflowToCache(workflow, &messageProps, key)
 	if err != nil || successCode != http.StatusCreated {
-		logCtx.WithFields(logFields).Error("Failed to send alert.")
+		logCtx.WithError(err).Error("Failed to add workflow payload to cache.")
 		return false
 	}
 
@@ -773,15 +781,30 @@ func (store *MemSQL) getWorkflowMessageProperties(projectID int64,
 		additionalPropsPayload[mp.Others] = propertyValue
 	}
 
+	additionalContactProps := messagePropertiesQuery.AdditionalPropertiesContact
+	additionalContactPropsPayload := make(model.WorkflowPayloadProperties)
+	for _, acp := range additionalContactProps {
+		propertyValue := store.getPropertiesPayloadForTheGivenProperty(projectID, acp, allProperties)
+		additionalPropsPayload[acp.Others] = propertyValue
+	}
+
 	payloadProperties := model.WorkflowParagonPayload{
 		MandatoryPropsCompany:  mandatoryPropsPayload,
 		AdditionalPropsCompany: additionalPropsPayload,
+		AdditionalPropsContact: additionalContactPropsPayload,
 	}
 
 	msgPropMap, err := U.EncodeStructTypeToMap(payloadProperties)
 	if err != nil {
 		log.WithError(err).Error("Failed to encode struct to map.")
 	}
+
+	log.WithFields(log.Fields{
+		"project_id":      projectID,
+		"user_properties": allProperties,
+		"msg_prop_map":    msgPropMap,
+		"payload":         payloadProperties,
+	}).Info("$$Check message properties in meth.")
 
 	return msgPropMap
 }
