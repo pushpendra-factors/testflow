@@ -7,7 +7,7 @@ interface IntegrationHeaderProps {
   description: string;
   iconText: string;
   handleBackClick: () => void;
-  lastSyncDetail: string;
+  ActionStatus?: React.ReactNode;
 }
 
 const IntegrationHeader = ({
@@ -15,7 +15,7 @@ const IntegrationHeader = ({
   description,
   iconText,
   handleBackClick,
-  lastSyncDetail
+  ActionStatus
 }: IntegrationHeaderProps) => (
   <div>
     <Button
@@ -52,19 +52,7 @@ const IntegrationHeader = ({
             >
               {title}
             </Text>
-            {lastSyncDetail && (
-              <div className='flex gap-2 items-center'>
-                <SVG name='SyncAlt' size='20' color='#EA6262' />
-                <Text
-                  type='title'
-                  level={7}
-                  color='character-primary'
-                  extraClass='m-0'
-                >
-                  {lastSyncDetail}
-                </Text>
-              </div>
-            )}
+            {ActionStatus && <>{ActionStatus}</>}
           </div>
         </div>
 

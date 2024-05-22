@@ -48,3 +48,9 @@ export interface IntegrationStatus {
   last_synced_at: number;
   message?: string;
 }
+
+export type IntegrationState =
+  | 'connected'
+  | 'error'
+  | 'pending'
+  | 'not_connected';

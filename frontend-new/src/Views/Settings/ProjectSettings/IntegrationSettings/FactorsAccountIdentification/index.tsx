@@ -44,7 +44,7 @@ const FactorsAccountIdentification = ({
         >
           <IndentificationProvider kbLink={kbLink} />
         </Tabs.TabPane>
-        <Tabs.TabPane tab='EnrichmentRules' key={TabTypes.enrichmentRules}>
+        <Tabs.TabPane tab='Enrichment Rules' key={TabTypes.enrichmentRules}>
           <EnrichmentRulesTab />
         </Tabs.TabPane>
       </Tabs>
