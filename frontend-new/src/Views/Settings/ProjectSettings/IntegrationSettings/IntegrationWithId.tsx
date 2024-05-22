@@ -1,7 +1,12 @@
 import React, { useContext, useEffect, useRef } from 'react';
 import { Alert, Divider, Skeleton, message } from 'antd';
 import { ErrorBoundary } from 'react-error-boundary';
-import { FaErrorComp, FaErrorLog } from 'Components/factorsComponents';
+import {
+  FaErrorComp,
+  FaErrorLog,
+  SVG,
+  Text
+} from 'Components/factorsComponents';
 import { useHistory, useParams } from 'react-router-dom';
 import { ConnectedProps, connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
@@ -16,10 +21,12 @@ import IntegrationHeader from './IntegrationHeader';
 import IntegrationInstruction from './IntegrationInstruction';
 import {
   createDashboardsFromTemplatesForRequiredIntegration,
+  getIntegrationActionText,
   getIntegrationStatus,
   showIntegrationStatus
 } from './util';
 import { IntegrationContext } from './IntegrationContext';
+import styles from './index.module.scss';
 
 const IntegrationWithId = ({
   currentProjectSettingsLoading,
@@ -44,21 +51,41 @@ const IntegrationWithId = ({
   const integrationStatusValue = getIntegrationStatus(
     integrationStatus?.[integrationId]
   );
-  const integrationInfo = useIntegrationCheck();
+  const integrationActionText = getIntegrationActionText(
+    integrationStatus?.[integrationId]
+  );
+  const { integrationInfo } = useIntegrationCheck();
   const isIntegrated = integrationInfo?.[integrationId];
   const showIntegrationStatusFlag = showIntegrationStatus(userEmail);
-
   const integrationStatusMessage = integrationStatus?.[integrationId]?.message;
-  const lastSyncDetail =
-    showIntegrationStatusFlag &&
-    integrationStatus?.[integrationId]?.last_synced_at &&
-    isIntegrated
-      ? `Last sync: ${moment
-          .unix(integrationStatus?.[integrationId]?.last_synced_at)
-          .fromNow()}`
-      : '';
+  // const lastSyncDetail =
+  //   showIntegrationStatusFlag &&
+  //   integrationStatus?.[integrationId]?.last_synced_at &&
+  //   isIntegrated
+  //     ? `Last sync: ${moment
+  //         .unix(integrationStatus?.[integrationId]?.last_synced_at)
+  //         .fromNow()}`
+  //     : '';
 
   const isErrorState = integrationStatusValue === 'error';
+  const isPendingState = integrationStatusValue === 'pending';
+  const isConnectedState = integrationStatusValue === 'connected';
+
+  const actionStatusColor = isErrorState
+    ? '#EA6262'
+    : isPendingState
+      ? '#FAAD14'
+      : '#52C41A';
+
+  const ActionStatus =
+    isErrorState || isPendingState || isConnectedState ? (
+      <div className='flex gap-2 items-center'>
+        <SVG name='SyncAlt' size='20' color={actionStatusColor} />
+        <Text type='title' level={7} color='character-primary' extraClass='m-0'>
+          {integrationActionText}
+        </Text>
+      </div>
+    ) : undefined;
 
   const handleBackClick = () => {
     sessionStorage.setItem('integration-card', integrationId);
@@ -183,12 +210,21 @@ const IntegrationWithId = ({
             title={Integration.name}
             description={Integration.desc}
             iconText={Integration.icon}
-            lastSyncDetail={lastSyncDetail}
+            ActionStatus={ActionStatus}
           />
           <Divider style={{ margin: '16px 0px' }} />
-          {showIntegrationStatusFlag && isIntegrated && isErrorState && (
-            <Alert message={integrationStatusMessage} type='error' showIcon />
-          )}
+          {showIntegrationStatusFlag &&
+            isIntegrated &&
+            (isErrorState || isPendingState) && (
+              <div className={styles.integrationActionAlert}>
+                <Alert
+                  message={integrationActionText}
+                  description={integrationStatusMessage}
+                  type={isErrorState ? 'error' : 'warning'}
+                  showIcon
+                />
+              </div>
+            )}
           {Integration.showInstructionMenu && (
             <IntegrationInstruction
               title={Integration.instructionTitle}

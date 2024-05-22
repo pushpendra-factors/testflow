@@ -31,7 +31,6 @@ import {
 import MomentTz from '../../../../components/MomentTz';
 import ExcludeIp from '../BasicSettings/IpBlocking/excludeIp';
 
-import SdkVerificationFooter from './SdkVerificationFooter';
 import GtmSteps from './InstructionSteps/gtmSteps';
 import ManualSteps from './InstructionSteps/manualSteps';
 import { JavascriptHeadDocumentation } from './utils';
@@ -752,13 +751,9 @@ function JavascriptSDK({
           {dataLoading ? (
             <Skeleton active paragraph={{ rows: 4 }} />
           ) : (
-            <>
-              <Tabs defaultActiveKey='1' onChange={callback}>
-                {renderTabs()}
-              </Tabs>
-
-              <SdkVerificationFooter type='gtm' />
-            </>
+            <Tabs defaultActiveKey='1' onChange={callback}>
+              {renderTabs()}
+            </Tabs>
           )}
         </Col>
       </Row>

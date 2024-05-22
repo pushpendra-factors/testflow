@@ -29,7 +29,6 @@ const IntegrationSettings = () => {
     }))
   ];
   const [selectedCategory, setSelectedCategory] = useState(defaultCategory);
-  const [showSearch, setShowSearch] = useState(false);
   const [searchText, setSearchText] = useState('');
   const { integrationInfo } = useIntegrationCheck();
 
@@ -153,33 +152,13 @@ const IntegrationSettings = () => {
                 />
               </div>
               <div className='flex items-center justify-between'>
-                {showSearch ? (
-                  <Input
-                    autoFocus
-                    onChange={handleSearchTextChange}
-                    placeholder='Search Integration'
-                    style={{ width: '220px', borderRadius: 5 }}
-                    prefix={<SVG name='search' size={16} color='grey' />}
-                  />
-                ) : null}
-                <Button
-                  type='text'
-                  ghost
-                  shape='circle'
-                  className='p-2 bg-white'
-                  onClick={() => {
-                    setShowSearch(!showSearch);
-                    if (showSearch) {
-                      setSearchText('');
-                    }
-                  }}
-                >
-                  <SVG
-                    name={!showSearch ? 'search' : 'close'}
-                    size={20}
-                    color='grey'
-                  />
-                </Button>
+                <Input
+                  autoFocus
+                  onChange={handleSearchTextChange}
+                  placeholder='Search Integration'
+                  style={{ width: '220px', borderRadius: 5 }}
+                  prefix={<SVG name='search' size={16} color='grey' />}
+                />
               </div>
             </div>
           </div>

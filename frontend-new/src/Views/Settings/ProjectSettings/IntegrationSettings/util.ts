@@ -7,7 +7,7 @@ import logger from 'Utils/logger';
 import { get, getHostUrl } from 'Utils/request';
 import { AdminLock } from 'Routes/feature';
 import { IntegrationPageCategories } from './integrations.constants';
-import { IntegrationStatus } from './types';
+import { IntegrationState, IntegrationStatus } from './types';
 
 export const INTEGRATION_HOME_PAGE = '/settings/integration';
 export const ADWORDS_INTERNAL_REDIRECT_URI = '?googleAds=manageAccounts';
@@ -166,8 +166,10 @@ export const getBackendHost = () => {
   return backendHost;
 };
 
-export const getIntegrationStatus = (integrationStatus: IntegrationStatus) => {
-  let status = '';
+export const getIntegrationStatus = (
+  integrationStatus: IntegrationStatus
+): IntegrationState => {
+  let status: IntegrationState = 'not_connected';
   switch (integrationStatus?.state) {
     case 'connected':
     case 'synced':
@@ -198,10 +200,8 @@ export const getIntegrationActionText = (
   switch (integrationStatus?.state) {
     case 'connected':
     case 'success':
-      actionText = 'Connected';
-      break;
     case 'synced':
-      actionText = 'Receiving Data';
+      actionText = 'Connected';
       break;
     case 'client_token_expired':
     case 'limit_exceed':
@@ -211,7 +211,7 @@ export const getIntegrationActionText = (
     case 'delayed':
     case 'heavy_delayed':
     case 'sync_pending':
-      actionText = 'Data sync Pending';
+      actionText = 'Data Sync Pending';
       break;
     default:
       actionText = 'Connect Now';
