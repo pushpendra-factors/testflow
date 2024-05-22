@@ -30,32 +30,33 @@ func (store *MemSQL) GetKPIConfigFromStandardUserProperties(projectID int64) []m
 }
 
 func (store *MemSQL) ExecuteKPIQueryForProfiles(projectID int64, reqID string,
-	kpiQuery model.KPIQuery, enableOptimisedFilter bool) ([]model.QueryResult, int) {
+	kpiQuery model.KPIQuery, enableOptimisedFilter bool) ([]model.QueryResult, [][]model.QueryResult, int) {
 	return store.TransformToAndExecuteProfileAnalyticsQueries(projectID, kpiQuery, reqID, enableOptimisedFilter)
 }
 
 func (store *MemSQL) TransformToAndExecuteProfileAnalyticsQueries(projectID int64, kpiQuery model.KPIQuery,
-	reqID string, enableOptimisedFilter bool) ([]model.QueryResult, int) {
+	reqID string, enableOptimisedFilter bool) ([]model.QueryResult, [][]model.QueryResult, int) {
 	var profileQueryGroup model.ProfileQueryGroup
 	var statusCode, finalStatusCode int
 	var queryResults []model.QueryResult
 	queryResults = make([]model.QueryResult, len(kpiQuery.Metrics))
+	internalQueryResults := make([][]model.QueryResult, len(kpiQuery.Metrics))
 	profileQueryGroup = model.GetDirectDerivableProfileQueryFromKPI(kpiQuery)
 	for index, kpiMetric := range kpiQuery.Metrics {
-		queryResults[index], statusCode = store.ExecuteForSingleKPIMetricProfile(projectID, profileQueryGroup, kpiQuery, kpiMetric, enableOptimisedFilter)
+		queryResults[index], internalQueryResults[index], statusCode = store.ExecuteForSingleKPIMetricProfile(projectID, profileQueryGroup, kpiQuery, kpiMetric, enableOptimisedFilter)
 		finalStatusCode = statusCode
 		if statusCode != http.StatusOK {
 			queryResults = make([]model.QueryResult, len(kpiQuery.Metrics))
-			return queryResults, finalStatusCode
+			return queryResults, internalQueryResults, finalStatusCode
 		}
 	}
-	return queryResults, finalStatusCode
+	return queryResults, internalQueryResults, finalStatusCode
 }
 
 // TODO Later - Generalising the transformation of external computation to internal computations.
 // Eg - representing avg in terms of count(property)/count(*) with division operator.
 func (store *MemSQL) ExecuteForSingleKPIMetricProfile(projectID int64, profileQueryGroup model.ProfileQueryGroup,
-	kpiQuery model.KPIQuery, kpiMetric string, enableOptimisedFilter bool) (model.QueryResult, int) {
+	kpiQuery model.KPIQuery, kpiMetric string, enableOptimisedFilter bool) (model.QueryResult, []model.QueryResult, int) {
 	// Execute Profiles Query For Single KPI.
 	hasGroupByTimestamp := (kpiQuery.GroupByTimestamp != "")
 	hasAnyGroupBys := (len(kpiQuery.GroupBy) > 0)
@@ -65,7 +66,7 @@ func (store *MemSQL) ExecuteForSingleKPIMetricProfile(projectID int64, profileQu
 	customMetric, err, statusCode := store.GetProfileCustomMetricByProjectIdName(projectID, kpiMetric)
 	if statusCode != http.StatusFound {
 		finalResult.Headers = append(finalResult.Headers, model.AliasError)
-		return finalResult, statusCode
+		return finalResult, []model.QueryResult{}, statusCode
 	}
 	err1 := U.DecodePostgresJsonbToStructType(customMetric.Transformations, &transformation)
 	if err1 != nil {
@@ -76,16 +77,19 @@ func (store *MemSQL) ExecuteForSingleKPIMetricProfile(projectID int64, profileQu
 	if statusCode2 != http.StatusOK {
 		// Log or not.
 		finalResult.Headers = append(finalResult.Headers, model.AliasError)
-		return finalResult, statusCode2
+		return finalResult, []model.QueryResult{finalResult}, statusCode2
 	}
 	// Transformation of Profiles Results of Single KPI.
+	results := make([]model.QueryResult, 0)
 	if len(currentQueries) == 1 {
-		results := model.TransformProfileResultsToKPIResults(resultGroup.Results, hasGroupByTimestamp, hasAnyGroupBys)
+		results = model.TransformProfileResultsToKPIResults(resultGroup.Results, hasGroupByTimestamp, hasAnyGroupBys)
 		finalResult = results[0]
-		return finalResult, http.StatusOK
 	} else {
-		results := model.TransformProfileResultsToKPIResults(resultGroup.Results, hasGroupByTimestamp, hasAnyGroupBys)
-		finalResult = model.HandlingProfileResultsByApplyingOperations(results, currentQueries, kpiQuery.Timezone)
+		// IMP NOTE - Recomputing transformation for NonGBT by directly using number of results.
+		// Considered only having 1 or 2 results.
+		// Function - GetNonGBTResultsFromGBTResultsAndMaps
+		results = model.TransformProfileResultsToKPIResults(resultGroup.Results, hasGroupByTimestamp, hasAnyGroupBys)
+		finalResult = model.HandlingProfileResultsByApplyingOperations(results, currentQueries[0].Operator, kpiQuery.Timezone)
 	}
-	return finalResult, http.StatusOK
+	return finalResult, results, http.StatusOK
 }

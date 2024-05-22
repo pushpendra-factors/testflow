@@ -236,6 +236,7 @@ type Configuration struct {
 	EnableOLTPQueriesMemSQLImprovements                  string
 	CaptureSourceInUsersTable                            string
 	AllowSupportForSourceColumnInUsers                   string
+	AllowSupportForV1AvgKPIComputation                   string
 	ResourcePoolForAnalytics                             string
 	RestrictReusingUsersByCustomerUserId                 string
 	HubspotAPIOnboardingHAPIKey                          string
@@ -2696,6 +2697,14 @@ func SetEnableEventLevelEventProperties(projectId int64) {
 
 func IsProfileQuerySourceSupported(projectId int64) bool {
 	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowSupportForSourceColumnInUsers, "")
+	if allProjects || projectIDsMap[projectId] {
+		return true
+	}
+	return false
+}
+
+func IsV1AvgKPIEnabled(projectId int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowSupportForV1AvgKPIComputation, "")
 	if allProjects || projectIDsMap[projectId] {
 		return true
 	}

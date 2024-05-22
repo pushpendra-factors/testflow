@@ -209,7 +209,7 @@ func getTransformedRowsForProfileResults(rows [][]interface{}, hasGroupByTimesta
 }
 
 // Here we are considering only one transformation
-func HandlingProfileResultsByApplyingOperations(results []QueryResult, profileQueries []ProfileQuery, timezone string) QueryResult {
+func HandlingProfileResultsByApplyingOperations(results []QueryResult, operator string, timezone string) QueryResult {
 	resultKeys := getAllKeysFromResultsArray(results)
 	var finalResult QueryResult
 	finalResultRows := make([][]interface{}, 0)
@@ -219,7 +219,6 @@ func HandlingProfileResultsByApplyingOperations(results []QueryResult, profileQu
 		key := U.GetkeyFromRow(row)
 		value1 := resultKeys[key]
 		value2 := row[len(row)-1]
-		operator := profileQueries[0].Operator
 		result := getValueFromValuesAndOperator(value1, value2, operator)
 		resultKeys[key] = result
 	}

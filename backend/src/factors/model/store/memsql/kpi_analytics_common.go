@@ -63,6 +63,7 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQuer
 		log.WithField("project_id", projectID).Error(errMsg)
 		return []model.QueryResult{{}, {}}, http.StatusBadRequest
 	}
+	mapOfhashToProfileGBTResults := make(map[string][][]model.QueryResult, 0)
 
 	// Fetch all property mappings from global filters and groupbys from db and store in a map
 	mapOfPropertyMappingNameToDisplayCategoryToProperty, statusCode := store.fetchPropertyMappingsForKPIQueryGroupGlobals(kpiQueryGroup, projectID)
@@ -87,18 +88,20 @@ func (store *MemSQL) ExecuteKPIQueryGroup(projectID int64, reqID string, kpiQuer
 	if statusCode != http.StatusOK {
 		return []model.QueryResult{{}, {}}, statusCode
 	}
-
 	finalStatusCode, mapOfNonGBTDerivedKPIToInternalKPIToResults, mapOfGBTDerivedKPIToInternalKPIToResults, mapOfNonGBTKPINormalQueryToResults,
 		mapOfGBTKPINormalQueryToResults := store.ExecuteKPIQueriesAndGetResultsAsMap(projectID,
-		reqID, kpiQueryGroup, externalGBTQueryToInternalQueries, externalNonGBTQueryToInternalQueries, mapOfPropertyMappingNameToDisplayCategoryToProperty, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
+		reqID, kpiQueryGroup, externalGBTQueryToInternalQueries, externalNonGBTQueryToInternalQueries, mapOfPropertyMappingNameToDisplayCategoryToProperty,
+		mapOfhashToProfileGBTResults,
+		enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 	if finalStatusCode == 2 {
 		return []model.QueryResult{{}, {}}, http.StatusInternalServerError
 	}
 	if finalStatusCode != http.StatusOK {
 		return []model.QueryResult{{}, {}}, finalStatusCode
 	}
-	finalStatusCode, mapOfNonGBTDerivedKPIToInternalKPIToResults, mapOfNonGBTKPINormalQueryToResults = model.GetNonGBTResultsFromGBTResultsAndMaps(reqID, kpiQueryGroup,
-		mapOfNonGBTDerivedKPIToInternalKPIToResults, mapOfGBTDerivedKPIToInternalKPIToResults, mapOfNonGBTKPINormalQueryToResults, mapOfGBTKPINormalQueryToResults, externalGBTQueryToInternalQueries, externalNonGBTQueryToInternalQueries)
+	finalStatusCode, mapOfNonGBTDerivedKPIToInternalKPIToResults, mapOfNonGBTKPINormalQueryToResults = model.GetNonGBTResultsFromGBTResultsAndMaps(projectID, reqID, kpiQueryGroup,
+		mapOfNonGBTDerivedKPIToInternalKPIToResults, mapOfGBTDerivedKPIToInternalKPIToResults, mapOfNonGBTKPINormalQueryToResults, mapOfGBTKPINormalQueryToResults,
+		externalGBTQueryToInternalQueries, externalNonGBTQueryToInternalQueries, mapOfhashToProfileGBTResults)
 	if finalStatusCode == 2 {
 		return []model.QueryResult{{}, {}}, http.StatusInternalServerError
 	}
@@ -234,6 +237,7 @@ func (store *MemSQL) buildInternalQueryGroupForDerivedKPIs(kpiQueryGroup model.K
 func (store *MemSQL) ExecuteKPIQueriesAndGetResultsAsMap(projectID int64, reqID string, kpiQueryGroup model.KPIQueryGroup,
 	externalGBTQueryToInternalQueries, externalNonGBTQueryToInternalQueries map[string]model.KPIQueryGroup,
 	mapOfPropertyMappingNameToDisplayCategoryToProperty map[string]map[string]model.Property,
+	mapOfhashToProfileGBTResults map[string][][]model.QueryResult,
 	enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (int, map[string]map[string][]model.QueryResult,
 	map[string]map[string][]model.QueryResult, map[string][]model.QueryResult, map[string][]model.QueryResult) {
 	finalStatus := model.KPIStatus{Status: 2}
@@ -259,7 +263,7 @@ func (store *MemSQL) ExecuteKPIQueriesAndGetResultsAsMap(projectID int64, reqID 
 		go store.runSingleKPIQuery(projectID, reqID, kpiQueryGroup, query, externalGBTQueryToInternalQueries, externalNonGBTQueryToInternalQueries, mapOfPropertyMappingNameToDisplayCategoryToProperty,
 			enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery,
 			mapOfGBTDerivedKPIToInternalKPIToResults, mapOfNonGBTDerivedKPIToInternalKPIToResults, mapOfGBTKPINormalQueryToResults,
-			mapOfNonGBTKPINormalQueryToResults, &finalStatus, &waitGroup)
+			mapOfNonGBTKPINormalQueryToResults, mapOfhashToProfileGBTResults, &finalStatus, &waitGroup)
 
 		if count%actualRoutineLimit == 0 {
 			waitGroup.Wait()
@@ -290,6 +294,7 @@ func (store *MemSQL) runSingleKPIQuery(projectID int64, reqID string, kpiQueryGr
 	enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool,
 	mapOfGBTDerivedKPIToInternalKPIToResults, mapOfNonGBTDerivedKPIToInternalKPIToResults map[string]map[string][]model.QueryResult,
 	mapOfGBTKPINormalQueryToResults, mapOfNonGBTKPINormalQueryToResults map[string][]model.QueryResult,
+	mapOfhashToProfileGBTResults map[string][][]model.QueryResult,
 	finalStatus *model.KPIStatus, waitGroup *sync.WaitGroup) {
 
 	defer U.NotifyOnPanicWithError(C.GetConfig().Env, C.GetConfig().AppName)
@@ -301,7 +306,8 @@ func (store *MemSQL) runSingleKPIQuery(projectID int64, reqID string, kpiQueryGr
 
 	if query.QueryType == model.KpiDerivedQueryType {
 		var derivedKPIHashCode string
-		internalQueryToQueryResult, statusCode, derivedKPIHashCode, errMsg = store.ExecuteDerivedKPIQuery(projectID, reqID, query, externalGBTQueryToInternalQueries, externalNonGBTQueryToInternalQueries, mapOfPropertyMappingNameToDisplayCategoryToProperty, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
+		internalQueryToQueryResult, statusCode, derivedKPIHashCode, errMsg = store.ExecuteDerivedKPIQuery(projectID, reqID, query, externalGBTQueryToInternalQueries, externalNonGBTQueryToInternalQueries, mapOfPropertyMappingNameToDisplayCategoryToProperty,
+			mapOfhashToProfileGBTResults, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 		finalStatus.CheckAndSetStatus(statusCode)
 		if statusCode != http.StatusOK {
 			log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("err_code", statusCode).WithField("query", query).Error(errMsg)
@@ -315,7 +321,7 @@ func (store *MemSQL) runSingleKPIQuery(projectID int64, reqID string, kpiQueryGr
 		}
 	} else {
 		var hashCode string
-		result, statusCode, hashCode, errMsg = store.ExecuteNonDerivedKPIQuery(projectID, reqID, query, mapOfPropertyMappingNameToDisplayCategoryToProperty, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
+		result, statusCode, hashCode, errMsg = store.ExecuteNonDerivedKPIQuery(projectID, reqID, query, mapOfPropertyMappingNameToDisplayCategoryToProperty, mapOfhashToProfileGBTResults, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 		finalStatus.CheckAndSetStatus(statusCode)
 		if statusCode != http.StatusOK {
 			log.WithField("reqID", reqID).WithField("kpiQueryGroup", kpiQueryGroup).WithField("query", query).
@@ -337,9 +343,9 @@ func (store *MemSQL) runSingleKPIQuery(projectID int64, reqID string, kpiQueryGr
 func (store *MemSQL) ExecuteDerivedKPIQuery(projectID int64, reqID string, baseQuery model.KPIQuery,
 	externalGBTQueryToInternalQueries, externalNonGBTQueryToInternalQueries map[string]model.KPIQueryGroup,
 	mapOfPropertyMappingNameToDisplayCategoryToProperty map[string]map[string]model.Property,
+	mapOfhashToProfileGBTResults map[string][][]model.QueryResult,
 	enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) (map[string][]model.QueryResult, int, string, string) {
 
-	queryResults := make([]model.QueryResult, 0)
 	mapOfInternalQueryToResult := make(map[string][]model.QueryResult)
 
 	derivedQueryHashCode, err := baseQuery.GetQueryCacheHashString()
@@ -357,7 +363,7 @@ func (store *MemSQL) ExecuteDerivedKPIQuery(projectID int64, reqID string, baseQ
 	for _, query := range internalKPIQueryGroup.Queries {
 		var result []model.QueryResult
 		var hashCode string
-		result, statusCode, hashCode, errMsg := store.ExecuteNonDerivedKPIQuery(projectID, reqID, query, mapOfPropertyMappingNameToDisplayCategoryToProperty, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
+		result, statusCode, hashCode, errMsg := store.ExecuteNonDerivedKPIQuery(projectID, reqID, query, mapOfPropertyMappingNameToDisplayCategoryToProperty, mapOfhashToProfileGBTResults, enableOptimisedFilterOnProfileQuery, enableOptimisedFilterOnEventUserQuery)
 
 		if statusCode != http.StatusOK {
 			mapOfInternalQueryToResult := make(map[string][]model.QueryResult)
@@ -365,8 +371,6 @@ func (store *MemSQL) ExecuteDerivedKPIQuery(projectID int64, reqID string, baseQ
 		}
 
 		mapOfInternalQueryToResult[hashCode] = result
-
-		queryResults = append(queryResults, result...)
 	}
 
 	return mapOfInternalQueryToResult, http.StatusOK, derivedQueryHashCode, ""
@@ -379,9 +383,11 @@ func (store *MemSQL) ExecuteDerivedKPIQuery(projectID int64, reqID string, baseQ
 // QueryResult, statusCode, hashCode, errMsg
 func (store *MemSQL) ExecuteNonDerivedKPIQuery(projectID int64, reqID string,
 	query model.KPIQuery, mapOfPropertyMappingNameToDisplayCategoryToProperty map[string]map[string]model.Property,
+	mapOfhashToProfileGBTResults map[string][][]model.QueryResult,
 	enableOptimisedFilterOnProfileQuery bool, enableOptimisedFilterOnEventUserQuery bool) ([]model.QueryResult, int, string, string) {
 
 	result := make([]model.QueryResult, 0)
+	internalResults := make([][]model.QueryResult, 0)
 	statusCode := http.StatusOK
 	hashCode, _ := query.GetQueryCacheHashString()
 
@@ -392,8 +398,9 @@ func (store *MemSQL) ExecuteNonDerivedKPIQuery(projectID int64, reqID string,
 
 	if tempQuery.Category == model.ProfileCategory {
 		if tempQuery.GroupByTimestamp != "" {
-			result, statusCode = store.ExecuteKPIQueryForProfiles(projectID, reqID,
+			result, internalResults, statusCode = store.ExecuteKPIQueryForProfiles(projectID, reqID,
 				tempQuery, enableOptimisedFilterOnProfileQuery)
+			mapOfhashToProfileGBTResults[hashCode] = internalResults
 		} else {
 			return make([]model.QueryResult, 1), http.StatusOK, hashCode, ""
 		}
