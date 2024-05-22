@@ -576,7 +576,7 @@ type QueryEventWithProperties struct {
 	GroupAnalysis     string          `json:"grpa"`
 	Properties        []QueryProperty `json:"pr"`
 	EventNameIDs      []interface{}   `json:"-"`
-	From              int64           `json:"fr"`
+	Range             int64           `json:"range"` // number of days
 	FrequencyOperator string          `json:"freqOp"`
 	Frequency         string          `json:"freq"`
 	IsEventPerformed  bool            `json:"iep"`

@@ -111,9 +111,14 @@ func SegmentMarker(projectID int64, projectIdListAllRun map[int64]bool, latestSe
 			segmentQuery.GlobalUserProperties = model.TransformPayloadForInProperties(segmentQuery.GlobalUserProperties)
 			segmentQuery.From = U.TimeNowZ().AddDate(0, 0, -90).Unix()
 			segmentQuery.To = U.TimeNowZ().Unix()
-			for _, eventProp := range segmentQuery.EventsWithProperties {
+			for index, eventProp := range segmentQuery.EventsWithProperties {
 				if eventProp.Name != "" {
 					eventNameIDsList[eventProp.Name] = true
+				}
+				if eventProp.Range > int64(0) {
+					days := int(eventProp.Range)
+					timestampForRange := U.TimeNowIn(timezoneString).AddDate(0, 0, -days).Unix()
+					segmentQuery.EventsWithProperties[index].Range = timestampForRange
 				}
 			}
 			decodedSegmentRulesMap[groupName] = append(decodedSegmentRulesMap[groupName], segmentQuery)
