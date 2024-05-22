@@ -218,7 +218,6 @@ const IntegrationWithId = ({
             (isErrorState || isPendingState) && (
               <div className={styles.integrationActionAlert}>
                 <Alert
-                  message={integrationActionText}
                   description={integrationStatusMessage}
                   type={isErrorState ? 'error' : 'warning'}
                   showIcon
