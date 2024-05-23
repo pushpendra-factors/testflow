@@ -173,6 +173,7 @@ func main() {
 	enableTotalSessionPropertiesV2ByProjectID := flag.String("enable_total_session_properties_v2", "", "")
 	enableDomainWebsitePropertiesByProjectID := flag.String("enable_domain_website_properties_by_project_id", "", "")
 	enableDeletedRecordProjectID := flag.String("enable_deleted_record_by_project_id", "", "")
+	skipLeadEnrichmentByProjectID := flag.String("skip_lead_processing_by_project_id", "", "")
 
 	flag.Parse()
 
@@ -260,6 +261,7 @@ func main() {
 		EnableTotalSessionPropertiesV2ByProjectID:            *enableTotalSessionPropertiesV2ByProjectID,
 		EnableDomainWebsitePropertiesByProjectID:             *enableDomainWebsitePropertiesByProjectID,
 		EnableSalesforceDeletedRecordByProjectID:             *enableDeletedRecordProjectID,
+		SkipSalesforceLeadEnrichmentByProjectID:              *skipLeadEnrichmentByProjectID,
 	}
 
 	C.InitConf(config)
