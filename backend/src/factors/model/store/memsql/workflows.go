@@ -279,7 +279,7 @@ func (store *MemSQL) isDuplicateWorkflowTitle(id, title string, projectID int64)
 	var workflow model.Workflow
 
 	err := db.Where("project_id = ?", projectID).
-		Where("title = ?", title).
+		Where("name = ?", title).
 		Where("is_deleted = ?", false).
 		Not("id = ?", id).Find(&workflow).Error
 	if err != nil {
@@ -630,13 +630,13 @@ func (store *MemSQL) CacheWorkflowToBeSent(workflow *model.Workflow, event *mode
 		return false
 	}
 
-	logCtx.WithFields(log.Fields{
-		"breakdown_props": breakdownProps,
-		"message_props":   messageProps,
-		"workflow_id":     workflow.ID,
-		"counter_key":     *counterKey,
-		"cache_key":       *key,
-	}).Info("$$Check workflow message props.")
+	// logCtx.WithFields(log.Fields{
+	// 	"breakdown_props": breakdownProps,
+	// 	"message_props":   messageProps,
+	// 	"workflow_id":     workflow.ID,
+	// 	"counter_key":     *counterKey,
+	// 	"cache_key":       *key,
+	// }).Info("$$Check workflow message props.")
 
 	successCode, err := store.AddWorkflowToCache(workflow, &messageProps, key)
 	if err != nil || successCode != http.StatusCreated {
@@ -799,12 +799,12 @@ func (store *MemSQL) getWorkflowMessageProperties(projectID int64,
 		log.WithError(err).Error("Failed to encode struct to map.")
 	}
 
-	log.WithFields(log.Fields{
-		"project_id":      projectID,
-		"user_properties": allProperties,
-		"msg_prop_map":    msgPropMap,
-		"payload":         payloadProperties,
-	}).Info("$$Check message properties in meth.")
+	// log.WithFields(log.Fields{
+	// 	"project_id":      projectID,
+	// 	"user_properties": allProperties,
+	// 	"msg_prop_map":    msgPropMap,
+	// 	"payload":         payloadProperties,
+	// }).Info("$$Check message properties in meth.")
 
 	return msgPropMap
 }
