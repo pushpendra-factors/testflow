@@ -242,7 +242,19 @@ function Dashboard({
       </div>
     );
   }
-
+  const addDashboardModal = (
+    <AddDashboard
+      setEditDashboard={setEditDashboard}
+      editDashboard={editDashboard}
+    />
+  );
+  if (areDraftsSelected) {
+    return (
+      <>
+        <Drafts /> {addDashboardModal}
+      </>
+    );
+  }
   if (dashboards.length) {
     return (
       <ErrorBoundary
@@ -271,11 +283,8 @@ function Dashboard({
             />
           </div>
         )}
-        {areDraftsSelected === true && <Drafts />}
-        <AddDashboard
-          setEditDashboard={setEditDashboard}
-          editDashboard={editDashboard}
-        />
+
+        {addDashboardModal}
       </ErrorBoundary>
     );
   }
