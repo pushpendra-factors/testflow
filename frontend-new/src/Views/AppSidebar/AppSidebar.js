@@ -16,7 +16,7 @@ import {
 } from 'Reducers/accountProfilesView/actions';
 import { selectTimelinePayload } from 'Reducers/userProfilesView/selectors';
 import { setTimelinePayloadAction } from 'Reducers/userProfilesView/actions';
-import { checkMatchPath } from './appSidebar.helpers';
+import { checkMatchPath, isSettingsUrl } from './appSidebar.helpers';
 import SidebarMenuItem from './SidebarMenuItem';
 import styles from './index.module.scss';
 import SidebarContent from './SidebarContent';
@@ -118,7 +118,8 @@ function AppSidebar() {
             >
               <div
                 className={cx('flex gap-x-2 items-center px-3', {
-                  'pl-6': sidebarTitleConfig.title === 'Dashboards'
+                  'pl-6': sidebarTitleConfig.title === 'Dashboards',
+                  'pl-4': isSettingsUrl(pathname)
                 })}
               >
                 <SVG
