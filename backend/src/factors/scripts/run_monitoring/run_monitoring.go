@@ -358,25 +358,27 @@ func RunFactorsDeanonEnrichmentCheck() {
 
 	startTime := time.Now().Unix()
 	var factorsDeanonAlertMap map[int64]map[string]float64
+	jobReport := make(map[string]interface{})
 	var err error
 	factorsDeanonAlertLastRun, err := model.GetFactorsDeanonAlertRedisResult()
 	if err != nil {
 		log.WithError(err).Error("failed to get factors deanon last run")
 		return
 	}
-	if startTime-factorsDeanonAlertLastRun > 24*60*60 {
+	if startTime-factorsDeanonAlertLastRun >= 24*60*60 {
 		factorsDeanonAlertMap, err = MonitorFactorsDeanonDailyEnrichment()
 		if err != nil {
 			log.Error("Failed to run factors deanon enrichment check ", time.Now())
 			return
 		}
+		jobReport["jobReport"] = factorsDeanonAlertMap
 		if len(factorsDeanonAlertMap) > 0 {
-			C.PingHealthcheckForFailure(C.HealthcheckFactorsDeanonAlertPingID, factorsDeanonAlertMap)
+			C.PingHealthcheckForFailure(C.HealthcheckFactorsDeanonAlertPingID, jobReport)
 			model.SetFactorsDeanonAlertRedisResult(startTime)
 			return
 		}
 		model.SetFactorsDeanonAlertRedisResult(startTime)
-		C.PingHealthcheckForSuccess(C.HealthcheckFactorsDeanonAlertPingID, factorsDeanonAlertMap)
+		C.PingHealthcheckForSuccess(C.HealthcheckFactorsDeanonAlertPingID, jobReport)
 	}
 
 }

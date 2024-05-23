@@ -246,6 +246,7 @@ type Query struct {
 	Source                     string   `json:"source"`
 	TableProps                 []string `json:"table_props"`
 	DownloadAccountsLimitGiven bool     `gorm:"default:false" json:"dalg"`
+	DownloadAccountsLimit      int64    `json:"dal"`
 
 	// Deprecated: Keeping it for old dashboard units.
 	OverridePeriod    bool  `json:"ovp"`
@@ -575,7 +576,7 @@ type QueryEventWithProperties struct {
 	GroupAnalysis     string          `json:"grpa"`
 	Properties        []QueryProperty `json:"pr"`
 	EventNameIDs      []interface{}   `json:"-"`
-	From              int64           `json:"fr"`
+	Range             int64           `json:"range"` // number of days
 	FrequencyOperator string          `json:"freqOp"`
 	Frequency         string          `json:"freq"`
 	IsEventPerformed  bool            `json:"iep"`

@@ -3083,3 +3083,65 @@ func buildMapOfTimestampOrgIDCampaignIDV3(linkedinArr []LinkedinEventFieldsV3) (
 	}
 	return resultantMap, nil
 }
+
+func (store *MemSQL) GetActiveProjectByEventsPerformedTimeStamp(timestamp int64) ([]int64, error) {
+
+	query := "SELECT DISTINCT(project_id) from events where timestamp>=?"
+	db := C.GetServices().Db
+
+	rows, err := db.Raw(query, timestamp).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to get project ids.")
+		return nil, err
+	}
+	defer rows.Close()
+
+	project_ids := make([]int64, 0)
+
+	for rows.Next() {
+		var project_id int64
+
+		if err := db.ScanRows(rows, &project_id); err != nil {
+			log.WithError(err).Error("Failed to scan rows")
+			return nil, err
+		}
+		project_ids = append(project_ids, project_id)
+	}
+
+	return project_ids, nil
+
+}
+
+type SessionEventCount struct {
+	SessionCount int64 `json:"session_count"`
+}
+
+func (store *MemSQL) GetSessionCount(projectId, startTimeStamp, endTimeStamp int64) (SessionEventCount, error) {
+
+	logFields := log.Fields{
+		"project_id":     projectId,
+		"startTimestamp": startTimeStamp,
+		"endTimestamp":   endTimeStamp,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+
+	var count SessionEventCount
+	sessionEventName, errCode := store.GetEventName(U.EVENT_NAME_SESSION, projectId)
+	if errCode != http.StatusFound {
+		logCtx.Error("Failed to get event name id for session event")
+		return count, fmt.Errorf("failed to get event name id for session event")
+	}
+
+	db := C.GetServices().Db
+	err := db.Table("events").Select("COUNT(*) as session_count").
+		Where("project_id=? and timestamp>=? and timestamp<=? and event_name_id = ?", projectId, startTimeStamp, endTimeStamp, sessionEventName.ID).
+		Find(&count).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get session event count.")
+		return count, err
+	}
+
+	return count, err
+
+}

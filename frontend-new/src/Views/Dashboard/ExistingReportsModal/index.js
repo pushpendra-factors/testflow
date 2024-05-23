@@ -143,6 +143,7 @@ const ExistingReportsModal = ({
         okText='Add Report'
         visible={isReportsModalOpen}
         onOk={handleAddReport}
+        className='fa-modal--regular'
         onCancel={() => setIsReportsModalOpen(false)}
       >
         <Text type={'title'} level={3} weight={'bold'}>

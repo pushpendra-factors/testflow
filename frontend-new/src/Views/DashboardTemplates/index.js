@@ -106,9 +106,13 @@ function DashboardTemplates() {
             <div className='pt-4'>
               <span>
                 {' '}
-                <Link type='link' onClick={() => setHowToModal(true)}>
-                  <PlayCircleFilled /> How to create a dashboard?
-                </Link>{' '}
+                <Button
+                  type='link'
+                  icon={<PlayCircleFilled style={{fontSize:'18px'}} />}
+                  onClick={() => setHowToModal(true)}
+                >
+                  How to create a dashboard?
+                </Button>{' '}
                 <Modal
                   visible={howToModal}
                   onCancel={() => setHowToModal(false)}
@@ -144,7 +148,7 @@ function DashboardTemplates() {
         }
         ActionButton={{
           text: 'New Dashboard',
-          props: { type: 'dashed', size: 'large', style: { width: 232 } },
+          props: { type: 'dashed', style: { width: 232 } },
           onClick: handleOpenTemplateModal,
           tooltip: {
             title:

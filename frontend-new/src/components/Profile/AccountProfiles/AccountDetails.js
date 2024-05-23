@@ -27,7 +27,10 @@ import {
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
 import useFeatureLock from 'hooks/useFeatureLock';
-import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
+import {
+  CustomGroupDisplayNames,
+  GROUP_NAME_DOMAINS
+} from 'Components/GlobalFilter/FilterWrapper/utils';
 import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 import logger from 'Utils/logger';
 import EmptyScreen from 'Components/EmptyScreen';
@@ -46,7 +49,12 @@ import {
   setActivePageviewEvent
 } from '../../../reducers/timelines/middleware';
 import { udpateProjectSettings } from '../../../reducers/global';
-import { eventsFormattedForGranularity, getHost, getPropType } from '../utils';
+import {
+  eventsFormattedForGranularity,
+  flattenObjects,
+  getHost,
+  getPropType
+} from '../utils';
 import AccountTimelineBirdView from './AccountTimelineBirdView';
 import { Text, SVG } from '../../factorsComponents';
 import styles from './index.module.scss';
@@ -299,28 +307,27 @@ function AccountDetails({
     setActivities(listActivities);
   }, [currentProjectSettings, accountDetails]);
 
-  const fetchGroupProperties = async () => {
-    const missingGroups = Object.keys(groups?.account_groups || {}).filter(
-      (group) => !groupProperties[group]
-    );
-
-    if (missingGroups.length > 0) {
-      await Promise.allSettled(
-        missingGroups.forEach((group) =>
-          getGroupProperties(activeProject?.id, group)
-        )
-      );
-    }
-  };
+  const getGroupPropsFromAPI = useCallback(
+    async (groupId) => {
+      if (!groupProperties[groupId]) {
+        await getGroupProperties(activeProject.id, groupId);
+      }
+    },
+    [activeProject.id, groupProperties]
+  );
 
   useEffect(() => {
-    fetchGroupProperties();
-  }, [activeProject?.id, groups, groupProperties]);
+    getGroupPropsFromAPI(GROUP_NAME_DOMAINS);
+    Object.keys(groups?.all_groups || {}).forEach((group) => {
+      getGroupPropsFromAPI(group);
+    });
+  }, [activeProject.id, groups]);
 
   useEffect(() => {
     const mergedProps = [];
     const filterProps = {};
 
+    filterProps[GROUP_NAME_DOMAINS] = groupProperties[GROUP_NAME_DOMAINS];
     Object.keys(groups?.account_groups || {}).forEach((group) => {
       const values = groupProperties?.[group] || [];
       mergedProps.push(...values);
@@ -329,7 +336,10 @@ function AccountDetails({
 
     const groupProps = Object.entries(filterProps)
       .map(([group, values]) => ({
-        label: groups?.account_groups?.[group] || PropTextFormat(group),
+        label:
+          CustomGroupDisplayNames[group] ||
+          groups?.account_groups?.[group] ||
+          PropTextFormat(group),
         iconName: group,
         values: processProperties(values)
       }))
@@ -591,8 +601,9 @@ function AccountDetails({
       ) || [];
     showProps.forEach((prop) => {
       const propType = getPropType(listProperties, prop);
-      const propDisplayName = groupPropNames[prop]
-        ? groupPropNames[prop]
+      const mergedGroupPropNames = flattenObjects(groupPropNames);
+      const propDisplayName = mergedGroupPropNames[prop]
+        ? mergedGroupPropNames[prop]
         : PropTextFormat(prop);
       const value = props[prop];
       propsList.push(

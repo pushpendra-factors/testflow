@@ -101,6 +101,7 @@ function AnalysisHeader({
   };
 
   const closeWithoutSave = () => {
+    dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
     history.push({
       pathname: '/analyse'
     });
@@ -116,6 +117,7 @@ function AnalysisHeader({
     const navigatedFromDashboardWithId = location.state?.navigatedFromDashboard;
     if (navigatedFromDashboardExistingReports) {
       // Just moving back to / route
+      dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
       history.push(PathUrls.Dashboard);
     } else if (navigatedFromDashboardWithId) {
       dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });

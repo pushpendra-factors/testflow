@@ -294,7 +294,7 @@ function AccountProfiles({
     if (location.pathname === PathUrls.ProfileAccounts && !newSegmentMode) {
       setAccountPayload(INITIAL_ACCOUNT_PAYLOAD);
     }
-  }, [location.pathname]);
+  }, [location.pathname, newSegmentMode]);
 
   const getAccountPayload = () => {
     if (newSegmentMode) {
@@ -1179,24 +1179,36 @@ function AccountProfiles({
       headers.unshift('"Account Domain"');
       csvRows.push(headers.join(','));
 
-      data.forEach((d) => {
-        const values = selectedOptions.map((elem) => {
-          const propType = getPropType(tableColumnsList, elem);
+      data
+        .sort((a, b) => {
+          if ('score' in a) {
+            if (a.score < b.score) return 1;
+            else if (a.score > b.score) return -1;
+            return 0;
+          } else {
+            if (a.domain_name < b.domain_name) return 1;
+            else if (a.domain_name > b.domain_name) return -1;
+            return 0;
+          }
+        })
+        .forEach((d) => {
+          const values = selectedOptions.map((elem) => {
+            const propType = getPropType(tableColumnsList, elem);
 
-          return elem === 'last_activity'
-            ? d.last_activity?.replace('T', ' ').replace('Z', '')
-            : renderValue(
-                d.table_props[elem],
-                propType,
-                elem,
-                projectDomainsList,
-                true
-              );
+            return elem === 'last_activity'
+              ? d.last_activity?.replace('T', ' ').replace('Z', '')
+              : renderValue(
+                  d.table_props[elem],
+                  propType,
+                  elem,
+                  projectDomainsList,
+                  true
+                );
+          });
+          values.unshift(d.domain_name);
+
+          csvRows.push(values);
         });
-        values.unshift(d.domain_name);
-
-        csvRows.push(values);
-      });
 
       return csvRows.join('\n');
     },

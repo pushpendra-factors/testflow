@@ -23,20 +23,25 @@ function NoDataDashboard() {
       <SkeletonGrid />
       <div className='flex justify-center absolute top-0 w-full h-full text-center'>
         <div>
-          <video
-            autoPlay
-            style={{
-              width: '300px',
-              objectFit: 'cover',
-              clipPath: 'inset(1px 1px)',
-              borderRadius: '8px',
-              margin: '40px auto 0 auto'
-            }}
-            loop
+          <div
+            className='mx-auto rounded-lg w-fit'
+            style={{ width: 'fit-content', boxShadow: '5px 5px 10px #dedede' }}
           >
-            <source src={HowToCreateNewReport} type='video/mp4' />
-          </video>
-          <Text type='title' level={5} weight='bold' extraClass='m-0'>
+            <video
+              autoPlay
+              style={{
+                width: '300px',
+                objectFit: 'cover',
+                clipPath: 'inset(-2px)',
+                borderRadius: '8px',
+                margin: '40px auto 0 auto'
+              }}
+              loop
+            >
+              <source src={HowToCreateNewReport} type='video/mp4' />
+            </video>
+          </div>
+          <Text type='title' level={5} weight='bold' extraClass='m-0 mt-4'>
             What kind of reports do you want to store in this dashboard?
           </Text>
           <Text type='title' level={7} color='grey' extraClass='m-0'>

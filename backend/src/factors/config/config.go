@@ -236,6 +236,7 @@ type Configuration struct {
 	EnableOLTPQueriesMemSQLImprovements                  string
 	CaptureSourceInUsersTable                            string
 	AllowSupportForSourceColumnInUsers                   string
+	AllowSupportForV1AvgKPIComputation                   string
 	ResourcePoolForAnalytics                             string
 	RestrictReusingUsersByCustomerUserId                 string
 	HubspotAPIOnboardingHAPIKey                          string
@@ -245,6 +246,7 @@ type Configuration struct {
 	MailModoOnboardingURL2                               string
 	SlackOnboardingWebhookURL                            string
 	AllowProfilesGroupSupport                            string
+	WebsiteAggregationTestEnabledProjects                string
 	DebugEnabled                                         bool
 	MergeAmpIDAndSegmentIDWithUserIDByProjectID          string
 	SessionBatchTransactionBatchSize                     int
@@ -2680,9 +2682,25 @@ func IsProfileQuerySourceSupported(projectId int64) bool {
 	return false
 }
 
+func IsV1AvgKPIEnabled(projectId int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().AllowSupportForV1AvgKPIComputation, "")
+	if allProjects || projectIDsMap[projectId] {
+		return true
+	}
+	return false
+}
+
 func CheckRestrictReusingUsersByCustomerUserId(projectId int64) bool {
 	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().RestrictReusingUsersByCustomerUserId, "")
 	if allProjects || projectIDsMap[projectId] {
+		return true
+	}
+	return false
+}
+
+func IsWebsiteAggregationTestEnabled(projectID int64) bool {
+	allProjects, projectIDsMap, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().WebsiteAggregationTestEnabledProjects, "")
+	if allProjects || projectIDsMap[projectID] {
 		return true
 	}
 	return false

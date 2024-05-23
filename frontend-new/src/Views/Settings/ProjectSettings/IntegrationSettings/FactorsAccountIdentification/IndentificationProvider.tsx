@@ -2,8 +2,10 @@ import CollapsibleContainer from 'Components/GenericComponents/CollapsibleContai
 import Header from 'Components/GenericComponents/CollapsibleContainer/CollasibleHeader';
 import React from 'react';
 import { SVG } from 'Components/factorsComponents';
+import { Divider } from 'antd';
 import SixSignalFactors from '../SixSignalFactors';
 import ExternalProvider from './ExternalProvider';
+import styles from './index.module.scss';
 
 interface IndentificationProviderProps {
   kbLink: string;
@@ -25,10 +27,11 @@ const IndentificationProvider = ({ kbLink }: IndentificationProviderProps) => {
     );
   };
   return (
-    <div className='flex flex-col gap-4'>
+    <div className={`${styles.collapse} flex flex-col`}>
       <CollapsibleContainer
         showBorder={false}
-        key='factors'
+        keyName='factors'
+        openByDefault
         HeaderComponent={
           <Header
             title='Factor Deanonymization'
@@ -38,10 +41,11 @@ const IndentificationProvider = ({ kbLink }: IndentificationProviderProps) => {
         BodyComponent={<SixSignalFactors kbLink={kbLink} />}
         expandIcon={collapseIcon}
       />
+      <Divider />
       <CollapsibleContainer
         showBorder={false}
         expandIcon={collapseIcon}
-        key='third-party'
+        keyName='third-party'
         HeaderComponent={
           <Header
             title='Third party Integrations'

@@ -743,6 +743,20 @@ func (store *MemSQL) UpdateProjectSettings(projectId int64, settings *model.Proj
 		}
 	}
 
+	// validate saml config
+
+	if settings.SamlConfiguration != nil {
+		var SAMLConfig model.SAMLConfiguration
+		err := U.DecodePostgresJsonbToStructType(settings.SamlConfiguration, &SAMLConfig)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectId, "setting": settings}).WithError(
+				err).Error("Failed decoding saml config json. Aborting.")
+			return nil, http.StatusInternalServerError
+		}
+
+		// func call to validate saml url, certificate 
+	}
+
 	var updatedProjectSetting model.ProjectSetting
 	if err := db.Model(&updatedProjectSetting).Where("project_id = ?",
 		projectId).Updates(settings).Error; err != nil {
@@ -2084,9 +2098,15 @@ func getQueryStmntFromIntegrationName(integrationName string, projectID int64) (
 		params = append(params, projectID)
 		return stmt, params
 
-	case model.FEATURE_FACEBOOK, model.ADWORDS, model.FEATURE_G2, model.FEATURE_GOOGLE_ORGANIC:
+	case model.FEATURE_FACEBOOK, model.FEATURE_G2, model.FEATURE_GOOGLE_ORGANIC:
 
 		stmt = fmt.Sprintf("SELECT 1 synced,MAX(created_at) last_at from %s_documents where project_id= ? ", integrationName)
+		params = append(params, projectID)
+		return stmt, params
+
+	case model.FEATURE_GOOGLE_ADS:
+
+		stmt = fmt.Sprintf("SELECT 1 synced,MAX(created_at) last_at from adwords_documents where project_id= ? ")
 		params = append(params, projectID)
 		return stmt, params
 

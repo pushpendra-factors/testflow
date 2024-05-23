@@ -1225,8 +1225,8 @@ func addFilterEventsWithPropsQuery(projectId int64, qStmnt *string, qParams *[]i
 	}
 	*qParams = append(*qParams, projectId)
 
-	if qep.From > 0 {
-		*qParams = append(*qParams, qep.From)
+	if qep.Range > 0 {
+		*qParams = append(*qParams, qep.Range)
 	} else if from > 0 {
 		*qParams = append(*qParams, from)
 	}
@@ -1427,8 +1427,8 @@ func addFilterEventsWithPropsQueryV2(projectId int64, qStmnt *string, qParams *[
 	}
 	*qParams = append(*qParams, projectId)
 
-	if qep.From > 0 {
-		*qParams = append(*qParams, qep.From)
+	if qep.Range > 0 {
+		*qParams = append(*qParams, qep.Range)
 	} else if from > 0 {
 		*qParams = append(*qParams, from)
 	}
@@ -1566,7 +1566,7 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 		} else {
 			usersUserGroupColumn = model.GetQueryUserGroupUserID(addSelecStmnt)
 			if usersUserGroupColumn != "" {
-				eventsWrapSelect = joinWithComma(eventsWrapSelect, fmt.Sprintf("%s as user_group_user_id", usersUserGroupColumn))
+				eventsWrapSelect = joinWithComma(eventsWrapSelect, fmt.Sprintf("%s as users_group_user_id", usersUserGroupColumn))
 			}
 
 			userGroupColumn = model.GetQueryGroupUserID(addSelecStmnt)
@@ -1580,6 +1580,10 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 
 			if strings.Contains(addSelecStmnt, "group_users_user_id") {
 				eventsWrapSelect = joinWithComma(eventsWrapSelect, "group_users.id as group_users_user_id")
+			}
+
+			if strings.Contains(addSelecStmnt, "user_groups.id") {
+				eventsWrapSelect = joinWithComma(eventsWrapSelect, "user_groups.id as user_groups_user_id")
 			}
 
 			if strings.Contains(addJoinStmnt, "domain_users") {
@@ -1631,19 +1635,20 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 
 	groupUserCondition := ""
 	if userGroupColumn != "" {
-		groupUserCondition = "group_user_id IS NOT NULL"
+		groupUserCondition = " ( group_user_id IS NOT NULL OR user_groups.source = 9 ) "
 	}
 
 	if usersUserGroupColumn != "" {
 		if groupUserCondition != "" {
 			groupUserCondition += " OR "
 		}
-		groupUserCondition += "user_group_user_id IS NOT NULL"
+		groupUserCondition += "users_group_user_id IS NOT NULL"
 	}
 
 	if groupUserCondition != "" {
-		eventsWrapWhereCondition = eventsWrapWhereCondition + " AND " + " ( " + groupUserCondition + "  )"
+		eventsWrapWhereCondition = eventsWrapWhereCondition + " AND " + " ( " + groupUserCondition + " ) "
 	}
+
 	if whereStmnt != "" {
 		eventsWrapWhereCondition = eventsWrapWhereCondition + " AND " + whereStmnt + " "
 	}
@@ -1680,7 +1685,7 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 		addSelecStmnt = strings.ReplaceAll(addSelecStmnt, userGroupColumn, eventsWrapViewName+".group_user_id")
 	}
 	if usersUserGroupColumn != "" {
-		addSelecStmnt = strings.ReplaceAll(addSelecStmnt, usersUserGroupColumn, eventsWrapViewName+".user_group_user_id")
+		addSelecStmnt = strings.ReplaceAll(addSelecStmnt, usersUserGroupColumn, eventsWrapViewName+".users_group_user_id")
 	}
 
 	// Change properties column for the view.
@@ -1690,6 +1695,7 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 	addSelecStmnt = strings.ReplaceAll(addSelecStmnt, "group_users.properties", eventsWrapViewName+".group_properties")
 	addSelecStmnt = strings.ReplaceAll(addSelecStmnt, "group_users.id", eventsWrapViewName+".group_users_user_id")
 	addSelecStmnt = strings.ReplaceAll(addSelecStmnt, "domains.id", eventsWrapViewName+".domain_id")
+	addSelecStmnt = strings.ReplaceAll(addSelecStmnt, "user_groups.id", eventsWrapViewName+".user_groups_user_id")
 	if domainGroupID := model.GetQueryDomainGroupID(addSelecStmnt); model.IsAnyProfiles(caller) && domainGroupID != "" {
 		addSelecStmnt = strings.ReplaceAll(addSelecStmnt, domainGroupID, eventsWrapViewName+".domain_group_id")
 	}
@@ -1716,8 +1722,8 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 	}
 	*qParams = append(*qParams, projectId)
 
-	if qep.From > 0 {
-		*qParams = append(*qParams, qep.From)
+	if qep.Range > 0 {
+		*qParams = append(*qParams, qep.Range)
 	} else if from > 0 {
 		*qParams = append(*qParams, from)
 	}

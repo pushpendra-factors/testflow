@@ -316,7 +316,7 @@ function FaFilterSelect({
         return userPropNames[state.name] || PropTextFormat(state.name);
       case 'group':
         return (
-          groupPropNames[state.groupName][state.name] ||
+          groupPropNames[state.groupName]?.[state.name] ||
           PropTextFormat(state.name)
         );
       default:

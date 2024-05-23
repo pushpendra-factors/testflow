@@ -52,6 +52,7 @@ export const FEATURES = {
   FEATURE_WEB_ANALYTICS_DASHBOARD: 'web_analytics_dashboard',
   FEATURE_G2: 'g2',
   FEATURE_RUDDERSTACK: 'rudderstack',
+  FEATURE_SEGMENT_KPI: 'segment_kpi',
   CONF_CUSTOM_PROPERTIES: 'conf_custom_properties',
   CONF_CUSTOM_EVENTS: 'conf_custom_events'
 };
@@ -131,6 +132,7 @@ export const PLANS_COFIG: PLANS_COFIG_INTERFACE = {
       'Track & prioritise your target accounts with custom scoring models',
     uniqueFeatures: [
       'Everything in Basic +',
+      'Segment Insights',
       'ABM Analytics',
       'Account Scoring',
       'LinkedIn Attribution',

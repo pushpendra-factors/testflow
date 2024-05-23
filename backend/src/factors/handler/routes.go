@@ -49,6 +49,9 @@ func InitAppRoutes(r *gin.Engine) {
 		return
 	})
 
+	r.GET(routePrefix+"/saml/login", V1.SamlLoginRequestHandler)
+	r.POST(routePrefix+"/project/:project_id/saml/acs", V1.SamlCallbackHandler)
+
 	// Initialize swagger api docs only for development / staging.
 	if C.GetConfig().Env != C.PRODUCTION {
 		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -325,11 +328,11 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.DELETE("/:project_id/segments/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), DeleteSegmentByIdHandler)
 
 	// Segment analysis
-	authRouteGroup.GET("/:project_id/segments/analytics/config", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS}), GetSegmentAnalyticsConfigHandler)
-	authRouteGroup.POST("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS}), responseWrapper(AddNewWidgetToWidgetGroupHandler))
-	authRouteGroup.PUT("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:widget_id", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS}), responseWrapper(EditSegmentAnalyticsWidgetHandler))
-	authRouteGroup.DELETE("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:widget_id", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS}), responseWrapper(DeleteSegmentAnalyticsWidgetHandler))
-	authRouteGroup.POST("/:project_id/segments/:segment_id/analytics/widget_group/:widget_group_id/query", mid.FeatureMiddleware([]string{M.FEATURE_CUSTOM_METRICS}), ExecuteSegmentQueryHandler)
+	authRouteGroup.GET("/:project_id/segments/analytics/config", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENTKPI_OVERVIEW}), GetSegmentAnalyticsConfigHandler)
+	authRouteGroup.POST("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENTKPI_OVERVIEW}), responseWrapper(AddNewWidgetToWidgetGroupHandler))
+	authRouteGroup.PUT("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:widget_id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENTKPI_OVERVIEW}), responseWrapper(EditSegmentAnalyticsWidgetHandler))
+	authRouteGroup.DELETE("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets/:widget_id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENTKPI_OVERVIEW}), responseWrapper(DeleteSegmentAnalyticsWidgetHandler))
+	authRouteGroup.POST("/:project_id/segments/:segment_id/analytics/widget_group/:widget_group_id/query", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENTKPI_OVERVIEW}), ExecuteSegmentQueryHandler)
 
 	// path analysis
 	authRouteGroup.GET("/:project_id/v1/pathanalysis", mid.FeatureMiddleware([]string{M.FEATURE_PATH_ANALYSIS}), responseWrapper(V1.GetPathAnalysisEntityHandler))

@@ -72,6 +72,8 @@ import FactorsHubspotCompany from './Templates/FactorsHubspotCompany';
 import FactorsApolloHubspotContacts from './Templates/FactorsApolloHubspotContacts';
 import { fetchSavedWorkflows, saveWorkflow } from 'Reducers/workflows';
 import { TemplateIDs } from './../utils';
+import FactorsSalesforceCompany from './Templates/FactorsSalesforceCompany';
+import FactorsApolloSalesforceContacts from './Templates/FactorsApolloSalesforceContacts';
 
 const host = getHostUrl();
 
@@ -87,12 +89,12 @@ const WorkflowBuilder = ({
   getSavedSegments,
   selectedTemp,
   fetchSavedWorkflows,
-  saveWorkflow,
+  saveWorkflow
 }) => {
   const configureRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [queries, setQueries] = useState([]);
-  const [workflowName, setWorkflowName] = useState("");
+  const [workflowName, setWorkflowName] = useState('');
   const [isTemplate, setIsTemplate] = useState(false);
   const [queryType, setQueryType] = useState(QUERY_TYPE_EVENT);
   const [activeGrpBtn, setActiveGrpBtn] = useState(QUERY_TYPE_EVENT);
@@ -111,7 +113,7 @@ const WorkflowBuilder = ({
   const [propertyMapMandatory, setPropertyMapMandatory] = useState([]);
   const [propertyMapAdditional, setPropertyMapAdditional] = useState([]);
   const [propertyMapAdditional2, setPropertyMapAdditional2] = useState([]);
-  
+
   const [apolloFormDetails, setApolloFormDetails] = useState(false);
   const [showConfigureOptions, setShowConfigureOptions] = useState(false);
 
@@ -120,7 +122,6 @@ const WorkflowBuilder = ({
     token: ''
   });
   const { user, error, isLoaded } = useParagon(state.token);
-  
 
   const fetchToken = async () => {
     get(null, `${host}projects/${activeProject?.id}/paragon/auth`)
@@ -146,30 +147,46 @@ const WorkflowBuilder = ({
     fetchToken();
   }, []);
 
-
   useEffect(() => {
-    if (selectedTemp) { 
+    if (selectedTemp) {
       const queryData = [];
-      let isTemplateWorkflow = selectedTemp?.is_workflow ? true : false 
-      if(selectedTemp?.workflow_config?.trigger?.event || selectedTemp?.event){
+      let isTemplateWorkflow = selectedTemp?.is_workflow ? true : false;
+      if (
+        (selectedTemp?.action_performed == 'action_event' ||
+          isTemplateWorkflow) &&
+        (selectedTemp?.workflow_config?.trigger?.event || selectedTemp?.event)
+      ) {
         queryData.push({
           alias: '',
-          label: isTemplateWorkflow ? selectedTemp?.workflow_config?.trigger?.event : selectedTemp?.event,
-          filters: processFiltersFromQuery(isTemplateWorkflow ? selectedTemp?.workflow_config?.trigger?.filter : selectedTemp?.filters),
+          label: isTemplateWorkflow
+            ? selectedTemp?.workflow_config?.trigger?.event
+            : selectedTemp?.event,
+          filters: processFiltersFromQuery(
+            isTemplateWorkflow
+              ? selectedTemp?.workflow_config?.trigger?.filter
+              : selectedTemp?.filters
+          ),
           group: ''
         });
         setQueries(queryData);
+      } else if (
+        selectedTemp?.action_performed == 'action_segment_entry' ||
+        selectedTemp?.action_performed == 'action_segment_exit'
+      ) {
+        setSegmentType(selectedTemp?.action_performed);
+        setSelectedSegment(
+          selectedTemp?.event || selectedTemp?.workflow_config?.trigger?.event
+        );
+        setQueries([]);
       }
-      setWorkflowName(isTemplateWorkflow ? "" : selectedTemp?.title)
-      setIsTemplate(isTemplateWorkflow); 
-      setShowConfigureOptions(!isTemplateWorkflow); 
-
+      setWorkflowName(isTemplateWorkflow ? '' : selectedTemp?.title);
+      setIsTemplate(isTemplateWorkflow);
+      setShowConfigureOptions(!isTemplateWorkflow);
     }
     return () => {
       setIsTemplate(false);
     };
   }, [selectedTemp]);
-
 
   // fetch segments and on Change functions
   useEffect(() => {
@@ -200,15 +217,6 @@ const WorkflowBuilder = ({
     return '';
   };
 
-
-  useEffect(() => {
-    const segmentListWithLabels = segmentsList.map((segment) => ({
-      value: segment?.id,
-      label: renderOptions(segment)
-    }));
-    setSegmentOptions(segmentListWithLabels);
-  }, [segmentsList]);
-
   useEffect(() => {
     const segmentListWithLabels = segmentsList.map((segment) => ({
       value: segment?.id,
@@ -227,7 +235,6 @@ const WorkflowBuilder = ({
     fetchEventNames(activeProject?.id, true);
   }, [activeProject]);
 
-
   const groupsList = useMemo(() => {
     let listGroups = [];
     Object.entries(groups?.all_groups || {}).forEach(
@@ -237,7 +244,6 @@ const WorkflowBuilder = ({
     );
     return listGroups;
   }, [groups]);
-
 
   const fetchGroups = async () => {
     if (!groups || Object.keys(groups).length === 0) {
@@ -281,7 +287,6 @@ const WorkflowBuilder = ({
     },
     [queries]
   );
-
 
   const queryList = () => {
     const blockList = [];
@@ -332,136 +337,228 @@ const WorkflowBuilder = ({
     return {
       label: item.label,
       options: item.values
-    }
-  })
+    };
+  });
 
-
+  const VerticalDivider = () => {
+    return (
+      <>
+        <div className='fa-workflow_section--dot top' />
+        <div className={'fa-workflow_section--line'} />
+        <div className='fa-workflow_section--dot bottom' />
+      </>
+    );
+  };
   const saveWorkflowFn = (value) => {
-
     let message_propertiesObj = {};
-    if (selectedTemp?.id == TemplateIDs.FACTORS_HUBSPOT_COMPANY || selectedTemp?.template_id == TemplateIDs.FACTORS_HUBSPOT_COMPANY) {
+    if (
+      selectedTemp?.id == TemplateIDs.FACTORS_HUBSPOT_COMPANY ||
+      selectedTemp?.template_id == TemplateIDs.FACTORS_HUBSPOT_COMPANY ||
+      selectedTemp?.id == TemplateIDs.FACTORS_SALESFORCE_COMPANY ||
+      selectedTemp?.template_id == TemplateIDs.FACTORS_SALESFORCE_COMPANY
+    ) {
       message_propertiesObj = {
         mandatory_properties: propertyMapMandatory,
-        additional_properties_company: propertyMapAdditional,
-      }
+        additional_properties_company: propertyMapAdditional
+      };
     }
-    if (selectedTemp?.id == TemplateIDs.FACTORS_APOLLO_HUBSPOT_CONTACTS || selectedTemp?.template_id == TemplateIDs.FACTORS_APOLLO_HUBSPOT_CONTACTS) {
+    if (
+      selectedTemp?.id == TemplateIDs.FACTORS_APOLLO_HUBSPOT_CONTACTS ||
+      selectedTemp?.template_id ==
+        TemplateIDs.FACTORS_APOLLO_HUBSPOT_CONTACTS ||
+      selectedTemp?.id == TemplateIDs.FACTORS_APOLLO_SALESFORCE_CONTACTS ||
+      selectedTemp?.template_id ==
+        TemplateIDs.FACTORS_APOLLO_SALESFORCE_CONTACTS
+    ) {
       message_propertiesObj = {
         mandatory_properties: propertyMapMandatory,
         additional_properties_company: propertyMapAdditional,
         additional_properties_contact: propertyMapAdditional2,
-        addtional_configuration: value, 
-      }
+        addtional_configuration: value
+      };
     }
-    
 
-    let payload =
-    {
+    let payload = {
       action_performed: segmentType,
       alert_limit: 5,
       breakdown_properties: [
         {
-          "en": "user",
-          "ena": "$session",
-          "pr": "$6Signal_domain",
-          "pty": "categorical"
+          en: 'user',
+          ena: '$session',
+          pr: '$6Signal_domain',
+          pty: 'categorical'
         }
       ],
       cool_down_time: 1800,
-      event: queries[0]?.label,
-      event_level: "active",
+      event:
+        segmentType == 'action_event' ? queries[0]?.label : selectedSegment,
+      event_level: 'active',
       filters: formatFiltersForQuery(queries?.[0]?.filters),
       notifications: false,
       repeat_alerts: true,
       template_title: selectedTemp?.title,
       template_description: selectedTemp?.description,
-      title: workflowName ? workflowName : "",
-      description: workflowName ? workflowName : "",
+      title: workflowName ? workflowName : '',
+      description: workflowName ? workflowName : '',
       template_id: selectedTemp?.id,
       message_properties: message_propertiesObj
-    }
+    };
 
-    saveWorkflow(activeProject?.id, payload).then((res) => { 
-      fetchSavedWorkflows(activeProject?.id);
-      setBuilderMode(false);
-      notification.success({
-        message: 'Workflow Saved',
-        description: 'New workflow is created and saved successfully.'
-      });
-    }).catch((err) => message.error(err?.data?.error));
+    saveWorkflow(activeProject?.id, payload)
+      .then((res) => {
+        fetchSavedWorkflows(activeProject?.id);
+        setBuilderMode(false);
+        notification.success({
+          message: 'Workflow Saved',
+          description: 'New workflow is created and saved successfully.'
+        });
+      })
+      .catch((err) => message.error(err?.data?.error));
+  };
 
-  }
-  
   const returnIntegrationComponent = (workflowItem) => {
-    if (workflowItem?.id == TemplateIDs.FACTORS_HUBSPOT_COMPANY || workflowItem?.template_id == TemplateIDs.FACTORS_HUBSPOT_COMPANY) {
-      return <FactorsHubspotCompany
-        user={user}
-        propertyMapMandatory={propertyMapMandatory}
-        setPropertyMapMandatory={setPropertyMapMandatory}
-        filterOptions={filterOptions}
-        dropdownOptions={dropdownOptions}
-        propertyMapAdditional={propertyMapAdditional}
-        setPropertyMapAdditional={setPropertyMapAdditional}
-        saveWorkflowFn={saveWorkflowFn}
-        selectedTemp={selectedTemp}
-        isTemplate={isTemplate}
-      />
+    if (
+      workflowItem?.id == TemplateIDs.FACTORS_HUBSPOT_COMPANY ||
+      workflowItem?.template_id == TemplateIDs.FACTORS_HUBSPOT_COMPANY
+    ) {
+      return (
+        <FactorsHubspotCompany
+          user={user}
+          propertyMapMandatory={propertyMapMandatory}
+          setPropertyMapMandatory={setPropertyMapMandatory}
+          filterOptions={filterOptions}
+          dropdownOptions={dropdownOptions}
+          propertyMapAdditional={propertyMapAdditional}
+          setPropertyMapAdditional={setPropertyMapAdditional}
+          saveWorkflowFn={saveWorkflowFn}
+          selectedTemp={selectedTemp}
+          isTemplate={isTemplate}
+        />
+      );
+    } else if (
+      workflowItem?.id == TemplateIDs.FACTORS_APOLLO_HUBSPOT_CONTACTS ||
+      workflowItem?.template_id == TemplateIDs.FACTORS_APOLLO_HUBSPOT_CONTACTS
+    ) {
+      return (
+        <FactorsApolloHubspotContacts
+          user={user}
+          propertyMapMandatory={propertyMapMandatory}
+          setPropertyMapMandatory={setPropertyMapMandatory}
+          filterOptions={filterOptions}
+          dropdownOptions={dropdownOptions}
+          propertyMapAdditional={propertyMapAdditional}
+          setPropertyMapAdditional={setPropertyMapAdditional}
+          saveWorkflowFn={saveWorkflowFn}
+          selectedTemp={selectedTemp}
+          isTemplate={isTemplate}
+          setPropertyMapAdditional2={setPropertyMapAdditional2}
+          propertyMapAdditional2={propertyMapAdditional2}
+          apolloFormDetails={apolloFormDetails}
+          setApolloFormDetails={setApolloFormDetails}
+        />
+      );
+    } else if (
+      workflowItem?.id == TemplateIDs.FACTORS_SALESFORCE_COMPANY ||
+      workflowItem?.template_id == TemplateIDs.FACTORS_SALESFORCE_COMPANY
+    ) {
+      return (
+        <FactorsSalesforceCompany
+          user={user}
+          propertyMapMandatory={propertyMapMandatory}
+          setPropertyMapMandatory={setPropertyMapMandatory}
+          filterOptions={filterOptions}
+          dropdownOptions={dropdownOptions}
+          propertyMapAdditional={propertyMapAdditional}
+          setPropertyMapAdditional={setPropertyMapAdditional}
+          saveWorkflowFn={saveWorkflowFn}
+          selectedTemp={selectedTemp}
+          isTemplate={isTemplate}
+        />
+      );
+    } else if (
+      workflowItem?.id == TemplateIDs.FACTORS_APOLLO_SALESFORCE_CONTACTS ||
+      workflowItem?.template_id ==
+        TemplateIDs.FACTORS_APOLLO_SALESFORCE_CONTACTS
+    ) {
+      return (
+        <FactorsApolloSalesforceContacts
+          user={user}
+          propertyMapMandatory={propertyMapMandatory}
+          setPropertyMapMandatory={setPropertyMapMandatory}
+          filterOptions={filterOptions}
+          dropdownOptions={dropdownOptions}
+          propertyMapAdditional={propertyMapAdditional}
+          setPropertyMapAdditional={setPropertyMapAdditional}
+          saveWorkflowFn={saveWorkflowFn}
+          selectedTemp={selectedTemp}
+          isTemplate={isTemplate}
+          setPropertyMapAdditional2={setPropertyMapAdditional2}
+          propertyMapAdditional2={propertyMapAdditional2}
+          apolloFormDetails={apolloFormDetails}
+          setApolloFormDetails={setApolloFormDetails}
+        />
+      );
+    } else {
+      return null;
     }
-    else
-     if (workflowItem?.id == TemplateIDs.FACTORS_APOLLO_HUBSPOT_CONTACTS || workflowItem?.template_id == TemplateIDs.FACTORS_APOLLO_HUBSPOT_CONTACTS) {
-      return <FactorsApolloHubspotContacts
-        user={user}
-        propertyMapMandatory={propertyMapMandatory}
-        setPropertyMapMandatory={setPropertyMapMandatory}
-        filterOptions={filterOptions}
-        dropdownOptions={dropdownOptions}
-        propertyMapAdditional={propertyMapAdditional}
-        setPropertyMapAdditional={setPropertyMapAdditional}
-        saveWorkflowFn={saveWorkflowFn}
-        selectedTemp={selectedTemp}
-        isTemplate={isTemplate}
-        setPropertyMapAdditional2={setPropertyMapAdditional2}
-        propertyMapAdditional2={propertyMapAdditional2}
-        apolloFormDetails={apolloFormDetails} 
-        setApolloFormDetails={setApolloFormDetails}
-      />
-    }
-    else {
-      return null
-    }
-  }
+  };
 
-  const handleConfigure = () =>{
+  const handleConfigure = () => {
     setShowConfigureOptions(true);
     setTimeout(() => {
-      configureRef.current.scrollIntoView({ behavior: 'smooth' }); 
+      configureRef.current.scrollIntoView({ behavior: 'smooth' });
     }, 300);
-  }
+  };
 
   return (
     <>
       <Row className={'border-bottom--thin-2 pt-4 pb-4'}>
         <Col span={12}>
-          <div className={'flex justify-start'}>
+          <div className={'flex justify-start items-center'}>
             <Button
               disabled={loading}
               type={'text'}
+              size='large'
               onClick={() => setBuilderMode(false)}
-              icon={<SVG name='ArrowLeft' size={16} />}
-            >
-              Back
-            </Button>
+              icon={<SVG name='arrowLeft' size={24} />}
+            ></Button>
+            <Input
+              size='large'
+              style={{ width: '300px' }}
+              placeholder={'Untitled Workflow '}
+              value={workflowName}
+              onChange={(e) => setWorkflowName(e.target.value)}
+              className={'fa-input ml-4'}
+            />
           </div>
         </Col>
         <Col span={12}>
           <div className={'flex justify-end'}>
-            <Button
+            <div className={'flex items-center justify-end mr-4'}>
+              <Text
+                type={'title'}
+                level={8}
+                color={'grey'}
+                extraClass={'m-0 mr-2'}
+              >
+                Not published
+              </Text>
+              <Switch
+                checkedChildren='On'
+                unCheckedChildren='OFF'
+                size='large'
+                // onChange={(checked) => setTeamsEnabled(checked)}
+                // checked={teamsEnabled}
+              />
+            </div>
+
+            {/* <Button
               size={'large'}
               disabled={loading}
               onClick={() => setBuilderMode(false)}
             >
               Cancel
-            </Button>
+            </Button> */}
             <Button
               size={'large'}
               disabled={loading}
@@ -470,53 +567,29 @@ const WorkflowBuilder = ({
               type={'primary'}
               onClick={() => saveWorkflowFn()}
             >
-              Save
+              Save and Publish
             </Button>
-          </div>
-        </Col>
-      </Row>
-
-      <Row className={'py-6'}>
-        <Col span={12}>
-          <div className={'flex justify-start items-start'}>
-            <div className={'flex flex-col items-start justify-start'}>
-              <Input size='large' placeholder={'Untitled Workflow '} value={workflowName} onChange={(e) => setWorkflowName(e.target.value)} className={'fa-input'} />
-              <Button
-                size={'small'}
-                type='link'
-                disabled={loading}
-                className={'mt-2'}
-              >
-                Add description
-              </Button>
-            </div>
-          </div>
-        </Col>
-        <Col span={12}>
-          <div className={'flex justify-end'}>
-            <div className={'flex items-center justify-end'}>
-              <Text type={'title'} level={8} color={'grey'} extraClass={'m-0 mr-2'} >
-                Not published
-              </Text>
-              <Switch
-                checkedChildren='On'
-                unCheckedChildren='OFF'
-              // onChange={(checked) => setTeamsEnabled(checked)}
-              // checked={teamsEnabled}
-              />
-            </div>
           </div>
         </Col>
       </Row>
 
       <Row className={'my-6 background-color--mono-color-1 border-radius--sm'}>
         <Col span={24}>
-          <div className='flex flex-col' style={{ 'min-height': '500px', padding: '5% 5%' }}>
-
-
+          <div
+            className='flex flex-col justify-center items-center'
+            style={{ 'min-height': '500px', padding: '3%' }}
+          >
             {/* trigger div */}
-            <div className={`relative border--thin-2 border-radius--lg background-color--white flex flex-col`} style={{ 'margin-top': '0%', padding: '5%' }}>
-              <Tag className='absolute top-0 mx-auto' style={{ 'margin-top': '-10px' }}>Trigger</Tag>
+            <div
+              className={`relative border--thin-2 w-full border-radius--lg background-color--white flex flex-col fa-workflow_section`}
+              style={{ 'margin-top': '0%', padding: '3% 3%' }}
+            >
+              <Tag
+                className='absolute top-0 mx-auto'
+                style={{ 'margin-top': '-10px' }}
+              >
+                Trigger
+              </Tag>
 
               <WorkflowTrigger
                 onChangeSegmentType={onChangeSegmentType}
@@ -527,45 +600,83 @@ const WorkflowBuilder = ({
                 queryList={queryList}
                 activeGrpBtn={activeGrpBtn}
               />
-
             </div>
 
             {/* workflow config */}
-            
-            
-            {queries?.length>0 ? <>
-              <div className={'fa-line--vertical'} />
-             <div className={'z-10 relative border--thin-2 border-radius--lg background-color--white'} style={{  'margin-top': '0%','min-height': '250px' }}>
-              <div className='flex items-center' style={{ padding: '3% 3%' }}>
-                <div className='pr-6'>
-                  <Text type={'title'} level={7} color={'black'} weight={'bold'} extraClass={'m-0'}>{isTemplate ? selectedTemp?.title : selectedTemp?.template_title}</Text>
-                  <Text type={'title'} level={7} color={'grey'} extraClass={'mt-2'}>{isTemplate ? selectedTemp?.description : selectedTemp?.template_description}</Text>
-                  <Button type='primary' extraClass={'mt-2'} onClick={()=>handleConfigure()}>Configure Action</Button>
-                </div>
-                <div className='px-4'>
-                  <img src={WorkflowHubspotThumbnail} style={{ 'height': "150px" }} />
-                </div>
-              </div>
 
-              <div ref={configureRef}> 
-              { showConfigureOptions && returnIntegrationComponent(selectedTemp)} 
-              </div>
+            {queries?.length > 0 ? (
+              <>
+                <VerticalDivider />
 
-            </div></> : <></>}
+                <div
+                  className={
+                    'w-full relative border--thin-2 border-radius--lg background-color--white'
+                  }
+                  style={{ 'margin-top': '0%', 'min-height': '250px' }}
+                >
+                  <div
+                    className='flex items-center'
+                    style={{ padding: '3% 3%' }}
+                  >
+                    <div className='pr-6'>
+                      <Text
+                        type={'title'}
+                        level={7}
+                        color={'black'}
+                        weight={'bold'}
+                        extraClass={'m-0'}
+                      >
+                        {isTemplate
+                          ? selectedTemp?.title
+                          : selectedTemp?.template_title}
+                      </Text>
+                      <Text
+                        type={'title'}
+                        level={7}
+                        color={'grey'}
+                        extraClass={'mt-2'}
+                      >
+                        {isTemplate
+                          ? selectedTemp?.description
+                          : selectedTemp?.template_description}
+                      </Text>
+                      <Button
+                        type='primary'
+                        extraClass={'mt-2'}
+                        onClick={() => handleConfigure()}
+                      >
+                        Configure Action
+                      </Button>
+                    </div>
+                    <div className='px-4 flex justify-center'>
+                      <img
+                        src={WorkflowHubspotThumbnail}
+                        style={{ height: '175px' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div ref={configureRef}>
+                    {showConfigureOptions &&
+                      returnIntegrationComponent(selectedTemp)}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <></>
+            )}
           </div>
         </Col>
       </Row>
-
     </>
-  )
-}
+  );
+};
 
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   groupBy: state.coreQuery.groupBy.event,
-  groups: state.coreQuery.groups,
+  groups: state.coreQuery.groups
 });
-
 
 export default connect(mapStateToProps, {
   getGroups,
@@ -573,4 +684,4 @@ export default connect(mapStateToProps, {
   getSavedSegments,
   fetchSavedWorkflows,
   saveWorkflow
-})(WorkflowBuilder); 
+})(WorkflowBuilder);

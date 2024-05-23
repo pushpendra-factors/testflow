@@ -18,6 +18,7 @@ export interface IntegrationConfig {
 export interface IntegrationCategroryType {
   name: string;
   id: string;
+  sortOrder: number;
 }
 
 export interface IntegrationContextData {
@@ -35,6 +36,7 @@ export interface IntegrationStatus {
   state:
     | ''
     | 'connected'
+    | 'success'
     | 'disconnected'
     | 'synced'
     | 'delayed'
@@ -46,3 +48,9 @@ export interface IntegrationStatus {
   last_synced_at: number;
   message?: string;
 }
+
+export type IntegrationState =
+  | 'connected'
+  | 'error'
+  | 'pending'
+  | 'not_connected';

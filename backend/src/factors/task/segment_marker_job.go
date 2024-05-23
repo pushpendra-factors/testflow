@@ -111,9 +111,14 @@ func SegmentMarker(projectID int64, projectIdListAllRun map[int64]bool, latestSe
 			segmentQuery.GlobalUserProperties = model.TransformPayloadForInProperties(segmentQuery.GlobalUserProperties)
 			segmentQuery.From = U.TimeNowZ().AddDate(0, 0, -90).Unix()
 			segmentQuery.To = U.TimeNowZ().Unix()
-			for _, eventProp := range segmentQuery.EventsWithProperties {
+			for index, eventProp := range segmentQuery.EventsWithProperties {
 				if eventProp.Name != "" {
 					eventNameIDsList[eventProp.Name] = true
+				}
+				if eventProp.Range > int64(0) {
+					days := int(eventProp.Range)
+					timestampForRange := U.TimeNowIn(timezoneString).AddDate(0, 0, -days).Unix()
+					segmentQuery.EventsWithProperties[index].Range = timestampForRange
 				}
 			}
 			decodedSegmentRulesMap[groupName] = append(decodedSegmentRulesMap[groupName], segmentQuery)
@@ -157,25 +162,25 @@ func SegmentMarker(projectID int64, projectIdListAllRun map[int64]bool, latestSe
 		return http.StatusOK
 	}
 
-	allAccountsDecodedSegmentRule, ruleExists := decodedSegmentRulesMap[model.GROUP_NAME_DOMAINS]
-	if ruleExists && (domainGroup != nil && domainGroup.ID > 0) {
-
-		// process the domains list
-		status, err := processDomainsInBatches(projectID, domainsList, allSegmentsMap[model.GROUP_NAME_DOMAINS],
-			allAccountsDecodedSegmentRule, domainGroup.ID, eventNameIDsMap, fileValuesMap)
-
-		if status != http.StatusOK || err != nil {
-			log.WithField("project_id", projectID).Error("Unable to update associated_segments to the domain user.")
-			return status
-		}
-	}
-
 	var runForGivenSegment bool
 	var segmentIds []string
 
 	// to run marker for 100k domains for selected recently updated/created segments
 	if !allUsersRun && C.EnableLatestSegmentsMarkerRun(projectID) {
 		segmentIds, runForGivenSegment = latestSegmentsMap[projectID]
+	}
+
+	allAccountsDecodedSegmentRule, ruleExists := decodedSegmentRulesMap[model.GROUP_NAME_DOMAINS]
+	if ruleExists && (domainGroup != nil && domainGroup.ID > 0) {
+
+		// process the domains list
+		status, err := processDomainsInBatches(projectID, domainsList, allSegmentsMap[model.GROUP_NAME_DOMAINS],
+			allAccountsDecodedSegmentRule, domainGroup.ID, eventNameIDsMap, fileValuesMap, segmentIds)
+
+		if status != http.StatusOK || err != nil {
+			log.WithField("project_id", projectID).Error("Unable to update associated_segments to the domain user.")
+			return status
+		}
 	}
 
 	if allUsersRun {
@@ -276,7 +281,7 @@ func ListOfSegmentsToRunMarkerFor(projectID int64, allUsersRun bool, latestSegme
 }
 
 func processDomainsInBatches(projectID int64, domainIDList []string, segments []model.Segment, segmentsRulesArr []model.Query,
-	domainGroupId int, eventNameIDsMap map[string]string, fileValuesMap map[string]map[string]bool) (int, error) {
+	domainGroupId int, eventNameIDsMap map[string]string, fileValuesMap map[string]map[string]bool, segmentIds []string) (int, error) {
 	// Batch size
 	batchSize := C.BatchSizeSegmentMarker()
 
@@ -294,7 +299,7 @@ func processDomainsInBatches(projectID int64, domainIDList []string, segments []
 		wg.Add(len(domainIDChunks[ci]))
 		for _, domID := range domainIDChunks[ci] {
 			go fetchAndProcessFromDomainList(projectID, domID, segments, segmentsRulesArr, domainGroupId,
-				eventNameIDsMap, &wg, &statusArr, userCount, domainUpdateCount, fileValuesMap)
+				eventNameIDsMap, &wg, &statusArr, userCount, domainUpdateCount, fileValuesMap, segmentIds)
 		}
 		wg.Wait()
 	}
@@ -315,7 +320,7 @@ func processDomainsInBatches(projectID int64, domainIDList []string, segments []
 
 func fetchAndProcessFromDomainList(projectID int64, domainID string, segments []model.Segment, segmentsRulesArr []model.Query,
 	domainGroupId int, eventNameIDsMap map[string]string, waitGroup *sync.WaitGroup, statusArr *[]bool, userCount *int64,
-	domainUpdateCount *int64, fileValuesMap map[string]map[string]bool) {
+	domainUpdateCount *int64, fileValuesMap map[string]map[string]bool, segmentIds []string) {
 
 	logFields := log.Fields{
 		"project_id":      projectID,
@@ -336,7 +341,7 @@ func fetchAndProcessFromDomainList(projectID int64, domainID string, segments []
 	}
 
 	status, err := domainUsersProcessingWithErrcode(projectID, domainID, users, segments,
-		segmentsRulesArr, eventNameIDsMap, domainUpdateCount, fileValuesMap)
+		segmentsRulesArr, eventNameIDsMap, domainUpdateCount, fileValuesMap, segmentIds)
 
 	if status != http.StatusOK || err != nil {
 		log.WithField("project_id", projectID).Error("Unable to update associated_segments to the domain user.")
@@ -456,7 +461,7 @@ func userProcessingWithErrcode(projectID int64, user model.User, allSegmentsMap 
 
 func domainUsersProcessingWithErrcode(projectID int64, domId string, usersArray []model.User,
 	segments []model.Segment, segmentsRulesArr []model.Query, eventNameIDsMap map[string]string,
-	domainUpdateCount *int64, fileValuesMap map[string]map[string]bool) (int, error) {
+	domainUpdateCount *int64, fileValuesMap map[string]map[string]bool, segmentIds []string) (int, error) {
 	associatedSegments := make(map[string]model.AssociatedSegments)
 	decodedPropsArr := make([]map[string]interface{}, 0)
 	for _, user := range usersArray {
@@ -488,7 +493,14 @@ func domainUsersProcessingWithErrcode(projectID int64, domId string, usersArray 
 		}
 	}
 
-	updateAssociatedSegment := IsMapsNotMatching(projectID, domId, associatedSegments, existingAssociatedSegment)
+	var updateAssociatedSegment bool
+
+	if len(segmentIds) > 0 {
+		updateAssociatedSegment, associatedSegments = compareGivenSegments(projectID, domId, associatedSegments, existingAssociatedSegment,
+			segmentIds)
+	} else {
+		updateAssociatedSegment = IsMapsNotMatching(projectID, domId, associatedSegments, existingAssociatedSegment)
+	}
 
 	if !updateAssociatedSegment {
 		return http.StatusOK, nil
@@ -540,6 +552,83 @@ func IsMapsNotMatching(projectID int64, domId string, associatedSegments map[str
 	}
 
 	return isDifferent
+}
+
+func compareGivenSegments(projectID int64, domId string, associatedSegments map[string]model.AssociatedSegments, oldAssociatedSegments map[string]interface{},
+	segmentIds []string) (bool, map[string]model.AssociatedSegments) {
+
+	segmentIdsMap := make(map[string]bool)
+
+	// making map of segments to run for the project (for easy search)
+	for _, id := range segmentIds {
+		segmentIdsMap[id] = true
+	}
+
+	// the map to be updated
+	updatedAssociatedSegments := make(map[string]model.AssociatedSegments)
+	isDifferent := false
+
+	// only appending the segment_ids that already exists and we are not running marker for
+	for segID := range oldAssociatedSegments {
+		if _, exists := segmentIdsMap[segID]; exists {
+			continue
+		}
+		var updatedSeg model.AssociatedSegments
+		updatedSeg.V = 0
+		updatedSeg.UpdatedAt = model.FormatTimeToString(time.Now().UTC())
+		updatedAssociatedSegments[segID] = updatedSeg
+	}
+
+	// checking new map, if previously computed segment does not exist [entering condition]
+	for segID := range associatedSegments {
+		// not checking when it is not the segment we are running marker for
+		if _, exists := segmentIdsMap[segID]; !exists {
+			continue
+		}
+		// continue if already exists in old segment
+		if _, exists := oldAssociatedSegments[segID]; exists {
+			// appending result to updated segment
+			updatedAssociatedSegments[segID] = associatedSegments[segID]
+			continue
+		}
+
+		// not exists case
+		log.WithFields(log.Fields{"project_id": projectID, "domain_id": domId, "segment_id": segID}).
+			Info("Entering the segment")
+		isDifferent = true
+
+		// appending result to updated segment
+		updatedFields := associatedSegments[segID]
+		updatedAssociatedSegments[segID] = updatedFields
+
+		// alert for entering segment
+		store.GetStore().FindAndCacheAlertForCurrentSegment(projectID, segID, domId, model.ACTION_SEGMENT_ENTRY)
+
+	}
+
+	// checking old map, if newly computed segment does not exist [leaving condition]
+	for segID := range oldAssociatedSegments {
+		// not checking when it is not the segment we are running marker for
+		if _, exists := segmentIdsMap[segID]; !exists {
+			continue
+		}
+
+		// continue if already exists in new segment
+		if _, exists := associatedSegments[segID]; exists {
+			continue
+		}
+
+		// not exists case
+		log.WithFields(log.Fields{"project_id": projectID, "domain_id": domId, "segment_id": segID}).
+			Info("Leaving the segment")
+
+		isDifferent = true
+
+		// alert for exiting segment
+		store.GetStore().FindAndCacheAlertForCurrentSegment(projectID, segID, domId, model.ACTION_SEGMENT_EXIT)
+	}
+
+	return isDifferent, updatedAssociatedSegments
 }
 
 func isRuleMatched(projectID int64, segment model.Segment, decodedProperties *map[string]interface{},

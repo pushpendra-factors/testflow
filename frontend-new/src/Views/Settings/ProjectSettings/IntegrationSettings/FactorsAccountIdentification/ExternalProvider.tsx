@@ -4,7 +4,7 @@ import { SVG, Text } from 'Components/factorsComponents';
 import { AccountIdentificationProviderData } from '../integrations.constants';
 
 const ExternalProvider = () => (
-  <div className='mt-8'>
+  <div className='mt-5'>
     {AccountIdentificationProviderData.map((config, i) => (
       <>
         <div className='flex justify-between '>
@@ -19,7 +19,7 @@ const ExternalProvider = () => (
           <div className='flex flex-col justify-start items-start ml-4 w-full'>
             <Text
               type='title'
-              level={5}
+              level={6}
               weight='bold'
               extraClass='m-0'
               color='character-primary'

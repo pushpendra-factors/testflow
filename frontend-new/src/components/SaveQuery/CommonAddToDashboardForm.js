@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useSelector } from 'react-redux';
 import { Select, Radio } from 'antd';
@@ -13,22 +13,30 @@ import {
 } from './saveQuery.constants';
 
 function AddToDashboardForm({
-  selectedDashboards,
+  selectedDashboards = [],
   setSelectedDashboards,
   dashboardPresentation,
   setDashboardPresentation
 }) {
-  const { dashboards } = useSelector((state) => state.dashboard);
+  const { dashboards, activeDashboard } = useSelector(
+    (state) => state.dashboard
+  );
 
+  useEffect(() => {
+    setSelectedDashboards([activeDashboard.id]);
+    return () => {
+      setSelectedDashboards([]);
+    };
+  }, []);
   const handlePresentationChange = (e) => {
     setDashboardPresentation(e.target.value);
   };
 
   const handleSelectChange = useCallback(
     (value) => {
-      const resp = value.map(
-        (v) => dashboards.data.find((d) => d.name === v).id
-      );
+      const resp = value
+        .map((v) => dashboards.data.find((d) => d.name === v)?.id)
+        .filter((v) => v != null);
       setSelectedDashboards(resp);
     },
     [dashboards.data]
@@ -36,9 +44,9 @@ function AddToDashboardForm({
 
   const getSelectedDashboards = useCallback(
     () =>
-      selectedDashboards.map(
-        (s) => dashboards.data.find((d) => d.id === s).name
-      ),
+      selectedDashboards
+        .map((s) => dashboards.data.find((d) => d.id === s)?.name)
+        .filter((s) => s != null),
     [dashboards.data, selectedDashboards]
   );
 
@@ -61,8 +69,8 @@ function AddToDashboardForm({
       mode='multiple'
       style={{ width: '100%' }}
       placeholder='Please Select'
+      size='large'
       onChange={handleSelectChange}
-      className={styles.multiSelectStyles}
       value={getSelectedDashboards()}
     >
       {dashboards.data

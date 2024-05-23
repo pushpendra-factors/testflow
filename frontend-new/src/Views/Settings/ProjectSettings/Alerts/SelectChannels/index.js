@@ -1,8 +1,8 @@
 import React, { useCallback, useState } from 'react';
 import { Text, SVG } from 'factorsComponents';
 import { Row, Col, Checkbox, Input } from 'antd';
-import styles from './index.module.scss';
 import { SearchOutlined } from '@ant-design/icons';
+import styles from './index.module.scss';
 
 function SelectChannels({ channelOpts, selectedChannel, setSelectedChannel }) {
   const [searchVal, setSearchVal] = useState('');
@@ -15,13 +15,9 @@ function SelectChannels({ channelOpts, selectedChannel, setSelectedChannel }) {
     (q) => {
       const isSelected = selectedChannel.findIndex((sq) => sq.id === q.id) > -1;
       if (isSelected) {
-        setSelectedChannel((currData) => {
-          return currData.filter((c) => c.id !== q.id);
-        });
+        setSelectedChannel((currData) => currData.filter((c) => c.id !== q.id));
       } else {
-        setSelectedChannel((currData) => {
-          return [...currData, { ...q, id: q.id }];
-        });
+        setSelectedChannel((currData) => [...currData, { ...q, id: q.id }]);
       }
     },
     [selectedChannel, setSelectedChannel]
@@ -45,10 +41,8 @@ function SelectChannels({ channelOpts, selectedChannel, setSelectedChannel }) {
 
       <div className='queries-list'>
         {filteredQueries.map((q) => {
-
           const isSelected =
-          selectedChannel.findIndex((sq) => sq.id === q.id) > -1;
-
+            selectedChannel.findIndex((sq) => sq.id === q.id) > -1;
           return (
             <div
               key={q.id}
@@ -64,7 +58,14 @@ function SelectChannels({ channelOpts, selectedChannel, setSelectedChannel }) {
                   />
                 </div>
                 <Text mini extraClass={styles.queryTitle} type='paragraph'>
-                  {'#'+ q.name}
+                  {q?.is_private ? (
+                    <>
+                      <SVG name='Lock' color='gray' extraClass='inline' />{' '}
+                      {q?.name}
+                    </>
+                  ) : (
+                    `#${q?.name}`
+                  )}
                 </Text>
               </div>
             </div>

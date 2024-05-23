@@ -20,8 +20,11 @@ import (
 func EventsPerformedCheck(projectID int64, segmentId string, eventNameIDsMap map[string]string,
 	segmentQuery *model.Query, userID string, isAllAccounts bool, userArray []model.User) bool {
 
-	// to be removed, default value true to all the events
+	// default value to be set true
 	for index := range segmentQuery.EventsWithProperties {
+		if segmentQuery.EventsWithProperties[index].FrequencyOperator != "" {
+			continue
+		}
 		segmentQuery.EventsWithProperties[index].IsEventPerformed = true
 	}
 
@@ -109,8 +112,11 @@ func didEventQuery(projectID int64, segmentId string, eventNameIDsMap map[string
 
 	result, status := GetStore().CheckIfUserPerformedGivenEvents(projectID, userID, query, queryParams)
 	if status != http.StatusFound {
-		log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "segment_id": segmentId}).
-			Error("Error while validating for performed events")
+		if status != http.StatusNotFound {
+			log.WithFields(log.Fields{"project_id": projectID, "user_id": userID, "segment_id": segmentId}).
+				Error("Error while validating for performed events")
+		}
+		return isMatched
 	}
 
 	endTime := time.Now().UnixMilli()
@@ -240,9 +246,9 @@ func eventsQuery(projectID int64, eventNameIDsMap map[string]string, segmentQuer
 		params = append(params, eventNameIDsMap[event.Name])
 
 		// support for in last x days
-		if event.From > 0 {
+		if event.Range > 0 {
 			queryStr = queryStr + " AND timestamp >= ?"
-			params = append(params, event.From)
+			params = append(params, event.Range)
 		}
 
 		if len(event.Properties) > 0 {
@@ -314,9 +320,9 @@ func eventsQueryOptimised(projectID int64, eventNameIDsMap map[string]string, se
 		qParams = append(qParams, eventNameIDsMap[event.Name])
 
 		// support for in last x days
-		if event.From > 0 {
+		if event.Range > 0 {
 			queryStr = queryStr + " AND timestamp >=?"
-			qParams = append(qParams, event.From)
+			qParams = append(qParams, event.Range)
 			timestampRequired = true
 		}
 		if len(event.Properties) > 0 {

@@ -29,7 +29,6 @@ const IntegrationSettings = () => {
     }))
   ];
   const [selectedCategory, setSelectedCategory] = useState(defaultCategory);
-  const [showSearch, setShowSearch] = useState(false);
   const [searchText, setSearchText] = useState('');
   const { integrationInfo } = useIntegrationCheck();
 
@@ -68,8 +67,13 @@ const IntegrationSettings = () => {
       }
     });
 
-    return Object.entries(categorizedData).map((item) => {
-      const [_categoryId, _categories] = item;
+    return IntegrationPageCategories.sort(
+      (categoryA, categoryB) => categoryA.sortOrder - categoryB.sortOrder
+    ).map((category) => {
+      const categoryMap = categorizedData[category.id];
+      if (!categoryMap || !categoryMap.length) {
+        return null;
+      }
       return (
         <div className='mb-10'>
           <Text
@@ -79,10 +83,10 @@ const IntegrationSettings = () => {
             color='character-primary'
             weight='bold'
           >
-            {getIntegrationCategoryNameFromId(_categoryId)}
+            {getIntegrationCategoryNameFromId(category.id)}
           </Text>
           <div className='mt-4'>
-            {_categories.map((c: IntegrationConfig) => (
+            {categoryMap.map((c: IntegrationConfig) => (
               <IntegrationCard
                 integrationConfig={c}
                 integrationInfo={integrationInfo}
@@ -105,79 +109,62 @@ const IntegrationSettings = () => {
       }
       onError={FaErrorLog}
     >
-      <div className={styles.integrationContainer}>
-        {integrationStatusLoading && (
-          <>
-            <Skeleton />
-            <Skeleton />
-            <Skeleton />
-            <Skeleton />
-          </>
-        )}
-        {!integrationStatusLoading && (
-          <>
-            <div className='mb-4'>
-              <Text
-                type='title'
-                level={4}
-                color='character-primary'
-                weight='bold'
-                extraClass='m-0 mt-2'
-              >
-                Integrations
-              </Text>
-              <Text type='title' level={7} color='character-secondary'>
-                Unlock productivity with our robust ecosystem of seamless
-                software integrations.Unlock productivity with our robust
-                ecosystem of seamless software integrations.
-              </Text>
-            </div>
-            <div className={styles.integrationHeader}>
-              <div className='mt-4 flex items-center justify-between w-full'>
-                <div>
-                  <Select
-                    style={{ width: 300 }}
-                    onChange={handleCategoryChange}
-                    options={categories}
-                    value={selectedCategory}
-                  />
-                </div>
-                <div className='flex items-center justify-between'>
-                  {showSearch ? (
-                    <Input
-                      autoFocus
-                      onChange={handleSearchTextChange}
-                      placeholder='Search Integration'
-                      style={{ width: '220px', borderRadius: 5 }}
-                      prefix={<SVG name='search' size={16} color='grey' />}
-                    />
-                  ) : null}
-                  <Button
-                    type='text'
-                    ghost
-                    shape='circle'
-                    className='p-2 bg-white'
-                    onClick={() => {
-                      setShowSearch(!showSearch);
-                      if (showSearch) {
-                        setSearchText('');
-                      }
-                    }}
-                  >
-                    <SVG
-                      name={!showSearch ? 'search' : 'close'}
-                      size={20}
-                      color='grey'
-                    />
-                  </Button>
-                </div>
+      {integrationStatusLoading && (
+        <>
+          <Skeleton />
+          <Skeleton />
+          <Skeleton />
+          <Skeleton />
+        </>
+      )}
+      {!integrationStatusLoading && (
+        <>
+          <div>
+            <Text
+              type='title'
+              level={4}
+              color='character-primary'
+              weight='bold'
+              extraClass='m-0 mt-2'
+            >
+              Integrations
+            </Text>
+            <Text
+              type='title'
+              level={7}
+              color='character-secondary'
+              extraClass='w-3/4'
+            >
+              Unlock productivity with our robust ecosystem of seamless software
+              integrations.Unlock productivity with our robust ecosystem of
+              seamless software integrations.
+            </Text>
+          </div>
+          <Divider style={{ marginBottom: 0 }} />
+          <div className={styles.integrationHeader}>
+            <div className=' flex items-center justify-between w-full'>
+              <div>
+                <Select
+                  style={{ width: 300 }}
+                  onChange={handleCategoryChange}
+                  options={categories}
+                  value={selectedCategory}
+                />
               </div>
-              <Divider />
+              <div className='flex items-center justify-between'>
+                <Input
+                  autoFocus
+                  onChange={handleSearchTextChange}
+                  placeholder='Search Integration'
+                  style={{ width: '220px', borderRadius: 5 }}
+                  prefix={<SVG name='search' size={16} color='grey' />}
+                />
+              </div>
             </div>
-            <div className='mb-6'>{renderIntegrationBody()}</div>
-          </>
-        )}
-      </div>
+          </div>
+          <div className='mb-6'>{renderIntegrationBody()}</div>
+        </>
+      )}
     </ErrorBoundary>
   );
 };

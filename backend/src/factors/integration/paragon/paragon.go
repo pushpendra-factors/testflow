@@ -149,7 +149,7 @@ func SendParagonEventRequest(url, token string, payload interface{}) (map[string
 	client := &http.Client{}
 	resp, err := client.Do(request)
 	if err != nil {
-		log.WithError(err).Error("failed to make request for paragon event")
+		log.WithError(err).Error("Failed to make request to paragon event endpoint.")
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -462,6 +462,11 @@ func SendPayloadToParagonWorkflow(projectID int64, url string, payload *model.Ca
 		logCtx.WithError(err).Error("Failed to trigger workflow.")
 		return response, err
 	}
+
+	log.WithField("payload", newPayload).Info("Paragon Request.")
+	log.WithField("response", response).Info("Paragon Response.")
+
+	logCtx.WithField("response", response).Info("Paragon Response.")
 
 	return response, nil
 }

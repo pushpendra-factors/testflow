@@ -182,11 +182,12 @@ func getPredefinedDashboard(c *gin.Context, dashboardInternalID int64) (model.Pr
 }
 
 func executePredefinedDashboard(projectID, dashboardInternalId int64, request model.PredefinedQueryGroup) ([]model.QueryResult, int, string) {
+	useTestEnabled := C.IsWebsiteAggregationTestEnabled(projectID)
 
 	storeSelected := store.GetStore()
 	if dashboardInternalId == 1 {
 		queryGroup := request.(model.PredefWebsiteAggregationQueryGroup)
-		return storeSelected.ExecuteQueryGroupForPredefinedWebsiteAggregation(projectID, queryGroup)
+		return storeSelected.ExecuteQueryGroupForPredefinedWebsiteAggregation(projectID, queryGroup, useTestEnabled)
 	}
 	return make([]model.QueryResult, 0), http.StatusBadRequest, "Invalid dashboard internal ID"
 }

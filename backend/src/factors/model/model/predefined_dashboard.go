@@ -1,30 +1,31 @@
 package model
 
 const (
-	DBSelect                = "SELECT "
-	DBFrom                  = "FROM "
-	DBWhere                 = "WHERE "
-	DBGroupByConst          = "GROUP BY "
-	DBOrderBy               = "ORDER BY "
-	DBAscend                = "ASC "
-	DBDescend               = "DESC "
-	DBLimit                 = "LIMIT "
-	WebsiteAggregationTable = "website_aggregation"
-	PredefinedWebAggrLimit  = "2500"
+	DBSelect                    = "SELECT "
+	DBFrom                      = "FROM "
+	DBWhere                     = "WHERE "
+	DBGroupByConst              = "GROUP BY "
+	DBOrderBy                   = "ORDER BY "
+	DBAscend                    = "ASC "
+	DBDescend                   = "DESC "
+	DBLimit                     = "LIMIT "
+	WebsiteAggregationTable     = "website_aggregation"
+	WebsiteAggregationTestTable = "website_aggregation_test"
+	PredefinedWebAggrLimit      = "2500"
 
-	ChartTypeBarChart 				= "pb"
-	ChartTypeLineChart 				= "pl"
-	ChartTypeTable 					= "pt"
-	ChartTypeSparkLines 			= "pc"
-	ChartTypeStackedAread 			= "pa"
-	ChartTypeStackedBar 			= "ps"
-	ChartTypeScatterPlot 			= "sp"
-	ChartTypeHorizontalBarChart 	= "hb"
-	ChartTypePivotChart 			= "pi"
-	ChartTypeMetricChart 			= "mc"
-	ChartTypeFunnelChart 			= "fc"
-	PresentationTypeChart 			= "chart"
-	PresentationTypeTable 			= "table"
+	ChartTypeBarChart           = "pb"
+	ChartTypeLineChart          = "pl"
+	ChartTypeTable              = "pt"
+	ChartTypeSparkLines         = "pc"
+	ChartTypeStackedAread       = "pa"
+	ChartTypeStackedBar         = "ps"
+	ChartTypeScatterPlot        = "sp"
+	ChartTypeHorizontalBarChart = "hb"
+	ChartTypePivotChart         = "pi"
+	ChartTypeMetricChart        = "mc"
+	ChartTypeFunnelChart        = "fc"
+	PresentationTypeChart       = "chart"
+	PresentationTypeTable       = "table"
 )
 
 var MapOfOperatorToExpression = map[string]string{
@@ -60,14 +61,14 @@ type PredefinedWidget struct {
 	Metrics     []PredefinedMetric  `json:"me"`
 	GroupBy     []PredefinedGroupBy `json:"g_by"`
 	InternalID  int64               `json:"inter_id"`
-	Setting		ChartSetting		`json:"chart_setting"` 
+	Setting     ChartSetting        `json:"chart_setting"`
 }
 
 type PredefinedMetric struct {
-	Name              	string `json:"na"`
-	DisplayName       	string `json:"d_na"`
-	InternalEventType 	string `json:"inter_e_type"`
-	Type				string `json:"ty"`
+	Name              string `json:"na"`
+	DisplayName       string `json:"d_na"`
+	InternalEventType string `json:"inter_e_type"`
+	Type              string `json:"ty"`
 }
 
 type PredefinedGroupBy struct {
@@ -76,8 +77,8 @@ type PredefinedGroupBy struct {
 }
 
 type ChartSetting struct {
-	Type   	string	`json:"ty"`
-	Presentation	string	`json:"pr"`
+	Type         string `json:"ty"`
+	Presentation string `json:"pr"`
 }
 
 // interface for predefined dashboards.

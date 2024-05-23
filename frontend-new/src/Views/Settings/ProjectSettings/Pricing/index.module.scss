@@ -72,3 +72,15 @@
   background-color: #fff;
   border-color: #b7bec8;
 }
+
+.tab_container{
+  & > div{
+    overflow: unset !important; // This is added to make bookacall sticky
+  }
+  & .upgrade_bookacall{
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 1;
+  }
+}

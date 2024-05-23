@@ -204,7 +204,7 @@ func ReadAndMergeDailyFilesForBeam(projectId int64, dataType, fileNamePrefix str
 					if err != nil {
 						return startIndexToFileInfoMap, indexMap, countLines, err
 					}
-					userID := getAptId(event, sortOnGroup)
+					userID := GetAptId(event, sortOnGroup)
 					if _, ok := indexMap[userID]; !ok {
 						indexMap[userID] = keyCount
 						keyCount++
@@ -357,7 +357,7 @@ func resizeUnsortedPartFilesForBeamByUid(projectId, startTimestamp, endTimestamp
 				if err != nil {
 					return noOfFilesBroken, noOfFilesAdded, err
 				}
-				userID := getAptId(event, sortOnGroup)
+				userID := GetAptId(event, sortOnGroup)
 				uidIndex := int(indexMap[userID])
 				splitNum := (uidIndex - start) / noOfUidsAfterSplit
 				if splitNum == noOfSplits {
