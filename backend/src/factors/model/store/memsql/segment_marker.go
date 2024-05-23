@@ -246,9 +246,9 @@ func eventsQuery(projectID int64, eventNameIDsMap map[string]string, segmentQuer
 		params = append(params, eventNameIDsMap[event.Name])
 
 		// support for in last x days
-		if event.From > 0 {
+		if event.Range > 0 {
 			queryStr = queryStr + " AND timestamp >= ?"
-			params = append(params, event.From)
+			params = append(params, event.Range)
 		}
 
 		if len(event.Properties) > 0 {
@@ -320,9 +320,9 @@ func eventsQueryOptimised(projectID int64, eventNameIDsMap map[string]string, se
 		qParams = append(qParams, eventNameIDsMap[event.Name])
 
 		// support for in last x days
-		if event.From > 0 {
+		if event.Range > 0 {
 			queryStr = queryStr + " AND timestamp >=?"
-			qParams = append(qParams, event.From)
+			qParams = append(qParams, event.Range)
 			timestampRequired = true
 		}
 		if len(event.Properties) > 0 {

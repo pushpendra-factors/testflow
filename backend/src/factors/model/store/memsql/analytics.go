@@ -1225,8 +1225,8 @@ func addFilterEventsWithPropsQuery(projectId int64, qStmnt *string, qParams *[]i
 	}
 	*qParams = append(*qParams, projectId)
 
-	if qep.From > 0 {
-		*qParams = append(*qParams, qep.From)
+	if qep.Range > 0 {
+		*qParams = append(*qParams, qep.Range)
 	} else if from > 0 {
 		*qParams = append(*qParams, from)
 	}
@@ -1427,8 +1427,8 @@ func addFilterEventsWithPropsQueryV2(projectId int64, qStmnt *string, qParams *[
 	}
 	*qParams = append(*qParams, projectId)
 
-	if qep.From > 0 {
-		*qParams = append(*qParams, qep.From)
+	if qep.Range > 0 {
+		*qParams = append(*qParams, qep.Range)
 	} else if from > 0 {
 		*qParams = append(*qParams, from)
 	}
@@ -1722,8 +1722,8 @@ func addFilterEventsWithPropsQueryV3(projectId int64, qStmnt *string, qParams *[
 	}
 	*qParams = append(*qParams, projectId)
 
-	if qep.From > 0 {
-		*qParams = append(*qParams, qep.From)
+	if qep.Range > 0 {
+		*qParams = append(*qParams, qep.Range)
 	} else if from > 0 {
 		*qParams = append(*qParams, from)
 	}

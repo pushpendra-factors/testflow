@@ -452,9 +452,14 @@ func (store *MemSQL) transformPayload(projectID int64, payload model.TimelinePay
 	payload.Query.GlobalUserProperties = model.TransformPayloadForInProperties(payload.Query.GlobalUserProperties)
 	payload.Query.From = U.TimeNowZ().AddDate(0, 0, -90).Unix()
 	payload.Query.To = U.TimeNowZ().Unix()
-	for _, eventProp := range payload.Query.EventsWithProperties {
+	for index, eventProp := range payload.Query.EventsWithProperties {
 		if eventProp.Name != "" {
 			eventNameIDsList[eventProp.Name] = true
+		}
+		if eventProp.Range > int64(0) {
+			days := int(eventProp.Range)
+			timestampForRange := U.TimeNowIn(payload.Query.GetTimeZone()).AddDate(0, 0, -days).Unix()
+			payload.Query.EventsWithProperties[index].Range = timestampForRange
 		}
 	}
 
