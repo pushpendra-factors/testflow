@@ -441,7 +441,7 @@ func main() {
 
 func UpdateProjectSettingsIntefrationStatusFromJobStatusForSalesforce(jobStatus salesforceJobStatus) {
 
-	var jobStatusByProjectIdMap map[int64]string
+	jobStatusByProjectIdMap := make(map[int64]string)
 	for _, state := range jobStatus.EnrichStatus {
 
 		if state.Message == model.CLIENT_TOKEN_EXPIRED {
