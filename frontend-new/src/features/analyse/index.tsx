@@ -103,9 +103,7 @@ const CoreQuery = () => {
   const { models, eventNames, groupBy } = useSelector(
     (state: any) => state.coreQuery
   );
-  const savedQueries = useSelector((state: any) =>
-    get(state, 'queries.data', EMPTY_ARRAY)
-  );
+  const { data: savedQueries } = useSelector((state: any) => state.queries);
 
   const [savedQueryModal, setSavedQueryModal] = useState(false);
 
@@ -159,7 +157,7 @@ const CoreQuery = () => {
       runEventsQueryFromUrl();
     }
     if (location?.state?.navigatedResultState) {
-      const queryToAdd = getQueryFromHashId();
+      const queryToAdd = { ...getQueryFromHashId() };
       if (query_type === QUERY_TYPE_EVENT) {
         createStateFromResult(queryToAdd);
       } else if (query_type === QUERY_TYPE_FUNNEL) {
@@ -181,7 +179,9 @@ const CoreQuery = () => {
   }, [groupBy]);
 
   const getQueryFromHashId = () =>
-    savedQueries?.find((quer: any) => quer.id_text === query_id);
+    savedQueries?.find((quer: any, index: number) => {
+      return quer.id_text === query_id;
+    });
 
   const updateCoreQueryReducer = useCallback((payload) => {
     localDispatch({
@@ -503,7 +503,7 @@ const CoreQuery = () => {
   };
 
   const runEventsQueryFromUrl = () => {
-    const queryToAdd = getQueryFromHashId();
+    const queryToAdd = { ...getQueryFromHashId() };
     if (queryToAdd) {
       if (query_type === QUERY_TYPE_FUNNEL) {
         getFunnelData(active_project.id, null, null, false, query_id).then(
@@ -995,7 +995,7 @@ const CoreQuery = () => {
 
         const res = await getFunnelData(active_project.id, query, null, true);
 
-        const queryToAdd = getQueryFromHashId();
+        const queryToAdd = { ...getQueryFromHashId() };
         if (!isQuerySaved) {
           queryToAdd.query = query;
         }
@@ -1100,6 +1100,7 @@ const CoreQuery = () => {
   );
 
   const handleCloseDashboardQuery = () => {
+    dispatch({ type: SHOW_ANALYTICS_RESULT, payload: false });
     history.push({
       pathname: '/',
       state: {
