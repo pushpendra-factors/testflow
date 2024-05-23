@@ -49,7 +49,7 @@ const useSidebarTitleConfig = () => {
   if (isSettingsUrl(pathname)) {
     return {
       title: 'Settings',
-      icon: 'settings_Filled',
+      icon: '',
       iconColor: '#8C8C8C'
     };
   }

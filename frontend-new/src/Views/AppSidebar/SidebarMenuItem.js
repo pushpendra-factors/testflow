@@ -11,24 +11,33 @@ const SidebarMenuItem = ({
   onClick,
   icon,
   iconColor,
-  iconSize = 16
+  iconSize = 16,
+  hoverable = true
 }) => {
   return (
     <Tooltip placement='right' mouseEnterDelay={2} title={text}>
       <div
-        role='button'
+        role={hoverable && 'button'}
         onClick={onClick}
         className={cx(
-          'cursor-pointer rounded-md p-2 flex justify-between gap-x-2 items-center',
+          'rounded-md p-2 flex justify-between gap-x-2 items-center',
           {
             [styles['active']]: isActive
           },
-          styles['sidebar-menu-item']
+          {
+            [styles['cursor-pointer']]: hoverable
+          },
+          {
+            [styles['sidebar-menu-item']]: hoverable
+          },
+          {
+            [styles['font-medium']]: !hoverable
+          }
         )}
       >
         <div className={cx('flex gap-x-1 items-center w-full')}>
           <ControlledComponent controller={icon != null}>
-            <SVG name={icon} size={20} color={iconColor} />
+            <SVG name={icon} size={iconSize} color={iconColor} />
           </ControlledComponent>
           <Text
             type='title'
