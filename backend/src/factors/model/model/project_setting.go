@@ -2,6 +2,7 @@ package model
 
 import (
 	U "factors/util"
+	"fmt"
 	"strings"
 	"time"
 
@@ -155,20 +156,23 @@ type IntegrationState struct {
 }
 
 const (
-	PULL_DELAYED         = "delayed"
-	SYNC_PENDING         = "pending"
-	SYNCED               = "synced"
-	ACCOUNT_DELETION     = "accountDeletion"
-	CLIENT_TOKEN_EXPIRED = "client_side_token_expired"
-	HEAVY_DELAYED        = "large_data_delayed"
-	LIMIT_EXCEED         = "limit_exceed"
-	SUCCESS              = "success"
-	DISCONNECTED         = "disconnected"
-	CONNECTED            = "connected"
+	PULL_DELAYED              = "delayed"
+	SYNC_PENDING              = "pending"
+	SYNCED                    = "synced"
+	ACCOUNT_DELETION          = "accountDeletion"
+	CLIENT_TOKEN_EXPIRED      = "client_side_token_expired"
+	HEAVY_DELAYED             = "large_data_delayed"
+	LIMIT_EXCEED              = "limit_exceed"
+	SUCCESS                   = "success"
+	DISCONNECTED              = "disconnected"
+	CONNECTED                 = "connected"
+	RUSDDERSTACK_PULL_DELAYED = "rudder_stack_delayed"
+	SDK_PULL_DELAYED          = "sdk_stack_delayed"
+	SEGMENT_PULL_DELAYED      = "segment_stack_delayed"
 )
 
 var ErrorStateToErrorMessageMap = map[string]string{
-	PULL_DELAYED:         "Dev diagnosis required- “There is something wrong with pulling data from %s, we are investigating this. All your data is secure and you will be able to access it shortly.”",
+	PULL_DELAYED:         "We are encountering a delay in syncing your data from %s. Rest assured, all your data is safe and will be synced shortly.",
 	SYNC_PENDING:         "Delay- “Your data is running slow, don’t worry all your data is secure and you will be able to access it shortly.”",
 	SYNCED:               "Unhealthy trigger hasn’t occurred",
 	HEAVY_DELAYED:        "“Data will not be lost, just delayed”",
@@ -176,6 +180,9 @@ var ErrorStateToErrorMessageMap = map[string]string{
 	LIMIT_EXCEED:         "Factors Deanomysation Limit Exhausted",
 	DISCONNECTED:         "Disconnected",
 	CONNECTED:            "Connected",
+	fmt.Sprintf("%s_%s", FEATURE_RUDDERSTACK, PULL_DELAYED): "We are encountering a delay in syncing your data from RudderStack. Please check the destination settings inside your RudderStack account.",
+	fmt.Sprintf("%s_%s", FEATURE_SEGMENT, PULL_DELAYED):     "We are encountering a delay in syncing your data from Segment. Please check the destination settings inside your Segment account.",
+	fmt.Sprintf("%s_%s", SDK, PULL_DELAYED):                 "The SDK is not receiving events from your website. Please check if the SDK is placed correctly on your website pages or reach out to us for assistance.",
 }
 
 /* Sample Attribution Setting
