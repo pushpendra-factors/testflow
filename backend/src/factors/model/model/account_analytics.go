@@ -27,7 +27,7 @@ var MapOfAccountAnalyticsMetricToFilters = map[string][]QueryProperty{
 		{
 			Type:      U.PropertyTypeCategorical,
 			Property:  U.DP_ENGAGEMENT_LEVEL,
-			Operator:  EqualsOp,
+			Operator:  EqualsOpStr,
 			Value:     ENGAGEMENT_LEVEL_HOT,
 			LogicalOp: LOGICAL_OP_AND,
 			Entity:    PropertyEntityUserGlobal,
@@ -35,7 +35,7 @@ var MapOfAccountAnalyticsMetricToFilters = map[string][]QueryProperty{
 		{
 			Type:      U.PropertyTypeCategorical,
 			Property:  U.DP_ENGAGEMENT_LEVEL,
-			Operator:  EqualsOp,
+			Operator:  EqualsOpStr,
 			Value:     ENGAGEMENT_LEVEL_WARM,
 			LogicalOp: LOGICAL_OP_OR,
 			Entity:    PropertyEntityUserGlobal,
