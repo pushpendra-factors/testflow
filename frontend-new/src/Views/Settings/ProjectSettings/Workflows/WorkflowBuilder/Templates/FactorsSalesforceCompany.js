@@ -21,6 +21,7 @@ import { Text, SVG } from 'factorsComponents';
 import { paragon } from '@useparagon/connect/dist/src/index';
 import isEmpty from 'lodash/isEmpty';
 import MapComponent from '../MapComponent';
+import logger from 'Utils/logger';
 
 const FactorsSalesforceCompany = ({
   propertyMapMandatory,
@@ -62,14 +63,14 @@ const FactorsSalesforceCompany = ({
           SetSFCompanyProps(SFdropdownOptions || []);
         })
         .catch((err) => {
-          console.log('fetchSFCompanies error===>>>>>', err);
+          logger.log('fetchSFCompanies error===>>>>>', err);
         });
     }
   };
 
   useEffect(() => {
     fetchSFCompanies();
-  }, []);
+  }, [isSFIntEnabled]);
 
   useEffect(() => {
     if (selectedTemp && !isTemplate) {
@@ -77,7 +78,7 @@ const FactorsSalesforceCompany = ({
         selectedTemp?.message_properties?.mandatory_properties
       );
       setPropertyMapAdditional(
-        selectedTemp?.message_properties?.additional_properties
+        selectedTemp?.message_properties?.additional_properties_company
       );
     }
   }, selectedTemp);
@@ -189,7 +190,7 @@ const FactorsSalesforceCompany = ({
       </Collapse>
     );
   } catch (err) {
-    console.log('error inside FactorsSalesforceCompany', err);
+    logger.log('error inside FactorsSalesforceCompany', err);
     return null;
   }
 };

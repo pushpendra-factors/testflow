@@ -17,15 +17,11 @@ import {
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import WorkflowEmptyImg from '../../../../../src/assets/images/workflow-empty-screen.png';
-import WorkflowBuilder from './WorkflowBuilder';
 import ModalFlow from 'Components/ModalFlow';
 import {
   NEW_DASHBOARD_TEMPLATES_MODAL_CLOSE,
   NEW_DASHBOARD_TEMPLATES_MODAL_OPEN
 } from 'Reducers/types';
-import { getAlertTemplatesTransformation } from './utils';
-import { Stub, StubOld } from './Stub';
 import {
   fetchSavedWorkflows,
   fetchWorkflowTemplates,
@@ -33,7 +29,12 @@ import {
 } from 'Reducers/workflows';
 import MomentTz from 'Components/MomentTz';
 import TableSearchAndRefresh from 'Components/TableSearchAndRefresh';
+import { Stub, StubOld } from './Stub';
+import { getAlertTemplatesTransformation } from './utils';
+import WorkflowBuilder from './WorkflowBuilder';
+import WorkflowEmptyImg from '../../../../assets/images/workflow-empty-screen.png';
 import WorkflowHubspotThumbnail from '../../../../assets/images/workflow-hubspot-thumbnail.png';
+import logger from 'Utils/logger';
 
 const Workflows = ({
   fetchSavedWorkflows,
@@ -65,7 +66,7 @@ const Workflows = ({
         setTableLoading(false);
       })
       .catch((err) => {
-        console.log('saved workflows fetch error=>', err);
+        logger.log('saved workflows fetch error=>', err);
         setTableLoading(false);
       });
 
@@ -73,7 +74,7 @@ const Workflows = ({
       .then((res) => {
         setAlertTemplates(res.data);
       })
-      .catch((err) => console.log('fetch templates error=>', err));
+      .catch((err) => logger.log('fetch templates error=>', err));
 
     // setAlertTemplates(StubOld);
   }, [activeProject]);
@@ -110,10 +111,8 @@ const Workflows = ({
       <Menu.Item
         key='0'
         onClick={() => {
-          // setTabNo(item?.type === 'kpi_alert' ? '1' : '2');
-          // dispatch({ type: RESET_GROUPBY });
-          // setAlertState({ state: 'edit', index: item });
-          // setAlertDetails(item);
+          setSelectedTemp(item?.alert_body);
+          setBuilderMode(true);
         }}
       >
         <a>Edit workflow</a>
@@ -215,94 +214,88 @@ const Workflows = ({
     }
   ];
 
-  const newStep2Comp = (props) => {
-    return (
-      <>
-        <div>
-          <div className='p-6'>
-            <div className='flex items-center p-4'>
-              <Button
-                type={'text'}
-                icon={<SVG name={'ArrowLeft'} color={'grey'} size={4} />}
-                onClick={() => {
-                  props.handleBack();
-                }}
-              >
-                Back
-              </Button>
-            </div>
+  const newStep2Comp = (props) => (
+    <div>
+      <div className='p-6'>
+        <div className='flex items-center p-4'>
+          <Button
+            type='text'
+            icon={<SVG name='ArrowLeft' color='grey' size={4} />}
+            onClick={() => {
+              props.handleBack();
+            }}
+          >
+            Back
+          </Button>
+        </div>
 
-            <div className='flex items-center p-4'>
-              <div className='p-2'>
-                <img
-                  src={WorkflowHubspotThumbnail}
-                  style={{ 'max-height': '300px' }}
-                />
-              </div>
-
-              <div className='pl-6'>
-                <Text
-                  type={'title'}
-                  level={7}
-                  color={'black'}
-                  weight={'bold'}
-                  extraClass={'m-0'}
-                >
-                  {' '}
-                  {props?.template?.title}
-                </Text>
-                <Text type={'title'} level={7} extraClass={'mt-2'}>
-                  {' '}
-                  {props?.template?.description}
-                </Text>
-                {props?.template?.categories.map((item) => (
-                  <>
-                    <Tag>{item}</Tag>
-                  </>
-                ))}
-              </div>
-            </div>
-
-            <div className='flex items-center p-4'>
-              <Text type={'title'} level={7} color={'grey'} extraClass={'mt-2'}>
-                {' '}
-                {props?.template?.alert?.long_description}
-              </Text>
-            </div>
+        <div className='flex items-center p-4'>
+          <div className='p-2'>
+            <img
+              src={WorkflowHubspotThumbnail}
+              style={{ 'max-height': '300px' }}
+            />
           </div>
 
-          <div className='flex items-center justify-end p-4 border-top--thin-2'>
-            <Button
-              type={'default'}
-              onClick={() => {
-                props.onCancel();
-              }}
+          <div className='pl-6'>
+            <Text
+              type='title'
+              level={7}
+              color='black'
+              weight='bold'
+              extraClass='m-0'
             >
-              Cancel
-            </Button>
-
-            <Button
-              type={'primary'}
-              className='ml-2'
-              onClick={() => {
-                setSelectedTemp(props?.template);
-                props.onCancel();
-                setBuilderMode(true);
-              }}
-            >
-              Use this template
-            </Button>
+              {' '}
+              {props?.template?.title}
+            </Text>
+            <Text type='title' level={7} extraClass='mt-2'>
+              {' '}
+              {props?.template?.description}
+            </Text>
+            {props?.template?.categories.map((item) => (
+              <Tag>{item}</Tag>
+            ))}
           </div>
         </div>
-      </>
-    );
-  };
+
+        <div className='flex items-center p-4'>
+          <Text type='title' level={7} color='grey' extraClass='mt-2'>
+            {' '}
+            {props?.template?.alert?.long_description}
+          </Text>
+        </div>
+      </div>
+
+      <div className='flex items-center justify-end p-4 border-top--thin-2'>
+        <Button
+          type='default'
+          onClick={() => {
+            props.onCancel();
+          }}
+        >
+          Cancel
+        </Button>
+
+        <Button
+          type='primary'
+          className='ml-2'
+          onClick={() => {
+            setSelectedTemp(props?.template);
+            props.onCancel();
+            setBuilderMode(true);
+          }}
+        >
+          Use this template
+        </Button>
+      </div>
+    </div>
+  );
 
   const onSearch = (e) => {
     const term = e.target.value;
     setSearchTerm(term);
     const searchResults = tableData?.filter((item) =>
-      item?.alert_name?.title?.toLowerCase().includes(term.toLowerCase())
+      item?.name?.title?.toLowerCase().includes(term.toLowerCase())
     );
     setSearchTableData(searchResults);
   };
@@ -321,7 +314,7 @@ const Workflows = ({
         savedArr.push({
           key: index,
           name: item,
-          last_edit: MomentTz(item.updated_at).fromNow(),
+          last_edit: MomentTz(item.created_at).fromNow(),
           status: { status: item?.status, error: item?.last_fail_details },
           actions: item
         });
@@ -331,7 +324,7 @@ const Workflows = ({
   }, [savedWorkflows]);
 
   return (
-    <div className={'fa-container'}>
+    <div className='fa-container'>
       <Row gutter={[24, 24]} justify='center'>
         <Col span={22}>
           {!builderMode ? (
@@ -339,17 +332,17 @@ const Workflows = ({
               <Row>
                 <Col span={12}>
                   <Text
-                    type={'title'}
+                    type='title'
                     level={3}
-                    weight={'bold'}
-                    extraClass={'m-0'}
-                    id={'fa-at-text--page-title'}
+                    weight='bold'
+                    extraClass='m-0'
+                    id='fa-at-text--page-title'
                   >
                     Workflows
                   </Text>
                 </Col>
                 <Col span={12}>
-                  <div className={'flex justify-end'}>
+                  <div className='flex justify-end'>
                     <Button
                       type='primary'
                       disabled={!alertTemplates}
@@ -359,7 +352,7 @@ const Workflows = ({
                       }}
                     >
                       <Space>
-                        <SVG name={'plus'} size={16} color='white' />
+                        <SVG name='plus' size={16} color='white' />
                         New Workflow
                       </Space>
                     </Button>
@@ -368,18 +361,15 @@ const Workflows = ({
               </Row>
               <Row>
                 <Col span={24}>
-                  <Text
-                    type={'title'}
-                    level={7}
-                    color={'grey-2'}
-                    extraClass={'m-0'}
-                  >
+                  <Text type='title' level={7} color='grey-2' extraClass='m-0'>
                     Set up automatic workflows for your platforms such as your
-                    CRM. Learn more &nbsp;
+                    CRM.
                     <a
                       href='https://help.factors.ai/en/articles/7284705-alerts'
                       target='_blank'
+                      rel='noreferrer'
                     >
+                      {' '}
                       Learn more
                     </a>
                   </Text>
@@ -404,13 +394,13 @@ const Workflows = ({
                       />
                     </div>
                   ) : (
-                    <div className={'flex flex-col items-center mt-10'}>
+                    <div className='flex flex-col items-center mt-10'>
                       <img src={WorkflowEmptyImg} width='350' />
                       <Text
-                        type={'title'}
+                        type='title'
                         level={7}
-                        color={'grey'}
-                        extraClass={'mt-2'}
+                        color='grey'
+                        extraClass='mt-2'
                       >
                         Lorem ipsum dolor sit amet consectetur. Morbi enim eget
                         egestas nulla aliquet sodales quisque

@@ -11,6 +11,7 @@ import { Text, SVG } from 'factorsComponents';
 import MapComponent from '../MapComponent';
 import { paragon } from '@useparagon/connect/dist/src/index';
 import isEmpty from 'lodash/isEmpty';
+import logger from 'Utils/logger';
 
 const FactorsApolloSalesforceContacts = ({
   propertyMapMandatory,
@@ -57,7 +58,7 @@ const FactorsApolloSalesforceContacts = ({
           SetSFCompanyProps(SFdropdownOptions || []);
         })
         .catch((err) => {
-          console.log('fetchSFCompanies error', err);
+          logger.log('fetchSFCompanies error', err);
         });
     }
   };
@@ -77,7 +78,7 @@ const FactorsApolloSalesforceContacts = ({
           SetSFContactsProps(SFdropdownOptions || []);
         })
         .catch((err) => {
-          console.log('fetchSFContacts error', err);
+          logger.log('fetchSFContacts error', err);
         });
     }
   };
@@ -85,7 +86,7 @@ const FactorsApolloSalesforceContacts = ({
   useEffect(() => {
     fetchSFCompanies();
     fetchSFContacts();
-  }, []);
+  }, [isSFIntEnabled]);
 
   useEffect(() => {
     if (selectedTemp && !isTemplate) {
@@ -93,7 +94,10 @@ const FactorsApolloSalesforceContacts = ({
         selectedTemp?.message_properties?.mandatory_properties
       );
       setPropertyMapAdditional(
-        selectedTemp?.message_properties?.additional_properties
+        selectedTemp?.message_properties?.additional_properties_company
+      );
+      setPropertyMapAdditional2(
+        selectedTemp?.message_properties?.additional_properties_contact
       );
     }
   }, selectedTemp);
