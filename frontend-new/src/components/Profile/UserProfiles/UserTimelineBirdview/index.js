@@ -160,7 +160,11 @@ function UserTimelineBirdview({
               );
               return (
                 <tr>
-                  <td className={`pb-${(milestones?.length || 0) * 8}`}>
+                  <td
+                    style={{
+                      paddingBottom: `${(milestones?.length || 0) * 38}px`
+                    }}
+                  >
                     <div className='timestamp top-40'>{timestamp}</div>
                     {milestones.length ? (
                       <div className='milestone-section'>
@@ -177,9 +181,10 @@ function UserTimelineBirdview({
                     ) : null}
                   </td>
                   <td
-                    className={`bg-gradient--120px pb-${
-                      milestones.length * 10
-                    }`}
+                    className='bg-gradient--120px'
+                    style={{
+                      paddingBottom: `${(milestones?.length || 0) * 38}px`
+                    }}
                   >
                     <div
                       className={`birdview-events user-pad ${
@@ -188,8 +193,8 @@ function UserTimelineBirdview({
                           : 'birdview-events--expanded'
                       }`}
                     >
-                      {eventsList?.map((event, ind) => (
-                        <div key={ind} className='birdview-events__event'>
+                      {eventsList?.map((event) => (
+                        <div className='birdview-events__event'>
                           {renderIcon(event)}
                           {renderInfoCard(event)}
                         </div>

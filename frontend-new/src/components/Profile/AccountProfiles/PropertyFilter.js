@@ -10,27 +10,18 @@ import FiltersBox from './FiltersBox';
 
 function PropertyFilter({
   profileType = 'account',
-  applyFilters,
-  disableDiscardButton,
   filtersExpanded,
   setFiltersExpanded,
-  filtersList,
-  setFiltersList,
-  secondaryFiltersList,
-  setSecondaryFiltersList,
-  listEvents,
-  setListEvents,
-  appliedFilters,
-  eventProp,
-  setEventProp,
-  setSaveSegmentModal,
-  selectedAccount,
-  areFiltersDirty,
+  selectedFilters,
+  setSelectedFilters,
   resetSelectedFilters,
-  onClearFilters,
+  appliedFilters,
+  applyFilters,
+  areFiltersDirty,
+  disableDiscardButton,
   isActiveSegment,
-  eventTimeline,
-  setEventTimeline
+  setSaveSegmentModal,
+  onClearFilters
 }) {
   const dispatch = useDispatch();
   const { newSegmentMode: accountsNewSegmentMode } = useSelector(
@@ -40,7 +31,8 @@ function PropertyFilter({
     (state) => state.userProfilesView
   );
 
-  const newSegmentMode = profileType === 'account' ? accountsNewSegmentMode : profilesNewSegmentMode;
+  const newSegmentMode =
+    profileType === 'account' ? accountsNewSegmentMode : profilesNewSegmentMode;
 
   const toggleFilters = useCallback(() => {
     setFiltersExpanded((curr) => !curr);
@@ -69,11 +61,11 @@ function PropertyFilter({
           onClick={toggleFilters}
         >
           <Text type='title' extraClass='mb-0' weight='medium' color='grey-6'>
-            View{' '}
-            {appliedFilters.filters.length +
+            {`View ${
+              appliedFilters.filters.length +
               appliedFilters.eventsList.length +
-              appliedFilters.secondaryFilters.length}{' '}
-            filter(s)
+              appliedFilters.secondaryFilters.length
+            } filter(s)`}
           </Text>
           <SVG size={16} name='chevronDown' color='#8C8C8C' />
         </Button>
@@ -101,7 +93,7 @@ function PropertyFilter({
     );
   }
 
-  if (!selectedAccount.length) return null;
+  if (!selectedFilters.account.length) return null;
 
   return (
     <div className='flex flex-col gap-y-4 w-full'>
@@ -121,26 +113,17 @@ function PropertyFilter({
         </Button>
       </ControlledComponent>
       <FiltersBox
-        source={selectedAccount?.[1]}
-        filtersList={filtersList}
         profileType={profileType}
-        setFiltersList={setFiltersList}
+        isActiveSegment={isActiveSegment}
+        selectedFilters={selectedFilters}
+        setSelectedFilters={setSelectedFilters}
         appliedFilters={appliedFilters}
         applyFilters={applyFilters}
         setSaveSegmentModal={setSaveSegmentModal}
-        listEvents={listEvents}
-        setListEvents={setListEvents}
-        eventProp={eventProp}
         areFiltersDirty={areFiltersDirty}
-        setEventProp={setEventProp}
         onCancel={handleCancel}
         onClearFilters={onClearFilters}
         disableDiscardButton={disableDiscardButton}
-        isActiveSegment={isActiveSegment}
-        secondaryFiltersList={secondaryFiltersList}
-        setSecondaryFiltersList={setSecondaryFiltersList}
-        eventTimeline={eventTimeline}
-        setEventTimeline={setEventTimeline}
       />
     </div>
   );

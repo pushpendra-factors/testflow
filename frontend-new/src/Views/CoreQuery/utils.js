@@ -37,6 +37,7 @@ import moment from 'moment';
 import {
   CORE_QUERY_INITIAL_STATE,
   FILTER_TYPES,
+  INITIAL_EVENT_WITH_PROPERTIES_STATE,
   INITIAL_STATE
 } from './constants';
 
@@ -121,15 +122,26 @@ export const formatBreakdown = (opt) => {
 export const formatBreakdownsForQuery = (breakdownArr) =>
   breakdownArr.map((breakdown) => formatBreakdown(breakdown));
 
+const getNewSegmentKeys = (ev) => ({
+  range: ev.range,
+  iep: ev.isEventPerformed,
+  freqOp: ev.frequencyOperator,
+  freq: ev.frequency
+});
+
 export const getEventsWithProperties = (queries) =>
   queries.map((ev) => {
-    const filterProps = formatFiltersForQuery(ev.filters);
-    return {
-      an: ev.alias,
-      na: ev.label,
-      grpa: ev.group,
-      pr: filterProps
-    };
+    const ewp = { an: ev.alias, na: ev.label, grpa: ev.group };
+    ewp.pr = formatFiltersForQuery(ev.filters);
+    if (ev.range) {
+      Object.assign(ewp, getNewSegmentKeys(ev));
+    }
+    if (!ewp.iep) {
+      delete ewp.freq;
+      delete ewp.freqOp;
+    }
+
+    return ewp;
   });
 
 export const getQuery = (
@@ -1181,22 +1193,36 @@ export const processBreakdownsFromQuery = (breakdownArray) =>
     overAllIndex: index
   }));
 
+const getNewSegmentKeysFromQuery = (e) => ({
+  range: e.range,
+  isEventPerformed: e.iep,
+  frequencyOperator:
+    e.freqOp || INITIAL_EVENT_WITH_PROPERTIES_STATE.frequencyOperator,
+  frequency: e.freq || INITIAL_EVENT_WITH_PROPERTIES_STATE.frequency
+});
+
 export const getStateQueryFromRequestQuery = (requestQuery) => {
   const events = (requestQuery?.ewp || []).map((e) => {
     const eventFilters = processFiltersFromQuery(e.pr);
+    const segmentAdditionalKeys = {};
+
+    if (e.range) {
+      Object.assign(segmentAdditionalKeys, getNewSegmentKeysFromQuery(e));
+    }
+
     return {
       alias: e.an,
       label: e.na,
       group: e.grpa,
       filters: eventFilters,
-      key: generateRandomKey()
+      key: generateRandomKey(),
+      ...segmentAdditionalKeys
     };
   });
 
-  const globalFilters =
-    requestQuery?.gup && Array.isArray(requestQuery.gup)
-      ? processFiltersFromQuery(requestQuery.gup)
-      : [];
+  const globalFilters = Array.isArray(requestQuery?.gup)
+    ? processFiltersFromQuery(requestQuery.gup)
+    : [];
 
   const queryType = requestQuery.cl;
   const eventsCondition = requestQuery.ec;
@@ -1204,12 +1230,9 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
     requestQuery.grpa || QUERY_OPTIONS_DEFAULT_VALUE.group_analysis;
   const sessionAnalyticsSeq = INITIAL_SESSION_ANALYTICS_SEQ;
 
-  const event = processBreakdownsFromQuery(requestQuery?.gbp || []).filter(
-    (b) => b.eventIndex
-  );
-  const global = processBreakdownsFromQuery(requestQuery?.gbp || []).filter(
-    (b) => !b.eventIndex
-  );
+  const breakdowns = processBreakdownsFromQuery(requestQuery?.gbp || []);
+  const eventBreakdowns = breakdowns.filter((b) => b.eventIndex);
+  const globalBreakdowns = breakdowns.filter((b) => !b.eventIndex);
 
   const dateRange = {
     from: requestQuery.fr * 1000,
@@ -1217,28 +1240,32 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
     frequency: requestQuery.gbt
   };
 
-  const result = {
+  const funnelConversionDuration =
+    queryType === QUERY_TYPE_FUNNEL && requestQuery.cnvtm
+      ? {
+          funnelConversionDurationNumber: parseInt(
+            requestQuery.cnvtm.slice(0, -1)
+          ),
+          funnelConversionDurationUnit: requestQuery.cnvtm.slice(-1)
+        }
+      : {
+          funnelConversionDurationNumber:
+            CORE_QUERY_INITIAL_STATE.funnelConversionDurationNumber,
+          funnelConversionDurationUnit:
+            CORE_QUERY_INITIAL_STATE.funnelConversionDurationUnit
+        };
+
+  return {
     events,
     queryType,
     eventsCondition,
     groupAnalysis,
     session_analytics_seq: sessionAnalyticsSeq,
     globalFilters,
-    breakdown: { event, global },
+    breakdown: { event: eventBreakdowns, global: globalBreakdowns },
     dateRange,
-    ...(queryType === QUERY_TYPE_FUNNEL && {
-      funnelConversionDurationNumber:
-        requestQuery.cnvtm != null
-          ? parseInt(requestQuery.cnvtm.slice(0, -1))
-          : CORE_QUERY_INITIAL_STATE.funnelConversionDurationNumber,
-      funnelConversionDurationUnit:
-        requestQuery.cnvtm != null
-          ? requestQuery.cnvtm.slice(-1)
-          : CORE_QUERY_INITIAL_STATE.funnelConversionDurationUnit
-    })
+    ...funnelConversionDuration
   };
-
-  return result;
 };
 
 export const DefaultDateRangeFormat = {

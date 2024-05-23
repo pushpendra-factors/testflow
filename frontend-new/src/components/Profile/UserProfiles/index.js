@@ -106,7 +106,6 @@ function UserProfiles({
   fetchProjectSettings,
   fetchMarketoIntegration,
   fetchBingAdsIntegration,
-  udpateProjectSettings,
   updateSegmentForId,
   deleteSegment
 }) {
@@ -119,7 +118,6 @@ function UserProfiles({
   const [loading, setLoading] = useState(true);
   const [checkListUserProps, setCheckListUserProps] = useState([]);
   const [showPopOver, setShowPopOver] = useState(false);
-  const [tlConfig, setTLConfig] = useState({});
   const [isUpgradeModalVisible, setIsUpgradeModalVisible] = useState(false);
   const [errMsg, setErrMsg] = useState('');
 
@@ -340,11 +338,8 @@ function UserProfiles({
     () =>
       checkFiltersEquality({
         appliedFilters,
+        selectedFilters,
         newSegmentMode,
-        filtersList: selectedFilters.filters,
-        secondaryFiltersList: selectedFilters.secondaryFilters,
-        eventProp: selectedFilters.eventProp,
-        eventsList: selectedFilters.eventsList,
         isActiveSegment: Boolean(timelinePayload.segment.id),
         areFiltersDirty
       }),
@@ -353,10 +348,7 @@ function UserProfiles({
       appliedFilters,
       areFiltersDirty,
       newSegmentMode,
-      selectedFilters.eventProp,
-      selectedFilters.eventsList,
-      selectedFilters.filters,
-      selectedFilters.secondaryFilters
+      selectedFilters
     ]
   );
 
@@ -559,11 +551,6 @@ function UserProfiles({
       setListSearchItems(_.uniq(listValues));
     }
   }, [timelinePayload?.search_filter]);
-
-  useEffect(() => {
-    if (!currentProjectSettings?.timelines_config) return;
-    setTLConfig(currentProjectSettings.timelines_config);
-  }, [currentProjectSettings?.timelines_config]);
 
   useEffect(() => {
     setTimeout(() => {
@@ -795,46 +782,9 @@ function UserProfiles({
     </Tabs>
   );
 
-  const setFiltersList = useCallback((filters) => {
-    setSelectedFilters((curr) => ({
-      ...curr,
-      filters
-    }));
-  }, []);
-
   const resetSelectedFilters = useCallback(() => {
     setSelectedFilters(appliedFilters);
   }, [appliedFilters]);
-
-  const setSelectedAccount = useCallback((account) => {
-    setSelectedFilters((current) => ({
-      ...current,
-      account
-    }));
-  }, []);
-
-  const setListEvents = useCallback((eventsList) => {
-    setSelectedFilters((curr) => ({
-      ...curr,
-      eventsList
-    }));
-  }, []);
-
-  const setEventProp = useCallback((eventProp) => {
-    setSelectedFilters((curr) => ({
-      ...curr,
-      eventProp
-    }));
-  }, []);
-
-  const availableGroups = [];
-
-  const setSecondaryFiltersList = useCallback((secondaryFilters) => {
-    setSelectedFilters((curr) => ({
-      ...curr,
-      secondaryFilters
-    }));
-  }, []);
 
   const applyFilters = useCallback(() => {
     setAppliedFilters(selectedFilters);
@@ -869,42 +819,22 @@ function UserProfiles({
       setSaveSegmentModal(true);
     }
   }, [timelinePayload.segment, newSegmentMode]);
-  const setEventTimeline = useCallback((eventTimeline) => {
-    setSelectedFilters((curr) => ({
-      ...curr,
-      eventTimeline
-    }));
-  }, []);
 
   const renderPropertyFilter = () => (
     <PropertyFilter
       profileType='user'
-      source={timelinePayload?.source}
-      filters={timelinePayload.filters}
-      secondaryFiltersList={selectedFilters.secondaryFilters}
       filtersExpanded={filtersExpanded}
-      filtersList={selectedFilters.filters}
+      setFiltersExpanded={setFiltersExpanded}
+      selectedFilters={selectedFilters}
+      setSelectedFilters={setSelectedFilters}
+      resetSelectedFilters={resetSelectedFilters}
       appliedFilters={appliedFilters}
-      selectedAccount={selectedFilters.account}
-      listEvents={selectedFilters.eventsList}
-      availableGroups={availableGroups}
-      eventProp={selectedFilters.eventProp}
-      eventTimeline={selectedFilters.eventTimeline}
+      applyFilters={applyFilters}
       areFiltersDirty={areFiltersDirty}
       disableDiscardButton={disableDiscardButton}
-      isActiveSegment={Boolean(timelinePayload?.segment?.id) === true}
-      applyFilters={applyFilters}
-      setFiltersExpanded={setFiltersExpanded}
+      isActiveSegment={Boolean(timelinePayload?.segment?.id)}
       setSaveSegmentModal={handleSaveSegmentClick}
-      setFiltersList={setFiltersList}
-      setAppliedFilters={setAppliedFilters}
-      setListEvents={setListEvents}
-      setEventProp={setEventProp}
-      resetSelectedFilters={resetSelectedFilters}
       onClearFilters={handleClearFilters}
-      setSelectedAccount={setSelectedAccount}
-      setSecondaryFiltersList={setSecondaryFiltersList}
-      setEventTimeline={setEventTimeline}
     />
   );
 
@@ -967,6 +897,7 @@ function UserProfiles({
   const onSearchOpen = () => {
     setSearchBarOpen(true);
   };
+
   function SearchBar() {
     const searchBarRef = useAutoFocus();
     return (
@@ -995,6 +926,7 @@ function UserProfiles({
       </div>
     );
   }
+
   const renderSearchSection = () => (
     <div className='relative'>
       <ControlledComponent controller={searchBarOpen}>
@@ -1115,7 +1047,7 @@ function UserProfiles({
   }, [contacts, tableColumns, location.state, peopleRow]);
 
   const renderTable = () => {
-    const mergeColumns = tableColumns.map((col, index) => ({
+    const mergeColumns = tableColumns.map((col) => ({
       ...col,
       onHeaderCell: (column) => ({
         width: column.width
