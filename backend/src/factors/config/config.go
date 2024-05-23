@@ -370,6 +370,7 @@ type Configuration struct {
 	EnableSalesforceDeletedRecordByProjectID             string
 	EnableCacheDBWriteProjects                           string
 	EnableCacheDBReadProjects                            string
+	SkipSalesforceLeadEnrichmentByProjectID              string
 }
 
 type Services struct {
@@ -3334,6 +3335,15 @@ func IsCacheDBWriteEnabled(projectID int64) bool {
 
 func IsCacheDBReadEnabled(projectID int64) bool {
 	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableCacheDBReadProjects, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
+}
+
+func SkipSalesforceLeadEnrichmentByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().SkipSalesforceLeadEnrichmentByProjectID, "")
 	if allProjects {
 		return true
 	}
