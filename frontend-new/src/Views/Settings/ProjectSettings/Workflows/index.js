@@ -47,6 +47,8 @@ const Workflows = ({
   const { confirm } = Modal;
   const [alertTemplates, setAlertTemplates] = useState(false);
   const [builderMode, setBuilderMode] = useState(false);
+  const [alertId, setAlertId] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   const [selectedTemp, setSelectedTemp] = useState(false);
 
   const [tableData, setTableData] = useState([]);
@@ -112,6 +114,8 @@ const Workflows = ({
         key='0'
         onClick={() => {
           setSelectedTemp(item?.alert_body);
+          setAlertId(item?.id);
+          setEditMode(true);
           setBuilderMode(true);
         }}
       >
@@ -146,6 +150,8 @@ const Workflows = ({
           extraClass='cursor-pointer m-0'
           onClick={() => {
             setSelectedTemp(item?.alert_body);
+            setAlertId(item?.id);
+            setEditMode(true);
             setBuilderMode(true);
           }}
         >
@@ -427,6 +433,9 @@ const Workflows = ({
             <WorkflowBuilder
               setBuilderMode={setBuilderMode}
               selectedTemp={selectedTemp}
+              alertId={alertId}
+              editMode={editMode}
+              setEditMode={setEditMode}
             />
           )}
         </Col>

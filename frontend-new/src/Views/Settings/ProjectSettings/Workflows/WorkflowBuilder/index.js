@@ -70,7 +70,11 @@ import useParagon from 'hooks/useParagon';
 import { get, getHostUrl } from 'Utils/request';
 import FactorsHubspotCompany from './Templates/FactorsHubspotCompany';
 import FactorsApolloHubspotContacts from './Templates/FactorsApolloHubspotContacts';
-import { fetchSavedWorkflows, saveWorkflow } from 'Reducers/workflows';
+import {
+  fetchSavedWorkflows,
+  saveWorkflow,
+  updateWorkflow
+} from 'Reducers/workflows';
 import { TemplateIDs } from './../utils';
 import FactorsSalesforceCompany from './Templates/FactorsSalesforceCompany';
 import FactorsApolloSalesforceContacts from './Templates/FactorsApolloSalesforceContacts';
@@ -90,7 +94,11 @@ const WorkflowBuilder = ({
   getSavedSegments,
   selectedTemp,
   fetchSavedWorkflows,
-  saveWorkflow
+  saveWorkflow,
+  updateWorkflow,
+  alertId,
+  editMode,
+  setEditMode
 }) => {
   const configureRef = useRef(null);
   const [loading, setLoading] = useState(false);
@@ -399,14 +407,7 @@ const WorkflowBuilder = ({
     let payload = {
       action_performed: segmentType,
       alert_limit: 5,
-      breakdown_properties: [
-        {
-          en: 'user',
-          ena: '$session',
-          pr: '$6Signal_domain',
-          pty: 'categorical'
-        }
-      ],
+      breakdown_properties: [],
       cool_down_time: 1800,
       event:
         segmentType == 'action_event' ? queries[0]?.label : selectedSegment,
@@ -414,8 +415,8 @@ const WorkflowBuilder = ({
       filters: formatFiltersForQuery(queries?.[0]?.filters),
       notifications: false,
       repeat_alerts: true,
-      template_title: selectedTemp?.title,
-      template_description: selectedTemp?.description,
+      template_title: selectedTemp?.template_title,
+      template_description: selectedTemp?.template_description,
       title: workflowName ? workflowName : '',
       description: workflowName ? workflowName : '',
       template_id: selectedTemp?.template_id || selectedTemp?.id,
@@ -423,16 +424,31 @@ const WorkflowBuilder = ({
     };
 
     if (isArrayAndObjectsNotEmpty(propertyMapMandatory)) {
-      saveWorkflow(activeProject?.id, payload)
-        .then((res) => {
-          fetchSavedWorkflows(activeProject?.id);
-          setBuilderMode(false);
-          notification.success({
-            message: 'Workflow Saved',
-            description: 'New workflow is created and saved successfully.'
-          });
-        })
-        .catch((err) => message.error(err?.data?.error));
+      if (!editMode) {
+        saveWorkflow(activeProject?.id, payload)
+          .then((res) => {
+            fetchSavedWorkflows(activeProject?.id);
+            setBuilderMode(false);
+            setEditMode(false);
+            notification.success({
+              message: 'Workflow Saved',
+              description: 'New workflow is created and saved successfully.'
+            });
+          })
+          .catch((err) => message.error(err?.data?.error));
+      } else {
+        updateWorkflow(activeProject?.id, alertId, payload)
+          .then((res) => {
+            fetchSavedWorkflows(activeProject?.id);
+            setBuilderMode(false);
+            setEditMode(false);
+            notification.success({
+              message: 'Workflow Updated',
+              description: 'Workflow is updated and saved successfully.'
+            });
+          })
+          .catch((err) => message.error(err?.data?.error));
+      }
     } else {
       message.error('Add mandatory properties');
     }
@@ -556,7 +572,7 @@ const WorkflowBuilder = ({
         </Col>
         <Col span={12}>
           <div className={'flex justify-end'}>
-            <div className={'flex items-center justify-end mr-4'}>
+            {/* <div className={'flex items-center justify-end mr-4'}>
               <Text
                 type={'title'}
                 level={8}
@@ -569,10 +585,10 @@ const WorkflowBuilder = ({
                 checkedChildren='On'
                 unCheckedChildren='OFF'
                 size='large'
-                // onChange={(checked) => setTeamsEnabled(checked)}
-                // checked={teamsEnabled}
+                onChange={(checked) => setTeamsEnabled(checked)}
+                checked={teamsEnabled}
               />
-            </div>
+            </div> */}
 
             {/* <Button
               size={'large'}
@@ -711,5 +727,6 @@ export default connect(mapStateToProps, {
   fetchEventNames,
   getSavedSegments,
   fetchSavedWorkflows,
-  saveWorkflow
+  saveWorkflow,
+  updateWorkflow
 })(WorkflowBuilder);

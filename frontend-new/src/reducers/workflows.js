@@ -1,4 +1,4 @@
-import { get, post, del, getHostUrl } from '../utils/request';
+import { get, post, del, getHostUrl, put } from '../utils/request';
 import { SET_ACTIVE_PROJECT } from './types';
 var host = getHostUrl();
 host = host[host.length - 1] === '/' ? host : host + '/';
@@ -58,15 +58,10 @@ export function fetchSavedWorkflows(projectID) {
   };
 }
 
-
 export function saveWorkflow(projectID, data) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      post(
-        dispatch,
-        host + 'projects/' + projectID + '/v1/workflow',
-        data
-      )
+      post(dispatch, host + 'projects/' + projectID + '/v1/workflow', data)
         .then((response) => {
           dispatch({
             type: 'FETCH_WORKFLOW_SAVE_FULFILLED',
@@ -76,6 +71,29 @@ export function saveWorkflow(projectID, data) {
         })
         .catch((err) => {
           dispatch({ type: 'FETCH_WORKFLOW_SAVE_REJECTED', payload: err });
+          reject(err);
+        });
+    });
+  };
+}
+
+export function updateWorkflow(projectID, id, data) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      put(
+        dispatch,
+        host + 'projects/' + projectID + '/v1/workflow/edit/' + id,
+        data
+      )
+        .then((response) => {
+          dispatch({
+            type: 'FETCH_WORKFLOW_UPDATE_FULFILLED',
+            payload: response.data
+          });
+          resolve(response);
+        })
+        .catch((err) => {
+          dispatch({ type: 'FETCH_WORKFLOW_UPDATE_REJECTED', payload: err });
           reject(err);
         });
     });
