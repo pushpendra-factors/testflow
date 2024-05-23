@@ -141,6 +141,22 @@ const IntegrationCard = ({
     );
   };
 
+  let border;
+  let backgroundColor;
+  if (isFeatureLocked && featureName !== 'sdk') {
+    backgroundColor = '#FAFAFA';
+  }
+  if (
+    (featureName === 'sdk' &&
+      (isErrorState || isPendingState) &&
+      showIntegrationStatusFlag) ||
+    (isFeatureLocked &&
+      (isErrorState || isPendingState) &&
+      showIntegrationStatusFlag)
+  ) {
+    border = `1px solid ${isPendingState ? '#DEA069' : '#EA6262'}`;
+  }
+
   useEffect(() => {
     if (!cardRef?.current) return;
     if (sessionStorage.getItem('integration-card') === integrationConfig.id) {
@@ -153,15 +169,8 @@ const IntegrationCard = ({
     <div
       className='fa-intergration-card'
       style={{
-        background:
-          isFeatureLocked && featureName !== 'sdk' ? '#FAFAFA' : undefined,
-        border:
-          (isErrorState || isPendingState) &&
-          isFeatureIntegrated &&
-          !isFeatureLocked &&
-          showIntegrationStatusFlag
-            ? `1px solid ${isPendingState ? '#DEA069' : '#EA6262'}`
-            : undefined
+        background: backgroundColor || undefined,
+        border: border || undefined
       }}
       ref={cardRef}
     >
