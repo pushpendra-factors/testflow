@@ -266,13 +266,10 @@ function AccountProfiles({
     () =>
       checkFiltersEquality({
         appliedFilters,
-        filtersList: selectedFilters.filters,
+        selectedFilters,
         newSegmentMode,
-        eventsList: selectedFilters.eventsList,
-        eventProp: selectedFilters.eventProp,
         areFiltersDirty,
-        isActiveSegment: Boolean(accountPayload?.segment?.id),
-        secondaryFiltersList: selectedFilters.secondaryFilters
+        isActiveSegment: Boolean(accountPayload?.segment?.id)
       }),
     [
       appliedFilters,
@@ -765,41 +762,6 @@ function AccountProfiles({
     );
   };
 
-  const setFiltersList = useCallback((filters) => {
-    setSelectedFilters((curr) => ({
-      ...curr,
-      filters
-    }));
-  }, []);
-
-  const setSecondaryFiltersList = useCallback((secondaryFilters) => {
-    setSelectedFilters((curr) => ({
-      ...curr,
-      secondaryFilters
-    }));
-  }, []);
-
-  const setListEvents = useCallback((eventsList) => {
-    setSelectedFilters((curr) => ({
-      ...curr,
-      eventsList
-    }));
-  }, []);
-
-  const setEventProp = useCallback((eventProp) => {
-    setSelectedFilters((curr) => ({
-      ...curr,
-      eventProp
-    }));
-  }, []);
-
-  const setEventTimeline = useCallback((eventTimeline) => {
-    setSelectedFilters((curr) => ({
-      ...curr,
-      eventTimeline
-    }));
-  }, []);
-
   const handleSaveSegmentClick = useCallback(() => {
     if (newSegmentMode) {
       setSaveSegmentModal(true);
@@ -823,27 +785,17 @@ function AccountProfiles({
   const renderPropertyFilter = () => (
     <PropertyFilter
       profileType='account'
-      source={GROUP_NAME_DOMAINS}
       filtersExpanded={filtersExpanded}
       setFiltersExpanded={setFiltersExpanded}
-      filtersList={selectedFilters.filters}
-      setFiltersList={setFiltersList}
-      secondaryFiltersList={selectedFilters.secondaryFilters}
-      setSecondaryFiltersList={setSecondaryFiltersList}
-      listEvents={selectedFilters.eventsList}
-      setListEvents={setListEvents}
+      selectedFilters={selectedFilters}
+      setSelectedFilters={setSelectedFilters}
+      resetSelectedFilters={resetSelectedFilters}
       appliedFilters={appliedFilters}
-      selectedAccount={selectedFilters.account}
-      eventProp={selectedFilters.eventProp}
-      eventTimeline={selectedFilters.eventTimeline}
+      applyFilters={applyFilters}
       areFiltersDirty={areFiltersDirty}
       disableDiscardButton={disableDiscardButton}
       isActiveSegment={Boolean(accountPayload?.segment?.id)}
-      applyFilters={applyFilters}
       setSaveSegmentModal={handleSaveSegmentClick}
-      setEventProp={setEventProp}
-      setEventTimeline={setEventTimeline}
-      resetSelectedFilters={resetSelectedFilters}
       onClearFilters={handleClearFilters}
     />
   );

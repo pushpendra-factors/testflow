@@ -45,12 +45,31 @@ export default function (state = initialState, action) {
       return { ...state, contactDetails: { isLoading: false, data: {} } };
     case 'FETCH_PROFILE_ACCOUNTS_LOADING':
       return { ...state, accounts: { ...state.accounts, isLoading: true } };
-    case 'FETCH_PROFILE_ACCOUNTS_FULFILLED':
-      const updatedData = { ...state.accounts.data };
-      updatedData[action.segmentID || 'default'] = action.payload;
-      return { ...state, accounts: { isLoading: false, data: updatedData } };
-    case 'FETCH_PROFILE_ACCOUNTS_FAILED':
-      return { ...state, accounts: { ...state.accounts, isLoading: false } };
+    case 'FETCH_PROFILE_ACCOUNTS_FULFILLED': {
+      return {
+        ...state,
+        accounts: {
+          isLoading: false,
+          data: {
+            ...state.accounts.data,
+            [action.segmentID]: action.payload
+          }
+        }
+      };
+    }
+    case 'FETCH_PROFILE_ACCOUNTS_FAILED': {
+      return {
+        ...state,
+        accounts: {
+          isLoading: false,
+          data: {
+            ...state.accounts.data,
+            [action.segmentID]: []
+          }
+        }
+      };
+    }
+
     case 'FETCH_PROFILE_ACCOUNT_DETAILS_LOADING':
       return { ...state, accountDetails: { isLoading: true, data: {} } };
     case 'FETCH_PROFILE_ACCOUNT_DETAILS_FULFILLED':

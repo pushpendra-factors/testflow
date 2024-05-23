@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Button, Tooltip } from 'antd';
-import { connect } from 'react-redux';
+import { Button, Dropdown, Input, Select, Tooltip, Menu } from 'antd';
+import { connect, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import { SVG } from 'Components/factorsComponents';
+import { SVG, Text } from 'Components/factorsComponents';
 import {
   getEventPropertiesV2,
   getGroupProperties,
@@ -11,204 +11,80 @@ import {
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 import ORButton from 'Components/ORButton';
 import { compareFilters, groupFilters } from 'Utils/global';
-import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
-import { OPERATORS } from 'Utils/constants';
 import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import getGroupIcon from 'Utils/getGroupIcon';
 import { processProperties } from 'Utils/dataFormatter';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
+import { DownOutlined } from '@ant-design/icons';
+import {
+  EVENT_FREQ_OPERATORS,
+  INITIAL_EVENT_WITH_PROPERTIES_STATE
+} from 'Views/CoreQuery/constants';
 import styles from './index.module.scss';
-
-const ENGAGEMENT_SUPPORTED_OPERATORS = [
-  OPERATORS.equalTo,
-  OPERATORS.notEqualTo,
-  OPERATORS.contain,
-  OPERATORS.doesNotContain
-];
 
 function EventsBlock({
   isEngagementConfig = false,
-  availableGroups,
   index,
   event,
-  disableEventEdit = false,
-  closeEvent,
+  closeEventDD,
   eventChange,
-  eventOptions,
-  eventNames,
-  eventNamesSpecial,
-  eventOptionsSpecial,
-  activeProject,
-  eventPropertiesV2,
   getEventPropertiesV2,
-  eventUserPropertiesV2,
   getUserPropertiesV2,
+  getGroupProperties,
   groupAnalysis,
   viewMode,
   dropdownPlacement = 'top',
   propertiesScope = ['event'],
   initialDDState = true,
-  groupProperties,
-  getGroupProperties,
   showInList = false,
   isSpecialEvent = false
 }) {
   const [isDDVisible, setDDVisible] = useState(initialDDState);
-
-  const eventGroup = useMemo(() => {
-    if (availableGroups && event) {
-      const group = availableGroups.find((grp) => grp[0] === event.group) || [];
-      return group[1];
-    }
-    return null;
-  }, [availableGroups, event]);
-
-  useEffect(() => {
-    if (event && eventGroup?.length && !groupProperties[eventGroup]) {
-      getGroupProperties(activeProject?.id, eventGroup);
-    }
-    if (isSpecialEvent) {
-      eventNames = eventNamesSpecial;
-      eventOptions = eventOptionsSpecial;
-    }
-  }, [event, activeProject?.id, eventGroup]);
-
-  useEffect(() => {
-    if (viewMode) {
-      setDDVisible(false);
-    }
-  }, [viewMode]);
   const [isFilterDDVisible, setFilterDDVisible] = useState(false);
   const [filterProps, setFilterProperties] = useState();
   const [showGroups, setShowGroups] = useState([]);
   const [orFilterIndex, setOrFilterIndex] = useState(-1);
 
-  useEffect(() => {
-    let showOpts = [];
-    if (groupAnalysis === 'users') {
-      showOpts = [
-        ...eventOptions.filter(
-          (group) =>
-            !['Linkedin Company Engagements', 'G2 Engagements'].includes(
-              group?.label
-            )
-        )
-      ];
-    } else if (
-      groupAnalysis === 'events' ||
-      groupAnalysis === GROUP_NAME_DOMAINS
-    ) {
-      showOpts = [...eventOptions];
-    } else {
-      const [label] =
-        availableGroups?.find((group) => group[1] === groupAnalysis) || [];
-      const groupOpts = eventOptions?.filter((item) => item?.label === label);
-      const userOpts = eventOptions?.filter(
-        (item) =>
-          !availableGroups?.map((group) => group[0]).includes(item?.label)
-      );
-      showOpts = groupOpts.concat(userOpts);
-    }
-    showOpts = showOpts?.map((opt) => ({
-      iconName: getGroupIcon(opt?.icon),
-      label: opt?.label,
-      values: processProperties(opt?.values)
-    }));
-    // Moving MostRecent as first Option.
-    const mostRecentGroupindex = showOpts
-      ?.map((opt) => opt.label)
-      ?.indexOf('Most Recent');
-    if (mostRecentGroupindex > 0) {
-      showOpts = [
-        showOpts[mostRecentGroupindex],
-        ...showOpts.slice(0, mostRecentGroupindex),
-        ...showOpts.slice(mostRecentGroupindex + 1)
-      ];
-    }
-    setShowGroups(showOpts);
-  }, [eventOptions, groupAnalysis]);
+  const activeProject = useSelector((state) => state.global.active_project);
 
-  const onChange = (option, group) => {
-    const newEvent = { label: '', filters: [], group: '' };
-    newEvent.label = option?.value;
-    newEvent.group = group?.label;
-    setDDVisible(false);
-    eventChange(newEvent, index - 1);
-    closeEvent();
-  };
-
-  useEffect(() => {
-    if (!event || event === undefined) {
-      return;
-    }
-    if (!eventPropertiesV2[event.label] && !viewMode) {
-      getEventPropertiesV2(activeProject?.id, event.label);
-    }
-    getUserPropertiesV2(activeProject.id);
-  }, [activeProject?.id, event, eventPropertiesV2, viewMode]);
-
-  useEffect(() => {
-    if (!event || event === undefined) {
-      return;
-    }
-
-    const filterEngagementProperties = (properties) => {
-      const filteredProps = {};
-
-      Object.keys(properties || {}).forEach((key) => {
-        if (properties[key]) {
-          filteredProps[key] = properties[key].filter((item) =>
-            ['categorical', 'numerical', 'datetime'].includes(item?.[2])
-          );
-        }
-      });
-      return filteredProps;
-    };
-
-    const eventPropertiesFiltered = eventPropertiesV2?.[event?.label]
-      ? filterEngagementProperties(eventPropertiesV2[event?.label])
-      : {};
-
-    const eventUserPropertiesFiltered = eventUserPropertiesV2
-      ? filterEngagementProperties(eventUserPropertiesV2)
-      : {};
-
-    const assignFilterProps = {};
-    propertiesScope.forEach((scope) => {
-      if (scope === 'event') {
-        assignFilterProps.event = isEngagementConfig
-          ? eventPropertiesFiltered
-          : eventPropertiesV2[event?.label] || {};
-      }
-      if (scope === 'user') {
-        if (!eventGroup) {
-          assignFilterProps.user = isEngagementConfig
-            ? eventUserPropertiesFiltered
-            : eventUserPropertiesV2 || {};
-        }
-      }
-      if (scope === 'group' && eventGroup && groupProperties[eventGroup]) {
-        assignFilterProps[eventGroup] = isEngagementConfig
-          ? groupProperties[eventGroup]?.filter((item) =>
-              ['categorical', 'numerical', 'datetime'].includes(item?.[2])
-            )
-          : groupProperties[eventGroup];
-        assignFilterProps.user = {};
-      }
-    });
-
-    setFilterProperties(assignFilterProps);
-  }, [
+  const {
+    eventNames,
+    eventNamesSpecial,
+    eventOptions,
+    eventOptionsSpecial,
     eventPropertiesV2,
     eventUserPropertiesV2,
-    event?.label,
-    eventGroup,
-    groupProperties
-  ]);
+    groupProperties,
+    groups
+  } = useSelector((state) => state.coreQuery);
 
-  const deleteItem = () => {
-    eventChange(event, index - 1, 'delete');
-  };
+  const eventGroup = useMemo(() => {
+    if (!event || !groups) {
+      return null;
+    }
+
+    const group =
+      Object.entries(groups).find((grp) => grp[1] === event.group) || [];
+    return group[0];
+  }, [event, groups]);
+
+  const eventNamesApplicable = useMemo(
+    () => (isSpecialEvent ? eventNamesSpecial : eventNames),
+    [eventNamesSpecial, eventNames]
+  );
+
+  const eventTitle = useMemo(() => {
+    if (!event) {
+      return '';
+    }
+
+    return eventNamesApplicable[event.label] || event.label;
+  }, [event, eventNamesApplicable]);
+
+  const eventOptionsApplicable = useMemo(
+    () => (isSpecialEvent ? eventOptionsSpecial : eventOptions),
+    [eventOptions, eventOptionsSpecial]
+  );
 
   const showEngagementGroups = useMemo(() => {
     if (!isEngagementConfig) {
@@ -239,7 +115,7 @@ function EventsBlock({
       });
     } else {
       const allEventsIndex = listGroups[othersIndex].values.findIndex(
-        (event) => event.value === customEvent.value
+        (ev) => ev.value === customEvent.value
       );
 
       if (allEventsIndex === -1) {
@@ -250,26 +126,136 @@ function EventsBlock({
     return listGroups;
   }, [showGroups]);
 
-  const selectEvents = () =>
-    isDDVisible && !disableEventEdit ? (
-      <div className={styles.query_block__event_selector}>
-        <GroupSelect
-          options={isEngagementConfig ? showEngagementGroups : showGroups}
-          searchPlaceHolder='Select Event'
-          optionClickCallback={onChange}
-          allowSearch
-          placement={dropdownPlacement}
-          onClickOutside={() => {
-            setDDVisible(false);
-            closeEvent();
-          }}
-          extraClass={`${styles.query_block__event_selector__select}`}
-        />
-      </div>
-    ) : null;
+  useEffect(() => {
+    if (viewMode) {
+      setDDVisible(false);
+    }
+  }, [viewMode]);
 
-  const addFilter = () => {
-    setFilterDDVisible(true);
+  useEffect(() => {
+    if (!event || viewMode) {
+      return;
+    }
+
+    if (eventGroup?.length && !groupProperties[eventGroup]) {
+      getGroupProperties(activeProject?.id, eventGroup);
+    }
+
+    if (!eventPropertiesV2[event.label]) {
+      getEventPropertiesV2(activeProject?.id, event.label);
+    }
+
+    getUserPropertiesV2(activeProject?.id);
+  }, [
+    activeProject?.id,
+    viewMode,
+    event,
+    eventGroup,
+    eventPropertiesV2,
+    groupProperties
+  ]);
+
+  useEffect(() => {
+    let showOpts = [];
+    if (groupAnalysis === 'users') {
+      showOpts = [
+        ...eventOptionsApplicable.filter(
+          (group) =>
+            !['Linkedin Company Engagements', 'G2 Engagements'].includes(
+              group?.label
+            )
+        )
+      ];
+    } else if (
+      groupAnalysis === 'events' ||
+      groupAnalysis === GROUP_NAME_DOMAINS
+    ) {
+      showOpts = [...eventOptionsApplicable];
+    } else {
+      const [label] =
+        Object.entries(groups || {})?.find(
+          (group) => group[0] === groupAnalysis
+        ) || [];
+      const groupOpts = eventOptionsApplicable?.filter(
+        (item) => item?.label === label
+      );
+      const userOpts = eventOptionsApplicable?.filter(
+        (item) =>
+          !Object.entries(groups || {})
+            ?.map((group) => group[0])
+            .includes(item?.label)
+      );
+      showOpts = groupOpts.concat(userOpts);
+    }
+    showOpts = showOpts?.map((opt) => ({
+      iconName: getGroupIcon(opt?.icon),
+      label: opt?.label,
+      values: processProperties(opt?.values)
+    }));
+    // Moving MostRecent as first Option.
+    const mostRecentGroupindex = showOpts
+      ?.map((opt) => opt.label)
+      ?.indexOf('Most Recent');
+    if (mostRecentGroupindex > 0) {
+      showOpts = [
+        showOpts[mostRecentGroupindex],
+        ...showOpts.slice(0, mostRecentGroupindex),
+        ...showOpts.slice(mostRecentGroupindex + 1)
+      ];
+    }
+    setShowGroups(showOpts);
+  }, [eventOptionsApplicable, groupAnalysis]);
+
+  useEffect(() => {
+    if (!event || event === undefined) {
+      return;
+    }
+
+    const assignFilterProps = {};
+    propertiesScope.forEach((scope) => {
+      if (scope === 'event') {
+        assignFilterProps.event = eventPropertiesV2[event?.label] || {};
+      }
+      if (scope === 'user') {
+        if (!eventGroup) {
+          assignFilterProps.user = eventUserPropertiesV2 || {};
+        }
+      }
+      if (scope === 'group' && eventGroup && groupProperties[eventGroup]) {
+        assignFilterProps[eventGroup] = groupProperties[eventGroup];
+        assignFilterProps.user = {};
+      }
+    });
+
+    setFilterProperties(assignFilterProps);
+  }, [
+    eventPropertiesV2,
+    eventUserPropertiesV2,
+    event?.label,
+    eventGroup,
+    groupProperties
+  ]);
+
+  const createNewEventObj = (grpa) => {
+    if (grpa === GROUP_NAME_DOMAINS) {
+      return INITIAL_EVENT_WITH_PROPERTIES_STATE;
+    }
+    return { label: '', filters: [], group: '' };
+  };
+
+  const onEventChange = (option, group) => {
+    const newEvent = createNewEventObj(groupAnalysis);
+
+    if (option?.value) {
+      newEvent.label = option.value;
+    }
+
+    if (group?.label) {
+      newEvent.group = group.label;
+    }
+
+    setDDVisible(false);
+    eventChange(newEvent, index - 1);
   };
 
   const insertFilters = (filter, filterIndex) => {
@@ -286,7 +272,6 @@ function EventsBlock({
     } else {
       newEvent.filters.push(filter);
     }
-
     eventChange(newEvent, index - 1, 'filters_updated');
   };
 
@@ -301,49 +286,91 @@ function EventsBlock({
     eventChange(newEvent, index - 1, 'filters_updated');
   };
 
+  const deleteEvent = () => {
+    eventChange(event, index - 1, 'delete');
+  };
+
+  const handleEventPerformedChange = (value) => {
+    const newEvent = { ...event, isEventPerformed: value };
+    eventChange(newEvent, index - 1);
+  };
+
+  const handleOperatorChange = (value) => {
+    const newEvent = { ...event };
+    newEvent.frequencyOperator = value;
+    eventChange(newEvent, index - 1);
+  };
+
+  const handleFrequencyChange = (e) => {
+    const newEvent = { ...event };
+    const { value: inputValue } = e.target;
+    const reg = /^-?\d*(\.\d*)?$/;
+    if (reg.test(inputValue) || inputValue === '' || inputValue === '-') {
+      newEvent.frequency = inputValue;
+      eventChange(newEvent, index - 1);
+    }
+  };
+
+  const handleDurationChange = (value) => {
+    const newEvent = { ...event };
+    newEvent.range = value;
+    eventChange(newEvent, index - 1);
+  };
+
+  const selectEvents = () => {
+    if (!isDDVisible) {
+      return null;
+    }
+
+    return (
+      <div className={styles.query_block__event_selector}>
+        <GroupSelect
+          options={isEngagementConfig ? showEngagementGroups : showGroups}
+          searchPlaceHolder='Select Event'
+          optionClickCallback={onEventChange}
+          allowSearch
+          placement={dropdownPlacement}
+          onClickOutside={() => {
+            setDDVisible(false);
+            closeEventDD();
+          }}
+          extraClass={`${styles.query_block__event_selector__select}`}
+        />
+      </div>
+    );
+  };
+
   const closeFilter = () => {
     setFilterDDVisible(false);
     setOrFilterIndex(-1);
   };
-  const selectEventFilter = (ind) => (
-    <FilterWrapper
-      viewMode={viewMode}
-      filterProps={filterProps}
-      projectID={activeProject?.id}
-      event={event}
-      deleteFilter={closeFilter}
-      insertFilter={insertFilters}
-      closeFilter={closeFilter}
-      refValue={ind}
-      caller='profiles'
-      dropdownPlacement={dropdownPlacement}
-      dropdownMaxHeight={344}
-      showInList={showInList}
-    />
-  );
 
-  const additionalActions = () => (
-    <div
-      className='fa--query_block--actions-cols flex'
-      id='additional_actions_events_block'
-    >
-      <Tooltip
-        overlayInnerStyle={{ width: 'max-content' }}
-        getPopupContainer={() =>
-          document.getElementById('additional_actions_events_block')
-        }
-        title='Filter this event'
-        color='#0B1E39'
+  const renderAdditionalActions = () => {
+    if (!event || viewMode) {
+      return null;
+    }
+
+    return (
+      <div
+        className='fa--query_block--actions-cols flex'
+        id='additional_actions_events_block'
       >
-        <Button
-          type='text'
-          onClick={addFilter}
-          className='fa-btn--custom mr-1 btn-total-round'
+        <Tooltip
+          overlayInnerStyle={{ width: 'max-content' }}
+          getPopupContainer={() =>
+            document.getElementById('additional_actions_events_block')
+          }
+          title='Filter this event'
+          color='#0B1E39'
         >
-          <SVG name='filter' />
-        </Button>
-      </Tooltip>
-      {!disableEventEdit && (
+          <Button
+            type='text'
+            onClick={() => setFilterDDVisible(true)}
+            className='fa-btn--custom mr-1 btn-total-round'
+          >
+            <SVG name='filter' />
+          </Button>
+        </Tooltip>
         <Tooltip
           overlayInnerStyle={{ width: 'max-content' }}
           getPopupContainer={() =>
@@ -354,16 +381,17 @@ function EventsBlock({
         >
           <Button
             type='text'
-            onClick={deleteItem}
+            onClick={deleteEvent}
             className='fa-btn--custom btn-total-round'
           >
             <SVG name='trash' />
           </Button>
         </Tooltip>
-      )}
-    </div>
-  );
+      </div>
+    );
+  };
 
+  // needs a cleanup
   const eventFilters = () => {
     const filters = [];
     let ind = 0;
@@ -475,12 +503,198 @@ function EventsBlock({
     if (isFilterDDVisible) {
       filters.push(
         <div key='init' className='fa--query_block--filters'>
-          {selectEventFilter(lastRef + 1)}
+          <FilterWrapper
+            viewMode={viewMode}
+            filterProps={filterProps}
+            projectID={activeProject?.id}
+            event={event}
+            deleteFilter={closeFilter}
+            insertFilter={insertFilters}
+            closeFilter={closeFilter}
+            refValue={lastRef + 1}
+            caller='profiles'
+            dropdownPlacement={dropdownPlacement}
+            dropdownMaxHeight={344}
+            showInList={showInList}
+          />
         </div>
       );
     }
 
     return filters;
+  };
+
+  const isEventPerformedOptions = [
+    {
+      value: true,
+      label: 'did'
+    },
+    {
+      value: false,
+      label: 'did not do'
+    }
+  ];
+
+  const renderIsEventPerformedSelect = () => {
+    if (!event || isEngagementConfig || groupAnalysis !== GROUP_NAME_DOMAINS) {
+      return null;
+    }
+
+    return (
+      <Select
+        className='h-8'
+        dropdownMatchSelectWidth={false}
+        bordered={false}
+        value={event.isEventPerformed}
+        options={isEventPerformedOptions}
+        onChange={handleEventPerformedChange}
+      />
+    );
+  };
+
+  const renderSelectEventButton = () => (
+    <Button
+      className='btn-total-round'
+      type='link'
+      onClick={() => setDDVisible(true)}
+    >
+      Select Event
+    </Button>
+  );
+
+  const renderAddEventButton = () => (
+    <Button
+      className='flex items-center gap-x-2'
+      type='text'
+      onClick={() => setDDVisible(true)}
+    >
+      <SVG name='plus' color='#00000073' />
+      <Text
+        type='title'
+        color='character-title'
+        extraClass='mb-0'
+        weight='medium'
+      >
+        Add event
+      </Text>
+    </Button>
+  );
+
+  const renderActiveEventButton = () => {
+    const currGroup = showGroups.find((group) => group.label === event.group);
+    const iconName = currGroup?.iconName || 'mouseclick';
+
+    return (
+      <Button
+        icon={<SVG name={iconName} size={20} />}
+        className={`fa-button--truncate fa-button--truncate-lg ${
+          viewMode ? 'static-button' : ''
+        } btn-total-round`}
+        type={viewMode ? 'default' : 'link'}
+        onClick={() => (viewMode ? null : setDDVisible(true))}
+      >
+        {eventTitle}
+      </Button>
+    );
+  };
+
+  const renderEventButton = () => {
+    if (!event) {
+      return isEngagementConfig
+        ? renderSelectEventButton()
+        : renderAddEventButton();
+    }
+    return renderActiveEventButton();
+  };
+
+  const renderEventSection = () => (
+    <div className='relative'>
+      <Tooltip zIndex={99999} title={eventTitle}>
+        {renderEventButton()}
+        {selectEvents()}
+      </Tooltip>
+    </div>
+  );
+
+  const renderFrequencyControls = () => {
+    if (!event.isEventPerformed) {
+      return null;
+    }
+
+    const frequencyOptions = Object.entries(EVENT_FREQ_OPERATORS).map(
+      ([label, value]) => ({ value, label })
+    );
+
+    return (
+      <>
+        <Select
+          className='h-8'
+          dropdownMatchSelectWidth={false}
+          bordered={false}
+          value={event.frequencyOperator}
+          options={frequencyOptions}
+          onChange={handleOperatorChange}
+        />
+        <Input
+          style={{ width: '56px' }}
+          onChange={handleFrequencyChange}
+          maxLength={3}
+          value={event.frequency}
+        />
+      </>
+    );
+  };
+
+  const renderDaysMenu = () => {
+    const daysArray = [7, 14, 30, 60, 90];
+    return (
+      <Menu
+        onClick={(info) => {
+          const selectedDays = Number(info.key);
+          handleDurationChange(selectedDays);
+        }}
+        style={{ overflowY: 'scroll', maxHeight: '185px' }}
+      >
+        {daysArray.map((days) => (
+          <Menu.Item style={{ padding: '10px' }} key={days}>
+            Last {days} Days
+          </Menu.Item>
+        ))}
+      </Menu>
+    );
+  };
+
+  const renderDaysDropdown = () => {
+    const prefix = event.isEventPerformed ? 'times in' : 'in';
+    const timePeriod = event.range ? `Last ${event.range} Days` : 'Select';
+
+    return (
+      <>
+        <div className='mx-2'>{prefix}</div>
+        <Dropdown overlay={renderDaysMenu()}>
+          <Button className='dropdown-btn gap-x-2 justify-between' type='text'>
+            <div className='flex gap-x-1 items-center'>
+              <SVG name='calendar' />
+              {timePeriod}
+            </div>
+            <DownOutlined />
+          </Button>
+        </Dropdown>
+      </>
+    );
+  };
+
+  const renderAdditionalFilters = () => {
+    if (!event || isEngagementConfig || groupAnalysis !== GROUP_NAME_DOMAINS) {
+      return null;
+    }
+
+    return (
+      <>
+        {renderFrequencyControls()}
+        {renderDaysDropdown()}
+      </>
+    );
   };
 
   return (
@@ -491,56 +705,10 @@ function EventsBlock({
         className={`${styles.query_block__event} block_section items-center`}
       >
         <div className='flex items-center'>
-          <div className='flex items-center'>
-            <div className='relative'>
-              <Tooltip
-                zIndex={99999}
-                title={
-                  eventNames[event?.label]
-                    ? eventNames[event?.label]
-                    : event?.label
-                }
-              >
-                {!event ? (
-                  <Button
-                    className='btn-total-round'
-                    type='link'
-                    onClick={() => setDDVisible(true)}
-                  >
-                    Select Event
-                  </Button>
-                ) : (
-                  <Button
-                    icon={
-                      <SVG
-                        name={
-                          showGroups.find(
-                            (group) => group.label === event.group
-                          )?.iconName
-                        }
-                        size={20}
-                      />
-                    }
-                    className={`fa-button--truncate fa-button--truncate-lg ${
-                      viewMode ? 'static-button' : ''
-                    } btn-total-round ${
-                      disableEventEdit ? 'pointer-events-none' : ''
-                    }`}
-                    type={viewMode ? 'default' : 'link'}
-                    onClick={() =>
-                      viewMode || disableEventEdit ? null : setDDVisible(true)
-                    }
-                  >
-                    {eventNames[event.label]
-                      ? eventNames[event.label]
-                      : event.label}
-                  </Button>
-                )}
-                {selectEvents()}
-              </Tooltip>
-            </div>
-            {event && !viewMode ? additionalActions() : null}
-          </div>
+          {renderIsEventPerformedSelect()}
+          {renderEventSection()}
+          {renderAdditionalFilters()}
+          {renderAdditionalActions()}
         </div>
       </div>
       {eventFilters()}
@@ -548,21 +716,10 @@ function EventsBlock({
   );
 }
 
-const mapStateToProps = (state) => ({
-  eventOptions: state.coreQuery.eventOptions,
-  eventOptionsSpecial: state.coreQuery.eventOptionsSpecial,
-  activeProject: state.global.active_project,
-  eventUserPropertiesV2: state.coreQuery.eventUserPropertiesV2,
-  groupProperties: state.coreQuery.groupProperties,
-  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
-  eventNames: state.coreQuery.eventNames,
-  eventNamesSpecial: state.coreQuery.eventNamesSpecial
-});
-
 const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     { getEventPropertiesV2, getUserPropertiesV2, getGroupProperties },
     dispatch
   );
 
-export default connect(mapStateToProps, mapDispatchToProps)(EventsBlock);
+export default connect(null, mapDispatchToProps)(EventsBlock);

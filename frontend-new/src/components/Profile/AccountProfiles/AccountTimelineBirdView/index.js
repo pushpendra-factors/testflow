@@ -212,7 +212,7 @@ function AccountTimelineBirdView({
               <tr>
                 <td
                   style={{
-                    paddingBottom: `${(milestones?.events?.length || 0) * 32}px`
+                    paddingBottom: `${(milestones?.events?.length || 0) * 38}px`
                   }}
                 >
                   <div className='timestamp top-64'>{timestamp}</div>
@@ -230,9 +230,12 @@ function AccountTimelineBirdView({
                     : allEvents[user.id].events;
                   return (
                     <td
-                      className={`bg-gradient--44px pb-${
-                        (milestones?.events?.length || 0) * 10
-                      }`}
+                      className='bg-gradient--44px'
+                      style={{
+                        paddingBottom: `${
+                          (milestones?.events?.length || 0) * 38
+                        }px`
+                      }}
                     >
                       <div
                         className={`birdview-events account-pad ${

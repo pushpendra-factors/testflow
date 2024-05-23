@@ -16,35 +16,33 @@ import {
 import { formatAccountTimeline, formatUsersTimeline } from './utils';
 import { deleteSegmentAction } from './actions';
 
-export const getProfileAccounts =
-  (projectId, payload, download) => (dispatch) => {
-    dispatch({ type: 'FETCH_PROFILE_ACCOUNTS_LOADING' });
-    return new Promise((resolve, reject) => {
-      fetchProfileAccounts(projectId, payload, download)
-        .then((response) => {
-          const data = response.data?.map((account) => ({
-            ...account,
-            domain: { id: account.identity, name: account?.domain_name }
-          }));
-          resolve(
-            dispatch({
-              type: 'FETCH_PROFILE_ACCOUNTS_FULFILLED',
-              payload: data,
-              segmentID: payload.segment_id,
-              status: response.status
-            })
-          );
-        })
-        .catch((err) => {
+export const getProfileAccounts = (projectId, payload) => (dispatch) => {
+  dispatch({ type: 'FETCH_PROFILE_ACCOUNTS_LOADING' });
+  return new Promise((resolve, reject) => {
+    fetchProfileAccounts(projectId, payload)
+      .then((response) => {
+        const data = response.data?.map((account) => ({
+          ...account,
+          domain: { id: account.identity, name: account?.domain_name }
+        }));
+        resolve(
           dispatch({
-            type: 'FETCH_PROFILE_ACCOUNTS_FAILED',
-            payload: [],
-            error: err
-          });
-          reject(err);
+            type: 'FETCH_PROFILE_ACCOUNTS_FULFILLED',
+            payload: data,
+            segmentID: payload.segment_id || 'default',
+            status: response.status
+          })
+        );
+      })
+      .catch((err) => {
+        dispatch({
+          type: 'FETCH_PROFILE_ACCOUNTS_FAILED',
+          segmentID: payload.segment_id || 'default'
         });
-    });
-  };
+        reject(err);
+      });
+  });
+};
 
 export const getProfileAccountDetails =
   (projectId, id, source) => (dispatch) => {
