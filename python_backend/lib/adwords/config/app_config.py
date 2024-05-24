@@ -43,7 +43,7 @@ class AppConfig(Config):
     def get_factors_admin_adwords_redirect_url(cls, status=None):
         url = cls.app_host_url + "/callback/integration/google_ads"
         if status is not None:
-            url = url + "&status=" + status
+            url = url + "?status=" + status
         return url
 
     @classmethod
