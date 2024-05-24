@@ -70,10 +70,15 @@ import useParagon from 'hooks/useParagon';
 import { get, getHostUrl } from 'Utils/request';
 import FactorsHubspotCompany from './Templates/FactorsHubspotCompany';
 import FactorsApolloHubspotContacts from './Templates/FactorsApolloHubspotContacts';
-import { fetchSavedWorkflows, saveWorkflow } from 'Reducers/workflows';
+import {
+  fetchSavedWorkflows,
+  saveWorkflow,
+  updateWorkflow
+} from 'Reducers/workflows';
 import { TemplateIDs } from './../utils';
 import FactorsSalesforceCompany from './Templates/FactorsSalesforceCompany';
 import FactorsApolloSalesforceContacts from './Templates/FactorsApolloSalesforceContacts';
+import logger from 'Utils/logger';
 
 const host = getHostUrl();
 
@@ -89,7 +94,11 @@ const WorkflowBuilder = ({
   getSavedSegments,
   selectedTemp,
   fetchSavedWorkflows,
-  saveWorkflow
+  saveWorkflow,
+  updateWorkflow,
+  alertId,
+  editMode,
+  setEditMode
 }) => {
   const configureRef = useRef(null);
   const [loading, setLoading] = useState(false);
@@ -127,7 +136,7 @@ const WorkflowBuilder = ({
     get(null, `${host}projects/${activeProject?.id}/paragon/auth`)
       .then((res) => {
         if (!res?.data) {
-          console.error('JWT Token not found');
+          logger.error('JWT Token not found');
           return;
         }
         setState((prev) => {
@@ -138,7 +147,7 @@ const WorkflowBuilder = ({
         });
       })
       .catch((err) => {
-        console.error(err);
+        logger.error(err);
         message.error('Token not found!');
       });
   };
@@ -349,6 +358,23 @@ const WorkflowBuilder = ({
       </>
     );
   };
+
+  const isArrayAndObjectsNotEmpty = (arr) => {
+    // Check if the array itself is not empty
+    if (!Array.isArray(arr) || arr.length === 0) {
+      return false;
+    }
+
+    // Check if each object in the array is not empty
+    for (const obj of arr) {
+      if (Object.keys(obj).length === 0 && obj.constructor === Object) {
+        return false;
+      }
+    }
+
+    return true;
+  };
+
   const saveWorkflowFn = (value) => {
     let message_propertiesObj = {};
     if (
@@ -381,39 +407,51 @@ const WorkflowBuilder = ({
     let payload = {
       action_performed: segmentType,
       alert_limit: 5,
-      breakdown_properties: [
-        {
-          en: 'user',
-          ena: '$session',
-          pr: '$6Signal_domain',
-          pty: 'categorical'
-        }
-      ],
+      breakdown_properties: [],
       cool_down_time: 1800,
       event:
         segmentType == 'action_event' ? queries[0]?.label : selectedSegment,
-      event_level: 'active',
+      event_level: 'account',
       filters: formatFiltersForQuery(queries?.[0]?.filters),
       notifications: false,
       repeat_alerts: true,
-      template_title: selectedTemp?.title,
-      template_description: selectedTemp?.description,
+      template_title: selectedTemp?.template_title,
+      template_description: selectedTemp?.template_description,
       title: workflowName ? workflowName : '',
       description: workflowName ? workflowName : '',
-      template_id: selectedTemp?.id,
+      template_id: selectedTemp?.template_id || selectedTemp?.id,
       message_properties: message_propertiesObj
     };
 
-    saveWorkflow(activeProject?.id, payload)
-      .then((res) => {
-        fetchSavedWorkflows(activeProject?.id);
-        setBuilderMode(false);
-        notification.success({
-          message: 'Workflow Saved',
-          description: 'New workflow is created and saved successfully.'
-        });
-      })
-      .catch((err) => message.error(err?.data?.error));
+    if (isArrayAndObjectsNotEmpty(propertyMapMandatory)) {
+      if (!editMode) {
+        saveWorkflow(activeProject?.id, payload)
+          .then((res) => {
+            fetchSavedWorkflows(activeProject?.id);
+            setBuilderMode(false);
+            setEditMode(false);
+            notification.success({
+              message: 'Workflow Saved',
+              description: 'New workflow is created and saved successfully.'
+            });
+          })
+          .catch((err) => message.error(err?.data?.error));
+      } else {
+        updateWorkflow(activeProject?.id, alertId, payload)
+          .then((res) => {
+            fetchSavedWorkflows(activeProject?.id);
+            setBuilderMode(false);
+            setEditMode(false);
+            notification.success({
+              message: 'Workflow Updated',
+              description: 'Workflow is updated and saved successfully.'
+            });
+          })
+          .catch((err) => message.error(err?.data?.error));
+      }
+    } else {
+      message.error('Add mandatory properties');
+    }
   };
 
   const returnIntegrationComponent = (workflowItem) => {
@@ -534,7 +572,7 @@ const WorkflowBuilder = ({
         </Col>
         <Col span={12}>
           <div className={'flex justify-end'}>
-            <div className={'flex items-center justify-end mr-4'}>
+            {/* <div className={'flex items-center justify-end mr-4'}>
               <Text
                 type={'title'}
                 level={8}
@@ -547,10 +585,10 @@ const WorkflowBuilder = ({
                 checkedChildren='On'
                 unCheckedChildren='OFF'
                 size='large'
-                // onChange={(checked) => setTeamsEnabled(checked)}
-                // checked={teamsEnabled}
+                onChange={(checked) => setTeamsEnabled(checked)}
+                checked={teamsEnabled}
               />
-            </div>
+            </div> */}
 
             {/* <Button
               size={'large'}
@@ -604,7 +642,7 @@ const WorkflowBuilder = ({
 
             {/* workflow config */}
 
-            {queries?.length > 0 ? (
+            {queries?.length > 0 || selectedSegment !== '' ? (
               <>
                 <VerticalDivider />
 
@@ -618,6 +656,12 @@ const WorkflowBuilder = ({
                     className='flex items-center'
                     style={{ padding: '3% 3%' }}
                   >
+                    <Tag
+                      className='absolute top-0 mx-auto'
+                      style={{ 'margin-top': '-10px' }}
+                    >
+                      Action
+                    </Tag>
                     <div className='pr-6'>
                       <Text
                         type={'title'}
@@ -683,5 +727,6 @@ export default connect(mapStateToProps, {
   fetchEventNames,
   getSavedSegments,
   fetchSavedWorkflows,
-  saveWorkflow
+  saveWorkflow,
+  updateWorkflow
 })(WorkflowBuilder);

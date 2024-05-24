@@ -156,6 +156,10 @@ func GetSalesforcePropertiesByDataType(projectID int64, dataType string, docType
 
 	propertiesByObjectType := make(map[int]*map[string]bool)
 	for i := range docTypes {
+		if docTypes[i] == model.SalesforceDocumentTypeLead && C.SkipSalesforceLeadEnrichmentByProjectID(projectID) {
+			continue
+		}
+
 		typeAlias := model.GetSalesforceAliasByDocType(docTypes[i])
 		describe, err := getSalesforceObjectDescription(projectID, typeAlias, accessToken, instanceURL)
 		if err != nil {

@@ -327,7 +327,7 @@ func RunHubspotEnrich(configs map[string]interface{}) (map[string]interface{}, b
 
 func UpdateProjectSettingsIntefrationStatusFromJobStatusForHubspot(syncStatus SyncStatus) {
 
-	var jobStatusByProjectIdMap map[int64]string
+	jobStatusByProjectIdMap := make(map[int64]string)
 	for _, state := range syncStatus.Status {
 
 		if state.Message == model.CLIENT_TOKEN_EXPIRED {
@@ -338,7 +338,6 @@ func UpdateProjectSettingsIntefrationStatusFromJobStatusForHubspot(syncStatus Sy
 			if _, ok := jobStatusByProjectIdMap[state.ProjectId]; !ok {
 				jobStatusByProjectIdMap[state.ProjectId] = model.SUCCESS
 			}
-
 		}
 
 		if state.IsProcessLimitExceeded {

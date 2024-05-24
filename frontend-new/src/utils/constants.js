@@ -1190,3 +1190,6 @@ export const customerSupportLink =
   'https://factors.schedulehero.io/campaign/global-round-robin-ssos';
 
 export const solutionsEmailId = 'solutions@factors.ai';
+
+export const SEGMENT_INSIGHTS_LEARN_MORE_LINK =
+  'https://help.factors.ai/en/articles/9334968-segment-insights';

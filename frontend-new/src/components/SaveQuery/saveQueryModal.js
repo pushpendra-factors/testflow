@@ -12,6 +12,7 @@ import {
 } from './saveQuery.constants';
 import AddToDashboardForm from './CommonAddToDashboardForm';
 import { QUERY_TYPE_PROFILE } from '../../utils/constants';
+import { useSelector } from 'react-redux';
 
 function SaveQueryModal({
   visible,
@@ -24,7 +25,7 @@ function SaveQueryModal({
   queryType
 }) {
   const { TextArea } = Input;
-
+  const { activeDashboard } = useSelector((state) => state.dashboard);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [showAddToDashboard, setShowAddToDashboard] = useState(false);
@@ -33,6 +34,11 @@ function SaveQueryModal({
     DEFAULT_DASHBOARD_PRESENTATION
   );
 
+  useEffect(() => {
+    if (activeDashboard && activeDashboard?.id) {
+      setShowAddToDashboard(true);
+    }
+  }, [activeDashboard]);
   useEffect(() => {
     if (visible && queryTitle) {
       if (activeAction === ACTION_TYPES.EDIT) {
@@ -128,7 +134,10 @@ function SaveQueryModal({
         {queryType !== QUERY_TYPE_PROFILE && (
           <>
             <div>
-              <Checkbox onChange={handleAddToDashboardChange}>
+              <Checkbox
+                onChange={handleAddToDashboardChange}
+                defaultChecked={activeDashboard?.id}
+              >
                 Add to Dashboard
               </Checkbox>
             </div>

@@ -107,7 +107,8 @@ export const settingsCategorisedMap = (email) => [
   {
     label: 'Project Settings',
     icon: 'rocket',
-    items: ProjectSettingsSubItems
+    items: ProjectSettingsSubItems,
+    hoverable: false
   },
   // {
   //   label: 'Personal Settings',
@@ -116,8 +117,9 @@ export const settingsCategorisedMap = (email) => [
   // },
   {
     label: 'Data Management',
-    icon: 'user',
-    items: getConfigureMenuItems(email)
+    icon: 'database',
+    items: getConfigureMenuItems(email),
+    hoverable: false
   }
 ];
 
@@ -223,7 +225,7 @@ const renderConfigureMenu = (email) => (
   <Menu className={styles['dropdown-menu']}>
     <Menu.Item disabled className={styles['dropdown-menu-item']}>
       <Text color='disabled' level={7} type='title' extraClass='mb-0'>
-        Configure
+        Settings
       </Text>
     </Menu.Item>
     {getConfigureMenuItems(email).map((item) => (

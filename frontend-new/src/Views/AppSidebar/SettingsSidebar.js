@@ -31,6 +31,8 @@ const SettingItem = ({ item }) => {
       isActive={isActive}
       icon={item.icon}
       onClick={handleItemClick}
+      iconSize={16}
+      hoverable={item.hoverable}
     />
   );
 };

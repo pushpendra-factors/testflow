@@ -6,19 +6,12 @@ import React, {
   useMemo
 } from 'react';
 import { connect, useDispatch, useSelector } from 'react-redux';
-import {
-  Dropdown,
-  Button,
-  Input,
-  Tag,
-  Collapse,
-  Select,
-  Form
-} from 'antd';
+import { Dropdown, Button, Input, Tag, Collapse, Select, Form } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import MapComponent from '../MapComponent';
 import { paragon } from '@useparagon/connect/dist/src/index';
 import isEmpty from 'lodash/isEmpty';
+import logger from 'Utils/logger';
 
 const FactorsApolloHubspotContacts = ({
   propertyMapMandatory,
@@ -36,7 +29,6 @@ const FactorsApolloHubspotContacts = ({
   apolloFormDetails,
   setApolloFormDetails
 }) => {
-
   const { Panel } = Collapse;
   const [form] = Form.useForm();
 
@@ -47,113 +39,155 @@ const FactorsApolloHubspotContacts = ({
 
   const isHubspotInt = () => {
     if (isHubspotIntEnabled) {
-      return <SVG name={'Check_circle'} size={22} color={'green'} />
-    }
-    else return null
-  }
-
+      return <SVG name={'Check_circle'} size={22} color={'green'} />;
+    } else return null;
+  };
 
   const fetchHubspotCompanies = () => {
     if (user) {
-      paragon.request("hubspot", "/crm/v3/properties/companies", {
-        method: "GET"
-      }).then((response) => {
-        let finalCompList = response.results?.filter((val) => (!val?.hidden))
+      paragon
+        .request('hubspot', '/crm/v3/properties/companies', {
+          method: 'GET'
+        })
+        .then((response) => {
+          let finalCompList = response.results?.filter((val) => !val?.hidden);
 
-        let HSdropdownOptions = finalCompList?.map((item) => {
-          return {
-            label: item.label,
-            value: item.name
-          }
-        });
-        SetHSCompanyProps(HSdropdownOptions || []);
-      })
+          let HSdropdownOptions = finalCompList?.map((item) => {
+            return {
+              label: item.label,
+              value: item.name
+            };
+          });
+          SetHSCompanyProps(HSdropdownOptions || []);
+        })
         .catch((err) => {
-          console.log("fetchHubspotCompanies error", err)
+          logger.log('fetchHubspotCompanies error', err);
         });
     }
-  }
+  };
 
   const fetchHubspotContacts = () => {
     if (user) {
-      paragon.request("hubspot", "/crm/v3/properties/contacts", {
-        method: "GET"
-      }).then((response) => {
-        let finalCompList = response.results?.filter((val) => (!val?.hidden))
+      paragon
+        .request('hubspot', '/crm/v3/properties/contacts', {
+          method: 'GET'
+        })
+        .then((response) => {
+          let finalCompList = response.results?.filter((val) => !val?.hidden);
 
-        let HSdropdownOptions = finalCompList?.map((item) => {
-          return {
-            label: item.label,
-            value: item.name
-          }
-        });
-        SetHSContactsProps(HSdropdownOptions || []);
-      })
+          let HSdropdownOptions = finalCompList?.map((item) => {
+            return {
+              label: item.label,
+              value: item.name
+            };
+          });
+          SetHSContactsProps(HSdropdownOptions || []);
+        })
         .catch((err) => {
-          console.log("fetchHubspotCompanies error", err)
+          logger.log('fetchHubspotCompanies error', err);
         });
     }
-  }
+  };
 
   useEffect(() => {
     fetchHubspotCompanies();
     fetchHubspotContacts();
-  }, []);
-
+  }, [isHubspotIntEnabled]);
 
   useEffect(() => {
     if (selectedTemp && !isTemplate) {
-      setPropertyMapMandatory(selectedTemp?.message_properties?.mandatory_properties)
-      setPropertyMapAdditional(selectedTemp?.message_properties?.additional_properties)
+      setPropertyMapMandatory(
+        selectedTemp?.message_properties?.mandatory_properties
+      );
+      setPropertyMapAdditional(
+        selectedTemp?.message_properties?.additional_properties_company
+      );
+      setPropertyMapAdditional2(
+        selectedTemp?.message_properties?.additional_properties_contact
+      );
     }
   }, selectedTemp);
 
   const saveFormValidateApollo = () => {
-    form
-      .validateFields()
-      .then((value) => {
-        setApolloFormDetails(value);
-        saveWorkflowFn(value)
-      });
-  }
+    form.validateFields().then((value) => {
+      setApolloFormDetails(value);
+      saveWorkflowFn(value);
+    });
+  };
 
   try {
-
-
     return (
       <>
-        <Collapse accordion bordered={false} defaultActiveKey={[isHubspotIntEnabled ? "2" : "1"]}>
-
-          <Panel header="Integrate Hubspot" className='bg-white' key="1" extra={isHubspotInt()}>
+        <Collapse
+          accordion
+          bordered={false}
+          defaultActiveKey={[isHubspotIntEnabled ? '2' : '1']}
+        >
+          <Panel
+            header='Integrate Hubspot'
+            className='bg-white'
+            key='1'
+            extra={isHubspotInt()}
+          >
             <div className='flex flex-col p-4'>
-              <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mb-2'}>{`Factors is a secure partner with Zapier. Your credentials are encrypted & can be removed at any time. You can manage all of your connected accounts here.`}</Text>
+              <Text
+                type={'title'}
+                level={7}
+                color={'grey'}
+                extraClass={'m-0 mb-2'}
+              >{`Factors is a secure partner with Zapier. Your credentials are encrypted & can be removed at any time. You can manage all of your connected accounts here.`}</Text>
               <div className=''>
                 <Button
-                  // disabled={isHubspotIntEnabled} 
-                  icon={isHubspotIntEnabled ? <SVG name={'Check_circle'} size={16} color={'green'} /> : ""} onClick={() => paragon.installIntegration('hubspot')}>
-                  {isHubspotIntEnabled ? 'Hubspot Connected' : 'Connect Hubspot'}
+                  // disabled={isHubspotIntEnabled}
+                  icon={
+                    isHubspotIntEnabled ? (
+                      <SVG name={'Check_circle'} size={16} color={'green'} />
+                    ) : (
+                      ''
+                    )
+                  }
+                  onClick={() => paragon.installIntegration('hubspot')}
+                >
+                  {isHubspotIntEnabled
+                    ? 'Hubspot Connected'
+                    : 'Connect Hubspot'}
                 </Button>
               </div>
             </div>
           </Panel>
 
-          <Panel header="Configurations" key="2" className='bg-white' disabled={!isHubspotIntEnabled}>
+          <Panel
+            header='Configurations'
+            key='2'
+            className='bg-white'
+            disabled={!isHubspotIntEnabled}
+          >
             <div className='flex p-4'>
-
-
               <div className='flex flex-col'>
-                <Text type={'title'} weight={'bold'} level={7} color={'black'} extraClass={'m-0'}>{`Mandatory fields`}</Text>
+                <Text
+                  type={'title'}
+                  weight={'bold'}
+                  level={7}
+                  color={'black'}
+                  extraClass={'m-0'}
+                >{`Mandatory fields`}</Text>
                 <div className='flex justify-between items-center mt-4'>
                   <div className=''>
-                    <Text type={'title'} level={8} color={'black'} extraClass={'m-0'}>{`Factors Properties`}</Text>
-
+                    <Text
+                      type={'title'}
+                      level={8}
+                      color={'black'}
+                      extraClass={'m-0'}
+                    >{`Factors Properties`}</Text>
                   </div>
-                  <div className='mr-2 ml-2'>
-
-                  </div>
+                  <div className='mr-2 ml-2'></div>
                   <div className=''>
-                    <Text type={'title'} level={8} color={'black'} extraClass={'m-0'}>{`Hubspot Properties`}</Text>
-
+                    <Text
+                      type={'title'}
+                      level={8}
+                      color={'black'}
+                      extraClass={'m-0'}
+                    >{`Hubspot Properties`}</Text>
                   </div>
                 </div>
                 <MapComponent
@@ -166,7 +200,13 @@ const FactorsApolloHubspotContacts = ({
                 />
 
                 <div className='mt-6'>
-                  <Text type={'title'} weight={'bold'} level={7} color={'black'} extraClass={'m-0'}>{`Additional fields (for Company)`}</Text>
+                  <Text
+                    type={'title'}
+                    weight={'bold'}
+                    level={7}
+                    color={'black'}
+                    extraClass={'m-0'}
+                  >{`Additional fields (for Company)`}</Text>
                   <MapComponent
                     dropdownOptions1={dropdownOptions}
                     dropdownOptions2={HSCompanyProps}
@@ -176,11 +216,14 @@ const FactorsApolloHubspotContacts = ({
                   />
                 </div>
 
-
-
-
                 <div className='mt-6'>
-                  <Text type={'title'} weight={'bold'} level={7} color={'black'} extraClass={'m-0'}>{`Apollo Configuration`}</Text>
+                  <Text
+                    type={'title'}
+                    weight={'bold'}
+                    level={7}
+                    color={'black'}
+                    extraClass={'m-0'}
+                  >{`Apollo Configuration`}</Text>
                   <Form
                     form={form}
                     name='apollo'
@@ -188,7 +231,12 @@ const FactorsApolloHubspotContacts = ({
                     onFinish={saveFormValidateApollo}
                   >
                     <div className='mt-4'>
-                      <Text type={'title'} weight={'thin'} level={8} extraClass={'m-0'}>{`Apollo API key`}</Text>
+                      <Text
+                        type={'title'}
+                        weight={'thin'}
+                        level={8}
+                        extraClass={'m-0'}
+                      >{`Apollo API key`}</Text>
                       <Form.Item
                         label={null}
                         name='ApiKey'
@@ -207,7 +255,12 @@ const FactorsApolloHubspotContacts = ({
                       </Form.Item>
                     </div>
                     <div className='mt-4'>
-                      <Text type={'title'} weight={'thin'} level={8} extraClass={'m-0'}>{`Job title list`}</Text>
+                      <Text
+                        type={'title'}
+                        weight={'thin'}
+                        level={8}
+                        extraClass={'m-0'}
+                      >{`Job title list`}</Text>
                       <Form.Item
                         label={null}
                         name='PersonTitles'
@@ -220,7 +273,12 @@ const FactorsApolloHubspotContacts = ({
                       </Form.Item>
                     </div>
                     <div className='mt-4'>
-                      <Text type={'title'} weight={'thin'} level={8} extraClass={'m-0'}>{`Seniorities to include`}</Text>
+                      <Text
+                        type={'title'}
+                        weight={'thin'}
+                        level={8}
+                        extraClass={'m-0'}
+                      >{`Seniorities to include`}</Text>
                       <Form.Item
                         label={null}
                         name='PersonSeniorities'
@@ -233,22 +291,30 @@ const FactorsApolloHubspotContacts = ({
                       </Form.Item>
                     </div>
                     <div className='mt-4'>
-                      <Text type={'title'} weight={'thin'} level={8} extraClass={'m-0'}>{`Maximum number of contacts to enrich for a company`}</Text>
+                      <Text
+                        type={'title'}
+                        weight={'thin'}
+                        level={8}
+                        extraClass={'m-0'}
+                      >{`Maximum number of contacts to enrich for a company`}</Text>
                       <Form.Item
                         label={null}
                         name='MaxContacts'
                         className='w-full'
                       >
-                        <Input
-                          className='fa-input w-full'
-                          placeholder={`10`}
-                        />
+                        <Input className='fa-input w-full' placeholder={`10`} />
                       </Form.Item>
                     </div>
                   </Form>
                 </div>
                 <div className='mt-6'>
-                  <Text type={'title'} weight={'bold'} level={7} color={'black'} extraClass={'m-0'}>{`Additional fields (for Contact)`}</Text>
+                  <Text
+                    type={'title'}
+                    weight={'bold'}
+                    level={7}
+                    color={'black'}
+                    extraClass={'m-0'}
+                  >{`Additional fields (for Contact)`}</Text>
                   <MapComponent
                     dropdownOptions1={dropdownOptions}
                     dropdownOptions2={HSContactsProps}
@@ -257,24 +323,25 @@ const FactorsApolloHubspotContacts = ({
                     isTemplate={isTemplate}
                   />
                 </div>
-
               </div>
             </div>
             <div className='border-top--thin-2 p-4 mt-4 flex items-center justify-end'>
-              <Button type={'primary'} className='mt-2' onClick={() => saveWorkflowFn()}>Save and Publish</Button>
+              <Button
+                type={'primary'}
+                className='mt-2'
+                onClick={() => saveWorkflowFn()}
+              >
+                Save and Publish
+              </Button>
             </div>
-
-
-
           </Panel>
         </Collapse>
       </>
-    )
+    );
+  } catch (err) {
+    logger.log('error inside FactorsApolloHubspotContacts', err);
+    return null;
   }
-  catch (err) {
-    console.log("error inside FactorsApolloHubspotContacts", err);
-    return null
-  }
-}
+};
 
-export default FactorsApolloHubspotContacts
+export default FactorsApolloHubspotContacts;
