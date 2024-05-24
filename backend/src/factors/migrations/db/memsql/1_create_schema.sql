@@ -1527,7 +1527,7 @@ CREATE TABLE IF NOT EXISTS widget_groups (
     SHARD KEY (project_id),
     KEY (project_id, id) USING HASH,
     UNIQUE KEY unique_widget_groups_project_id_name_idx(project_id, display_name) USING HASH
-)
+);
 
 CREATE TABLE IF NOT EXISTS cache_db (
     k TEXT NOT NULL,
