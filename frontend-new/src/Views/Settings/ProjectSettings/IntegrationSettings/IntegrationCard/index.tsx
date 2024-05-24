@@ -150,7 +150,7 @@ const IntegrationCard = ({
     (featureName === 'sdk' &&
       (isErrorState || isPendingState) &&
       showIntegrationStatusFlag) ||
-    (isFeatureLocked &&
+    (!isFeatureLocked &&
       (isErrorState || isPendingState) &&
       showIntegrationStatusFlag)
   ) {
