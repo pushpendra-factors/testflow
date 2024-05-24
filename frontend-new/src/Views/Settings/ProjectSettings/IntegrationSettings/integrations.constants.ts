@@ -338,7 +338,7 @@ export const AccountIdentificationProviderData: IntegrationConfig[] = [
     id: INTEGRATION_ID.six_signal_by_6_sense,
     categoryId: INTEGRATION_CATEGORY_ID.accountIdentification,
     name: '6Signal by 6Sense',
-    desc: 'Gain insight into who is visiting your website and where they are in the buying journey',
+    desc: 'Use 6Signal by 6Sense to identify accounts. Your usage will be billed by 6Signal directly.',
     icon: 'SixSignalLogo',
     kbLink:
       'https://help.factors.ai/en/articles/7261968-6signal-by-6sense-integration',
@@ -350,7 +350,7 @@ export const AccountIdentificationProviderData: IntegrationConfig[] = [
     id: INTEGRATION_ID.clearbit_reveal,
     categoryId: INTEGRATION_CATEGORY_ID.accountIdentification,
     name: 'Clearbit Reveal',
-    desc: 'Take action as soon as a target account hits your site',
+    desc: 'Use Clearbit Reveal to identify accounts. Your usage will be billed by Clearbit directly.',
     icon: 'ClearbitLogo',
     kbLink:
       'https://help.factors.ai/en/articles/7261981-clearbit-reveal-integration',

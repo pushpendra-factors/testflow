@@ -153,7 +153,6 @@ const IntegrationSettings = () => {
               </div>
               <div className='flex items-center justify-between'>
                 <Input
-                  autoFocus
                   onChange={handleSearchTextChange}
                   placeholder='Search Integration'
                   style={{ width: '220px', borderRadius: 5 }}

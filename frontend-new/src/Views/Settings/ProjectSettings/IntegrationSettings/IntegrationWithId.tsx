@@ -27,6 +27,7 @@ import {
 } from './util';
 import { IntegrationContext } from './IntegrationContext';
 import styles from './index.module.scss';
+import { PathUrls } from 'Routes/pathUrls';
 
 const IntegrationWithId = ({
   currentProjectSettingsLoading,
@@ -89,7 +90,7 @@ const IntegrationWithId = ({
 
   const handleBackClick = () => {
     sessionStorage.setItem('integration-card', integrationId);
-    history.goBack();
+    history.push(PathUrls.SettingsIntegration);
   };
 
   const integrationCallback = () => {
