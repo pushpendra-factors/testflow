@@ -303,7 +303,7 @@ func GetSlackIntegrationState(projectID int64, agentUUID string) model.Integrati
 	//switch case for all possible error
 	if response["ok"] == true {
 		return model.IntegrationState{
-			State:   model.SYNCED,
+			State:   model.CONNECTED,
 			Message: U.GetPropertyValueAsString(response["error"]),
 		}
 	}

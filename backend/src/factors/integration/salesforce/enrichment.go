@@ -3120,6 +3120,10 @@ func enrichWithOrderedTimeSeries(project *model.Project, orderedTimeSeries [][]i
 		}
 
 		for _, docType := range enrichOrderByType {
+			if docType == model.SalesforceDocumentTypeLead && C.SkipSalesforceLeadEnrichmentByProjectID(project.ID) {
+				continue
+			}
+
 			if docMinTimestamp[docType] <= 0 || timeRange[1] < docMinTimestamp[docType] {
 				continue
 			}
