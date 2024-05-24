@@ -34,8 +34,8 @@ const IndentificationProvider = ({ kbLink }: IndentificationProviderProps) => {
         openByDefault
         HeaderComponent={
           <Header
-            title='Factor Deanonymization'
-            description='Use Factors deanonymization to identify accounts visiting your website. Monthly quota is calculated based on your plan.'
+            title='Factors Deanonymization'
+            description='Use Factors Deanonymization to identify accounts visiting your website. Monthly quota is calculated based on your plan.'
           />
         }
         BodyComponent={<SixSignalFactors kbLink={kbLink} />}
@@ -48,7 +48,7 @@ const IndentificationProvider = ({ kbLink }: IndentificationProviderProps) => {
         keyName='third-party'
         HeaderComponent={
           <Header
-            title='Third party Integrations'
+            title='Third-Party Integrations'
             description='Use your existing API key to identify accounts visiting your website. Your usage is metered by your API provider directly.'
           />
         }
