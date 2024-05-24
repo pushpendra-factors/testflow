@@ -220,5 +220,4 @@ export const getIntegrationActionText = (
   return actionText;
 };
 
-export const showIntegrationStatus = (email: string) => true;
-// return AdminLock(email);
+export const showIntegrationStatus = (email: string) => AdminLock(email);
