@@ -97,9 +97,12 @@ func mainRunDeltaInsights() {
 	projectsFromDB := flag.Bool("projects_from_db", false, "")
 	isMailerRun := flag.Bool("is_mailer_run", false, "")
 
-	startTimestamp := flag.Int64("start_timetamp", 0, "start time stamp")
-	endTimestamp := flag.Int64("end_timetamp", 0, "end time stamp")
-	createNewProps := flag.Bool("create_new_props", false, "whether to recreate creating properties and events filter list")
+	startTimestamp := flag.Int64("start_timestamp", 0, "start time stamp")
+	endTimestamp := flag.Int64("end_timestamp", 0, "end time stamp")
+	inputDays := flag.Int("input_days", 15, "period in days for input data")
+	outputDays := flag.Int("output_days", 15, "period in days for output data")
+	gapDays := flag.Int("gap_days", 15, "period in days to skip for next input")
+	targetEvent := flag.String("target_event", "$form_submitted", "event to target for analysis")
 	mode := flag.String("mode", "delta", "delta or predict")
 
 	flag.Parse()
@@ -384,7 +387,11 @@ func mainRunDeltaInsights() {
 		configs["startTimestamp"] = startTimestamp
 		configs["endTimestamp"] = endTimestamp
 		configs["lookback"] = *lookback
-		configs["createNewProps"] = *createNewProps
+
+		configs["daysOfInput"] = *inputDays
+		configs["daysOfOutput"] = *outputDays
+		configs["gapDaysForNextInput"] = *gapDays
+		configs["targetEvent"] = *targetEvent
 
 		var archiveCloudManager filestore.FileManager
 		if *envFlag == "development" {

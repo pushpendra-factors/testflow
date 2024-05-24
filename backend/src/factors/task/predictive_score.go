@@ -186,9 +186,17 @@ func PredictiveScoring2(projectId int64, configs map[string]interface{}) (map[st
 
 	tmpCloudManager := configs["tmpCloudManager"].(*filestore.FileManager)
 	archiveCloudManager := configs["archiveCloudManager"].(*filestore.FileManager)
+
+	daysOfInput := (configs["daysOfInput"].(int))
+	daysOfOutput := (configs["daysOfOutput"].(int))
+	gapDaysForNextInput := configs["gapDaysForNextInput"].(int)
+
 	lookbackWindow := configs["lookback"].(int)
 	startTimestamp := *(configs["startTimestamp"].(*int64))
 	endTimestamp := *(configs["endTimestamp"].(*int64))
+	minStartTimestamp := startTimestamp - (int64(lookbackWindow) * U.Per_day_epoch)
+
+	targetEvent := configs["targetEvent"].(string)
 
 	// get id number for aaccount ids
 	domain_group, httpStatus := store.GetStore().GetGroup(projectId, M.GROUP_NAME_DOMAINS)
@@ -200,14 +208,10 @@ func PredictiveScoring2(projectId int64, configs map[string]interface{}) (map[st
 	}
 	idNum := domain_group.ID
 
-	startDayTimestamp := startTimestamp
-	endDayTimestamp := endTimestamp
+	activeAccounts := make(map[string]bool)
 
-	accountInfos := make(map[string]map[string]interface{})
-	userPropCounts := make(map[string]map[string]int)
-
-	timestamp := startDayTimestamp
-	for timestamp <= endDayTimestamp {
+	timestamp := startTimestamp
+	for timestamp <= endTimestamp {
 		partFilesDir, _ := pull.GetDailyArchiveFilePathAndName(archiveCloudManager, U.DataTypeEvent, U.EVENTS_FILENAME_PREFIX, projectId, timestamp, 0, 0)
 		listFiles := (*archiveCloudManager).ListFiles(partFilesDir)
 		for _, partFileFullName := range listFiles {
@@ -241,222 +245,8 @@ func PredictiveScoring2(projectId int64, configs map[string]interface{}) (map[st
 					return status, false
 				}
 				AccID := merge.GetAptId(eventDetails, idNum)
-				if _, ok := accountInfos[AccID]; !ok {
-					newMap := make(map[string]interface{})
-					newMap[IdColumnName] = AccID
-					newMap[minTimestampCol] = eventDetails.EventTimestamp
-					newMap[maxTimestampCol] = eventDetails.EventTimestamp
-					accountInfos[AccID] = newMap
-					userPropCounts[AccID] = make(map[string]int)
-				}
-				dataPoint := accountInfos[AccID]
-
-				eName := "ev#" + eventDetails.EventName
-				if freq, ok := dataPoint[eName]; !ok {
-					dataPoint[eName] = int64(1)
-				} else {
-					dataPoint[eName] = freq.(int64) + 1
-				}
-
-				evType := "middle"
-				if eventDetails.EventTimestamp < dataPoint[minTimestampCol].(int64) {
-					dataPoint[minTimestampCol] = eventDetails.EventTimestamp
-					evType = "first"
-				} else if eventDetails.EventTimestamp > dataPoint[maxTimestampCol].(int64) {
-					dataPoint[maxTimestampCol] = eventDetails.EventTimestamp
-					evType = "last"
-				}
-
-				propCounts := userPropCounts[AccID]
-				for uKey, uVal := range eventDetails.UserProperties {
-					uKey = "up#" + uKey
-					if uVal == "" || uVal == nil {
-						continue
-					}
-					if val, ok := props[uKey]; !ok {
-						continue
-					} else {
-						propCounts[uKey] += 1
-						if val == "pass" {
-							continue
-						} else if val == "total" || val == "average" {
-							floatVal, err := U.GetPropertyValueAsFloat64(uVal)
-							if err != nil {
-								log.Error("failed getting interface float value")
-								status["err"] = err.Error()
-								return status, false
-							}
-							if _, ok := dataPoint[uKey]; !ok {
-								dataPoint[uKey] = 0.0
-							}
-							dataPoint[uKey] = dataPoint[uKey].(float64) + floatVal
-						} else if val == "first" || val == "last" {
-							if evType != val {
-								continue
-							}
-							dataPoint[uKey] = uVal
-						}
-					}
-				}
-				for eKey, eVal := range eventDetails.EventProperties {
-					eKey = "ep#" + eKey
-					if eVal == "" || eVal == nil {
-						continue
-					}
-					if val, ok := props[eKey]; !ok {
-						continue
-					} else {
-						propCounts[eKey] += 1
-						if _, ok := dataPoint[eKey]; !ok {
-							dataPoint[eKey] = eVal
-							continue
-						}
-						if val == "pass" {
-							continue
-						} else if val == "total" || val == "average" {
-							floatVal, err := U.GetPropertyValueAsFloat64(eVal)
-							if err != nil {
-								log.Error("failed getting interface float value")
-								status["err"] = err.Error()
-								return status, false
-							}
-							if _, ok := dataPoint[eKey]; !ok {
-								dataPoint[eKey] = 0.0
-							}
-							dataPoint[eKey] = dataPoint[eKey].(float64) + floatVal
-						} else if val == "first" || val == "last" {
-							if evType != val {
-								continue
-							}
-							dataPoint[eKey] = eVal
-						}
-					}
-				}
-			}
-		}
-		timestamp += U.Per_day_epoch
-	}
-
-	newStartDayTimestamp := startDayTimestamp - (int64(lookbackWindow) * U.Per_day_epoch)
-	newEndDayTimestamp := startDayTimestamp - 1
-	timestamp = newStartDayTimestamp
-	// var accountInfos = make(map[string]map[string]interface{})
-	for timestamp <= newEndDayTimestamp {
-		partFilesDir, _ := pull.GetDailyArchiveFilePathAndName(archiveCloudManager, U.DataTypeEvent, U.EVENTS_FILENAME_PREFIX, projectId, timestamp, 0, 0)
-		listFiles := (*archiveCloudManager).ListFiles(partFilesDir)
-		for _, partFileFullName := range listFiles {
-			partFNamelist := strings.Split(partFileFullName, "/")
-			partFileName := partFNamelist[len(partFNamelist)-1]
-			if !strings.HasPrefix(partFileName, U.EVENTS_FILENAME_PREFIX) {
-				continue
-			}
-
-			log.Infof("Reading daily file :%s, %s", partFilesDir, partFileName)
-			file, err := (*archiveCloudManager).Get(partFilesDir, partFileName)
-			if err != nil {
-				log.Error(err)
-				status["err"] = err.Error()
-				return status, false
-			}
-
-			scanner := bufio.NewScanner(file)
-			const maxCapacity = 30 * 1024 * 1024
-			buf := make([]byte, maxCapacity)
-			scanner.Buffer(buf, maxCapacity)
-
-			for scanner.Scan() {
-				line := scanner.Text()
-
-				var eventDetails *P.CounterEventFormat
-				err = json.Unmarshal([]byte(line), &eventDetails)
-				if err != nil {
-					log.Error(err)
-					status["err"] = err.Error()
-					return status, false
-				}
-				AccID := merge.GetAptId(eventDetails, idNum)
-
-				if _, ok := accountInfos[AccID]; !ok {
-					continue
-				}
-				dataPoint := accountInfos[AccID]
-
-				eName := "ev#" + eventDetails.EventName
-				if freq, ok := dataPoint[eName]; !ok {
-					dataPoint[eName] = int64(1)
-				} else {
-					dataPoint[eName] = freq.(int64) + 1
-				}
-
-				evType := "middle"
-				if eventDetails.EventTimestamp < dataPoint[minTimestampCol].(int64) {
-					dataPoint[minTimestampCol] = eventDetails.EventTimestamp
-					evType = "first"
-				} else if eventDetails.EventTimestamp > dataPoint[maxTimestampCol].(int64) {
-					dataPoint[maxTimestampCol] = eventDetails.EventTimestamp
-					evType = "last"
-				}
-
-				propCounts := userPropCounts[AccID]
-				for uKey, uVal := range eventDetails.UserProperties {
-					uKey = "up#" + uKey
-					if uVal == "" || uVal == nil {
-						continue
-					}
-					if val, ok := props[uKey]; !ok {
-						continue
-					} else {
-						propCounts[uKey] += 1
-						if val == "pass" {
-							continue
-						} else if val == "total" || val == "average" {
-							floatVal, err := U.GetPropertyValueAsFloat64(uVal)
-							if err != nil {
-								log.Error("failed getting interface float value")
-								status["err"] = err.Error()
-								return status, false
-							}
-							if _, ok := dataPoint[uKey]; !ok {
-								dataPoint[uKey] = 0.0
-							}
-							dataPoint[uKey] = dataPoint[uKey].(float64) + floatVal
-						} else if val == "first" || val == "last" {
-							if evType != val {
-								continue
-							}
-							dataPoint[uKey] = uVal
-						}
-					}
-				}
-				for eKey, eVal := range eventDetails.EventProperties {
-					eKey = "ep#" + eKey
-					if eVal == "" || eVal == nil {
-						continue
-					}
-					if val, ok := props[eKey]; !ok {
-						continue
-					} else {
-						propCounts[eKey] += 1
-						if val == "pass" {
-							continue
-						} else if val == "total" || val == "average" {
-							floatVal, err := U.GetPropertyValueAsFloat64(eVal)
-							if err != nil {
-								log.Error("failed getting interface float value")
-								status["err"] = err.Error()
-								return status, false
-							}
-							if _, ok := dataPoint[eKey]; !ok {
-								dataPoint[eKey] = 0.0
-							}
-							dataPoint[eKey] = dataPoint[eKey].(float64) + floatVal
-						} else if val == "first" || val == "last" {
-							if evType != val {
-								continue
-							}
-							dataPoint[eKey] = eVal
-						}
-					}
+				if _, ok := activeAccounts[AccID]; !ok {
+					activeAccounts[AccID] = true
 				}
 			}
 		}
@@ -465,7 +255,7 @@ func PredictiveScoring2(projectId int64, configs map[string]interface{}) (map[st
 
 	fileDir := (*tmpCloudManager).GetProjectDir(projectId)
 	fileDir = fileDir + "pred_score_rfc/"
-	fileName := "training_data_golang.txt"
+	fileName := fmt.Sprintf("training_data_golang_%d_%d_%d.txt", startTimestamp, endTimestamp, lookbackWindow)
 	cloudWriter, err := (*tmpCloudManager).GetWriter(fileDir, fileName)
 	if err != nil {
 		log.WithFields(log.Fields{"fileDir": fileDir, "fileName": fileName}).Error("unable to get writer for file")
@@ -473,27 +263,257 @@ func PredictiveScoring2(projectId int64, configs map[string]interface{}) (map[st
 		return status, false
 	}
 
-	countIds := 0
-	for accId, dataPoint := range accountInfos {
-		for _, prop := range avgProps {
-			if val, ok := dataPoint[prop]; ok && val != 0 {
-				dataPoint[prop] = dataPoint[prop].(float64) / float64(userPropCounts[accId][prop])
-			}
+	countDatapoints := 0
+
+	outputEndDayTimestamp := endTimestamp
+	outputStartDayTimestamp := outputEndDayTimestamp - (int64(daysOfOutput) * U.Per_day_epoch)
+
+	inputStartDayTimestamp := outputStartDayTimestamp - (int64(daysOfInput) * U.Per_day_epoch)
+	inputEndDayTimestamp := outputStartDayTimestamp - 1
+
+	loop := 0
+	for minStartTimestamp <= inputStartDayTimestamp {
+		loop++
+		var accountIds = make(map[string]bool)
+		for accId, yes := range activeAccounts {
+			accountIds[accId] = yes
 		}
-		if dataPointBytes, err := json.Marshal(dataPoint); err != nil {
-			log.WithFields(log.Fields{"dataPoint": dataPoint, "err": err}).Error("Marshal failed")
-			status["err"] = err.Error()
-			return status, false
-		} else {
-			lineWrite := string(dataPointBytes)
-			if _, err := io.WriteString(cloudWriter, lineWrite+"\n"); err != nil {
-				mineLog.WithFields(log.Fields{"line": lineWrite, "err": err}).Error("Unable to write to file.")
+		var accountInfos = make(map[string]map[string]interface{})
+		var userPropCounts = make(map[string]map[string]int)
+		target := make(map[string]int)
+
+		timestamp = outputStartDayTimestamp
+		for timestamp <= outputEndDayTimestamp {
+			partFilesDir, _ := pull.GetDailyArchiveFilePathAndName(archiveCloudManager, U.DataTypeEvent, U.EVENTS_FILENAME_PREFIX, projectId, timestamp, 0, 0)
+			listFiles := (*archiveCloudManager).ListFiles(partFilesDir)
+			for _, partFileFullName := range listFiles {
+				partFNamelist := strings.Split(partFileFullName, "/")
+				partFileName := partFNamelist[len(partFNamelist)-1]
+				if !strings.HasPrefix(partFileName, U.EVENTS_FILENAME_PREFIX) {
+					continue
+				}
+
+				log.Infof("Reading daily file :%s, %s", partFilesDir, partFileName)
+				file, err := (*archiveCloudManager).Get(partFilesDir, partFileName)
+				if err != nil {
+					log.Error(err)
+					status["err"] = err.Error()
+					return status, false
+				}
+
+				scanner := bufio.NewScanner(file)
+				const maxCapacity = 30 * 1024 * 1024
+				buf := make([]byte, maxCapacity)
+				scanner.Buffer(buf, maxCapacity)
+
+				for scanner.Scan() {
+					line := scanner.Text()
+
+					var eventDetails *P.CounterEventFormat
+					err = json.Unmarshal([]byte(line), &eventDetails)
+					if err != nil {
+						log.Error(err)
+						status["err"] = err.Error()
+						return status, false
+					}
+					AccID := merge.GetAptId(eventDetails, idNum)
+					if _, ok := accountIds[AccID]; !ok {
+						continue
+					}
+					if _, ok := target[AccID]; !ok {
+						target[AccID] = 0
+					}
+					if eventDetails.EventName == targetEvent {
+						target[AccID] = 1
+					}
+				}
+			}
+			timestamp += U.Per_day_epoch
+		}
+
+		timestamp = inputStartDayTimestamp
+		for timestamp <= inputEndDayTimestamp {
+			partFilesDir, _ := pull.GetDailyArchiveFilePathAndName(archiveCloudManager, U.DataTypeEvent, U.EVENTS_FILENAME_PREFIX, projectId, timestamp, 0, 0)
+			listFiles := (*archiveCloudManager).ListFiles(partFilesDir)
+			for _, partFileFullName := range listFiles {
+				partFNamelist := strings.Split(partFileFullName, "/")
+				partFileName := partFNamelist[len(partFNamelist)-1]
+				if !strings.HasPrefix(partFileName, U.EVENTS_FILENAME_PREFIX) {
+					continue
+				}
+
+				log.Infof("Reading daily file :%s, %s", partFilesDir, partFileName)
+				file, err := (*archiveCloudManager).Get(partFilesDir, partFileName)
+				if err != nil {
+					log.Error(err)
+					status["err"] = err.Error()
+					return status, false
+				}
+
+				scanner := bufio.NewScanner(file)
+				const maxCapacity = 30 * 1024 * 1024
+				buf := make([]byte, maxCapacity)
+				scanner.Buffer(buf, maxCapacity)
+
+				for scanner.Scan() {
+					line := scanner.Text()
+
+					var eventDetails *P.CounterEventFormat
+					err = json.Unmarshal([]byte(line), &eventDetails)
+					if err != nil {
+						log.Error(err)
+						status["err"] = err.Error()
+						return status, false
+					}
+					AccID := merge.GetAptId(eventDetails, idNum)
+
+					if yes, ok := accountIds[AccID]; !ok || !yes {
+						continue
+					}
+					if eventDetails.EventName == targetEvent {
+						accountIds[AccID] = false
+						delete(accountInfos, AccID)
+						continue
+					}
+					var newId bool
+					if _, ok := accountInfos[AccID]; !ok {
+						var newMap = make(map[string]interface{})
+						newMap[IdColumnName] = AccID
+						newMap[minTimestampCol] = eventDetails.EventTimestamp
+						newMap[maxTimestampCol] = eventDetails.EventTimestamp
+						newMap["loop"] = loop
+						accountInfos[AccID] = newMap
+						newId = true
+					}
+					dataPoint := accountInfos[AccID]
+
+					eName := "ev#" + eventDetails.EventName
+					if freq, ok := dataPoint[eName]; !ok {
+						dataPoint[eName] = 1
+					} else {
+						dataPoint[eName] = freq.(int64) + 1
+					}
+
+					evType := "middle"
+					if eventDetails.EventTimestamp < dataPoint[minTimestampCol].(int64) {
+						dataPoint[minTimestampCol] = eventDetails.EventTimestamp
+						evType = "first"
+					} else if eventDetails.EventTimestamp > dataPoint[maxTimestampCol].(int64) {
+						dataPoint[maxTimestampCol] = eventDetails.EventTimestamp
+						evType = "last"
+					}
+
+					propCounts := userPropCounts[AccID]
+
+					for uKey, uVal := range eventDetails.UserProperties {
+						uKey = "up#" + uKey
+						if uVal == "" || uVal == nil {
+							continue
+						}
+						if val, ok := props[uKey]; !ok {
+							continue
+						} else {
+							propCounts[uKey] += 1
+							if val == "pass" {
+								continue
+							} else if val == "total" || val == "average" {
+								floatVal, err := U.GetPropertyValueAsFloat64(uVal)
+								if err != nil {
+									log.Error("failed getting interface float value")
+									status["err"] = err.Error()
+									return status, false
+								}
+								if _, ok := dataPoint[uKey]; !ok {
+									dataPoint[uKey] = 0.0
+								}
+								var mult float64 = 1
+								var den float64 = 1
+								if val == "average" {
+									mult = float64(propCounts[uKey] - 1)
+									den = float64(propCounts[uKey])
+								}
+								dataPoint[uKey] = ((dataPoint[uKey].(float64) * mult) + floatVal) / den
+							} else if val == "first" || val == "last" {
+								if evType != val || newId {
+									continue
+								}
+								dataPoint[uKey] = uVal
+							}
+						}
+					}
+					for eKey, eVal := range eventDetails.EventProperties {
+						eKey = "ep#" + eKey
+						if eVal == "" || eVal == nil {
+							continue
+						}
+						if val, ok := props[eKey]; !ok {
+							continue
+						} else {
+							propCounts[eKey] += 1
+							if val == "pass" {
+								continue
+							} else if val == "total" || val == "average" {
+								floatVal, err := U.GetPropertyValueAsFloat64(eVal)
+								if err != nil {
+									log.Error("failed getting interface float value")
+									status["err"] = err.Error()
+									return status, false
+								}
+								if _, ok := dataPoint[eKey]; !ok {
+									dataPoint[eKey] = 0.0
+								}
+								var mult float64 = 1
+								var den float64 = 1
+								if val == "average" {
+									mult = float64(propCounts[eKey] - 1)
+									den = float64(propCounts[eKey])
+								}
+								dataPoint[eKey] = ((dataPoint[eKey].(float64) * mult) + floatVal) / den
+							} else if val == "first" || val == "last" {
+								if evType != val || newId {
+									continue
+								}
+								dataPoint[eKey] = eVal
+							}
+						}
+					}
+				}
+			}
+			timestamp += U.Per_day_epoch
+		}
+
+		countIds := 0
+		for accId, dataPoint := range accountInfos {
+			dataPoint["target"] = target[accId]
+			dataPoint["firstEventSecondsFromEnd"] = outputStartDayTimestamp - dataPoint[minTimestampCol].(int64)
+			dataPoint["lastEventSecondsFromEnd"] = outputStartDayTimestamp - dataPoint[maxTimestampCol].(int64)
+			dataPoint["firstEventDayFromEnd"] = 1 + (outputStartDayTimestamp-dataPoint[minTimestampCol].(int64))/U.Per_day_epoch
+			dataPoint["lastEventDayFromEnd"] = 1 + (outputStartDayTimestamp-dataPoint[maxTimestampCol].(int64))/U.Per_day_epoch
+			if dataPointBytes, err := json.Marshal(dataPoint); err != nil {
+				log.WithFields(log.Fields{"dataPoint": dataPoint, "err": err}).Error("Marshal failed")
 				status["err"] = err.Error()
 				return status, false
+			} else {
+				lineWrite := string(dataPointBytes)
+				if _, err := io.WriteString(cloudWriter, lineWrite+"\n"); err != nil {
+					mineLog.WithFields(log.Fields{"line": lineWrite, "err": err}).Error("Unable to write to file.")
+					status["err"] = err.Error()
+					return status, false
+				}
 			}
+			countIds += 1
+			log.Info("countIds: ", countIds)
 		}
-		countIds += 1
+		countDatapoints += countIds
+
+		timestampToGoBack := (int64(gapDaysForNextInput) * U.Per_day_epoch)
+		outputEndDayTimestamp -= timestampToGoBack
+		outputStartDayTimestamp -= timestampToGoBack
+
+		inputStartDayTimestamp -= timestampToGoBack
+		inputEndDayTimestamp -= timestampToGoBack
 	}
+	log.Info("countDatapoints: ", countDatapoints)
 	err = cloudWriter.Close()
 	if err != nil {
 		log.WithFields(log.Fields{"fileDir": fileDir, "fileName": fileName}).Error("unable to close writer for file")
