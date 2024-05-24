@@ -392,7 +392,7 @@ func PredictiveScoring2(projectId int64, configs map[string]interface{}) (map[st
 					if freq, ok := dataPoint[eName]; !ok {
 						dataPoint[eName] = 1
 					} else {
-						dataPoint[eName] = freq.(int64) + 1
+						dataPoint[eName] = freq.(int) + 1
 					}
 
 					evType := "middle"
