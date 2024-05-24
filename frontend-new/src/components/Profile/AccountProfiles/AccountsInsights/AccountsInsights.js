@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Spin, notification } from 'antd';
+import { Spin, notification, Button } from 'antd';
 import FaDatepicker from 'Components/FaDatepicker';
 import ControlledComponent from 'Components/ControlledComponent';
-import { SVG as Svg, Text } from 'Components/factorsComponents';
+import { SVG, SVG as Svg, Text } from 'Components/factorsComponents';
 import {
   selectAccountPayload,
   selectEditInsightsMetricStatus,
@@ -16,6 +16,10 @@ import {
 import { setInsightsDuration } from 'Reducers/accountProfilesView/actions';
 import { EMPTY_OBJECT } from 'Utils/global';
 import { selectSegmentBySegmentId } from 'Reducers/timelines/selectors';
+import useFeatureLock from 'hooks/useFeatureLock';
+import { SEGMENT_INSIGHTS_LEARN_MORE_LINK } from 'Utils/constants';
+import { FEATURES } from 'Constants/plans.constants';
+import usePlanUpgrade from 'hooks/usePlanUpgrade';
 import InsightsWidget from './InsightsWidget';
 import SegmentKpisOverview from './SegmentKpisOverview';
 import { DEFAULT_DATE_RANGE } from './accountInsightsConstants';
@@ -24,22 +28,24 @@ import EditMetricModal from './EditMetricModal';
 
 export default function AccountsInsights() {
   const dispatch = useDispatch();
+  const { handlePlanUpgradeClick } = usePlanUpgrade();
   const insightsConfig = useSelector(selectInsightsConfig);
   const accountPayload = useSelector(selectAccountPayload);
   const segment = useSelector((state) =>
     selectSegmentBySegmentId(state, accountPayload?.segment.id)
   );
   const areInsightsAvailable = segment.long_run_comp === true;
+  const featureFlag = useFeatureLock(FEATURES.FEATURE_SEGMENT_KPI);
+
+  const featureLocked =
+    featureFlag.isLoading === false && featureFlag.isFeatureLocked === true;
+
   const editMetricStatus = useSelector(selectEditInsightsMetricStatus);
   const activeProject = useSelector((state) => state.global.active_project);
   const [isFetchDone, setIsFetchDone] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editWidget, setEditWidget] = useState(EMPTY_OBJECT);
   const [editWidgetGroupId, setEditWidgetGroupId] = useState(null);
-
-  const handleEditModalClose = useCallback(() => {
-    setShowEditModal(false);
-  }, []);
 
   const nonAccountsWidgets = useMemo(
     () =>
@@ -56,6 +62,10 @@ export default function AccountsInsights() {
       ),
     [insightsConfig.config]
   );
+
+  const handleEditModalClose = useCallback(() => {
+    setShowEditModal(false);
+  }, []);
 
   const handleDurationChange = useCallback(
     (duration) => {
@@ -105,17 +115,29 @@ export default function AccountsInsights() {
     [editWidget, editWidgetGroupId, handleEditModalClose]
   );
 
+  const handleLearnMoreClick = useCallback(() => {
+    window.open(SEGMENT_INSIGHTS_LEARN_MORE_LINK, '_blank');
+  }, []);
+
   useEffect(() => {
     if (
       areInsightsAvailable &&
       insightsConfig.completed !== true &&
       insightsConfig.loading !== true &&
-      isFetchDone === false
+      isFetchDone === false &&
+      featureLocked === false
     ) {
       setIsFetchDone(true);
       dispatch(fetchInsightsConfig(activeProject.id));
     }
-  }, [insightsConfig.loading, activeProject.id, insightsConfig.completed]);
+  }, [
+    areInsightsAvailable,
+    isFetchDone,
+    insightsConfig.loading,
+    insightsConfig.completed,
+    activeProject.id,
+    featureLocked
+  ]);
 
   useEffect(() => {
     if (editMetricStatus.completed === true) {
@@ -124,10 +146,11 @@ export default function AccountsInsights() {
   }, [editMetricStatus.completed, handleEditModalClose]);
 
   const isLoading =
+    featureFlag.isLoading === true ||
     insightsConfig.loading === true ||
     (insightsConfig.completed !== true && insightsConfig.error !== true);
 
-  if (areInsightsAvailable === false) {
+  if (areInsightsAvailable === false && featureLocked === false) {
     return (
       <div className='flex justify-center items-center flex-col gap-y-1 flex-1'>
         <img src='../../../../assets/icons/pana.svg' alt='loader-man' />
@@ -137,6 +160,47 @@ export default function AccountsInsights() {
         <Text type='title' level={8} extraClass='mb-0' color='character-title'>
           Check back in some time
         </Text>
+      </div>
+    );
+  }
+
+  if (featureLocked === true) {
+    return (
+      <div className='flex justify-center items-center flex-col gap-y-4'>
+        <img
+          alt='no-data'
+          src='../../../../assets/images/locked-segment-insights.svg'
+        />
+        <div className='flex justify-center items-center flex-col gap-y-2'>
+          <Text
+            level={3}
+            type='title'
+            extraClass='mb-0'
+            color='character-primary'
+          >
+            {`Your plan doesn't have this feature`}
+          </Text>
+          <Text type='title' color='character-secondary' extraClass='mb-0'>
+            This feature is not included in your current plan. Please upgrade to
+            use this feature
+          </Text>
+          <div className='flex gap-x-4 justify-center items-center'>
+            <Button
+              onClick={handleLearnMoreClick}
+              icon={<SVG size={16} color='#8c8c8c' name='arrowUpRightSquare' />}
+            >
+              Learn more
+            </Button>
+            <Button
+              onClick={() =>
+                handlePlanUpgradeClick(FEATURES.FEATURE_SEGMENT_KPI)
+              }
+              type='primary'
+            >
+              Upgrade now
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }

@@ -63,3 +63,12 @@
   border-top-width: 1px;
   border-color: $fa-color-neutral-grey-4;
 }
+
+.linkButton {
+  color: $fa-color--brand-color-6;
+  font-weight: 500;
+  &:hover {
+    background-color: unset !important;
+    color: $fa-color--brand-color-6;
+  }
+}
