@@ -132,7 +132,7 @@ func parseFlagsAndInitConfig() (string, bool, bool, string, int) {
 	if *env != "development" && *env != "staging" && *env != "production" {
 		err := fmt.Errorf("env [ %s ] not recognised", *env)
 		panic(err)
-		return "", false, *env, http.StatusBadRequest
+		return "", false, false, *env, http.StatusBadRequest
 	}
 
 	config := &C.Configuration{
@@ -157,7 +157,7 @@ func parseFlagsAndInitConfig() (string, bool, bool, string, int) {
 	err := C.InitDB(*config)
 	if err != nil {
 		log.Fatal("Init Config failed.")
-		return "", false, "", http.StatusBadRequest
+		return "", false, false, "", http.StatusBadRequest
 	}
 
 	return *overrideHealthcheckPingID, *jobForLargeTimerange, *jobForTestProjectsOnly, *env, http.StatusOK
