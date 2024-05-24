@@ -2876,6 +2876,10 @@ func getAndProcessUnSyncedGroupDocuments(projectID int64, docType int, workerPer
 				break
 			}
 		}
+
+		if recordProcessLimit > 0 && status.TotalProcessed > recordProcessLimit {
+			break
+		}
 	}
 
 	for key, value := range status.OverAllPendingSyncRecords {
@@ -2920,7 +2924,7 @@ func enrichGroup(projectID int64, workerPerProject int, orderedType []string, do
 		limitExceeded := false
 		overAllSyncStatus[docTypeAlias], overAllPendingSyncRecords, recordsProcessed, limitExceeded = getAndProcessUnSyncedGroupDocuments(projectID, docType, workerPerProject, salesforceSmartEventNames, timeZoneStr,
 			dataPropertiesByType, pullLimit, recordProcessLimit-totalRecordsProcessed, startTime, endTime, organizationURL)
-		totalRecordsProcessedMap[docTypeAlias] += recordsProcessed
+		totalRecordsProcessedMap[fmt.Sprintf("groups_%s", docTypeAlias)] += recordsProcessed
 		if limitExceeded {
 			return overAllSyncStatus, overAllPendingSyncRecords, http.StatusOK, totalRecordsProcessedMap, true
 		}
