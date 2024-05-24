@@ -130,11 +130,10 @@ func buildPredefinedWebsiteAggregationQuery(projectID int64, q model.PredefWebsi
 
 	resFromStmnt := ""
 	if useTestTable {
-		resFromStmnt = fmt.Sprintf("%s %s ", model.DBFrom, model.WebsiteAggregationTable)
-	} else {
 		resFromStmnt = fmt.Sprintf("%s %s ", model.DBFrom, model.WebsiteAggregationTestTable)
+	} else {
+		resFromStmnt = fmt.Sprintf("%s %s ", model.DBFrom, model.WebsiteAggregationTable)
 	}
-	resFromStmnt = fmt.Sprintf("%s %s ", model.DBFrom, model.WebsiteAggregationTable)
 
 	resFilterStmnt, resFilterParams := getPredefinedFilterStmnt(projectID, q.Filters, internalEventType, q.From, q.To, q.Timezone)
 
