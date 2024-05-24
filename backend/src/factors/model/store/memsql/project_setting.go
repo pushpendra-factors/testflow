@@ -743,6 +743,20 @@ func (store *MemSQL) UpdateProjectSettings(projectId int64, settings *model.Proj
 		}
 	}
 
+	// validate saml config
+
+	if settings.SamlConfiguration != nil {
+		var SAMLConfig model.SAMLConfiguration
+		err := U.DecodePostgresJsonbToStructType(settings.SamlConfiguration, &SAMLConfig)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectId, "setting": settings}).WithError(
+				err).Error("Failed decoding saml config json. Aborting.")
+			return nil, http.StatusInternalServerError
+		}
+
+		// func call to validate saml url, certificate 
+	}
+
 	var updatedProjectSetting model.ProjectSetting
 	if err := db.Model(&updatedProjectSetting).Where("project_id = ?",
 		projectId).Updates(settings).Error; err != nil {
@@ -1415,7 +1429,8 @@ func (store *MemSQL) UpdateLastProcessedAdsData(updatedFields map[string]model.L
 func (store *MemSQL) GetCustomAdsSourcesByProject(projectID int64) ([]string, int) {
 	db := C.GetServices().Db
 	adsImport := make([]string, 0, 0)
-	rows, err := db.Raw("SELECT DISTINCT source FROM integration_documents where project_id = ? and source != 'bingads'", projectID).Rows()
+	dbQuery := "SELECT DISTINCT(source) FROM integration_documents where project_id = ? and source != 'bingads' GROUP BY source order by min(created_at)"
+	rows, err := db.Raw(dbQuery, projectID).Rows()
 	if err != nil {
 		log.WithError(err).Error("Failed to get all sources.")
 		return adsImport, http.StatusInternalServerError

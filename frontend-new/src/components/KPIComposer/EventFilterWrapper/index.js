@@ -59,8 +59,6 @@ function EventFilterWrapper({
     operator: operatorProps
   });
 
-  const { userPropNames } = useSelector((state) => state.coreQuery);
-
   useEffect(() => {
     if (filter) {
       setValuesByProps(filter.props);

@@ -1,6 +1,7 @@
 package clearbit
 
 import (
+	"factors/config"
 	"factors/integration/clear_bit"
 	"factors/model/model"
 	"factors/model/store"
@@ -23,12 +24,13 @@ Customer clearbit enrichment and metering flow:
 */
 
 // IsEligible is a method on CustomerClearbit to check the eligibility of enrichment by customer clearbit API.
-func (cb *CustomerClearbit) IsEligible(projectSettings *model.ProjectSetting) (bool, error) {
+func (cb *CustomerClearbit) IsEligible(projectSettings *model.ProjectSetting, logCtx *log.Entry) (bool, error) {
 
 	projectId := projectSettings.ProjectId
+
 	featureFlag, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_CLEARBIT, false)
 	if err != nil {
-		log.Error("Failed to fetch feature flag")
+		logCtx.Error("Failed to fetch feature flag")
 		return false, err
 	}
 	if !featureFlag {
@@ -38,26 +40,31 @@ func (cb *CustomerClearbit) IsEligible(projectSettings *model.ProjectSetting) (b
 	intCustomerClearbit := projectSettings.IntClearBit
 
 	eligible := (featureFlag && *intCustomerClearbit && (customerClearbitKey != ""))
+	if config.IsEnrichmentDebugLogsEnabled(projectId) && !eligible {
+		logCtx.Warn("Eligibility check failed for customer clearbit")
+	}
 
 	return eligible, nil
 }
 
 // Enrich is a method on CustomerClearbit to enrich the company identification user properties.
-func (cb *CustomerClearbit) Enrich(projectSettings *model.ProjectSetting, userProperties *U.PropertiesMap, userId, clientIP string) (string, int) {
+func (cb *CustomerClearbit) Enrich(projectSettings *model.ProjectSetting, userProperties *U.PropertiesMap, userId, clientIP string, logCtx *log.Entry) (string, int) {
 
 	projectId := projectSettings.ProjectId
 	customerClearbitAPIKey := projectSettings.ClearbitKey
 
-	domain, status := FillClearbitUserProperties(projectId, customerClearbitAPIKey, userProperties, userId, clientIP)
+	if config.IsEnrichmentDebugLogsEnabled(projectId) {
+		logCtx.Info("Enrichment using customer clearbit.")
+	}
+
+	domain, status := FillClearbitUserProperties(projectId, customerClearbitAPIKey, userProperties, userId, clientIP, logCtx)
 	(*userProperties)[U.ENRICHMENT_SOURCE] = API_CLEARBIT
 	return domain, status
 }
 
 // FillClearbitUserProperties checks the cache and if not present it calls the goroutine func for enrichment.
 func FillClearbitUserProperties(projectId int64, clearbitKey string,
-	userProperties *U.PropertiesMap, UserId string, clientIP string) (string, int) {
-
-	logCtx := log.WithField("project_id", projectId)
+	userProperties *U.PropertiesMap, UserId string, clientIP string, logCtx *log.Entry) (string, int) {
 
 	resultChannel := make(chan clear_bit.ResultChannel)
 	var res clear_bit.ResultChannel
@@ -69,14 +76,23 @@ func FillClearbitUserProperties(projectId int64, clearbitKey string,
 		select {
 		case res = <-resultChannel:
 			if res.ExecuteStatus == 1 {
-
 				clear_bit.SetClearBitCacheResult(projectId, UserId, clientIP)
+				if config.IsEnrichmentDebugLogsEnabled(projectId) {
+					logCtx.Info("ExecuteClearbit success in Track Call.")
+				}
 			} else {
-				logCtx.Warn("ExecuteClearbit failed in Track call")
+				if config.IsEnrichmentDebugLogsEnabled(projectId) {
+					logCtx.Warn("ExecuteClearbit failed in Track call")
+				}
+
 			}
 		case <-time.After(U.TimeoutOneSecond):
-			logCtx.Warn("clear_bit enrichment timed out in Track call")
+			if config.IsEnrichmentDebugLogsEnabled(projectId) {
+				logCtx.Warn("clear_bit enrichment timed out in Track call")
+			}
 		}
+	} else if config.IsEnrichmentDebugLogsEnabled(projectId) && clearBitExists {
+		logCtx.Info("Getting the enrichment data from user props.")
 	}
 	return res.Domain, res.ExecuteStatus
 }

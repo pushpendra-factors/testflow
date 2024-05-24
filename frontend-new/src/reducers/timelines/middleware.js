@@ -287,7 +287,6 @@ export const getConfiguredEventProperties =
     new Promise((resolve, reject) => {
       fetchConfiguredEventProperties(projectID, eventID, eventName)
         .then((response) => {
-          console.log('response--->', response);
           resolve(
             dispatch({
               type: 'FETCH_EVENT_CONFIG_PROPERTIES_FULFILLED',

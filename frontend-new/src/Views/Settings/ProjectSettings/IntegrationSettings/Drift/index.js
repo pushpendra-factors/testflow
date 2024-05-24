@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useEffect } from 'react';
 import { connect } from 'react-redux';
 import { fetchProjectSettings, udpateProjectSettings } from 'Reducers/global';
 import { Button, message, Modal } from 'antd';
@@ -13,22 +12,15 @@ const DriftIntegration = ({
   udpateProjectSettings,
   activeProject,
   currentProjectSettings,
-  setIsActive,
-  kbLink = false,
-  currentAgent
+  currentAgent,
+  integrationCallback
 }) => {
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (currentProjectSettings?.int_drift) {
-      setIsActive(true);
-    }
-  }, [currentProjectSettings]);
 
   const enableDrift = () => {
     setLoading(true);
 
-    //Factors INTEGRATION tracking
+    // Factors INTEGRATION tracking
     factorsai.track('INTEGRATION', {
       name: 'drift',
       activeProjectID: activeProject.id
@@ -40,14 +32,12 @@ const DriftIntegration = ({
         setTimeout(() => {
           message.success('Drift integration enabled!');
         }, 500);
-        setIsActive(true);
         sendSlackNotification(currentAgent.email, activeProject.name, 'Drift');
+        integrationCallback();
       })
       .catch((err) => {
         setLoading(false);
         console.log('change password failed-->', err);
-        seterrorInfo(err.error);
-        setIsActive(false);
       });
   };
 
@@ -66,7 +56,7 @@ const DriftIntegration = ({
             setTimeout(() => {
               message.success('Drift integration disabled!');
             }, 500);
-            setIsActive(false);
+            integrationCallback();
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);
@@ -78,31 +68,24 @@ const DriftIntegration = ({
   };
 
   return (
-    <>
-      <ErrorBoundary
-        fallback={
-          <FaErrorComp subtitle={'Facing issues with Facebook integrations'} />
-        }
-        onError={FaErrorLog}
-      >
-        <div className={'mt-4 flex'}>
-          {currentProjectSettings?.int_drift ? (
-            <Button loading={loading} onClick={() => onDisconnect()}>
-              Disable
-            </Button>
-          ) : (
-            <Button type={'primary'} loading={loading} onClick={enableDrift}>
-              Enable Now
-            </Button>
-          )}
-          {kbLink && (
-            <a className={'ant-btn ml-2 '} target={'_blank'} href={kbLink}>
-              View documentation
-            </a>
-          )}
-        </div>
-      </ErrorBoundary>
-    </>
+    <ErrorBoundary
+      fallback={
+        <FaErrorComp subtitle='Facing issues with Facebook integrations' />
+      }
+      onError={FaErrorLog}
+    >
+      <div className='mt-4 flex'>
+        {currentProjectSettings?.int_drift ? (
+          <Button loading={loading} onClick={() => onDisconnect()}>
+            Disable
+          </Button>
+        ) : (
+          <Button type='primary' loading={loading} onClick={enableDrift}>
+            Enable Now
+          </Button>
+        )}
+      </div>
+    </ErrorBoundary>
   );
 };
 

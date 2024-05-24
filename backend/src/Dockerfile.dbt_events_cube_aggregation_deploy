@@ -7,7 +7,7 @@ COPY ./dbt/go_script ./scripts
 RUN go build -o $GOPATH/bin/events_cube_aggregation_deploy $GOPATH/src/factors/scripts/events_cube_aggregation_deploy/events_cube_aggregation_deploy.go
 
 
-FROM python:3.7-alpine
+FROM python:3.9-alpine
 
 ENV PYTHONPATH "${PYTHONPATH}:/usr/local/var/factors"
 RUN /bin/sh -c 'mkdir -p {/usr/local/var/factors,/root/.dbt}'

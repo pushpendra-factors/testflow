@@ -59,7 +59,7 @@ func SlackAuthRedirectHandler(c *gin.Context) {
 }
 func GetSlackAuthorisationURL(clientID string, state string) string {
 
-	url := fmt.Sprintf(`https://slack.com/oauth/v2/authorize?client_id=%s&scope=channels:read,chat:write,chat:write.public,im:read,users:read,users:read.email&user_scope=channels:read,chat:write,groups:read,mpim:read,users:read,users:read.email&state=%s`, clientID, state)
+	url := fmt.Sprintf(`https://slack.com/oauth/v2/authorize?client_id=%s&scope=channels:read,chat:write,chat:write.public,users:read,users:read.email&user_scope=channels:read,chat:write,groups:read,mpim:read,users:read,users:read.email&state=%s`, clientID, state)
 	return url
 }
 func SlackCallbackHandler(c *gin.Context) {
@@ -174,7 +174,7 @@ func buildRedirectURL(errMsg string, source int) string {
 	if source == 2 {
 		return C.GetProtocol() + C.GetAPPDomain() + "/welcome/visitoridentification/3?error=" + url.QueryEscape(errMsg)
 	}
-	return C.GetProtocol() + C.GetAPPDomain() + "/settings/integration?error=" + url.QueryEscape(errMsg)
+	return C.GetProtocol() + C.GetAPPDomain() + "/callback/integration/slack?error=" + url.QueryEscape(errMsg)
 }
 
 func GetSlackChannelsListHandler(c *gin.Context) {

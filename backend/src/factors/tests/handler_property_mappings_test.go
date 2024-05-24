@@ -6,12 +6,13 @@ import (
 	H "factors/handler"
 	"factors/handler/helpers"
 	"factors/model/model"
+	"factors/model/store"
 	U "factors/util"
 	"fmt"
-	"strings"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -21,15 +22,42 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func insertCustomAd(project model.Project) {
+	// insert dummy bingads data
+	user1Properties := postgres.Jsonb{json.RawMessage(`{"name":"abc","city":"xyz"}`)}
+	intDocument := model.IntegrationDocument{
+		DocumentId:        "123",
+		ProjectID:         project.ID,
+		CustomerAccountID: "123",
+		Source:            "reddit",
+		DocumentType:      1,
+		Timestamp:         20220601,
+		Value:             &user1Properties,
+	}
+	intDocument1 := model.IntegrationDocument{
+		DocumentId:        "124",
+		ProjectID:         project.ID,
+		CustomerAccountID: "124",
+		Source:            "quora",
+		DocumentType:      1,
+		Timestamp:         20220601,
+		Value:             &user1Properties,
+	}
+	_ = store.GetStore().UpsertIntegrationDocument(intDocument)
+	_ = store.GetStore().UpsertIntegrationDocument(intDocument1)
+}
+
 func TestPropertyMappingHandler(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 
 	displayName1 := "Test property mapping 1"
+	displayName2 := "Test property mapping 2"
 	invalidDisplayName := ""
 	project, agent, _ := SetupProjectWithAgentDAO()
 	assert.NotNil(t, project)
 
+	insertCustomAd(*project)
 	propertiesRaw1 := model.Property{
 		Category:        "events",
 		DisplayCategory: "page_views",
@@ -67,6 +95,14 @@ func TestPropertyMappingHandler(t *testing.T) {
 		DisplayCategory: "hubspot_contacts",
 		ObjectType:      "",
 		Name:            "$browser4",
+		DataType:        "categorical",
+		Entity:          "user",
+	}
+	propertiesRaw6 := model.Property{
+		Category:        "custom_channels",
+		DisplayCategory: "quora",
+		ObjectType:      "",
+		Name:            "city",
 		DataType:        "categorical",
 		Entity:          "user",
 	}
@@ -188,7 +224,7 @@ func TestPropertyMappingHandler(t *testing.T) {
 		assert.Equal(t, len(result), 3)
 
 		payloadRaw = fmt.Sprintf(`[{"name": "%s", "derived_kpi": %s},{"name": "%s", "derived_kpi": %s}]`,
-								model.HubspotContactsDisplayCategory, "false", model.GoogleAdsDisplayCategory, "false")
+			model.HubspotContactsDisplayCategory, "false", model.GoogleAdsDisplayCategory, "false")
 		payload = &postgres.Jsonb{RawMessage: json.RawMessage(payloadRaw)}
 		w = sendGetCommonPropertyMappings(r, project.ID, agent, payload)
 		assert.Equal(t, http.StatusOK, w.Code)
@@ -210,7 +246,7 @@ func TestPropertyMappingHandler(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 
 		payloadRaw := fmt.Sprintf(`[{"name": "%s", "derived_kpi": %s},{"name": "%s", "derived_kpi": %s}]`,
-									model.PageViewsDisplayCategory, "false", name1, "true")
+			model.PageViewsDisplayCategory, "false", name1, "true")
 		payload := &postgres.Jsonb{RawMessage: json.RawMessage(payloadRaw)}
 		w = sendGetCommonPropertyMappings(r, project.ID, agent, payload)
 		assert.Equal(t, http.StatusOK, w.Code)
@@ -235,6 +271,36 @@ func TestPropertyMappingHandler(t *testing.T) {
 		}
 		assert.NotNil(t, result)
 		assert.Equal(t, len(result), 3)
+	})
+
+	// For Custom Ads
+	t.Run("CreatePropertyMappingSuccessForCustomAds", func(t *testing.T) {
+		propertiesRaw := []model.Property{propertiesRaw2, propertiesRaw6}
+		properties_byte, _ := json.Marshal(propertiesRaw)
+		properties := &postgres.Jsonb{RawMessage: properties_byte}
+		w := sendCreatePropertyMapping(r, project.ID, agent, properties, displayName2)
+		assert.Equal(t, http.StatusOK, w.Code)
+		decoder := json.NewDecoder(w.Body)
+		if err := decoder.Decode(&firstPropertyMapping); err != nil {
+			assert.NotNil(t, nil, err)
+		}
+		assert.NotNil(t, firstPropertyMapping)
+	})
+	t.Run("GetCommonPropertyMappingsSuccess with custom Ads", func(t *testing.T) {
+
+		payloadRaw := fmt.Sprintf(`[{"name": "%s", "derived_kpi": %s},{"name": "%s", "derived_kpi": %s}]`,
+			"quora", "false", model.GoogleAdsDisplayCategory, "false")
+		payload := &postgres.Jsonb{RawMessage: json.RawMessage(payloadRaw)}
+		w := sendGetCommonPropertyMappings(r, project.ID, agent, payload)
+		assert.Equal(t, http.StatusOK, w.Code)
+		var result []*model.PropertyMapping
+		decoder := json.NewDecoder(w.Body)
+		if err := decoder.Decode(&result); err != nil {
+			assert.NotNil(t, nil, err)
+		}
+		log.WithField("result", result).Warn("kark23")
+		assert.NotNil(t, result)
+		assert.Equal(t, len(result), 1)
 	})
 }
 

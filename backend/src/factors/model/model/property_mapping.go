@@ -8,7 +8,7 @@ import (
 )
 
 // Bit positions for display categories
-var sectionBitMapping = map[string]int{
+var SectionBitMapping = map[string]int{
 	WebsiteSessionDisplayCategory:  1,
 	FormSubmissionsDisplayCategory: 2,
 
@@ -95,33 +95,4 @@ func (properties *Property) IsValid() bool {
 	}
 
 	return true
-}
-
-// Returns a array of string containing display_category from properties json.
-func GenerateSectionBitMapFromProperties(properties []Property) (int64, string) {
-
-	displayCategories := make([]string, 0)
-	for _, property := range properties {
-		displayCategories = append(displayCategories, property.DisplayCategory)
-	}
-
-	return GenerateSectionBitMap(displayCategories)
-}
-
-// Takes list of display category
-// Returns sectionBitMap
-// Binary bits are marked based on display_category from properties from left to right.
-func GenerateSectionBitMap(displayCategories []string) (int64, string) {
-
-	sectionBitMap := int64(0)
-	for _, displayCategory := range displayCategories {
-		bitPosition, present := sectionBitMapping[displayCategory]
-		if !present {
-			return 0, "Invalid object type for property mapping"
-		}
-		// Mark the bit as per position of display category
-		sectionBitMap = sectionBitMap | (1 << (bitPosition - 1))
-	}
-
-	return sectionBitMap, ""
 }

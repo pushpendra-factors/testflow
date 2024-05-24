@@ -301,37 +301,37 @@ function FaFilterSelect({
     //           MomentTz(toVal).format('MMM DD, YYYY'));
   };
 
-  const renderGroupDisplayName = (propState) => {
-    const mergedPropNames = {
-      ...groupPropNames,
-      ...userPropNames,
-      ...eventPropNames,
-      ...extraProps?.displayNames
-    };
-    let propertyName = propState?.name;
-    propertyName = mergedPropNames[propState?.name]
-      ? mergedPropNames[propState?.name]
-      : PropTextFormat(propState?.name);
-    if (!propState.name) {
-      propertyName = 'Select Property';
+  const renderGroupDisplayName = (state) => {
+    if (extraProps?.displayNames && extraProps.displayNames[state.name]) {
+      return extraProps.displayNames[state.name];
     }
-    return propertyName;
+    if (!state.name) {
+      return 'Select Property';
+    }
+
+    switch (state.icon) {
+      case 'event':
+        return eventPropNames[state.name] || PropTextFormat(state.name);
+      case 'user' || 'user_g':
+        return userPropNames[state.name] || PropTextFormat(state.name);
+      case 'group':
+        return (
+          groupPropNames[state.groupName]?.[state.name] ||
+          PropTextFormat(state.name)
+        );
+      default:
+        return PropTextFormat(state.name);
+    }
   };
 
-  const getIcon = (propState) => {
-    const { name, icon } = propState || {};
+  const getIcon = (state) => {
+    const { name, icon } = state || {};
     if (!name) return null;
-    const iconName = 'user';
-    return (
-      <SVG name={iconName} size={16} color={viewMode ? 'grey' : 'purple'} />
-    );
-  };
 
-  const getGroupLabel = (grp) => {
-    if (grp === 'event') return 'Event Properties';
-    if (grp === 'user') return 'User Properties';
-    if (!grp || !grp.length) return 'Properties';
-    return grp;
+    const iconName = icon === 'group' ? 'user' : icon;
+    const iconColor = viewMode ? 'grey' : 'purple';
+
+    return <SVG name={iconName} size={16} color={iconColor} />;
   };
 
   const renderPropSelect = () => (

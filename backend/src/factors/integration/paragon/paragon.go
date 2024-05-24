@@ -149,7 +149,7 @@ func SendParagonEventRequest(url, token string, payload interface{}) (map[string
 	client := &http.Client{}
 	resp, err := client.Do(request)
 	if err != nil {
-		log.WithError(err).Error("failed to make request for paragon event")
+		log.WithError(err).Error("Failed to make request to paragon event endpoint.")
 		return nil, err
 	}
 	defer resp.Body.Close()
@@ -427,6 +427,46 @@ func DisableParagonWorkflowForUserAPI(token, paragonProjectID, workflowID string
 		response["error"] = string(bodyBytes)
 		response["statuscode"] = resp.StatusCode
 	}
+
+	return response, nil
+}
+
+func SendPayloadToParagonWorkflow(projectID int64, url string, payload *model.CachedEventTriggerAlert) (map[string]interface{}, error) {
+
+	if projectID == 0 || payload == nil {
+		return nil, fmt.Errorf("invalid parameter")
+	}
+
+	logFields := log.Fields{
+		"project_id": projectID,
+		"payload":    *payload,
+	}
+	logCtx := log.WithFields(logFields)
+
+
+	signedToken, errCode, err := store.GetStore().GetParagonTokenFromProjectSetting(projectID)
+	if err != nil || errCode != http.StatusFound {
+		logCtx.WithError(err).Error("Failed to fetch auth token for paragon.")
+		return nil, err
+	}
+
+	var newPayload model.WorkflowParagonPayload
+	err = U.DecodeInterfaceMapToStructType(payload.Message.MessageProperty, &newPayload)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to decode payload. Workflow trigger cancelled.")
+		return nil, err
+	}
+
+	response, err := SendParagonEventRequest(url, signedToken, newPayload)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to trigger workflow.")
+		return response, err
+	}
+
+	log.WithField("payload", newPayload).Info("Paragon Request.")
+	log.WithField("response", response).Info("Paragon Response.")
+
+	logCtx.WithField("response", response).Info("Paragon Response.")
 
 	return response, nil
 }

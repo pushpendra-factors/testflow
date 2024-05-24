@@ -243,7 +243,7 @@ function AddDashboard({ editDashboard, setEditDashboard }) {
   ]);
 
   const handleOk = useCallback(async () => {
-    if (activeKey === '2') {
+    if (activeKey === '1') {
       if (!editDashboard) {
         createNewDashboard();
       } else {
@@ -308,13 +308,23 @@ function AddDashboard({ editDashboard, setEditDashboard }) {
                   size='grey'
                   extraClass='m-0'
                 >
-                  {editDashboard ? 'Edit Dashboard' : 'New Dashboard'}
+                  {editDashboard ? 'Edit Dashboard' : 'Add New Dashboard'}
                 </Text>
               </Col>
             </Row>
             <Row>
               <Col span={24}>
-                <Tabs
+                <AddDashboardTab
+                  title={title}
+                  setTitle={setTitle}
+                  description={description}
+                  setDescription={setDescription}
+                  dashboardType={dashboardType}
+                  setDashboardType={setDashboardType}
+                  editDashboard={editDashboard}
+                  showDeleteModal={showDeleteModal}
+                />
+                {/* <Tabs
                   onChange={handleTabChange}
                   activeKey={activeKey}
                   className='fa-tabs'
@@ -347,7 +357,7 @@ function AddDashboard({ editDashboard, setEditDashboard }) {
                       ''
                     )}
                   </TabPane>
-                </Tabs>
+                </Tabs> */}
               </Col>
             </Row>
             <div className='flex mt-6 items-center justify-end'>
@@ -380,8 +390,7 @@ function AddDashboard({ editDashboard, setEditDashboard }) {
                   size='large'
                   onClick={() => handleOk()}
                 >
-                  {isLoading === true ? <LoadingOutlined /> : ''}{' '}
-                  {activeKey === '2' ? 'Save' : 'Next'}
+                  {isLoading === true ? <LoadingOutlined /> : ''} Save
                 </Button>
               </div>
             </div>

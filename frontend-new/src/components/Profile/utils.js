@@ -513,3 +513,9 @@ export const findKeyByValue = (data, targetValue) => {
 
   return foundKey;
 };
+
+export const flattenObjects = (obj) =>
+  Object.values(obj).reduce(
+    (acc, nestedObj) => Object.assign(acc, nestedObj),
+    {}
+  );

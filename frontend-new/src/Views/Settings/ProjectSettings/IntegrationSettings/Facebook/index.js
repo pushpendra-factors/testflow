@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useEffect } from 'react';
 import { connect } from 'react-redux';
 import {
   fetchProjectSettings,
@@ -20,11 +19,10 @@ const FacebookIntegration = ({
   udpateProjectSettings,
   activeProject,
   currentProjectSettings,
-  setIsActive,
   addFacebookAccessToken,
-  kbLink = false,
   deleteIntegration,
-  currentAgent
+  currentAgent,
+  integrationCallback
 }) => {
   const [loading, setLoading] = useState(false);
   const [FbResponse, SetFbResponse] = useState(null);
@@ -32,20 +30,14 @@ const FacebookIntegration = ({
   const [SelectAdAccount, SetSelectAdAccount] = useState(null);
   const [showForm, setShowForm] = useState(false);
 
-  useEffect(() => {
-    if (currentProjectSettings?.int_facebook_ad_account) {
-      setIsActive(true);
-    }
-  }, [currentProjectSettings]);
-
   const makeSelectOpt = (value, label) => {
     if (!label) label = value;
-    return { value: value, label: `${label} (${value})` };
+    return { value, label: `${label} (${value})` };
   };
 
   const createSelectOpts = (opts) => {
-    let ropts = [];
-    for (let k in opts) ropts.push(makeSelectOpt(k, opts[k]));
+    const ropts = [];
+    for (const k in opts) ropts.push(makeSelectOpt(k, opts[k]));
     return ropts;
   };
 
@@ -58,11 +50,13 @@ const FacebookIntegration = ({
         .then((res) =>
           res.json().then((r) => {
             if (r.data?.length != 0) {
-              let adAccounts = r.data.map((account) => {
-                return { value: account.id, label: account.name };
-              });
+              const adAccounts = r.data.map((account) => ({
+                value: account.id,
+                label: account.name
+              }));
               SetFbAdAccounts(adAccounts);
               setShowForm(true);
+              integrationCallback();
             } else {
               message.error(
                 "You don't have any ad accounts associated to the id you logged in with."
@@ -94,14 +88,14 @@ const FacebookIntegration = ({
   };
 
   const convertToString = (e) => {
-    let dataString = _.toString(e);
+    const dataString = _.toString(e);
     SetSelectAdAccount(dataString);
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    //Factors INTEGRATION tracking
+    // Factors INTEGRATION tracking
     factorsai.track('INTEGRATION', {
       name: 'facebook',
       activeProjectID: activeProject.id
@@ -119,7 +113,6 @@ const FacebookIntegration = ({
         .then(() => {
           fetchProjectSettings(activeProject.id);
           setShowForm(false);
-          setIsActive(true);
           message.success('Facebok integration enabled!');
           sendSlackNotification(
             currentAgent.email,
@@ -131,7 +124,6 @@ const FacebookIntegration = ({
           console.log(e);
           message.error(e);
           setShowForm(false);
-          setIsActive(false);
         });
     }
   };
@@ -153,7 +145,6 @@ const FacebookIntegration = ({
             setTimeout(() => {
               message.success('Facebook integration disconnected!');
             }, 500);
-            setIsActive(false);
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);
@@ -166,9 +157,9 @@ const FacebookIntegration = ({
   };
 
   const getAdAccountsOptSrc = () => {
-    let opts = {};
-    for (let i in FbAdAccounts) {
-      let adAccount = FbAdAccounts[i];
+    const opts = {};
+    for (const i in FbAdAccounts) {
+      const adAccount = FbAdAccounts[i];
       opts[adAccount.value] = adAccount.label;
     }
     return opts;
@@ -182,29 +173,24 @@ const FacebookIntegration = ({
             visible={showForm}
             zIndex={1020}
             afterClose={() => setShowForm(false)}
-            className={'fa-modal--regular fa-modal--slideInDown'}
-            centered={true}
+            className='fa-modal--regular fa-modal--slideInDown'
+            centered
             footer={null}
             transitionName=''
             maskTransitionName=''
             closable={false}
           >
-            <div className={'p-4'}>
+            <div className='p-4'>
               <Row>
                 <Col span={24}>
-                  <Text
-                    type={'title'}
-                    level={6}
-                    weight={'bold'}
-                    extraClass={'m-0'}
-                  >
+                  <Text type='title' level={6} weight='bold' extraClass='m-0'>
                     Choose your Facebook Ad account:
                   </Text>
                   <Text
-                    type={'title'}
+                    type='title'
                     level={7}
-                    color={'grey'}
-                    extraClass={'m-0 mt-2'}
+                    color='grey'
+                    extraClass='m-0 mt-2'
                   >
                     Choose your Facebook Ad account to pull in reports from
                     Facebook, Instagram and Facebook Audience Network
@@ -212,7 +198,7 @@ const FacebookIntegration = ({
                 </Col>
               </Row>
               <form onSubmit={(e) => handleSubmit(e)} className='w-full'>
-                <Row className={'mt-6'}>
+                <Row className='mt-6'>
                   <Col span={24}>
                     <div className='w-full'>
                       <div className='w-full pb-2'>
@@ -220,7 +206,7 @@ const FacebookIntegration = ({
                           mode='multiple'
                           allowClear
                           className='w-full'
-                          placeholder={'Select Account'}
+                          placeholder='Select Account'
                           onChange={(e) => convertToString(e)}
                           options={createSelectOpts(getAdAccountsOptSrc())}
                         />
@@ -228,9 +214,9 @@ const FacebookIntegration = ({
                     </div>
                   </Col>
                 </Row>
-                <Row className={'mt-2'}>
+                <Row className='mt-2'>
                   <Col span={24}>
-                    <div className={'flex justify-end'}>
+                    <div className='flex justify-end'>
                       <Button className='ant-btn-primary' htmlType='submit'>
                         Select
                       </Button>
@@ -245,40 +231,38 @@ const FacebookIntegration = ({
       //   else {
       //     return <div>You don't have any ad accounts associated to the id you logged in with.</div>
       //   }
-    } else {
-      if (
-        currentProjectSettings?.int_facebook_ad_account !== '' ||
-        currentProjectSettings?.int_facebook_ad_account !== undefined
-      ) {
-        return (
-          <div className={'mt-4 flex flex-col border-top--thin py-4 mt-2'}>
-            <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>
-              Connected Account
-            </Text>
-            <Text
-              type={'title'}
-              level={7}
-              color={'grey'}
-              extraClass={'m-0 mt-2'}
-            >
-              Selected Facebook Ad Account
-            </Text>
+    } else if (
+      currentProjectSettings?.int_facebook_ad_account !== '' ||
+      currentProjectSettings?.int_facebook_ad_account !== undefined
+    ) {
+      return (
+        <div className='mt-4'>
+          <Text
+            type='title'
+            level={6}
+            weight='bold'
+            color='character-primary'
+            extraClass='m-0'
+          >
+            Selected Facebook Ad Account
+          </Text>
+          <div>
             <Input
-              size='large'
-              disabled={true}
+              disabled
               value={currentProjectSettings?.int_facebook_ad_account}
-              style={{ width: '400px' }}
+              style={{ width: '320px', marginTop: 8, background: '#fff' }}
             />
-            <Button
-              loading={loading}
-              className={'mt-4'}
-              onClick={() => onDisconnect()}
-            >
-              Disconnect
-            </Button>
           </div>
-        );
-      }
+
+          <Button
+            loading={loading}
+            className='mt-4'
+            onClick={() => onDisconnect()}
+          >
+            Disconnect
+          </Button>
+        </div>
+      );
     }
   };
 
@@ -288,27 +272,18 @@ const FacebookIntegration = ({
   // ]
 
   return (
-    <>
-      <ErrorBoundary
-        fallback={
-          <FaErrorComp subtitle={'Facing issues with Facebook integrations'} />
-        }
-        onError={FaErrorLog}
-      >
-        <div className={'mt-4 flex w-6/12'}>{formComponent()}</div>
+    <ErrorBoundary
+      fallback={
+        <FaErrorComp subtitle='Facing issues with Facebook integrations' />
+      }
+      onError={FaErrorLog}
+    >
+      <div className='flex w-6/12'>{formComponent()}</div>
 
-        {!currentProjectSettings?.int_facebook_access_token && (
-          <div className={'mt-4 flex'}>
-            {renderFacebookLogin()}
-            {kbLink && (
-              <a className={'ant-btn ml-2 '} target={'_blank'} href={kbLink}>
-                View documentation
-              </a>
-            )}
-          </div>
-        )}
-      </ErrorBoundary>
-    </>
+      {!currentProjectSettings?.int_facebook_access_token && (
+        <div className='mt-4 flex'>{renderFacebookLogin()}</div>
+      )}
+    </ErrorBoundary>
   );
 };
 

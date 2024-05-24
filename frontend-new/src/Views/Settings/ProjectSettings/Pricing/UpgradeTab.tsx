@@ -11,12 +11,15 @@ import {
   PlansDetailStateInterface
 } from 'Reducers/plansConfig/types';
 import logger from 'Utils/logger';
-import { Button, Divider, Spin } from 'antd';
+import { Badge, Button, Divider, Spin } from 'antd';
 import React, { useRef, useState } from 'react';
 // import PriceUpgradeModal from './PriceUpgradeModal';
 import { useSelector } from 'react-redux';
 import PriceUpgradeModal from './PriceUpgradeModal';
 import { PRICING_HELP_LINK } from './utils';
+import { PhoneFilled } from '@ant-design/icons';
+import TalktousPNG from './../../../../assets/images/illustrations/Talktous.png';
+import styles from './index.module.scss';
 
 function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -73,7 +76,7 @@ function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
 
   const renderPlans = () => (
     <div>
-      <div className='flex flex-col gap-5'>
+      <div className='flex flex-col gap-5 px-3'>
         {plansDetail &&
           plansDetail?.length > 0 &&
           plansDetail
@@ -103,8 +106,7 @@ function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
             .map((plan) => {
               const localPlansConfig = PLANS_COFIG?.[plan.name];
               if (!localPlansConfig) return <></>;
-
-              return (
+              const planCard = (
                 <PlanDescriptionCard
                   isPlanActive={
                     currentPlanDetail?.plan?.externalName === plan.name
@@ -130,6 +132,15 @@ function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
                   icons={localPlansConfig?.icons}
                 />
               );
+              if (localPlansConfig.isRecommendedPlan) {
+                return (
+                  <Badge.Ribbon text='Recommended Plan' color='#FAAD14'>
+                    {planCard}
+                  </Badge.Ribbon>
+                );
+              }
+
+              return planCard;
             })}
         {/* <LastPlanCard /> */}
       </div>
@@ -146,34 +157,70 @@ function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
     );
   }
   return (
-    <div className='py-4'>
-      <div className='mb-6'>
-        <Text
-          type='title'
-          level={4}
-          weight='bold'
-          extraClass='m-0 mb-2'
-          color='character-primary'
-        >
-          Upgrade to get more out of Factors
-        </Text>
-        <Text
-          type='title'
-          level={7}
-          extraClass='m-0'
-          color='character-secondary'
-        >
-          Check out all our plans and their included features to find the one
-          that fits your needs. We are always available for a call if you ever
-          need help finding the right one for your organisation.{' '}
+    <div>
+      <div className={`mb-6 pt-4 ${styles.upgrade_bookacall}`}>
+        <div className='flex justify-between items-center'>
+          <div className='w-9/12'>
+            <Text
+              type='title'
+              level={4}
+              weight='bold'
+              extraClass='m-0'
+              color='character-primary'
+            >
+              Upgrade to get more out of Factors
+            </Text>
+            <Text
+              type='title'
+              level={7}
+              extraClass='m-0'
+              color='character-secondary'
+            >
+              Check out all our plans and their included features to find the
+              one that fits your needs. We are always available for a call if
+              you ever need help finding the right one for your organisation.{' '}
+            </Text>
+          </div>
           <a href={PRICING_HELP_LINK} target='_blank' rel='noreferrer'>
-            Book a call
-          </a>{' '}
-        </Text>
+            <Button
+              type='primary'
+              icon={<PhoneFilled style={{ transform: 'rotate(90deg)' }} />}
+            >
+              Book a call
+            </Button>
+          </a>
+        </div>
         <Divider />
       </div>
       {renderPlans()}
-
+      <div className='flex flex-col gap-5 px-3 my-5 '>
+        <div
+          className='flex justify-between items-center'
+          style={{
+            border: '1px solid #d9d9d9',
+            borderRadius: '16px',
+            padding: '40px 48px'
+          }}
+        >
+          <div>
+            <Text level={4} type='title'>
+              Not sure which plan is best for you?
+            </Text>
+            <Text level={6} type='title'>
+              Get a customised product demo and identify the plan that best fits
+              your needs.
+            </Text>
+            <a href={PRICING_HELP_LINK} target='_blank' rel='noreferrer'>
+              <Button size='large' style={{ width: 218 }}>
+                Talk to us
+              </Button>
+            </a>
+          </div>
+          <div>
+            <img src={TalktousPNG} width={216} />
+          </div>
+        </div>
+      </div>
       {isModalVisible && (
         <PriceUpgradeModal
           visible={isModalVisible}

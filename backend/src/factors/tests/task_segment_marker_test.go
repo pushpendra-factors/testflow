@@ -693,12 +693,14 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 					},
 				},
 				{
-					Name:          U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL,
-					GroupAnalysis: "Most Recent",
+					Name:             U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL,
+					GroupAnalysis:    "Most Recent",
+					IsEventPerformed: true,
 				},
 				{
-					Name:          U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
-					GroupAnalysis: "Most Recent",
+					Name:             U.EVENT_NAME_SALESFORCE_CAMPAIGNMEMBER_CREATED,
+					GroupAnalysis:    "Most Recent",
+					IsEventPerformed: true,
 				},
 			},
 			Caller:          model.USER_PROFILES,
@@ -730,12 +732,14 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 		Query: model.Query{
 			EventsWithProperties: []model.QueryEventWithProperties{
 				{
-					Name:          U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
-					GroupAnalysis: "Most Recent",
+					Name:             U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+					GroupAnalysis:    "Most Recent",
+					IsEventPerformed: true,
 				},
 				{
-					Name:          U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_UPDATED,
-					GroupAnalysis: "Most Recent",
+					Name:             U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_UPDATED,
+					GroupAnalysis:    "Most Recent",
+					IsEventPerformed: true,
 				},
 			},
 			Caller:          model.ACCOUNT_PROFILES,
@@ -767,16 +771,19 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 		Query: model.Query{
 			EventsWithProperties: []model.QueryEventWithProperties{
 				{
-					Name:          U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
-					GroupAnalysis: "Most Recent",
+					Name:             U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED,
+					GroupAnalysis:    "Most Recent",
+					IsEventPerformed: true,
 				},
 				{
-					Name:          U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
-					GroupAnalysis: "Most Recent",
+					Name:             U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
+					GroupAnalysis:    "Most Recent",
+					IsEventPerformed: true,
 				},
 				{
-					Name:          U.EVENT_NAME_SESSION,
-					GroupAnalysis: "Most Recent",
+					Name:             U.EVENT_NAME_SESSION,
+					GroupAnalysis:    "Most Recent",
+					IsEventPerformed: true,
 					Properties: []model.QueryProperty{
 						{
 							Entity:    "user",

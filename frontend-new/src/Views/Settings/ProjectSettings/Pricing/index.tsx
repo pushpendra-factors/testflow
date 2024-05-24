@@ -2,18 +2,18 @@ import { SVG } from 'Components/factorsComponents';
 import { Breadcrumb, Tabs, notification } from 'antd';
 import React, { useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
-import BillingTab from './BillingTab';
-import EnrichmentRulesTab from './EnrichmentRulesTab';
-import { PRICING_PAGE_TABS, showV2PricingVersion } from './utils';
 import { PathUrls } from 'Routes/pathUrls';
 import useQuery from 'hooks/useQuery';
-import UpgradeTab from './UpgradeTab';
-import InvoiceTab from './InvoiceTab';
 import { useSelector } from 'react-redux';
 import { startCase } from 'lodash';
 import { upgradePlan } from 'Reducers/plansConfig/services';
 import { ADDITIONAL_ACCOUNTS_ADDON_ID } from 'Constants/plans.constants';
 import logger from 'Utils/logger';
+import InvoiceTab from './InvoiceTab';
+import UpgradeTab from './UpgradeTab';
+import { PRICING_PAGE_TABS, showV2PricingVersion } from './utils';
+import BillingTab from './BillingTab';
+import styles from './index.module.scss';
 
 function Pricing() {
   const [activeKey, setActiveKey] = useState(PRICING_PAGE_TABS.BILLING);
@@ -81,8 +81,12 @@ function Pricing() {
           </Breadcrumb>
         </div>
       </div>
-      <div className='mt-6'>
-        <Tabs activeKey={activeKey} onChange={handleTabChange}>
+      <div className={`mt-6 ${styles.tab_container}`}>
+        <Tabs
+          activeKey={activeKey}
+          onChange={handleTabChange}
+          style={{overflow: 'none'}}
+        >
           <Tabs.TabPane tab='Billing' key={PRICING_PAGE_TABS.BILLING}>
             <BillingTab
               handleBuyAddonClick={handleBuyAddonClick}
@@ -103,12 +107,6 @@ function Pricing() {
               </Tabs.TabPane>
             </>
           )}
-          <Tabs.TabPane
-            tab='Enrichment Rules'
-            key={PRICING_PAGE_TABS.ENRICHMENT_RULES}
-          >
-            <EnrichmentRulesTab />
-          </Tabs.TabPane>
         </Tabs>
       </div>
     </div>

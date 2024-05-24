@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { connect } from 'react-redux';
 import { Button, message, Input, Modal } from 'antd';
 import {
@@ -14,12 +14,11 @@ const MarketoIntegration = ({
   activeProject,
   agent_details,
   enableMarketoIntegration,
-  setIsStatus,
   createMarketoIntegration,
-  kbLink = false,
   fetchMarketoIntegration,
   disableMarketoIntegration,
-  marketo
+  marketo,
+  integrationCallback
 }) => {
   const [loading, setLoading] = useState(false);
   const [accounts, setAccounts] = useState(null);
@@ -39,7 +38,7 @@ const MarketoIntegration = ({
             setTimeout(() => {
               message.success('Marketo integration disconnected!');
             }, 500);
-            setIsStatus('');
+            integrationCallback();
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);
@@ -51,54 +50,20 @@ const MarketoIntegration = ({
     });
   };
 
-  const isMarketoEnabled = () => {
-    fetchMarketoIntegration(activeProject.id);
-  };
-
-  useEffect(() => {
-    isMarketoEnabled();
-    if (marketo.status) {
-      setIsStatus('Active');
-      setAccounts(marketo.accounts);
-    } else {
-      setIsStatus('');
-    }
-  }, [activeProject, agent_details, marketo?.status]);
-
   const enableMarketo = () => {
     setLoading(true);
     createMarketoIntegration(activeProject.id)
       .then((r) => {
         setLoading(false);
         if (r.status == 200) {
-          let hostname = window.location.hostname;
-          let protocol = window.location.protocol;
-          let port = window.location.port;
-          let redirectURL =
-            protocol +
-            '//' +
-            hostname +
-            ':' +
-            port +
-            '?marketoInt=' +
-            activeProject.id +
-            '&email=' +
-            agent_details.email +
-            '&projectname=' +
-            activeProject.name;
+          const { hostname } = window.location;
+          const { protocol } = window.location;
+          const { port } = window.location;
+          let redirectURL = `${protocol}//${hostname}:${port}?marketoInt=${activeProject.id}&email=${agent_details.email}&projectname=${activeProject.name}`;
           if (port === undefined || port === '') {
-            redirectURL =
-              protocol +
-              '//' +
-              hostname +
-              '?markketoInt=' +
-              activeProject.id +
-              '&email=' +
-              agent_details.email +
-              '&projectname=' +
-              activeProject.name;
+            redirectURL = `${protocol}//${hostname}?markketoInt=${activeProject.id}&email=${agent_details.email}&projectname=${activeProject.name}`;
           }
-          let url = new URL(r.data.redirect_uri);
+          const url = new URL(r.data.redirect_uri);
           url.searchParams.set('redirect_uri', redirectURL);
           window.location = url.href;
         }
@@ -109,74 +74,28 @@ const MarketoIntegration = ({
       .catch((err) => {
         setLoading(false);
         console.log('Marketo error-->', err);
-        setIsStatus('');
       });
   };
 
   return (
-    <>
-      <ErrorBoundary
-        fallback={
-          <FaErrorComp subtitle={'Facing issues with Marketo integrations'} />
-        }
-        onError={FaErrorLog}
-      >
-        <div className={'mt-4 flex w-full'}>
-          {marketo.status && (
-            <>
-              <div
-                className={
-                  'mt-4 flex flex-col border-top--thin py-4 mt-2 w-full'
-                }
-              >
-                <Text
-                  type={'title'}
-                  level={6}
-                  weight={'bold'}
-                  extraClass={'m-0'}
-                >
-                  Connected Account
-                </Text>
-                <Text
-                  type={'title'}
-                  level={7}
-                  color={'grey'}
-                  extraClass={'m-0 mt-2'}
-                >
-                  Marketo sync is enabled
-                </Text>
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className={'mt-4 flex'}>
-          {!marketo.status ? (
-            <Button
-              className={'mr-2'}
-              type={'primary'}
-              loading={loading}
-              onClick={enableMarketo}
-            >
-              Connect Now
-            </Button>
-          ) : (
-            <Button
-              className={'mr-2'}
-              loading={loading}
-              onClick={() => onDisconnect()}
-            >
-              Disconnect
-            </Button>
-          )}
-          {kbLink && (
-            <a className={'ant-btn'} target={'_blank'} href={kbLink}>
-              View documentation
-            </a>
-          )}
-        </div>
-      </ErrorBoundary>
-    </>
+    <ErrorBoundary
+      fallback={
+        <FaErrorComp subtitle='Facing issues with Marketo integrations' />
+      }
+      onError={FaErrorLog}
+    >
+      <div className='mt-4 flex'>
+        {!marketo.status ? (
+          <Button type='primary' loading={loading} onClick={enableMarketo}>
+            Connect Marketo
+          </Button>
+        ) : (
+          <Button loading={loading} onClick={() => onDisconnect()}>
+            Disconnect
+          </Button>
+        )}
+      </div>
+    </ErrorBoundary>
   );
 };
 

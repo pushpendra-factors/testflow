@@ -1,7 +1,8 @@
+@import './../../styles/abstracts/index';
 .content-layout {
   position: relative;
-  top: 3.5rem;
-  min-height: calc(100vh - 3.5rem) !important;
+  top: $fa-header-height;
+  min-height: calc(100vh - $fa-header-height) !important;
   &.no-header {
     top: 0px;
     min-height: 100vh !important;
@@ -17,4 +18,7 @@
     // Commenting this to avoid transition animation in accounts page
     // transition: 0.4s;
   }
+}
+.parent-layout {
+  height: calc(100vh - $fa-header-height)
 }

@@ -890,52 +890,46 @@ func Track(projectId int64, request *TrackPayload,
 
 func FillCompanyIdentificationUserProperties(projectId int64, clientIP string, projectSettings *model.ProjectSetting, userProperties *U.PropertiesMap, eventProperties *U.PropertiesMap, userId string, isoCode string, pageUrl string) {
 
-	logCtx := log.WithField("project_id", projectId)
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectId,
+		"logId":      fmt.Sprintf("%v+%v", projectId, clientIP)})
 
 	var customerClearbit clearbit.CustomerClearbit
 	var customerSixSignal sixsignal.CustomerSixSignal
 	var factorsDeanon factors_deanon.FactorsDeanon
 
-	if enrichByCustomerClearbit, _ := customerClearbit.IsEligible(projectSettings); enrichByCustomerClearbit {
-
-		if _, ok := customerClearbit.Enrich(projectSettings, userProperties, userId, clientIP); ok == 1 {
+	if enrichByCustomerClearbit, _ := customerClearbit.IsEligible(projectSettings, logCtx); enrichByCustomerClearbit {
+		if _, ok := customerClearbit.Enrich(projectSettings, userProperties, userId, clientIP, logCtx); ok == 1 {
 			status := store.GetStore().UpdateProjectSettingsIntegrationStatus(projectId, model.FEATURE_CLEARBIT, model.SUCCESS)
 			if status != http.StatusAccepted {
 				log.WithFields(log.Fields{"project_id": projectId}).Warn("Failed to update integration status")
 
 			}
 		}
-
-	} else if enrichByCustomerSixSignal, _ := customerSixSignal.IsEligible(projectSettings); enrichByCustomerSixSignal {
-
-		if _, ok := customerSixSignal.Enrich(projectSettings, userProperties, userId, clientIP); ok == 1 {
+	} else if enrichByCustomerSixSignal, _ := customerSixSignal.IsEligible(projectSettings, logCtx); enrichByCustomerSixSignal {
+		if _, ok := customerSixSignal.Enrich(projectSettings, userProperties, userId, clientIP, logCtx); ok == 1 {
 			status := store.GetStore().UpdateProjectSettingsIntegrationStatus(projectId, model.FEATURE_SIX_SIGNAL, model.SUCCESS)
 			if status != http.StatusAccepted {
 				log.WithFields(log.Fields{"project_id": projectId}).Warn("Failed to update integration status")
 
 			}
 		}
-
-	} else if enrichByFactorsDeanon, err := factorsDeanon.IsEligible(projectSettings, isoCode, pageUrl); enrichByFactorsDeanon {
-		domain, status := factorsDeanon.Enrich(projectSettings, userProperties, eventProperties, userId, clientIP)
-		logCtx.WithFields(log.Fields{"domain": domain, "status": status}).Info("Debugging in sdk.")
-
+	} else if enrichByFactorsDeanon, err := factorsDeanon.IsEligible(projectSettings, isoCode, pageUrl, logCtx); enrichByFactorsDeanon {
+		domain, status := factorsDeanon.Enrich(projectSettings, userProperties, eventProperties, userId, clientIP, logCtx)
 		if status == 1 {
+			factorsDeanon.Meter(projectId, domain, logCtx)
+
 			status := store.GetStore().UpdateProjectSettingsIntegrationStatus(projectId, model.FEATURE_FACTORS_DEANONYMISATION, model.SUCCESS)
 			if status != http.StatusAccepted {
 				log.WithFields(log.Fields{"project_id": projectId}).Warn("Failed to update integration status")
 
 			}
-			logCtx.Info("Metering the enrichment.")
-			factorsDeanon.Meter(projectId, domain)
-		}
-		if C.IsAccountLimitEmailAlertEnabled(projectId) {
-			errCode, err := factorsDeanon.HandleAccountLimitAlert(projectId, &http.Client{})
-			if errCode != http.StatusOK && errCode != http.StatusForbidden {
-				logCtx.Error("Account limit alerting failed ", err)
-			}
 		}
 
+		errCode, err := factorsDeanon.HandleAccountLimitAlert(projectId, &http.Client{}, logCtx)
+		if errCode != http.StatusOK && errCode != http.StatusForbidden {
+			logCtx.WithField("error", err).Error("Failed to send account limit alert.")
+		}
 	} else if err == nil && !enrichByFactorsDeanon {
 		status := store.GetStore().UpdateProjectSettingsIntegrationStatus(projectId, model.FEATURE_FACTORS_DEANONYMISATION, model.LIMIT_EXCEED)
 		if status != http.StatusAccepted {

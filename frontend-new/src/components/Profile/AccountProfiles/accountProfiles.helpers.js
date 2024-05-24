@@ -8,8 +8,9 @@ import truncateURL from 'Utils/truncateURL';
 import { Button, Popover, Tag, Tooltip } from 'antd';
 import { ACCOUNTS_TABLE_COLUMN_TYPES, COLUMN_TYPE_PROPS } from 'Utils/table';
 import TextWithOverflowTooltip from 'Components/GenericComponents/TextWithOverflowTooltip';
-import { EngagementTag, placeholderIcon } from '../constants';
+import { EngagementTag, headerClassStr, placeholderIcon } from '../constants';
 import {
+  flattenObjects,
   getHost,
   getPropType,
   propValueFormat,
@@ -56,9 +57,16 @@ const getTitleText = ({ title, extraClass = '' }) => (
   </Text>
 );
 
-const renderValue = (value, propType, prop, domainsList) => {
+export const renderValue = (
+  value,
+  propType,
+  prop,
+  domainsList,
+  isText = false
+) => {
   const formattedValue = propValueFormat(prop, value, propType) || '-';
   const urlTruncatedValue = truncateURL(formattedValue, domainsList);
+  if (isText) return `"${formattedValue}"`;
   return (
     <Text
       type='title'
@@ -97,8 +105,9 @@ const getTablePropColumn = ({
   listProperties,
   projectDomainsList
 }) => {
-  const propDisplayName = groupPropNames[prop]
-    ? groupPropNames[prop]
+  const mergedGroupPropNames = flattenObjects(groupPropNames);
+  const propDisplayName = mergedGroupPropNames[prop]
+    ? mergedGroupPropNames[prop]
     : PropTextFormat(prop);
   const propType = getPropType(listProperties, prop);
 
@@ -213,9 +222,6 @@ export const getColumns = ({
   onClickOpen,
   onClickOpenNewTab
 }) => {
-  const headerClassStr =
-    'fai-text fai-text__color--grey-2 fai-text__size--h7 fai-text__weight--bold';
-
   const accountColumn = {
     title: <div className={headerClassStr}>Account Domain</div>,
     dataIndex: 'domain',
@@ -243,14 +249,13 @@ export const getColumns = ({
             />
             <TextWithOverflowTooltip text={domain.name} />
           </div>
-          <div className='flex items-center'>
+          <div className='inline-flex gap--4 preview-btns'>
             <Button
               size='small'
               onClick={(e) => {
                 e.stopPropagation();
                 onClickOpen(domain);
               }}
-              className='mr-1 preview-btn'
             >
               Open
             </Button>
@@ -260,8 +265,8 @@ export const getColumns = ({
                   e.stopPropagation();
                   onClickOpenNewTab(domain);
                 }}
-                className='preview-btn'
                 size='small'
+                className='flex items-center'
               >
                 <SVG name='ArrowUpRightSquare' size='12' />
               </Button>

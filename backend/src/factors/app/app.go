@@ -210,6 +210,8 @@ func main() {
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 	enableEventFiltersInSegments := flag.Bool("enable_event_filters_in_segments", false, "Enables adding event filters in segment query")
 	enableFeatureGates := flag.Bool("enable_feature_gates", false, "Enable Feature Gates")
+	websiteAggregationTestEnabledProjects := flag.String("website_aggregation_test_enabled_projects", "", "Flag - website aggregation test enabled projects")
+
 	teamsAppTenantID := flag.String("teams_app_tenant_id", "", "")
 	teamsAppClientID := flag.String("teams_app_client_id", "", "")
 	teamsAppClientSecret := flag.String("teams_app_client_secret", "", "")
@@ -404,6 +406,7 @@ func main() {
 		EmailUTMParameterAllowedProjects:               *emailUTMParameterAllowedProjects,
 		EnableCacheDBWriteProjects:                     *enableCacheDBWriteProjects,
 		EnableCacheDBReadProjects:                      *enableCacheDBReadProjects,
+		WebsiteAggregationTestEnabledProjects:          *websiteAggregationTestEnabledProjects,
 	}
 	C.InitConf(config)
 

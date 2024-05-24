@@ -1,4 +1,4 @@
-.PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds build-sdk serve-sdk serve-redis serve-predis clean pack-api upload-api pack-ps upload-ps pack-ds upload-ds pack-sdk upload-sdk pack-redis upload-redis pack-predis upload-predis pack-debug upload-debug pack-build-seq upload-build-seq pack-hubspot-enrich upload-hubspot-enrich pack-sdk-request-worker upload-sdk-request-worker pack-integration-request-worker upload-integration-request-worker pack-monitoring upload-monitoring pack-archive-events upload-archive-events pack-adhoc-archive-events upload-adhoc-archive-events pack-bigquery-upload upload-bigquery-upload pack-onboard-to-bigquery upload-onboard-to-bigquery pack-add-session upload-add-session pack-dashboard-caching upload-dashboard-caching pack-monthly-dashboard-caching upload-monthly-dashboard-caching pack-beam-dashboard-caching upload-beam-dashboard-caching pack-beam-dashboard-caching-now upload-beam-dashboard-caching-now pack-web-analytics-dashboard upload-web-analytics-dashboard pack-instantiate-event-user-cache upload-instantiate-event-user-cache pack-journey-mining upload-journey-mining build-api-doc pack-pull-events upload-pull-events go-fmt pack-beam-add-session upload-beam-add-session pack-memsql-hubspot-sync-fields upload-memsql-hubspot-sync-fields pack-replicate-properties upload-replicate-properties pack-precompiles-queries upload-precompile-queries pack-sdk-bundle upload-sdk-bundle pack-event-bundle upload-event-bundle pack-analytics-bundle upload-analytics-bundle test pack-convert_epoch_saved_queries_tz1_to_tz2 upload-convert_epoch_saved_queries_tz1_to_tz2 pack-channels-to-kpi-migration upload-channels-to-kpi-migration pack-predict-pull-events upload-predict-pull-events pack-form-fills upload-form-fills pack-delete-older-clickable-elements upload-delete-older-clickable-elements pack-dashboard-caching-queries-comparision upload-dashboard-caching-queries-comparision pack-segment-marker upload-segment-marker pack-create-default-segments upload-create-default-segments pack-country-name-to-isocode-migration upload-country-name-to-isocode-migration pack-cache-cleanup-filter-lists upload-cache-cleanup-filter-lists pack-saved-queries-migrate upload-saved-queries-migrate pack-clearbit-account-provisioning upload-clearbit-account-provisioning
+.PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds build-sdk serve-sdk serve-redis serve-predis clean pack-api upload-api pack-ps upload-ps pack-ds upload-ds pack-sdk upload-sdk pack-redis upload-redis pack-predis upload-predis pack-debug upload-debug pack-build-seq upload-build-seq pack-hubspot-enrich upload-hubspot-enrich pack-sdk-request-worker upload-sdk-request-worker pack-integration-request-worker upload-integration-request-worker pack-monitoring upload-monitoring pack-archive-events upload-archive-events pack-adhoc-archive-events upload-adhoc-archive-events pack-bigquery-upload upload-bigquery-upload pack-onboard-to-bigquery upload-onboard-to-bigquery pack-add-session upload-add-session pack-dashboard-caching upload-dashboard-caching pack-monthly-dashboard-caching upload-monthly-dashboard-caching pack-beam-dashboard-caching upload-beam-dashboard-caching pack-beam-dashboard-caching-now upload-beam-dashboard-caching-now pack-web-analytics-dashboard upload-web-analytics-dashboard pack-instantiate-event-user-cache upload-instantiate-event-user-cache pack-journey-mining upload-journey-mining build-api-doc pack-pull-events upload-pull-events go-fmt pack-beam-add-session upload-beam-add-session pack-memsql-hubspot-sync-fields upload-memsql-hubspot-sync-fields pack-replicate-properties upload-replicate-properties pack-precompiles-queries upload-precompile-queries pack-sdk-bundle upload-sdk-bundle pack-event-bundle upload-event-bundle pack-analytics-bundle upload-analytics-bundle test pack-convert_epoch_saved_queries_tz1_to_tz2 upload-convert_epoch_saved_queries_tz1_to_tz2 pack-channels-to-kpi-migration upload-channels-to-kpi-migration pack-predict-pull-events upload-predict-pull-events pack-form-fills upload-form-fills pack-delete-older-clickable-elements upload-delete-older-clickable-elements pack-dashboard-caching-queries-comparision upload-dashboard-caching-queries-comparision pack-segment-marker upload-segment-marker pack-create-default-segments upload-create-default-segments pack-cache-cleanup-filter-lists upload-cache-cleanup-filter-lists pack-saved-queries-migrate upload-saved-queries-migrate pack-weekly-mailmodo upload-weekly-mailmodo
 .PHONY: pack-dbt-events-cube-aggregation-job upload-dbt-events-cube-aggregation-job pack-dbt-events-cube-aggregation-deploy upload-dbt-events-cube-aggregation-deploy pack-default-custom-metrics-for-segment-kpi upload-default-custom-metrics-for-segment-kpi
 
 # Update tag with the latest release version
@@ -297,13 +297,6 @@ pack-backfill-users-domain:
 upload-backfill-users-domain: export IMAGE_NAME=backfill-users-domain
 upload-backfill-users-domain: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/backfill-users-domain:$(TAG)
-
-pack-backfill-factors-deanon-metering:
-	docker build -t us.gcr.io/factors-$(ENV)/backfill-factors-deanon-metering:$(TAG) -f Dockerfile.backfill_factors_deanon_metering .
-
-upload-backfill-factors-deanon-metering: export IMAGE_NAME=backfill-factors-deanon-metering
-upload-backfill-factors-deanon-metering: notify-deployment
-	docker push us.gcr.io/factors-$(ENV)/backfill-factors-deanon-metering:$(TAG)
 
 pack-backfill-salesforce-smart-event-job:
 	docker build -t us.gcr.io/factors-$(ENV)/backfill-salesforce-smart-event-job:$(TAG) -f Dockerfile.backfill_salesforce_datetime_job .
@@ -702,22 +695,6 @@ upload-event-trigger-alerts: export IMAGE_NAME=event-trigger-alerts-job
 upload-event-trigger-alerts: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/event-trigger-alerts-job:$(TAG)
 
-pack-country-name-to-isocode-migration:
-	docker build -t us.gcr.io/factors-$(ENV)/country-name-to-isocode-migration:$(TAG) -f Dockerfile.country_name_to_isoCode_migration .
-
-upload-country-name-to-isocode-migration: export IMAGE_NAME=country-name-to-isocode-migration
-upload-country-name-to-isocode-migration: notify-deployment
-	docker push us.gcr.io/factors-$(ENV)/country-name-to-isocode-migration:$(TAG)
-
-
-pack-six-signal-to-clearbit-migration:
-	docker build -t us.gcr.io/factors-$(ENV)/six-signal-to-clearbit-migration:$(TAG) -f Dockerfile.six_signal_to_clearbit_migration .
-
-upload-six-signal-to-clearbit-migration: export IMAGE_NAME=six-signal-to-clearbit-migration
-upload-six-signal-to-clearbit-migration: notify-deployment
-	docker push us.gcr.io/factors-$(ENV)/six-signal-to-clearbit-migration:$(TAG)
-
-
 pack-channels-to-kpi-migration:
 	docker build -t us.gcr.io/factors-$(ENV)/channels-to-kpi-migration:$(TAG) -f Dockerfile.channels_v1_to_kpi_query_migration .
 
@@ -790,13 +767,6 @@ upload-g2-data-pull: export IMAGE_NAME=g2-enrich-job
 upload-g2-data-pull: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/g2-enrich-job:$(TAG)
 
-pack-plan-population:
-	docker build -t us.gcr.io/factors-$(ENV)/plan-population-job:$(TAG) -f Dockerfile.plan_population_job .
-
-upload-plan-population: export IMAGE_NAME=plan-population-job
-upload-plan-population: notify-deployment
-	docker push us.gcr.io/factors-$(ENV)/plan-population-job:$(TAG)
-
 pack-free-plan-migration:
 	docker build -t us.gcr.io/factors-$(ENV)/free-plan-migration-job:$(TAG) -f Dockerfile.free_plan_migration_job .
 
@@ -828,13 +798,6 @@ pack-cache-cleanup-filter-lists:
 upload-cache-cleanup-filter-lists: export IMAGE_NAME=cache-cleanup-filter-lists-job
 upload-cache-cleanup-filter-lists: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/cache-cleanup-filter-lists-job:$(TAG)
-
-pack-clearbit-account-provisioning:
-	docker build -t us.gcr.io/factors-$(ENV)/clearbit-account-provisioning:$(TAG) -f Dockerfile.clearbit_account_provisioning_job .
-
-upload-clearbit-account-provisioning: export IMAGE_NAME=clearbit-account-provisioning
-upload-clearbit-account-provisioning: notify-deployment
-	docker push us.gcr.io/factors-$(ENV)/clearbit-account-provisioning:$(TAG)
 
 pack-saved-queries-migrate:
 	docker build -t us.gcr.io/factors-$(ENV)/saved-queries-migrate-job:$(TAG) -f Dockerfile.saved_queries_migrate_job .
@@ -871,6 +834,14 @@ pack-li-account-properties-migration:
 upload-li-account-properties-migration: export IMAGE_NAME=li-account-properties-migration-job
 upload-li-account-properties-migration: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/li-account-properties-migration-job:$(TAG)
+
+pack-weekly-mailmodo:
+	docker build -t us.gcr.io/factors-$(ENV)/weekly-mailmodo:$(TAG) -f Dockerfile.weekly_mailmodo_email .
+
+upload-weekly-mailmodo: export IMAGE_NAME=weekly-mailmodo
+upload-weekly-mailmodo: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/weekly-mailmodo:$(TAG)
+
 
 pack-all: pack-api pack-ps pack-ds pack-sdk pack-build-seq pack-pull-events pack-project-events pack-pattern-mine pack-explain pack-acc-scoring pack-add-session pack-import-ads pack-delete-dangling-sessions pack-hubspot-enrich pack-otp-hubspot pack-marketo-enrich pack-marketo-sync pack-leadsquared-sync pack-leadsquared-pull pack-leadsquared-enrich pack-enrich-smart-properties pack-ingest-leadgen pack-salesforce-enrich pack-otp-salesforce pack-backfill-salesforce-datetime-job pack-backfill-users-domain pack-backfill-salesforce-smart-event-job pack-fix-salesforce-identify-campaign-with-contact-and-lead-association pack-remove-empty-smart-events pack-hubspot-smart-event-validator-job pack-sdk-request-worker pack-integration-request-worker pack-monitoring pack-analyze pack-archive-events pack-adhoc-archive-events pack-bigquery-upload pack-onboard-to-bigquery pack-merge-user-properties pack-dashboard-caching pack-dashboard-db-precompute pack-sixsignal-report pack-web-analytics-dashboard pack-journey-mining pack-yourstory-add-properties pack-instantiate-event-user-cache pack-migrate-model-metadata pack-cleanup-eventuser-cache pack-cleanup-sortedset-cache pack-dashboard-caching-queries-comparision pack-cleanup-dangling-keys pack-rollup-sortedset-cache pack-copy-user-properties-migration pack-pull-test-data pack-ingest-test-data pack-memsql-hubspot-sync-fields pack-weekly-insights pack-weekly-insights-mailer pack-form-fills pack-pathanalysis pack-bingads-integration pack-currency-upload pack-numerical-bucketing pack-cleanup-stale-project pack-replicate-properties pack-queries-id-text-patch pack-precompile-queries pack-k8-backup pack-compute-and-send-alerts pack-event-trigger-alerts pack-channels-to-kpi-migration pack-adhoc-db-query pack-delete-older-clickable-elements pack-predict-pull-events pack-adhoc-yellowai-identify-fix pack-adhoc-sensehq-count-touchpoints pack-delete-sessions-job pack-create-linkedin-group-user pack-g2-enrich-job
 

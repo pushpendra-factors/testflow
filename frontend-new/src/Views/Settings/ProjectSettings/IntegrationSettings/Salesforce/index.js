@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useEffect } from 'react';
 import { connect } from 'react-redux';
 import {
   fetchProjectSettings,
@@ -18,26 +17,18 @@ const SalesForceIntegration = ({
   udpateProjectSettings,
   activeProject,
   currentProjectSettings,
-  setIsActive,
   enableSalesforceIntegration,
   fetchSalesforceRedirectURL,
-  kbLink = false,
-  currentAgent
+  currentAgent,
+  integrationCallback
 }) => {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
 
-  const isSalesforceEnabled = () => {
-    return (
-      currentProjectSettings &&
-      currentProjectSettings.int_salesforce_enabled_agent_uuid &&
-      currentProjectSettings.int_salesforce_enabled_agent_uuid != ''
-    );
-  };
-
-  useEffect(() => {
-    setIsActive(isSalesforceEnabled());
-  }, []);
+  const isSalesforceEnabled = () =>
+    currentProjectSettings &&
+    currentProjectSettings.int_salesforce_enabled_agent_uuid &&
+    currentProjectSettings.int_salesforce_enabled_agent_uuid != '';
 
   const handleRedirectToURL = () => {
     fetchSalesforceRedirectURL(activeProject.id.toString()).then((r) => {
@@ -48,7 +39,7 @@ const SalesForceIntegration = ({
   };
 
   const onClickEnableSalesforce = () => {
-    //Factors INTEGRATION tracking
+    // Factors INTEGRATION tracking
     factorsai.track('INTEGRATION', {
       name: 'salesforce',
       activeProjectID: activeProject.id
@@ -84,7 +75,7 @@ const SalesForceIntegration = ({
             setTimeout(() => {
               message.success('Salesforce integration disconnected!');
             }, 500);
-            setIsActive(false);
+            integrationCallback();
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);
@@ -98,68 +89,29 @@ const SalesForceIntegration = ({
 
   const isEnabled = isSalesforceEnabled();
   return (
-    <>
-      <ErrorBoundary
-        fallback={
-          <FaErrorComp
-            subtitle={'Facing issues with Salesforce integrations'}
-          />
-        }
-        onError={FaErrorLog}
-      >
-        <div className={'mt-4 flex'}>
-          {isEnabled && (
-            <>
-              <div
-                className={
-                  'mt-4 flex flex-col border-top--thin py-4 mt-2 w-full'
-                }
-              >
-                <Text
-                  type={'title'}
-                  level={6}
-                  weight={'bold'}
-                  extraClass={'m-0'}
-                >
-                  Account Connected
-                </Text>
-                <Text
-                  type={'title'}
-                  level={7}
-                  color={'grey'}
-                  extraClass={'m-0 mt-2'}
-                >
-                  Salesforce sync is enabled
-                </Text>
-                <Button
-                  loading={loading}
-                  className={'mt-4'}
-                  onClick={() => onDisconnect()}
-                >
-                  Disconnect
-                </Button>
-              </div>
-            </>
-          )}
-          {!isEnabled && (
-            <>
-              <Button
-                type={'primary'}
-                loading={loading}
-                onClick={onClickEnableSalesforce}
-              >
-                Enable using Salesforce
-              </Button>
-              {kbLink && (
-                <a className={'ant-btn ml-2 '} target={'_blank'} href={kbLink}>
-                  View documentation
-                </a>
-              )}
-            </>
-          )}
-        </div>
-      </ErrorBoundary>
-    </>
+    <ErrorBoundary
+      fallback={
+        <FaErrorComp subtitle='Facing issues with Salesforce integrations' />
+      }
+      onError={FaErrorLog}
+    >
+      <div className='mt-4 flex'>
+        {isEnabled && (
+          <Button loading={loading} onClick={() => onDisconnect()}>
+            Disconnect
+          </Button>
+        )}
+        {!isEnabled && (
+          <Button
+            type='primary'
+            loading={loading}
+            onClick={onClickEnableSalesforce}
+          >
+            Connect Salesforce
+          </Button>
+        )}
+      </div>
+    </ErrorBoundary>
   );
 };
 

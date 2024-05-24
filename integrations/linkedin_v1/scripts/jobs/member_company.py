@@ -10,6 +10,7 @@ from cache.member_company_info import MemberCompany
 from metrics_aggregator.metrics_aggregator import MetricsAggregator
 from util.linkedin_api_service import LinkedinApiService
 from data_service.data_service import DataService
+from google_storage.google_storage import GoogleStorage
 
 class MemberCompanyJob:
     linkedin_setting = None

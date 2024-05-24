@@ -16,12 +16,12 @@ import {
   GROUP_NAME_DOMAINS
 } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { invalidBreakdownPropertiesList } from 'Constants/general.constants';
+import { ReactSortable } from 'react-sortablejs';
+import { setGroupByActionList } from 'Reducers/coreQuery/actions';
 import { TOOLTIP_CONSTANTS } from '../../../constants/tooltips.constans';
 import FaSelect from '../../FaSelect';
 import { setGroupBy, delGroupBy } from '../../../reducers/coreQuery/middleware';
 import styles from './index.module.scss';
-import { ReactSortable } from 'react-sortablejs';
-import { setGroupByActionList } from 'Reducers/coreQuery/actions';
 
 function GroupBlock({
   groupByState,
@@ -231,12 +231,12 @@ function GroupBlock({
         : PropTextFormat(opt.property);
     }
     if (opt.property && opt.prop_category === 'group') {
-      propertyName = groupPropNames[opt.property]
-        ? groupPropNames[opt.property]
+      propertyName = groupPropNames[opt.groupName][opt.property]
+        ? groupPropNames[opt.GroupName][opt.property]
         : PropTextFormat(opt.property);
     }
     if (!opt.property) {
-      propertyName = 'Select user property';
+      propertyName = 'Select property';
     }
     return (
       <Tooltip title={propertyName} color={TOOLTIP_CONSTANTS.DARK}>
@@ -266,14 +266,14 @@ function GroupBlock({
         {groupByState.global.map((opt, index) => (
           <div
             key={index}
-            className={`flex relative items-center mt-2 ${styles['draghandleparent']}`}
+            className={`flex relative items-center mt-2 ${styles.draghandleparent}`}
           >
             <div className='flex relative'>
               <div
                 style={{ cursor: 'pointer', margin: 'auto 2px' }}
-                className={styles['draghandle']}
+                className={styles.draghandle}
               >
-                <SVG name='drag'></SVG>
+                <SVG name='drag' />
               </div>
               {renderGroupDisplayName(opt, index)}
               {isDDVisible[index] ? (

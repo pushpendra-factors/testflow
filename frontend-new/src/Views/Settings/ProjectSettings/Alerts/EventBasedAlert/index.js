@@ -219,7 +219,7 @@ const EventBasedAlert = ({
   const dispatch = useDispatch();
   const { confirm } = Modal;
 
-  // Segment Support
+  // Segment Support 
   const [segmentType, setSegmentType] = useState('action_event');
   const [selectedSegment, setSelectedSegment] = useState('');
   const [segmentOptions, setSegmentOptions] = useState([]);

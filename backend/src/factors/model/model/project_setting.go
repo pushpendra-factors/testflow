@@ -147,6 +147,17 @@ type ProjectSetting struct {
 	IntParagonToken              string          `gorm:"column:int_paragon_token" json:"int_paragon_token"`
 	IntParagonEnablingAgentID    string          `gorm:"column int_paragon_enabling_agent_id" json:"int_paragon_enabling_agent_id"`
 	IntegrationStatus            *postgres.Jsonb `json:"integration_status"`
+	SamlConfiguration            *postgres.Jsonb `json:"saml_configuration"`
+	SamlEnabled                  bool            `json:"saml_enabled"`
+}
+
+type SAMLConfiguration struct {
+	LoginURL    string    `json:"login_url"`
+	LogoutURL   string    `json:"logout_url"`
+	Certificate string    `json:"certificate"`
+	CreatedBy   string    `json:"created_by"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type IntegrationState struct {

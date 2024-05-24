@@ -97,13 +97,11 @@ function GroupBlock({
         filterOpts[0].values = [];
     }
 
-    const modifiedFilterOpts = filterOpts?.map((opt) => {
-      return {
-        iconName: opt?.iconName,
-        label: opt?.label,
-        values: processProperties(opt?.values)
-      };
-    });
+    const modifiedFilterOpts = filterOpts?.map((opt) => ({
+      iconName: opt?.iconName,
+      label: opt?.label,
+      values: processProperties(opt?.values)
+    }));
     setFilterOptions(modifiedFilterOpts);
   }, [
     userPropertiesV2,
@@ -118,12 +116,12 @@ function GroupBlock({
 
   const delOption = (index) => {
     // delGroupBy('global', groupByState.global[index], index);
-    let newArr = eventLevelExpandBy?.filter((item, indx) => indx != index);
+    const newArr = eventLevelExpandBy?.filter((item, indx) => indx != index);
     setEventLevelExpandBy(newArr);
   };
 
   const onGrpPropChange = (val, index) => {
-    const newGroupByState = Object.assign({}, eventLevelExpandBy[index]);
+    const newGroupByState = { ...eventLevelExpandBy[index] };
     if (newGroupByState.prop_type === 'numerical') {
       newGroupByState.gbty = val;
     }
@@ -132,7 +130,7 @@ function GroupBlock({
     }
     // setGroupBy('global', newGroupByState, index);
     if (eventLevelExpandBy?.[index]) {
-      let newArr = eventLevelExpandBy;
+      const newArr = eventLevelExpandBy;
       newArr[index] = newGroupByState;
       setEventLevelExpandBy(newArr);
     } else {
@@ -144,7 +142,7 @@ function GroupBlock({
   };
 
   const onChange = (option, group, index) => {
-    const newGroupByState = Object.assign({}, eventLevelExpandBy[index]);
+    const newGroupByState = { ...eventLevelExpandBy[index] };
     if (group?.label === 'Group Properties') {
       newGroupByState.prop_category = 'group';
     } else {
@@ -161,7 +159,7 @@ function GroupBlock({
     }
     // setGroupBy('global', newGroupByState, index);
     if (eventLevelExpandBy?.[index]) {
-      let newArr = eventLevelExpandBy;
+      const newArr = eventLevelExpandBy;
       newArr[index] = newGroupByState;
       setEventLevelExpandBy(newArr);
     } else {
@@ -181,11 +179,10 @@ function GroupBlock({
     setDDVisible(ddVis);
   };
 
-  const renderInitGroupSelect = (index) => {
-    return (
-      <div key={0} className={`m-0 mt-2`}>
-        <div className={`flex relative`}>
-          {/* {
+  const renderInitGroupSelect = (index) => (
+    <div key={0} className='m-0 mt-2'>
+      <div className='flex relative'>
+        {/* {
             <Button
               className={`fa-button--truncate`}
               type='text'
@@ -195,27 +192,26 @@ function GroupBlock({
               Add new
             </Button>
           } */}
-          {isDDVisible[index] ? (
-            <div className={`${styles.group_block__event_selector}`}>
-              <GroupSelect
-                options={filterOptions}
-                searchPlaceHolder={'Select Property'}
-                optionClickCallback={(option, group) =>
-                  onChange(option, group, index)
-                }
-                onClickOutside={() => triggerDropDown(index, true)}
-                allowSearch={true}
-                extraClass={`${styles.group_block__event_selector__select}`}
-              />
-            </div>
-          ) : null}
-        </div>
+        {isDDVisible[index] ? (
+          <div className={`${styles.group_block__event_selector}`}>
+            <GroupSelect
+              options={filterOptions}
+              searchPlaceHolder='Select Property'
+              optionClickCallback={(option, group) =>
+                onChange(option, group, index)
+              }
+              onClickOutside={() => triggerDropDown(index, true)}
+              allowSearch
+              extraClass={`${styles.group_block__event_selector__select}`}
+            />
+          </div>
+        ) : null}
       </div>
-    );
-  };
+    </div>
+  );
 
   const renderGroupPropertyOptions = (opt, index) => {
-    if (!opt || opt.prop_type === 'categorical') return;
+    if (!opt || opt.prop_type === 'categorical') return null;
 
     const propOpts = {
       numerical: [
@@ -232,11 +228,11 @@ function GroupBlock({
 
     const getProp = (opt) => {
       if (opt.prop_type === 'numerical') {
-        const propSel = propOpts['numerical'].filter((v) => v[2] === opt.gbty);
+        const propSel = propOpts.numerical.filter((v) => v[2] === opt.gbty);
         return propSel[0] ? propSel[0][0] : 'Select options';
       }
       if (opt.prop_type === 'datetime') {
-        const propSel = propOpts['datetime'].filter((v) => v[2] === opt.grn);
+        const propSel = propOpts.datetime.filter((v) => v[2] === opt.grn);
         return propSel[0] ? propSel[0][0] : 'Select options';
       }
     };
@@ -253,7 +249,7 @@ function GroupBlock({
     };
 
     return (
-      <div className={`flex items-center m-0 mx-2`}>
+      <div className='flex items-center m-0 mx-2'>
         show as
         <div
           className={`flex relative m-0 mx-2 ${styles.grpProps__select__opt}`}
@@ -265,7 +261,7 @@ function GroupBlock({
               options={propOpts[opt.prop_type]}
               optionClick={setProp}
               onClickOutside={() => selectVisToggle()}
-            ></FaSelect>
+            />
           )}
         </div>
       </div>
@@ -276,7 +272,7 @@ function GroupBlock({
     const { property, prop_category } = groupByEvent || {};
     if (!property) return null;
     const iconName = prop_category === 'group' ? 'user' : prop_category;
-    return <SVG name={iconName} size={16} color={'purple'} />;
+    return <SVG name={iconName} size={16} color='purple' />;
   };
 
   const renderGroupDisplayName = (opt, index) => {
@@ -285,26 +281,26 @@ function GroupBlock({
       propertyName = eventPropNames[opt.property]
         ? eventPropNames[opt.property]
         : userPropNames[opt.property]
-        ? userPropNames[opt.property]
-        : opt.property;
+          ? userPropNames[opt.property]
+          : opt.property;
     }
     if (opt.property && opt.prop_category === 'group') {
-      propertyName = groupPropNames[opt.property]
-        ? groupPropNames[opt.property]
+      propertyName = groupPropNames[opt.groupName][opt.property]
+        ? groupPropNames[opt.groupName][opt.property]
         : opt.property;
     }
     if (!opt.property) {
-      propertyName = 'Select user property';
+      propertyName = 'Select property';
     }
     return (
       <Tooltip title={propertyName} color={TOOLTIP_CONSTANTS.DARK}>
         <Button
           icon={getIcon(opt)}
-          className={`fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin`}
+          className='fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin'
           type='link'
           onClick={() => triggerDropDown(index)}
         >
-          {!opt.property && <SVG name='plus' extraClass={`mr-2`} />}
+          {!opt.property && <SVG name='plus' extraClass='mr-2' />}
           {propertyName}
         </Button>
       </Tooltip>
@@ -312,49 +308,45 @@ function GroupBlock({
   };
 
   const renderExistingBreakdowns = () => {
-    if (eventLevelExpandBy < 1) return;
+    if (eventLevelExpandBy < 1) return null;
     return eventLevelExpandBy.map((opt, index) => (
-      <div key={index} className={`flex relative items-center mt-2`}>
-        <Text type={'title'} level={8} extraClass={`m-0 mt-2 mr-4`}>
+      <div key={index} className='flex relative items-center mt-2'>
+        <Text type='title' level={8} extraClass='m-0 mt-2 mr-4'>
           Expand by
         </Text>
-        {
-          <>
-            <div className={`flex relative`}>
-              {renderGroupDisplayName(opt, index)}
-              {isDDVisible[index] ? (
-                <div className={`${styles.group_block__event_selector}`}>
-                  <GroupSelect
-                    options={filterOptions}
-                    searchPlaceHolder={'Select Property'}
-                    optionClickCallback={(option, group) =>
-                      onChange(option, group, index)
-                    }
-                    onClickOutside={() => triggerDropDown(index, true)}
-                    allowSearch={true}
-                    extraClass={`${styles.group_block__event_selector__select}`}
-                  />
-                </div>
-              ) : null}
+        <div className='flex relative'>
+          {renderGroupDisplayName(opt, index)}
+          {isDDVisible[index] ? (
+            <div className={`${styles.group_block__event_selector}`}>
+              <GroupSelect
+                options={filterOptions}
+                searchPlaceHolder='Select Property'
+                optionClickCallback={(option, group) =>
+                  onChange(option, group, index)
+                }
+                onClickOutside={() => triggerDropDown(index, true)}
+                allowSearch
+                extraClass={`${styles.group_block__event_selector__select}`}
+              />
             </div>
-            {renderGroupPropertyOptions(opt, index)}
+          ) : null}
+        </div>
+        {renderGroupPropertyOptions(opt, index)}
 
-            <Button
-              type='text'
-              onClick={() => delOption(index)}
-              size={'small'}
-              className={`fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button`}
-            >
-              <SVG name={'remove'} />
-            </Button>
-          </>
-        }
+        <Button
+          type='text'
+          onClick={() => delOption(index)}
+          size='small'
+          className='fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button'
+        >
+          <SVG name='remove' />
+        </Button>
       </div>
     ));
   };
 
   return (
-    <div className={'flex flex-col relative justify-start items-start ml-20'}>
+    <div className='flex flex-col relative justify-start items-start ml-20'>
       {renderExistingBreakdowns()}
       {renderInitGroupSelect(eventLevelExpandBy?.length)}
     </div>

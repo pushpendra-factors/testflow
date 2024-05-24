@@ -100,11 +100,13 @@ type AlertInfo struct {
 	Alert           *postgres.Jsonb `json:"alert"`
 	Type            string          `json:"type"`
 	CreatedAt       time.Time       `json:"created_at"`
+	CreatedBy       string          `json:"created_by"`
 }
 
 type CachedEventTriggerAlert struct {
-	Message   EventTriggerAlertMessage
-	FieldTags map[string]string
+	Message    EventTriggerAlertMessage
+	FieldTags  map[string]string
+	IsWorkflow bool
 }
 
 type EventTriggerAlertMessage struct {
@@ -206,7 +208,6 @@ func SetCacheForEventTriggerAlert(key *cache.Key, cacheETA *CachedEventTriggerAl
 		log.WithError(err).Error("Failed to set Cache for EventTriggerAlert.")
 	}
 
-	log.Info("Adding to cache successful.")
 	return err
 }
 
@@ -228,8 +229,6 @@ func GetEventTriggerAlertCacheCounterKey(projectId int64, alertId, date string) 
 
 	suffix := fmt.Sprintf("%s:%s", alertId, date)
 	prefix := fmt.Sprintf("%s:%s", prefixNameforAlerts, counterIndex)
-
-	log.Info("Fetching redisKey, inside GetEventTriggerAlertCacheKey.")
 
 	key, err := cache.NewKey(projectId, prefix, suffix)
 	if err != nil || key == nil {

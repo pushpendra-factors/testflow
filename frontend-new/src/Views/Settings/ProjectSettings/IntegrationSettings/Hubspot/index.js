@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useEffect } from 'react';
 import { connect } from 'react-redux';
 import {
   fetchProjectSettings,
@@ -26,30 +25,22 @@ const HubspotIntegration = ({
   udpateProjectSettings,
   activeProject,
   currentProjectSettings,
-  setIsActive,
-  kbLink = false,
   currentAgent,
-  enableHubspotIntegration
+  enableHubspotIntegration,
+  integrationCallback
 }) => {
   const [errorInfo, seterrorInfo] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const isHubspotEnabled = () => {
-    return (
-      currentProjectSettings &&
-      currentProjectSettings?.int_hubspot &&
-      currentProjectSettings?.int_hubspot_refresh_token != ''
-    );
-  };
-
-  useEffect(() => {
-    setIsActive(isHubspotEnabled());
-  }, []);
+  const isHubspotEnabled = () =>
+    currentProjectSettings &&
+    currentProjectSettings?.int_hubspot &&
+    currentProjectSettings?.int_hubspot_refresh_token != '';
 
   const onClickEnableHubspot = () => {
     setLoading(true);
 
-    //Factors INTEGRATION tracking
+    // Factors INTEGRATION tracking
     factorsai.track('INTEGRATION', {
       name: 'hubspot',
       activeProjectID: activeProject.id
@@ -70,7 +61,6 @@ const HubspotIntegration = ({
       .catch((err) => {
         setLoading(false);
         message.error(`${err?.data?.error}`);
-        setIsActive(false);
       });
   };
 
@@ -92,7 +82,7 @@ const HubspotIntegration = ({
             setTimeout(() => {
               message.success('Hubspot integration disconnected!');
             }, 500);
-            setIsActive(false);
+            integrationCallback();
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);
@@ -106,53 +96,28 @@ const HubspotIntegration = ({
   const isEnabled = isHubspotEnabled();
 
   return (
-    <>
-      <ErrorBoundary
-        fallback={
-          <FaErrorComp subtitle={'Facing issues with Hubspot integrations'} />
-        }
-        onError={FaErrorLog}
-      >
-        {isEnabled && (
-          <div
-            className={'mt-4 flex flex-col border-top--thin py-4 mt-2 w-full'}
+    <ErrorBoundary
+      fallback={
+        <FaErrorComp subtitle='Facing issues with Hubspot integrations' />
+      }
+      onError={FaErrorLog}
+    >
+      <div className='mt-4 flex' data-tour='step-11'>
+        {isEnabled ? (
+          <Button loading={loading} onClick={() => onDisconnect()}>
+            Disconnect
+          </Button>
+        ) : (
+          <Button
+            type='primary'
+            loading={loading}
+            onClick={onClickEnableHubspot}
           >
-            <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>
-              Account Connected
-            </Text>
-            <Text
-              type={'title'}
-              level={7}
-              color={'grey'}
-              extraClass={'m-0 mt-2'}
-            >
-              Hubspot sync is enabled
-            </Text>
-            {/* <Input size="large" disabled={true} placeholder="API Key" value={currentProjectSettings?.int_hubspot_api_key} style={{ width: '400px' }} /> */}
-          </div>
+            Enable using Hubspot
+          </Button>
         )}
-        <div className={'mt-4 flex'} data-tour='step-11'>
-          {isEnabled ? (
-            <Button loading={loading} onClick={() => onDisconnect()}>
-              Disconnect
-            </Button>
-          ) : (
-            <Button
-              type={'primary'}
-              loading={loading}
-              onClick={onClickEnableHubspot}
-            >
-              Enable using Hubspot
-            </Button>
-          )}
-          {kbLink && (
-            <a className={'ant-btn ml-2 '} target={'_blank'} href={kbLink}>
-              View documentation
-            </a>
-          )}
-        </div>
-      </ErrorBoundary>
-    </>
+      </div>
+    </ErrorBoundary>
   );
 };
 

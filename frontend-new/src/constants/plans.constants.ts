@@ -32,6 +32,7 @@ export const FEATURES = {
   FEATURE_WEEKLY_INSIGHTS: 'weekly_insights',
   FEATURE_KPI_ALERTS: 'kpi_alerts',
   FEATURE_EVENT_BASED_ALERTS: 'event_based_alerts',
+  FEATURE_WORKFLOWS: 'workflows',
   FEATURE_REPORT_SHARING: 'report_sharing',
   FEATURE_SLACK: 'slack',
   FEATURE_SEGMENT: 'segment',

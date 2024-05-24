@@ -516,6 +516,7 @@ func CustomCors() gin.HandlerFunc {
 					"https://sloth-staging.factors.ai",
 					"https://violet.factors.app",
 					"https://blue.factors.app",
+					"https://dev-27343192.okta.com",
 				}
 			} else {
 				corsConfig.AllowOrigins = []string{

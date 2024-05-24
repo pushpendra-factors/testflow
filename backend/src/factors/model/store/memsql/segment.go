@@ -4,6 +4,7 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
+	"fmt"
 
 	"errors"
 	"net/http"
@@ -13,7 +14,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func (store *MemSQL) CreateSegment(projectId int64, segmentPayload *model.SegmentPayload) (int, error) {
+func (store *MemSQL) CreateSegment(projectId int64, segmentPayload *model.SegmentPayload) (model.Segment, int, error) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"name":       segmentPayload.Name,
@@ -23,23 +24,23 @@ func (store *MemSQL) CreateSegment(projectId int64, segmentPayload *model.Segmen
 
 	if projectId == 0 {
 		logCtx.Error("segment creation failed. invalid projectId")
-		return http.StatusBadRequest, errors.New("segment creation failed. invalid project_id")
+		return model.Segment{}, http.StatusBadRequest, errors.New("segment creation failed. invalid project_id")
 	}
 
 	isSegmentValid, err := isValidSegment(segmentPayload)
 	if !isSegmentValid {
-		return http.StatusBadRequest, err
+		return model.Segment{}, http.StatusBadRequest, err
 	}
 
 	if store.IsDuplicateSegmentNameCheck(projectId, segmentPayload.Name) {
 		logCtx.Error("segment creation failed. Duplicate Name")
-		return http.StatusBadRequest, errors.New("segment creation failed. Duplicate Name")
+		return model.Segment{}, http.StatusBadRequest, errors.New("segment creation failed. Duplicate Name")
 	}
 
 	querySegment, err := U.EncodeStructTypeToPostgresJsonb(segmentPayload.Query)
 	if err != nil {
 		log.WithFields(logFields).WithError(err).Error("Failed to encode segment query while segment creation")
-		return http.StatusInternalServerError, err
+		return model.Segment{}, http.StatusInternalServerError, err
 	}
 	segment := model.Segment{
 		ProjectID:   projectId,
@@ -55,13 +56,13 @@ func (store *MemSQL) CreateSegment(projectId int64, segmentPayload *model.Segmen
 	dbx := db.Create(&segment)
 	if dbx.Error != nil {
 		if IsDuplicateRecordError(dbx.Error) {
-			return http.StatusConflict, errors.New("failed to create a segment. Duplicate Record")
+			return model.Segment{}, http.StatusConflict, errors.New("failed to create a segment. Duplicate Record")
 		}
 		logCtx.WithError(dbx.Error).Error("Failed to create a segment.")
-		return http.StatusInternalServerError, errors.New("failed to create a segment")
+		return model.Segment{}, http.StatusInternalServerError, errors.New("failed to create a segment")
 	}
 
-	return http.StatusCreated, nil
+	return segment, http.StatusCreated, nil
 }
 
 func isValidSegment(segmentPayload *model.SegmentPayload) (bool, error) {
@@ -242,7 +243,7 @@ func (store *MemSQL) GetSegmentById(projectId int64, segmentId string) (*model.S
 
 	var segment model.Segment
 	db := C.GetServices().Db
-	err := db.Limit(1).Where("project_id = ? AND id = ? ",
+	err := db.Limit(1).Where("project_id = ? AND id = ?",
 		projectId, segmentId).Find(&segment).Error
 
 	if err != nil {
@@ -265,7 +266,7 @@ func (store *MemSQL) GetSegmentById(projectId int64, segmentId string) (*model.S
 	return &segment, http.StatusFound
 }
 
-func (store *MemSQL) UpdateSegmentById(projectId int64, id string, segmentPayload model.SegmentPayload) (error, int) {
+func (store *MemSQL) UpdateSegmentById(projectId int64, id string, segmentPayload model.SegmentPayload) (int, error) {
 	logFields := log.Fields{
 		"project_id": projectId,
 		"id":         id,
@@ -277,7 +278,7 @@ func (store *MemSQL) UpdateSegmentById(projectId int64, id string, segmentPayloa
 
 	if projectId == 0 || id == "" {
 		logCtx.Error("Failed to update segment by ID. Invalid parameters.")
-		return nil, http.StatusBadRequest
+		return http.StatusBadRequest, fmt.Errorf("failed to update segment. Invalid parameters")
 	}
 
 	db := C.GetServices().Db
@@ -296,7 +297,7 @@ func (store *MemSQL) UpdateSegmentById(projectId int64, id string, segmentPayloa
 	if segmentPayload.Type != "" {
 		if len(updatedQuery.EventsWithProperties) == 0 && len(updatedQuery.GlobalUserProperties) == 0 {
 			logCtx.Error("Failed to update segment by ID. Query is empty.")
-			return nil, http.StatusBadRequest
+			return http.StatusBadRequest, fmt.Errorf("failed to update segment. Query is empty")
 		}
 		updateFields["type"] = segmentPayload.Type
 	}
@@ -305,7 +306,7 @@ func (store *MemSQL) UpdateSegmentById(projectId int64, id string, segmentPayloa
 		querySegment, err := U.EncodeStructTypeToPostgresJsonb(segmentPayload.Query)
 		if err != nil {
 			log.WithFields(logFields).WithError(err).Error("Failed to encode segment query while segment updation")
-			return err, http.StatusInternalServerError
+			return http.StatusInternalServerError, err
 		}
 		updateFields["query"] = querySegment
 	}
@@ -314,15 +315,15 @@ func (store *MemSQL) UpdateSegmentById(projectId int64, id string, segmentPayloa
 		projectId, id).Update(updateFields).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
-			return err, http.StatusNotFound
+			return http.StatusNotFound, err
 		}
 
 		logCtx.WithError(err).Error(
 			"Failed while updating segment on UpdateSegmentById.")
-		return err, http.StatusInternalServerError
+		return http.StatusInternalServerError, err
 	}
 
-	return nil, http.StatusOK
+	return http.StatusOK, nil
 }
 
 func (store *MemSQL) DeleteSegmentById(projectId int64, segmentId string) (int, error) {

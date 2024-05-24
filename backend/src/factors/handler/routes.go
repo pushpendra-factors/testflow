@@ -49,6 +49,9 @@ func InitAppRoutes(r *gin.Engine) {
 		return
 	})
 
+	r.GET(routePrefix+"/saml/login", V1.SamlLoginRequestHandler)
+	r.POST(routePrefix+"/project/:project_id/saml/acs", V1.SamlCallbackHandler)
+
 	// Initialize swagger api docs only for development / staging.
 	if C.GetConfig().Env != C.PRODUCTION {
 		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -314,6 +317,8 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/v1/profiles/accounts/top_events/:domain_name", mid.FeatureMiddleware([]string{M.FEATURE_ACCOUNT_PROFILES}), V1.GetTopEventsForADomainHandler)
 	authRouteGroup.GET("/:project_id/v1/profiles/user_properties/:id", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES, M.FEATURE_ACCOUNT_PROFILES}), V1.GetConfiguredUserPropertiesWithValuesHandler)
 	authRouteGroup.GET("/:project_id/v1/profiles/event_properties/:id/:name", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES, M.FEATURE_ACCOUNT_PROFILES}), V1.GetConfiguredEventPropertiesWithValuesHandler)
+	authRouteGroup.PUT("/:project_id/v1/profiles/:type/table_properties", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES, M.FEATURE_ACCOUNT_PROFILES}), V1.UpdateDefaultTablePropertiesHandler)
+	authRouteGroup.PUT("/:project_id/v1/profiles/segments/:segment_id/table_properties", mid.FeatureMiddleware([]string{M.FEATURE_PEOPLE_PROFILES, M.FEATURE_ACCOUNT_PROFILES}), V1.UpdateSegmentTablePropertiestHandler)
 
 	// Segments
 	authRouteGroup.POST("/:project_id/segments", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), CreateSegmentHandler)
@@ -365,11 +370,11 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/v1/eventtriggeralert/test_teams", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), responseWrapper(V1.TeamsTestforEventTriggerAlerts))
 
 	//alert workflows
-	authRouteGroup.GET("/:project_id/v1/workflow/templates", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), V1.GetAllWorkflowTemplatesHandler)
-	authRouteGroup.GET("/:project_id/v1/workflow/saved", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), responseWrapper(V1.GetAllSavedWorkflowsHandler))
-	authRouteGroup.POST("/:project_id/v1/workflow", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), responseWrapper(V1.CreateWorkflowHandler))
-	authRouteGroup.PUT("/:project_id/v1/workflow/edit/:id", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), responseWrapper(V1.EditWorkflowHandler))
-	authRouteGroup.DELETE("/:project_id/v1/workflow/:id", mid.FeatureMiddleware([]string{M.FEATURE_EVENT_BASED_ALERTS}), V1.DeleteWorkflowHandler)
+	authRouteGroup.GET("/:project_id/v1/workflow/templates", mid.FeatureMiddleware([]string{M.FEATURE_WORKFLOWS}), V1.GetAllWorkflowTemplatesHandler)
+	authRouteGroup.GET("/:project_id/v1/workflow/saved", mid.FeatureMiddleware([]string{M.FEATURE_WORKFLOWS}), responseWrapper(V1.GetAllSavedWorkflowsHandler))
+	authRouteGroup.POST("/:project_id/v1/workflow", mid.FeatureMiddleware([]string{M.FEATURE_WORKFLOWS}), responseWrapper(V1.CreateWorkflowHandler))
+	authRouteGroup.PUT("/:project_id/v1/workflow/edit/:id", mid.FeatureMiddleware([]string{M.FEATURE_WORKFLOWS}), responseWrapper(V1.EditWorkflowHandler))
+	authRouteGroup.DELETE("/:project_id/v1/workflow/:id", mid.FeatureMiddleware([]string{M.FEATURE_WORKFLOWS}), V1.DeleteWorkflowHandler)
 
 	// teams
 	authRouteGroup.POST("/:project_id/teams/auth", mid.FeatureMiddleware([]string{M.FEATURE_TEAMS}), V1.TeamsAuthRedirectHandler)
@@ -472,6 +477,9 @@ func InitAppRoutes(r *gin.Engine) {
 
 	// factors_deanon
 	authRouteGroup.POST("/:project_id/factors_deanon/provider/:name/enable", mid.FeatureMiddleware([]string{M.FEATURE_FACTORS_DEANONYMISATION}), UpdateFactorsDeanonProvider)
+
+	// weekly mailmodo mail
+	authRouteGroup.GET("/:project_id/internal/weekly_email_metrics", mid.SetLoggedInAgentInternalOnly(), stringifyWrapper(GetWeeklyMailmodoEmailMetricsHandler))
 
 }
 

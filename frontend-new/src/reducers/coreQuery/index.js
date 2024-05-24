@@ -1,3 +1,4 @@
+import { DEFAULT_TOUCHPOINTS } from 'Reducers/coreQuery/utils';
 import {
   FETCH_EVENTS,
   FETCH_GROUP_PROPERTIES,
@@ -56,7 +57,7 @@ import {
   FETCH_GROUPS_REJECTED
 } from '../types';
 import { DefaultDateRangeFormat } from '../../Views/CoreQuery/utils';
-import { DEFAULT_TOUCHPOINTS } from 'Reducers/coreQuery/utils';
+import logger from 'Utils/logger';
 
 const defaultState = {
   eventOptions: [],
@@ -147,24 +148,35 @@ export default function (state = defaultState, action) {
     case SET_GROUP_PROP_NAME:
       return {
         ...state,
-        groupPropNames: { ...state.groupPropNames, ...action.payload }
+        groupPropNames: {
+          ...state.groupPropNames,
+          [action.groupName]: action.payload
+        }
       };
     case FETCH_GROUPS_FULFILLED:
       return { ...state, groups: action.payload };
     case FETCH_GROUPS_REJECTED:
       return { ...state, groups: {} };
     case FETCH_GROUP_PROPERTIES:
-      const groupPropState = Object.assign({}, state.groupProperties);
-      groupPropState[action.groupName] = action.payload;
-      return { ...state, groupProperties: groupPropState };
+      return {
+        ...state,
+        groupProperties: {
+          ...state.groupProperties,
+          [action.groupName]: action.payload
+        }
+      };
     case FETCH_USER_PROPERTIES_V2:
       return { ...state, userPropertiesV2: action.payload };
     case FETCH_EVENT_USER_PROPERTIES_V2:
       return { ...state, eventUserPropertiesV2: action.payload };
     case FETCH_EVENT_PROPERTIES_V2:
-      const eventPropStateV2 = Object.assign({}, state.eventPropertiesV2);
-      eventPropStateV2[action.eventName] = action.payload;
-      return { ...state, eventPropertiesV2: eventPropStateV2 };
+      return {
+        ...state,
+        eventPropertiesV2: {
+          ...state.eventPropertiesV2,
+          [action.eventName]: action.payload
+        }
+      };
     case FETCH_PROPERTY_VALUES_LOADING:
       return {
         ...state,
@@ -174,18 +186,21 @@ export default function (state = defaultState, action) {
         }
       };
     case FETCH_PROPERTY_VALUES_LOADED:
-      const propValState = Object.assign({}, state.propertyValuesMap.data);
-      propValState[action.propName] = { ...action.payload, $none: '(Not Set)' };
       return {
         ...state,
         propertyValuesMap: {
           loading: false,
-          data: propValState
+          data: {
+            ...state.propertyValuesMap.data,
+            [action.propName]: { ...action.payload, $none: '(Not Set)' }
+          }
         }
       };
     case SET_EVENT_PROP_NAME:
-      const evnPropNames = { ...state.eventPropNames, ...action.payload };
-      return { ...state, eventPropNames: evnPropNames };
+      return {
+        ...state,
+        eventPropNames: { ...state.eventPropNames, ...action.payload }
+      };
     case INITIALIZE_GROUPBY: {
       return {
         ...state,
@@ -198,9 +213,7 @@ export default function (state = defaultState, action) {
         groupBy: {
           ...state.groupBy,
           [action.groupByType]: state.groupBy[action.groupByType]
-            .filter((gb) => {
-              return gb.overAllIndex !== action.payload.overAllIndex;
-            })
+            .filter((gb) => gb.overAllIndex !== action.payload.overAllIndex)
             .map((gb) => {
               if (gb.overAllIndex > action.payload.overAllIndex) {
                 return {
@@ -225,7 +238,7 @@ export default function (state = defaultState, action) {
     }
 
     case SET_GROUPBY: {
-      let groupByState = Object.assign({}, state.groupBy);
+      const groupByState = { ...state.groupBy };
       if (
         groupByState[action.groupByType] &&
         groupByState[action.groupByType][action.index]
@@ -244,24 +257,25 @@ export default function (state = defaultState, action) {
     }
     case SET_GROUPBY_LIST: {
       try {
-        let objectToBeReplaced = action.payload.map(
-          (eachBreakdown, eachBreakdownIndex) => {
-            return { ...eachBreakdown, overAllIndex: eachBreakdownIndex };
-          }
+        const objectToBeReplaced = action.payload.map(
+          (eachBreakdown, eachBreakdownIndex) => ({
+            ...eachBreakdown,
+            overAllIndex: eachBreakdownIndex
+          })
         );
         return {
           ...state,
           groupBy: { ...state.groupBy, global: objectToBeReplaced }
         };
       } catch (error) {
-        console.error(error);
+        logger.error(error);
         return state;
       }
     }
     case SET_GROUPBY_EVENT_LIST: {
       try {
         let whichEventIndex = 0; // we will always get this value from paylod
-        let objectToBeReplaced = action.payload.map(
+        const objectToBeReplaced = action.payload.map(
           (eachBreakdown, eachBreakdownIndex) => {
             const { eventIndex } = eachBreakdown;
             whichEventIndex = eventIndex;
@@ -274,9 +288,7 @@ export default function (state = defaultState, action) {
         );
         let arr = [...state.groupBy.event];
         arr = [
-          ...arr.filter((eachItem) => {
-            return eachItem.eventIndex !== whichEventIndex;
-          }),
+          ...arr.filter((eachItem) => eachItem.eventIndex !== whichEventIndex),
           ...objectToBeReplaced
         ];
         return { ...state, groupBy: { ...state.groupBy, event: arr } };
@@ -299,9 +311,7 @@ export default function (state = defaultState, action) {
         groupBy: {
           ...state.groupBy,
           event: state.groupBy.event
-            .filter((gb) => {
-              return gb.eventIndex - 1 !== action.index;
-            })
+            .filter((gb) => gb.eventIndex - 1 !== action.index)
             .map((gb) => {
               if (gb.eventIndex > action.index) {
                 return {

@@ -1,5 +1,4 @@
 import { SET_ACTIVE_PROJECT } from 'Reducers/types';
-import { SEGMENT_DELETED } from 'Reducers/timelines/types';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { apiStates } from 'Reducers/dashboard/constants';
 import { EMPTY_ARRAY } from 'Utils/global';
@@ -99,14 +98,6 @@ export default function (state = initialState, action) {
     case SET_ACTIVE_PROJECT: {
       return {
         ...initialState
-      };
-    }
-    case SEGMENT_DELETED: {
-      return {
-        ...state,
-        accountPayload: {
-          ...INITIAL_ACCOUNT_PAYLOAD
-        }
       };
     }
     case SET_FILTERS_DIRTY: {

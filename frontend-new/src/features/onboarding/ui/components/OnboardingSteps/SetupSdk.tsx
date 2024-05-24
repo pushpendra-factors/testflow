@@ -1,42 +1,22 @@
 import { SVG, Text } from 'Components/factorsComponents';
-import {
-  Col,
-  Row,
-  Collapse,
-  Tag,
-  Divider,
-  Button,
-  notification,
-  Input,
-  Tooltip,
-  Dropdown,
-  Menu,
-  Spin
-} from 'antd';
+import { Col, Row, Divider, Button, notification, Dropdown, Menu } from 'antd';
 import useMobileView from 'hooks/useMobileView';
 import React, { useEffect, useState } from 'react';
-import CodeBlockV2 from 'Components/CodeBlock/CodeBlockV2';
 import { ConnectedProps, connect, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import logger from 'Utils/logger';
 import { bindActionCreators } from 'redux';
 import { fetchProjectSettingsV1, udpateProjectSettings } from 'Reducers/global';
-import _ from 'lodash';
-import ScriptHtml from 'Views/Settings/ProjectSettings/SDKSettings/ScriptHtml';
 import {
   generateSdkScriptCode,
   generateSdkScriptCodeForPdf
 } from 'Views/Settings/ProjectSettings/SDKSettings/utils';
 import { PDFDownloadLink } from '@react-pdf/renderer';
-import GTMSteps from 'Views/Settings/ProjectSettings/SDKSettings/GTMSteps';
-import { LoadingOutlined } from '@ant-design/icons';
-import { delay } from 'Utils/global';
+import GtmSteps from 'Views/Settings/ProjectSettings/SDKSettings/InstructionSteps/gtmSteps';
+import ManualSteps from 'Views/Settings/ProjectSettings/SDKSettings/InstructionSteps/manualSteps';
+import ThirdPartySteps from 'Views/Settings/ProjectSettings/SDKSettings/InstructionSteps/thirdPartySteps';
 import StepsPdf from './StepsPdf';
-import {
-  OnboardingSupportLink,
-  SDKDocumentation,
-  generateCopyText
-} from '../../../utils';
+import { SDKDocumentation, generateCopyText } from '../../../utils';
 import {
   CommonStepsProps,
   OnboardingStepsConfig,
@@ -45,21 +25,6 @@ import {
 
 import style from './index.module.scss';
 
-const { Panel } = Collapse;
-const LoadingIcon = <LoadingOutlined style={{ fontSize: 20 }} spin />;
-
-interface VerificationType {
-  gtm: boolean;
-  manual: boolean;
-  cdp: boolean;
-}
-
-const defaultVerificationType: VerificationType = {
-  gtm: false,
-  manual: false,
-  cdp: false
-};
-
 function Step2({
   fetchProjectSettingsV1,
   udpateProjectSettings,
@@ -67,12 +32,7 @@ function Step2({
   decrementStepCount
 }: OnboardingStep2Props) {
   const [loading, setLoading] = useState<boolean>(false);
-  const [verificationLoading, setVerificationLoading] =
-    useState<VerificationType>(defaultVerificationType);
-  const [errorState, setErrorState] = useState<VerificationType>(
-    defaultVerificationType
-  );
-  const [cdpType, setCdpType] = useState('');
+
   const isMobileView = useMobileView();
   const { active_project, projectSettingsV1, currentProjectSettings } =
     useSelector((state: any) => state.global);
@@ -84,267 +44,6 @@ function Step2({
   const projectToken = active_project.token;
   const assetURL = currentProjectSettings.sdk_asset_url;
   const apiURL = currentProjectSettings.sdk_api_url;
-
-  const renderCodeBlock = () => (
-    <CodeBlockV2
-      collapsedViewText={
-        <>
-          <span style={{ color: '#2F80ED' }}>{`<script>`}</span>
-          {`(function(c)d.appendCh.....func("`}
-          <span style={{ color: '#EB5757' }}>{`${projectToken}`}</span>
-          {`")`}
-          <span style={{ color: '#2F80ED' }}>{`</script>`}</span>
-        </>
-      }
-      fullViewText={
-        <ScriptHtml
-          projectToken={projectToken}
-          assetURL={assetURL}
-          apiURL={apiURL}
-        />
-      }
-      textToCopy={generateSdkScriptCode(assetURL, projectToken, apiURL)}
-    />
-  );
-
-  const renderSDKVerificationFooter = (type: 'gtm' | 'manual' | 'cdp') => (
-    <div className='mt-4'>
-      <Divider />
-      {verificationLoading[type] && (
-        <div className='flex gap-2 items-center'>
-          <div className='flex items-center justify-center'>
-            <Spin indicator={LoadingIcon} />
-          </div>
-
-          <Text
-            type='title'
-            level={6}
-            color='character-primary'
-            extraClass='m-0 '
-          >
-            Checking for website data. It may take some time
-          </Text>
-        </div>
-      )}
-
-      {sdkVerified && !verificationLoading[type] && (
-        <div className='flex justify-between items-center'>
-          <div className='flex  items-center'>
-            <SVG name='CheckCircle' extraClass='inline' color='#52C41A' />
-            <Text
-              type='title'
-              level={6}
-              color='character-primary'
-              extraClass='m-0 ml-2 inline'
-            >
-              {type === 'cdp'
-                ? 'Events recieved successfully. 🎉'
-                : 'Verified. Your script is up and running. 🎉'}
-            </Text>
-          </div>
-          <Button
-            type='text'
-            size='small'
-            style={{ color: '#1890FF' }}
-            onClick={() => handleSdkVerification(type)}
-            loading={verificationLoading[type]}
-          >
-            {type === 'cdp' ? 'Check again' : 'Verify again'}
-          </Button>
-        </div>
-      )}
-      {!int_completed && !errorState[type] && !verificationLoading[type] && (
-        <div className='flex gap-2 items-center'>
-          <Text type='paragraph' color='mono-6' extraClass='m-0'>
-            {type === 'cdp'
-              ? 'No events received yet'
-              : 'Have you already added the code?'}
-          </Text>
-          <Button
-            onClick={() => handleSdkVerification(type)}
-            loading={verificationLoading[type]}
-          >
-            {type === 'cdp' ? 'Check for events' : 'Verify it now'}
-          </Button>
-        </div>
-      )}
-      {errorState[type] && !verificationLoading[type] && (
-        <div className='flex items-center'>
-          <SVG name='CloseCircle' extraClass='inline' color='#F5222D' />
-          <Text
-            type='title'
-            level={6}
-            color='character-primary'
-            extraClass='m-0 ml-2 inline'
-          >
-            {type === 'cdp'
-              ? 'No events received so far.'
-              : 'Couldn’t detect SDK.'}
-          </Text>
-          <Button
-            type='text'
-            size='small'
-            style={{ color: '#1890FF', padding: 0 }}
-            onClick={() => handleSdkVerification(type)}
-            loading={verificationLoading[type]}
-          >
-            Verify again
-          </Button>
-          <Text
-            type='title'
-            level={6}
-            color='character-primary'
-            extraClass='m-0 ml-1 inline'
-          >
-            or
-          </Text>
-          <Button
-            type='text'
-            size='small'
-            style={{ color: '#1890FF', padding: 0, marginLeft: 4 }}
-            onClick={() => window.open(OnboardingSupportLink, '_blank')}
-          >
-            book a call
-          </Button>
-        </div>
-      )}
-    </div>
-  );
-
-  const renderGtmContent = () => (
-    <div className='flex flex-col gap-1.5 px-4'>
-      <GTMSteps
-        projectToken={projectToken}
-        apiURL={apiURL}
-        assetURL={assetURL}
-      />
-      {renderSDKVerificationFooter('gtm')}
-    </div>
-  );
-
-  const renderManualSetupContent = () => (
-    <div className='flex flex-col gap-1.5 px-4'>
-      <Text type='paragraph' color='mono-6' extraClass='m-0'>
-        Add the below javascript code on every page between the &lt;head&gt; and
-        &lt;/head&gt; tags.
-      </Text>
-      <div className='py-4'>{renderCodeBlock()}</div>
-      {renderSDKVerificationFooter('manual')}
-    </div>
-  );
-
-  const generateCollapseHeader = (
-    title: string,
-    subtitle: string,
-    tag?: string
-  ) => (
-    <div className='w-full'>
-      <div className='flex gap-2'>
-        <Text
-          type='title'
-          level={5}
-          weight='bold'
-          color='character-primary'
-          extraClass='m-0'
-        >
-          {title}
-        </Text>
-        {tag && (
-          <div>
-            <Tag color='success'>{tag}</Tag>
-          </div>
-        )}
-      </div>
-
-      <Text type='title' level={6} color='character-secondary' extraClass='m-0'>
-        {subtitle}
-      </Text>
-    </div>
-  );
-
-  const renderCDPContent = () => (
-    <div className='flex flex-col gap-1.5 px-4'>
-      <Text
-        type='paragraph'
-        color='character-secondary'
-        weight='bold'
-        extraClass='m-0 mb-4 -ml-4'
-      >
-        Select your CDP
-      </Text>
-      <div>
-        <div className='flex items-center gap-3'>
-          <div
-            className={
-              cdpType === 'segment'
-                ? style.dashedButtonActive
-                : style.dashedButton
-            }
-          >
-            <Button
-              type='dashed'
-              onClick={() => handleCDPTypeChangeClick('segment')}
-              icon={<SVG name='Segment_ads' size='24' />}
-              size='large'
-            >
-              Segment
-            </Button>
-          </div>
-          <div
-            className={
-              cdpType === 'rudderstack'
-                ? style.dashedButtonActive
-                : style.dashedButton
-            }
-          >
-            <Button
-              type='dashed'
-              onClick={() => handleCDPTypeChangeClick('rudderstack')}
-              icon={<SVG name='Rudderstack_ads' size='24' />}
-              size='large'
-            >
-              Rudderstack
-            </Button>
-          </div>
-        </div>
-        {cdpType && (
-          <>
-            <div className='mt-6 flex flex-col gap-4'>
-              <Text type='title' level={6} color='mono-6' extraClass='m-0'>
-                1. Take your API key and configure Factors as a destination in
-                your {_.camelCase(cdpType)} Workspace.
-              </Text>
-              <div>
-                <Input.Group compact>
-                  <Input
-                    style={{
-                      width: 300
-                    }}
-                    defaultValue={active_project?.private_token}
-                    disabled
-                  />
-                  <Tooltip title='Copy Code'>
-                    <Button
-                      onClick={handleCDPCopyClick}
-                      type='text'
-                      className={style.outlineButton}
-                    >
-                      <SVG name='TextCopy' size='24' />
-                    </Button>
-                  </Tooltip>
-                </Input.Group>
-              </div>
-              <Text type='title' level={6} color='mono-6' extraClass='m-0'>
-                2. Once done, enable all the data sources inside{' '}
-                {_.camelCase(cdpType)} that you would like to send to factors
-              </Text>
-            </div>
-            {renderSDKVerificationFooter('cdp')}
-          </>
-        )}
-      </div>
-    </div>
-  );
 
   const copyInstruction = () => {
     try {
@@ -423,58 +122,6 @@ function Step2({
     </Menu>
   );
 
-  const handleSdkVerification = async (type: 'gtm' | 'manual' | 'cdp') => {
-    try {
-      if (
-        verificationLoading.cdp ||
-        verificationLoading.gtm ||
-        verificationLoading.manual
-      ) {
-        notification.warning({
-          message: 'Processing',
-          description: 'SDK Verification already in process!',
-          duration: 2
-        });
-        return;
-      }
-
-      setVerificationLoading({ ...defaultVerificationType, [type]: true });
-      await delay(5000);
-
-      setErrorState({
-        gtm: false,
-        manual: false,
-        cdp: false
-      });
-      const res = await fetchProjectSettingsV1(active_project.id);
-      if (res?.data?.int_completed) {
-        setSdkVerified(true);
-        notification.success({
-          message: 'Success',
-          description: 'SDK Verified!',
-          duration: 3
-        });
-      } else {
-        notification.error({
-          message: 'Error',
-          description: 'SDK not Verified!',
-          duration: 3
-        });
-        setErrorState({ ...errorState, [type]: true });
-      }
-
-      setVerificationLoading(defaultVerificationType);
-    } catch (error) {
-      logger.error(error);
-      setErrorState({ ...errorState, [type]: true });
-      setVerificationLoading(defaultVerificationType);
-    }
-  };
-
-  const handleCDPTypeChangeClick = (type: string) => {
-    setCdpType(type);
-  };
-
   const renderDocumentationLink = () => (
     <div>
       <Link
@@ -505,51 +152,6 @@ function Step2({
       </Dropdown>
     </div>
   );
-
-  const handleCDPCopyClick = async () => {
-    let updateProjectSettingsFlag = false;
-    let updatedProjectSettings = {};
-    if (cdpType === 'rudderstack' && !currentProjectSettings?.int_rudderstack) {
-      updateProjectSettingsFlag = true;
-      updatedProjectSettings = {
-        int_rudderstack: true
-      };
-    }
-    if (cdpType === 'segment' && !currentProjectSettings?.int_segment) {
-      updateProjectSettingsFlag = true;
-      updatedProjectSettings = {
-        int_segment: true
-      };
-    }
-
-    try {
-      if (updateProjectSettingsFlag) {
-        await udpateProjectSettings(active_project.id, updatedProjectSettings);
-      }
-      navigator?.clipboard
-        ?.writeText(active_project?.private_token)
-        .then(() => {
-          notification.success({
-            message: 'Success',
-            description: 'Successfully copied!',
-            duration: 3
-          });
-        })
-        .catch(() => {
-          notification.error({
-            message: 'Failed!',
-            description: 'Failed to copy!',
-            duration: 3
-          });
-        });
-    } catch (error) {
-      notification.error({
-        message: 'Failed!',
-        description: 'Failed to copy!',
-        duration: 3
-      });
-    }
-  };
 
   const handleSDkSubmission = async () => {
     try {
@@ -664,38 +266,19 @@ function Step2({
           >
             Use Factors SDK
           </Text>
-          <Collapse
-            key='gtm'
-            expandIconPosition='right'
-            className={style.collapse}
-          >
-            <Panel
-              key='gtm'
-              header={generateCollapseHeader(
-                'Setup using GTM',
-                'Add Factors SDK quickly using Google Tag Manager without any engineering effort',
-                'Most Popular'
-              )}
-            >
-              {renderGtmContent()}
-            </Panel>
-          </Collapse>
+          <GtmSteps
+            projectToken={projectToken}
+            assetURL={assetURL}
+            apiURL={apiURL}
+            isOnboardingFlow
+          />
           <div className='mt-6'>
-            <Collapse
-              key='manual'
-              expandIconPosition='right'
-              className={style.collapse}
-            >
-              <Panel
-                key='manual'
-                header={generateCollapseHeader(
-                  'Manual Setup',
-                  'Add Factors SDK manually in the head section for all pages you wish to get data for'
-                )}
-              >
-                {renderManualSetupContent()}
-              </Panel>
-            </Collapse>
+            <ManualSteps
+              projectToken={projectToken}
+              assetURL={assetURL}
+              apiURL={apiURL}
+              isOnboardingFlow
+            />
           </div>
         </Col>
         <Col className='mt-10' span={24}>
@@ -708,21 +291,7 @@ function Step2({
           >
             Use a third party data source
           </Text>
-          <Collapse
-            key='gtm'
-            expandIconPosition='right'
-            className={style.collapse}
-          >
-            <Panel
-              key='gtm'
-              header={generateCollapseHeader(
-                'Use a Customer Data Platform',
-                'Use an existing Customer Data Platform to bring in website data and events'
-              )}
-            >
-              {renderCDPContent()}
-            </Panel>
-          </Collapse>
+          <ThirdPartySteps />
         </Col>
         {!isMobileView && <Divider className='mt-10 mb-6' />}
         <Col span={24}>

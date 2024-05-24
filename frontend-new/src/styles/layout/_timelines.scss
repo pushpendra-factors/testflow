@@ -254,7 +254,6 @@
       border-bottom-left-radius: 0 !important;
     }
   }
-
 }
 
 .birdview-container {
@@ -729,6 +728,19 @@
   margin-bottom: 64px;
   padding: 0;
 
+  & .ant-table-content {
+    height: calc(100vh - 280px);
+    overflow: scroll !important;
+  }
+  & table {
+    min-width: unset !important;
+  }
+  & .ant-table-content thead tr {
+    top: 0;
+    position: sticky;
+    z-index: 10000;
+  }
+
   .ant-table-thead {
     .ant-table-cell {
       font-weight: $font-weight--bold;
@@ -779,13 +791,13 @@
     padding: 0 !important;
     height: 48px;
 
-    &>div {
+    & > div {
       padding: 0 16px;
     }
   }
 
   & tr {
-    .preview-btn {
+    .preview-btns {
       display: none;
       transition: all 0.3s;
     }
@@ -794,9 +806,9 @@
   & tr:hover td {
     background-color: #fafafa !important;
 
-    .preview-btn {
-      display: flex;
-      align-items: center;
+    .preview-btns {
+      display: inline-flex;
+      background-color: #fafafa !important;
       cursor: pointer;
     }
   }

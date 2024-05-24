@@ -207,8 +207,8 @@ func (store *MemSQL) GetProjectAnalyticsData(projectIDNameMap map[string]string,
 			hubspotEvents, _ := GetEventsFromCacheByDocumentType(projId, "hubspot", dateKey)
 			linkedinEvents, _ := GetEventsFromCacheByDocumentType(projId, "linkedin", dateKey)
 			salesforceEvents, _ := GetEventsFromCacheByDocumentType(projId, "salesforce", dateKey)
-			sixSignalAPIHits, _ := model.GetSixSignalAPICountCacheResult(projIdInt64, uint64(dateKeyInt))
-			sixSignalAPITotalHits, _ := model.GetSixSignalAPITotalHitCountCacheResult(projIdInt64, uint64(dateKeyInt))
+			sixSignalAPIHits, _ := model.GetFactorsDeanonAPICountResult(projIdInt64, uint64(dateKeyInt))
+			sixSignalAPITotalHits, _ := model.GetFactorsDeanonAPITotalHitCountResult(projIdInt64, uint64(dateKeyInt))
 
 			if projectId == 0 {
 				result[dateKey] = append(result[dateKey], &model.ProjectAnalytics{
@@ -367,7 +367,7 @@ func (store *MemSQL) GetGlobalProjectAnalyticsDataByProjectId(projectID int64, m
 
 		monthYearString := U.IfThenElse(monthString == "previous", U.GetPreviousMonthYear(timeZoneString), U.GetCurrentMonthYear(timeZoneString))
 
-		identifiedCount, err := model.GetSixSignalMonthlyUniqueEnrichmentCount(projectID, monthYearString.(string))
+		identifiedCount, err := model.GetFactorsDeanonMonthlyUniqueEnrichmentCount(projectID, monthYearString.(string))
 		if err != nil {
 			return nil, errors.New("failed to get six signal count")
 		}

@@ -5,6 +5,7 @@ import (
 	"factors/model/model"
 	U "factors/util"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -27,7 +28,7 @@ func (store *MemSQL) CreatePropertyMapping(propertyMapping model.PropertyMapping
 		logCtx.WithField("propertyMapping", propertyMapping).Warn("Failed to create property mapping. Duplicate record")
 		return &model.PropertyMapping{}, "Failed to create property mapping. Duplicate record", http.StatusConflict
 	}
-	
+
 	propertyMapping.ID = uuid.New().String()
 
 	db := C.GetServices().Db
@@ -167,6 +168,57 @@ func (store *MemSQL) GetPropertyMappingsByProjectIdAndSectionBitMap(projectID in
 	}
 
 	return propertyMappings, "", http.StatusOK
+}
+
+// Returns a array of string containing display_category from properties json.
+func (store *MemSQL) GenerateSectionBitMapFromProperties(properties []model.Property, projectID int64) (int64, string) {
+
+	displayCategories := make([]string, 0)
+	for _, property := range properties {
+		displayCategories = append(displayCategories, property.DisplayCategory)
+	}
+
+	return store.GenerateSectionBitMap(displayCategories, projectID)
+}
+
+// Takes list of display category
+// Returns sectionBitMap
+// Binary bits are marked based on display_category from properties from left to right.
+func (store *MemSQL) GenerateSectionBitMap(displayCategories []string, projectID int64) (int64, string) {
+
+	sources, statusCode := store.GetCustomAdsSourcesByProject(projectID)
+	if statusCode != http.StatusOK {
+		return 0, "Error during get of custom ads source"
+	}
+
+	sectionBitMap := int64(0)
+	for _, displayCategory := range displayCategories {
+		log.WithField("displayCategory", displayCategory).Warn("kark2")
+		bitPosition, present := model.SectionBitMapping[displayCategory]
+		if present {
+			log.WithField("displayCategory", displayCategory).WithField("present", present).Warn("kark2-1")
+			// Mark the bit as per position of display category
+			sectionBitMap = sectionBitMap | (1 << (bitPosition - 1))
+		} else {
+			if U.ContainsStringInArray(sources, displayCategory) {
+				baseForCustomAds := 25
+				for i, source := range sources {
+					if source == displayCategory {
+						log.WithField("displayCategory", displayCategory).WithField("source", source).WithField("sources", sources).Warn("kark2-2")
+						bitPosition = baseForCustomAds + i
+						sectionBitMap = sectionBitMap | (1 << (bitPosition - 1))
+					}
+
+				}
+			} else {
+				return 0, "Invalid object type for property mapping"
+			}
+
+		}
+	}
+	log.WithField("binary", strconv.FormatInt(sectionBitMap, 2)).Warn("kark2-3")
+
+	return sectionBitMap, ""
 }
 
 // Soft deletes the property mapping by ID

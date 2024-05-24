@@ -11,8 +11,6 @@ import {
   Checkbox,
   Skeleton
 } from 'antd';
-// const GSC_REDIRECT_URI = "/adwords/auth/redirect";
-const GSC_REDIRECT_URI_NEW = '/google_organic/v1/auth/redirect';
 import {
   enableSearchConsoleIntegration,
   fetchSearchConsoleCustomerAccounts,
@@ -20,29 +18,24 @@ import {
   fetchProjectSettings,
   deleteIntegration
 } from 'Reducers/global';
-const isDevelopment = () => {
-  return ENV === 'development';
-};
-import { Text, FaErrorComp, FaErrorLog } from 'factorsComponents';
+import { Text, FaErrorComp, FaErrorLog, SVG } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import factorsai from 'factorsai';
 import { sendSlackNotification } from '../../../../../utils/slack';
-const getGSCHostURL = () => {
-  // return isDevelopment() ? BUILD_CONFIG.adwords_service_host : BUILD_CONFIG.backend_host;
-  return BUILD_CONFIG.backend_host;
-};
+import { getBackendHost } from '../util';
+// const GSC_REDIRECT_URI = "/adwords/auth/redirect";
+const GSC_REDIRECT_URI_NEW = '/google_organic/v1/auth/redirect';
 
 const GoogleSearchConsole = ({
   activeProject,
   agent_details,
   currentProjectSettings,
   enableSearchConsoleIntegration,
-  setIsStatus,
   fetchSearchConsoleCustomerAccounts,
   udpateProjectSettings,
   fetchProjectSettings,
-  kbLink = false,
-  deleteIntegration
+  deleteIntegration,
+  integrationCallback
 }) => {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
@@ -75,7 +68,7 @@ const GoogleSearchConsole = ({
             setTimeout(() => {
               message.success('Google integration disconnected!');
             }, 500);
-            setIsStatus('');
+            integrationCallback();
           })
           .catch((err) => {
             message.error(`${err?.data?.error}`);
@@ -88,27 +81,20 @@ const GoogleSearchConsole = ({
     });
   };
 
-  const isGSCEnabled = () => {
-    return (
-      currentProjectSettings &&
-      currentProjectSettings.int_google_organic_enabled_agent_uuid &&
-      currentProjectSettings.int_google_organic_enabled_agent_uuid != ''
-    );
-  };
+  const isGSCEnabled = () =>
+    currentProjectSettings &&
+    currentProjectSettings.int_google_organic_enabled_agent_uuid &&
+    currentProjectSettings.int_google_organic_enabled_agent_uuid != '';
 
   const getRedirectURL = () => {
-    let params = {
+    const params = {
       method: 'GET',
       credentials: 'include'
     };
-    let host = getGSCHostURL();
-    let url =
-      host +
-      GSC_REDIRECT_URI_NEW +
-      '?pid=' +
-      activeProject?.id +
-      '&aid=' +
-      agent_details?.uuid;
+    const host = getBackendHost();
+    const url = `${host + GSC_REDIRECT_URI_NEW}?pid=${activeProject?.id}&aid=${
+      agent_details?.uuid
+    }`;
     fetch(url, params)
       .then((response) => response.json())
       .then((response) => {
@@ -116,19 +102,32 @@ const GoogleSearchConsole = ({
           window.location = response.url;
         }
       })
-      .catch((err) => {
-        return false;
-      });
+      .catch((err) => false);
   };
 
-  useEffect(() => {
-    if (isGSCEnabled()) {
-      currentProjectSettings?.int_google_organic_url_prefixes &&
-      currentProjectSettings?.int_google_organic_url_prefixes != ''
-        ? setIsStatus('Active')
-        : setIsStatus('Pending');
-    } else setIsStatus('');
-  }, [activeProject, agent_details, currentProjectSettings]);
+  const renderSettingInfo = () => {
+    const isCustomerAccountChosen =
+      currentProjectSettings.int_google_organic_url_prefixes &&
+      currentProjectSettings.int_google_organic_url_prefixes != '' &&
+      !addNewAccount;
+
+    // get all GSC account when no account is chosen and not account list not loaded.
+    // if (isGSCEnabled() && !isCustomerAccountChosen && !customerAccountsLoaded) {
+    if (isGSCEnabled() && !customerAccountsLoaded) {
+      // setLoadingData(true);
+      fetchSearchConsoleCustomerAccounts({ project_id: activeProject.id })
+        .then((data) => {
+          console.log('fetchSearchConsoleCustomerAccounts', data);
+          setCustomerAccountsLoaded(true);
+          setCustomerAccounts(data?.urls);
+          // setLoadingData(false);
+        })
+        .catch((error) => {
+          console.log('fetchSearchConsoleCustomerAccounts error-->', error);
+          message.error('Error while fetching URLs.');
+        });
+    }
+  };
 
   const enableGSC = () => {
     setLoading(true);
@@ -158,23 +157,22 @@ const GoogleSearchConsole = ({
       .catch((err) => {
         setLoading(false);
         console.log('Google Ads error-->', err);
-        setIsStatus('');
       });
   };
 
   const onAccountSelect = (e) => {
-    let selectedGSCAcc = [...selectedGSCAccounts];
+    const selectedGSCAcc = [...selectedGSCAccounts];
     if (e.target.checked) {
       selectedGSCAcc.push(e.target.value);
     } else {
-      let index = selectedGSCAcc.indexOf(e.target.value);
+      const index = selectedGSCAcc.indexOf(e.target.value);
       if (index > -1) selectedGSCAcc.splice(index, 1);
     }
     setSelectedGSCAccounts(selectedGSCAcc);
   };
 
   const addManualAccount = () => {
-    let accounts = [...manualAccounts];
+    const accounts = [...manualAccounts];
     if (accountId != '') {
       accounts.push({
         customer_id: accountId
@@ -185,9 +183,9 @@ const GoogleSearchConsole = ({
   };
 
   const onClickFinishSetup = () => {
-    let selectedGSCAcc = selectedGSCAccounts.join(', ');
+    const selectedGSCAcc = selectedGSCAccounts.join(', ');
 
-    //Factors INTEGRATION tracking
+    // Factors INTEGRATION tracking
     factorsai.track('INTEGRATION', {
       name: 'google_organic',
       activeProjectID: activeProject.id
@@ -205,15 +203,15 @@ const GoogleSearchConsole = ({
   };
 
   const renderAccountsList = () => {
-    let accountRows = [];
+    const accountRows = [];
 
     if (!customerAccounts) return;
 
     for (let i = 0; i < customerAccounts.length; i++) {
-      let account = customerAccounts[i];
+      const account = customerAccounts[i];
 
       accountRows.push(
-        <div className={'flex mt-2'}>
+        <div className='flex mt-2'>
           <Checkbox value={account} onChange={onAccountSelect}>
             {account}
           </Checkbox>
@@ -221,10 +219,10 @@ const GoogleSearchConsole = ({
       );
     }
     for (let i = 0; i < manualAccounts.length; i++) {
-      let account = manualAccounts[i];
+      const account = manualAccounts[i];
 
       accountRows.push(
-        <div className={'flex mt-2'}>
+        <div className='flex mt-2'>
           <Checkbox value={account} onChange={onAccountSelect}>
             {account}
           </Checkbox>
@@ -238,45 +236,40 @@ const GoogleSearchConsole = ({
         zIndex={10}
         width={600}
         afterClose={() => setShowURLModal(false)}
-        className={'fa-modal--regular fa-modal--slideInDown'}
-        centered={true}
+        className='fa-modal--regular fa-modal--slideInDown'
+        centered
         footer={null}
         closable={false}
         transitionName=''
         maskTransitionName=''
       >
-        <div className={'flex flex-col w-full p-2'}>
-          <Text
-            type={'title'}
-            level={3}
-            weight={'bold'}
-            extraClass={'my-2 pb-2'}
-          >
+        <div className='flex flex-col w-full p-2'>
+          <Text type='title' level={3} weight='bold' extraClass='my-2 pb-2'>
             Google Search Console
           </Text>
-          <Text type={'title'} level={6} weight={'bold'} extraClass={'my-2'}>
+          <Text type='title' level={6} weight='bold' extraClass='my-2'>
             Add/Remove URL(s):
           </Text>
-          <div className={'p-2'}>
+          <div className='p-2'>
             <Text
-              type={'title'}
+              type='title'
               level={7}
-              color={'grey'}
-              weight={'bold'}
-              extraClass={'m-0'}
+              color='grey'
+              weight='bold'
+              extraClass='m-0'
             >
               URL(s):
             </Text>
             {accountRows}
           </div>
-          <div className={'mt-6 flex justify-end'}>
+          <div className='mt-6 flex justify-end'>
             {/* <Button onClick={() => setShowModal(true)}>
               {' '}
               Enter Id Manually{' '}
             </Button> */}
             <Button
-              type={'primary'}
-              className={'ml-2'}
+              type='primary'
+              className='ml-2'
               onClick={onClickFinishSetup}
             >
               {' '}
@@ -292,173 +285,159 @@ const GoogleSearchConsole = ({
   //     return currentProjectSettings && currentProjectSettings.int_google_organic_url_prefixes && !addNewAccount;
   // };
 
-  const renderSettingInfo = () => {
-    let isCustomerAccountChosen =
-      currentProjectSettings.int_google_organic_url_prefixes &&
-      currentProjectSettings.int_google_organic_url_prefixes != '' &&
-      !addNewAccount;
-
-    // get all GSC account when no account is chosen and not account list not loaded.
-    // if (isGSCEnabled() && !isCustomerAccountChosen && !customerAccountsLoaded) {
-    if (isGSCEnabled() && !customerAccountsLoaded) {
-      // setLoadingData(true);
-      fetchSearchConsoleCustomerAccounts({ project_id: activeProject.id })
-        .then((data) => {
-          console.log('fetchSearchConsoleCustomerAccounts', data);
-          setCustomerAccountsLoaded(true);
-          setCustomerAccounts(data?.urls);
-          // setLoadingData(false);
-        })
-        .catch((error) => {
-          console.log('fetchSearchConsoleCustomerAccounts error-->', error);
-          message.error('Error while fetching URLs.');
-        });
-    }
-  };
-
   return (
-    <>
-      <ErrorBoundary
-        fallback={
-          <FaErrorComp
-            subtitle={'Facing issues with Google Search Console integrations'}
-          />
-        }
-        onError={FaErrorLog}
-      >
-        <div className={'mt-4 flex w-full'}>
-          {currentProjectSettings?.int_google_organic_url_prefixes &&
-            currentProjectSettings?.int_google_organic_url_prefixes != '' && (
-              <>
-                <div
-                  className={
-                    'mt-4 flex flex-col border-top--thin py-4 mt-2 w-full'
-                  }
-                >
-                  <Text
-                    type={'title'}
-                    level={6}
-                    weight={'bold'}
-                    extraClass={'m-0'}
-                  >
-                    Connected URL(s)
-                  </Text>
-                  {/* <Text type={'title'} level={7} color={'grey'} extraClass={'m-0 mt-2'}>URL(s)</Text> */}
-                  <Input
-                    size='large'
-                    disabled
-                    value={
-                      currentProjectSettings?.int_google_organic_url_prefixes
-                    }
-                    style={{ width: '400px' }}
-                  />
-                </div>
-              </>
-            )}
-        </div>
-
-        <div className={'w-full'}>
-          {isGSCEnabled() && showManageBtn && (
-            <div className={'mt-4'}>
-              <Button
-                type={'primary'}
-                onClick={() => {
+    <ErrorBoundary
+      fallback={
+        <FaErrorComp subtitle='Facing issues with Google Search Console integrations' />
+      }
+      onError={FaErrorLog}
+    >
+      {currentProjectSettings?.int_google_organic_url_prefixes &&
+        currentProjectSettings?.int_google_organic_url_prefixes != '' && (
+          <div className='mt-4 flex flex-col  w-full'>
+            <Text
+              type='title'
+              level={6}
+              weight='bold'
+              color='character-primary'
+              extraClass='m-0'
+            >
+              Connected URL(s)
+            </Text>
+            <div
+              className={`mt-4 p-4 relative ${
+                showManageBtn ? 'cursor-pointer' : ''
+              } `}
+              style={{ background: '#fafafa', borderRadius: 12 }}
+              onClick={() => {
+                if (showManageBtn) {
                   renderSettingInfo();
                   setShowURLModal(true);
                   setShowManageBtn(false);
-                }}
+                }
+              }}
+            >
+              {currentProjectSettings?.int_google_organic_url_prefixes
+                ?.split(',')
+                .map((id, i) => (
+                  <div
+                    className={`flex gap-6 items-center ${
+                      i !== 0 ? 'mt-2' : ''
+                    } `}
+                  >
+                    <SVG name='Greentick' size='14' />
+                    <Text
+                      type='title'
+                      level={7}
+                      extraClass='m-0'
+                      color='chracter-secondary'
+                    >
+                      {id}
+                    </Text>
+                  </div>
+                ))}
+              <div className='absolute' style={{ top: 16, right: 16 }}>
+                <SVG name='Edit' size={16} color='#00000073' />
+              </div>
+            </div>
+
+            {/* <Input
+              disabled
+              value={currentProjectSettings?.int_google_organic_url_prefixes}
+              style={{ width: '320px', marginTop: 8, background: '#fff' }}
+            /> */}
+          </div>
+        )}
+      {isGSCEnabled() &&
+        showManageBtn &&
+        !currentProjectSettings?.int_google_organic_url_prefixes && (
+          <div className='mt-4'>
+            <Button
+              type='primary'
+              onClick={() => {
+                renderSettingInfo();
+                setShowURLModal(true);
+                setShowManageBtn(false);
+              }}
+            >
+              Connect URL(s)
+            </Button>
+          </div>
+        )}
+
+      <div className='w-full'>
+        {!showManageBtn && !customerAccountsLoaded && <Skeleton />}
+      </div>
+      <div>{customerAccountsLoaded && renderAccountsList()}</div>
+
+      <div className='mt-4 flex'>
+        {!currentProjectSettings?.int_google_organic_enabled_agent_uuid ? (
+          <Button
+            className='mr-2'
+            type='primary'
+            loading={loading}
+            onClick={enableGSC}
+          >
+            Enable using Google
+          </Button>
+        ) : (
+          <Button
+            className='mr-2'
+            loading={loading}
+            onClick={() => onDisconnect()}
+          >
+            Disconnect
+          </Button>
+        )}
+      </div>
+
+      <Modal
+        visible={showModal}
+        zIndex={11}
+        afterClose={() => setShowModal(false)}
+        className='fa-modal--regular fa-modal--slideInDown'
+        centered
+        footer={null}
+        transitionName=''
+        maskTransitionName=''
+        closable={false}
+      >
+        <Row>
+          <Col span={24}>
+            <Text type='title' level={6} weight='bold' extraClass='m-0'>
+              Manually add Google Search Console account
+            </Text>
+          </Col>
+        </Row>
+        <Row className='mt-4'>
+          <Col span={24}>
+            <Text type='title' level={7} color='grey' extraClass='m-0 mt-2'>
+              Enter Search Console account ID:
+            </Text>
+            <Input
+              type='text'
+              className='mt-2'
+              onChange={(e) => setAccountId(e.target.value)}
+            />
+          </Col>
+        </Row>
+        <Row className='mt-4'>
+          <Col span={24}>
+            <div className='flex justify-end'>
+              <Button onClick={() => setShowModal(false)}> Cancel </Button>
+              <Button
+                className='ml-2'
+                type='primary'
+                onClick={addManualAccount}
               >
-                {currentProjectSettings?.int_google_organic_url_prefixes
-                  ? 'Manage URL(s)'
-                  : 'Connect URL(s)'}
+                {' '}
+                Submit{' '}
               </Button>
             </div>
-          )}
-        </div>
-        <div className={'w-full'}>
-          {!showManageBtn && !customerAccountsLoaded && <Skeleton />}
-        </div>
-        <div>{customerAccountsLoaded && renderAccountsList()}</div>
-
-        <div className={'mt-4 flex'}>
-          {!currentProjectSettings?.int_google_organic_enabled_agent_uuid ? (
-            <Button
-              className={'mr-2'}
-              type={'primary'}
-              loading={loading}
-              onClick={enableGSC}
-            >
-              Enable using Google
-            </Button>
-          ) : (
-            <Button
-              className={'mr-2'}
-              loading={loading}
-              onClick={() => onDisconnect()}
-            >
-              Disconnect
-            </Button>
-          )}
-          {kbLink && (
-            <a className={'ant-btn'} target={'_blank'} href={kbLink}>
-              View documentation
-            </a>
-          )}
-        </div>
-
-        <Modal
-          visible={showModal}
-          zIndex={11}
-          afterClose={() => setShowModal(false)}
-          className={'fa-modal--regular fa-modal--slideInDown'}
-          centered={true}
-          footer={null}
-          transitionName=''
-          maskTransitionName=''
-          closable={false}
-        >
-          <Row>
-            <Col span={24}>
-              <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>
-                Manually add Google Search Console account
-              </Text>
-            </Col>
-          </Row>
-          <Row className={'mt-4'}>
-            <Col span={24}>
-              <Text
-                type={'title'}
-                level={7}
-                color={'grey'}
-                extraClass={'m-0 mt-2'}
-              >
-                Enter Search Console account ID:
-              </Text>
-              <Input
-                type='text'
-                className={'mt-2'}
-                onChange={(e) => setAccountId(e.target.value)}
-              />
-            </Col>
-          </Row>
-          <Row className={'mt-4'}>
-            <Col span={24}>
-              <div className={'flex justify-end'}>
-                <Button onClick={() => setShowModal(false)}> Cancel </Button>
-                <Button
-                  className={'ml-2'}
-                  type={'primary'}
-                  onClick={addManualAccount}
-                >
-                  {' '}
-                  Submit{' '}
-                </Button>
-              </div>
-            </Col>
-          </Row>
-        </Modal>
-      </ErrorBoundary>
-    </>
+          </Col>
+        </Row>
+      </Modal>
+    </ErrorBoundary>
   );
 };
 

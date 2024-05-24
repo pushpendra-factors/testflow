@@ -41,7 +41,7 @@ func GetFactorsDeanonCountAndLimit(projectId int64) (int64, int64, error) {
 		timeZone = U.TimeZoneStringIST
 	}
 	monthYear := U.GetCurrentMonthYear(timeZone)
-	count, err := model.GetSixSignalMonthlyUniqueEnrichmentCount(projectId, monthYear)
+	count, err := model.GetFactorsDeanonMonthlyUniqueEnrichmentCount(projectId, monthYear)
 	if err != nil {
 		logCtx.Error("Error while fetching Factors Deanonymisation count")
 		return 0, -1, err

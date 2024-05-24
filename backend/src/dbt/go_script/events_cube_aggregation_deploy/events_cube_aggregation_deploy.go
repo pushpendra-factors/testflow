@@ -21,7 +21,7 @@ import (
 func main() {
 	var env string
 	defer U.NotifyOnPanic("Script#events_cube_aggregation_deploy", env)
-	
+
 	overrideHealthcheckPingID, jobForLargeTimerange, env, statusCode := parseFlagsAndInitConfig()
 	if statusCode != http.StatusOK {
 		log.Error("Failed in parsing flags")
@@ -33,10 +33,10 @@ func main() {
 	jobReport := getDefaultJobReport()
 	isError, errorString, key, tableCreated := false, "", "", true
 
-	allowedProjectIdsMap, allProjects, errString, statusCode2 :=  getAllowedProjectIDsAndAllProjectsTimezone()
-	if statusCode2 != http.StatusOK { 
+	allowedProjectIdsMap, allProjects, errString, statusCode2 := getAllowedProjectIDsAndAllProjectsTimezone()
+	if statusCode2 != http.StatusOK {
 		C.PingHealthcheckForFailure(healthcheckPingID, errString)
-		os.Exit(1) 
+		os.Exit(1)
 	}
 
 	storeSelected := store.GetStore()
@@ -48,7 +48,7 @@ func main() {
 	}
 
 	// TODO Compare unix of maxDataPresentTimestamp and beginning of day(maxDataPresentTimestamp) and show error.
-	// Since DB doesnt store timezone, we always get result of max timestamp of present data in UTC. 
+	// Since DB doesnt store timezone, we always get result of max timestamp of present data in UTC.
 	// We compute beginning of date in respective timezone from it.
 	for index, project := range allProjects {
 		key = fmt.Sprintf("%v:%v", index, project.ID)
@@ -65,7 +65,7 @@ func main() {
 			}
 
 			dashboardCreationStatusCode := storeSelected.CreatePredefWebAggDashboardIfNotExists(project.ID)
-			if (dashboardCreationStatusCode != http.StatusCreated && dashboardCreationStatusCode != http.StatusFound) {
+			if dashboardCreationStatusCode != http.StatusCreated && dashboardCreationStatusCode != http.StatusFound {
 				log.WithField("project", project.ID).Error("Failed during dashboard creation")
 				addToJobReport(jobReport, true, "Failed during dashboard creation", key)
 			}
@@ -80,8 +80,14 @@ func main() {
 			// else currentTo will be now with buffer.
 
 			for _, fromAndTo := range splitTimeRanges {
-				if isError, errorString, tableCreated = executeDbtCommand(project, fromAndTo[0].Unix(), fromAndTo[1].Unix(), tableCreated); isError {
-					break
+				if C.IsWebsiteAggregationTestEnabled(project.ID) {
+					if isError, errorString, tableCreated = executeDbtCommandTest(project, fromAndTo[0].Unix(), fromAndTo[1].Unix(), tableCreated); isError {
+						break
+					}
+				} else {
+					if isError, errorString, tableCreated = executeDbtCommand(project, fromAndTo[0].Unix(), fromAndTo[1].Unix(), tableCreated); isError {
+						break
+					}
 				}
 			}
 
@@ -115,6 +121,7 @@ func parseFlagsAndInitConfig() (string, bool, string, int) {
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	jobForLargeTimerange := flag.Bool("job_for_large_timerange", false, "Job for large timerange.")
+	websiteAggregationTestEnabledProjects := flag.String("website_aggregation_test_enabled_projects", "", "Flag - website aggregation test enabled projects")
 
 	appName := "events_cube_aggregation_deploy"
 
@@ -138,7 +145,8 @@ func parseFlagsAndInitConfig() (string, bool, string, int) {
 			Certificate: *memSQLCertificate,
 			AppName:     appName,
 		},
-		PrimaryDatastore: *primaryDatastore,
+		PrimaryDatastore:                      *primaryDatastore,
+		WebsiteAggregationTestEnabledProjects: *websiteAggregationTestEnabledProjects,
 	}
 
 	C.InitConf(config)
@@ -156,7 +164,7 @@ func getAllowedProjectIDsAndAllProjectsTimezone() (map[int64]bool, []model.Proje
 	storeSelected := store.GetStore()
 	allowedProjectIDs, err := storeSelected.GetAllProjectsWithFeatureEnabled(model.FEATURE_WEB_ANALYTICS_DASHBOARD, false)
 	if err != nil {
-		errString := "Failed in fetching projects with this feature flag enabled - events_cube_aggregation_deploy" 
+		errString := "Failed in fetching projects with this feature flag enabled - events_cube_aggregation_deploy"
 		log.WithField("err", err).Warn(errString)
 		return make(map[int64]bool), make([]model.Project, 0), errString, http.StatusInternalServerError
 	}
@@ -164,7 +172,7 @@ func getAllowedProjectIDsAndAllProjectsTimezone() (map[int64]bool, []model.Proje
 	for _, projectID := range allowedProjectIDs {
 		allowedProjectIdsMap[projectID] = true
 	}
-	
+
 	allProjects, statusCode := storeSelected.GetIDAndTimezoneForAllProjects()
 	if statusCode != http.StatusFound {
 		errString := "Failed to get projects"
@@ -220,7 +228,21 @@ func getMaxTimestampOfDataPresent(project model.Project, tableCreated bool) (tim
 // add fmt.Println later to check how it work.
 func executeDbtCommand(project model.Project, from, to int64, tableCreated bool) (bool, string, bool) {
 	log.WithField("project", project.ID).WithField("from", from).WithField("to", to).Warn("DBT ran for this params")
-	command := fmt.Sprintf("dbt run --vars '{project_id: %v, time_zone: %v, from: %v, to: %v}'", project.ID, project.TimeZone, from, to)
+	command := fmt.Sprintf("dbt run --select website_aggregation --vars '{project_id: %v, time_zone: %v, from: %v, to: %v}'", project.ID, project.TimeZone, from, to)
+	cmd := exec.Command("/bin/sh", "-c", command)
+	_, stdErr := cmd.Output()
+	// log.WithField("stdOut", stdOut).Warn("Printing dbt output")
+	if stdErr != nil {
+		log.WithField("project_id", project.ID).WithField("err", stdErr.Error()).Warn("Failed in Dbt run")
+		return true, string(stdErr.Error()), tableCreated
+	}
+	return false, "dbt completed", true
+}
+
+// add fmt.Println later to check how it work.
+func executeDbtCommandTest(project model.Project, from, to int64, tableCreated bool) (bool, string, bool) {
+	log.WithField("project", project.ID).WithField("from", from).WithField("to", to).Warn("DBT ran for this params - test")
+	command := fmt.Sprintf("dbt run --select website_aggregation_test --vars '{project_id: %v, time_zone: %v, from: %v, to: %v}'", project.ID, project.TimeZone, from, to)
 	cmd := exec.Command("/bin/sh", "-c", command)
 	_, stdErr := cmd.Output()
 	// log.WithField("stdOut", stdOut).Warn("Printing dbt output")
@@ -266,7 +288,7 @@ func addToJobReport(jobReport map[string]map[string]interface{}, isError bool, e
 }
 
 func addMetricsToReportIfCrossesThreshold(jobReport map[string]map[string]interface{}, jobRunTimeInSeconds float64, numberOfDays float64, projectID int64) {
-	if (jobRunTimeInSeconds > numberOfDays * 60) {
+	if jobRunTimeInSeconds > numberOfDays*60 {
 		key := fmt.Sprintf("%v:%v", projectID, numberOfDays)
 		jobReport["long_run_projects"][key] = jobRunTimeInSeconds
 	}

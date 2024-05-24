@@ -96,7 +96,7 @@ const (
 )
 
 var ObjectsForLinkedin = []string{AdwordsCampaign, AdwordsAdGroup}
-var ObjectsForLinkedinCompany = []string{AdwordsCampaign, LinkedinCompany}
+var ObjectsForLinkedinCompany = []string{AdwordsCampaign, AdwordsAdGroup, LinkedinCompany}
 var ObjectToDisplayCategoryForLinkedin = map[string]string{
 	AdwordsCampaign: "Campaign Group",
 	AdwordsAdGroup:  "Campaign",

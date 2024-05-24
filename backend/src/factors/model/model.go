@@ -195,7 +195,7 @@ type Model interface {
 	GetTimedOutUnitsByProject(cacheReports []model.CachingUnitReport) map[int64][]model.FailedDashboardUnitReport
 
 	// Predefined dashboards
-	ExecuteQueryGroupForPredefinedWebsiteAggregation(projectID int64, request model.PredefWebsiteAggregationQueryGroup) ([]model.QueryResult, int, string)
+	ExecuteQueryGroupForPredefinedWebsiteAggregation(projectID int64, request model.PredefWebsiteAggregationQueryGroup, useTestTable bool) ([]model.QueryResult, int, string)
 	CreateWebsiteAggregation(websiteAggregation model.WebsiteAggregation) (model.WebsiteAggregation, string, int)
 	CreatePredefWebAggDashboardIfNotExists(projectID int64) int
 	TableOfWebsiteAggregationExists() (bool, int)
@@ -375,6 +375,7 @@ type Model interface {
 		imprEventNameID string, clicksEventNameID string) (map[int64]map[string]map[string]model.ValueForEventLookupMap,
 		map[int64]map[string]map[string]model.ValueForEventLookupMap, error)
 	IsEventPresentAfterGivenTimestamp(projectId int64, timestamp int64) (int, string)
+	GetActiveProjectByEventsPerformedTimeStamp(timestamp int64) ([]int64, error)
 
 	// clickable_elements
 	UpsertCountAndCheckEnabledClickableElement(projectID int64, payload *model.CaptureClickPayload) (isEnabled bool, status int, err error)
@@ -985,6 +986,8 @@ type Model interface {
 	GetTopEventsForADomain(projectID int64, domainID string) ([]model.TimelineEvent, int)
 	GetConfiguredUserPropertiesWithValues(projectID int64, id string, isAnonymous bool) (map[string]interface{}, int)
 	GetConfiguredEventPropertiesWithValues(projectID int64, eventID string, eventName string) (map[string]interface{}, int)
+	UpdateDefaultTablePropertiesConfig(projectID int64, profileType string, updatedConfig []string) (int, error)
+	UpdateSegmentTablePropertiesConfig(projectID int64, segmentID string, updatedConfig []string) (int, error)
 
 	// Timeline consuming segment_marker
 	GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload, downloadLimitGiven bool) ([]model.Profile, int, string)
@@ -996,11 +999,11 @@ type Model interface {
 	GetPreviewDomainsListByProjectIdPerRun(projectID int64, payload model.TimelinePayload, domainGroupID int,
 		eventNameIDsMap map[string]string, userCount *int64, domainIDList []string, limitAcc int, fileValuesMap map[string]map[string]bool) ([]model.Profile, int, string)
 	// segment
-	CreateSegment(projectId int64, segment *model.SegmentPayload) (int, error)
+	CreateSegment(projectId int64, segment *model.SegmentPayload) (model.Segment, int, error)
 	GetAllSegments(projectId int64) (map[string][]model.Segment, int)
 	GetSegmentByName(projectId int64, name string) (*model.Segment, int)
 	GetSegmentById(projectId int64, segmentId string) (*model.Segment, int)
-	UpdateSegmentById(projectId int64, id string, segmentPayload model.SegmentPayload) (error, int)
+	UpdateSegmentById(projectId int64, id string, segmentPayload model.SegmentPayload) (int, error)
 	IsDuplicateSegmentNameCheck(projectID int64, name string) bool
 	DeleteSegmentById(projectId int64, segmentId string) (int, error)
 	CreateDefaultSegment(projectID int64, entity string, isGroup bool) (int, error)
@@ -1027,7 +1030,7 @@ type Model interface {
 	ExecuteAccountAnalyticsQuery(projectID int64, reqID string, accountAnalyticsQuery model.AccountAnalyticsQuery) (model.QueryResult, int)
 
 	// segment_marker
-	CheckIfUserPerformedGivenEvents(queryStr string, params []interface{}) ([]int, int)
+	CheckIfUserPerformedGivenEvents(qprojectID int64, userID string, ueryStr string, params []interface{}) (map[string]int, int)
 	FetchAssociatedSegmentsFromUsers(projectID int64) (int, []model.User, []map[string]interface{})
 
 	// Ads import
@@ -1113,6 +1116,8 @@ type Model interface {
 	GetPropertyMappingByProjectIDAndName(projectID int64, name string) (*model.PropertyMapping, string, int)
 	GetPropertyMappingsByProjectId(projectID int64) ([]*model.PropertyMapping, string, int)
 	GetPropertyMappingsByProjectIdAndSectionBitMap(projectID int64, sectionBitMap int64) ([]*model.PropertyMapping, string, int)
+	GenerateSectionBitMapFromProperties(properties []model.Property, projectID int64) (int64, string)
+	GenerateSectionBitMap(displayCategories []string, projectID int64) (int64, string)
 	DeletePropertyMappingByID(projectID int64, id string) int
 
 	//account scoring
@@ -1167,9 +1172,12 @@ type Model interface {
 
 	//Workflows
 	GetAllWorkflowTemplates() ([]model.AlertTemplate, int)
-	GetAllWorklfowsByProject(projectID int64) ([]model.Workflow, int, error)
+	GetAllWorklfowsByProject(projectID int64) ([]model.WorkflowDisplayableInfo, int, error)
 	GetWorkflowById(projectID int64, id string) (*model.Workflow, int, error)
-	CreateWorkflow(projectID int64, agentID string, alertBody model.Workflow) (*model.Workflow, int, error)
-	UpdateWorkflow(projectID int64, id, agentID string, alertBody model.Workflow) (*model.Workflow, int, error)
+	CreateWorkflow(projectID int64, agentID, oldIDIfEdit string, alertBody model.WorkflowAlertBody) (*model.Workflow, int, error)
+	UpdateWorkflow(projectID int64, id, agentID string, fieldsToUpdate map[string]interface{}) (int, error)
 	DeleteWorkflow(projectID int64, id, agentID string) (int, error)
+
+	//Weekly Mailmodo Emails
+	GetWeeklyMailmodoEmailsMetrics(projectId, startTimeStamp, endTimeStamp int64) (model.WeeklyMailmodoEmailMetrics, error)
 }

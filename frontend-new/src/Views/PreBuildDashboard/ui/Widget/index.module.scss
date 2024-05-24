@@ -1,6 +1,4 @@
-
 @import '../../../../styles/abstracts/variables';
-
 
 $fa-color--mono-2: #e7e9ed;
 $dropdownbtn-mono-1: #f5f6f8;
@@ -146,19 +144,17 @@ $dropdownbtn-mono-1: #f5f6f8;
   }
 }
 
-
 .container {
   display: flex;
   width: 150px;
   height: 50px;
-  
+
   cursor: pointer;
-  // border-right: 1px solid #E7E9ED;
 }
 
 .line {
   position: relative;
-  border-left: 1px solid #E7E9ED;
+  border-left: 1px solid #e7e9ed;
   height: 50px;
   left: 40px;
 }
@@ -169,7 +165,7 @@ $dropdownbtn-mono-1: #f5f6f8;
   font-weight: 500;
   font-size: 13px;
   line-height: 10px;
-  color: #1890FF;
+  color: #1890ff;
 }
 
 .text2Active {
@@ -183,24 +179,23 @@ $dropdownbtn-mono-1: #f5f6f8;
 }
 
 .text1 {
-    font-family: $font-family;
-    font-style: normal;
-    font-weight: 500;
-    font-size: 13px;
-    line-height: 10px;
-    color: lightslategray;
+  font-family: $font-family;
+  font-style: normal;
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 10px;
+  color: lightslategray;
 }
 
 .text2 {
-    font-family: $font-family;
-    font-style: normal;
-    font-weight: 600;
-    font-size: 25px;
-    line-height: 20px;
-    letter-spacing: -1px;
-    color: lightslategray;
+  font-family: $font-family;
+  font-style: normal;
+  font-weight: 600;
+  font-size: 25px;
+  line-height: 20px;
+  letter-spacing: -1px;
+  color: lightslategray;
 }
-
 
 .filters-box-container {
   border-radius: 0.5rem;

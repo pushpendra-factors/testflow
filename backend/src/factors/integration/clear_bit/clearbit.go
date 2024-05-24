@@ -40,7 +40,7 @@ func SetClearBitCacheResult(projectID int64, userId string, userIP string) {
 }
 func GetClearbitCacheRedisKey(projectID int64, userId string, userIP string) (*cache.Key, error) {
 	prefix := "ip:enrichment:clearbit"
-	suffix := fmt.Sprintf("userId:%d:userIP:%v", userId, userIP)
+	suffix := fmt.Sprintf("userId:%v:userIP:%v", userId, userIP)
 	return cache.NewKey(projectID, prefix, suffix)
 }
 

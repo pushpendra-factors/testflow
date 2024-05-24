@@ -24,7 +24,7 @@ const ExistingReportsModal = ({
   const { active_project } = useSelector((state) => state.global);
   const queries = useSelector((state) => state.queries);
 
-  const ContainerHeight = 440;
+  const ContainerHeight = 400;
   const dispatch = useDispatch();
   const [data, setData] = useState([]);
   const [selectedQuerySet, setSelectedQuerySet] = useState(new Set());
@@ -143,6 +143,7 @@ const ExistingReportsModal = ({
         okText='Add Report'
         visible={isReportsModalOpen}
         onOk={handleAddReport}
+        className='fa-modal--regular'
         onCancel={() => setIsReportsModalOpen(false)}
       >
         <Text type={'title'} level={3} weight={'bold'}>

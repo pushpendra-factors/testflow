@@ -62,7 +62,8 @@ import { selectAreDraftsSelected } from 'Reducers/dashboard/selectors';
 import OnboardingRouting from 'Onboarding/ui/OnboardingRouting';
 import moment from 'moment';
 import useAgentInfo from 'hooks/useAgentInfo';
-import { PathUrls } from '../../routes/pathUrls';
+import { fetchAlertTemplates } from 'Reducers/alertTemplates';
+import { checkMatchPath } from 'Views/AppSidebar/appSidebar.helpers';
 import {
   SIGNUP_HS_FORM_ID,
   SIGNUP_HS_PORTAL_ID,
@@ -75,8 +76,7 @@ import {
   fetchEventDisplayNames,
   fetchQueries
 } from '../../reducers/coreQuery/services';
-import { fetchAlertTemplates } from 'Reducers/alertTemplates';
-import { checkMatchPath } from 'Views/AppSidebar/appSidebar.helpers';
+import { PathUrls } from '../../routes/pathUrls';
 
 // customizing highcharts for project requirements
 customizeHighCharts(Highcharts);
@@ -305,9 +305,9 @@ function AppLayout({
       strict: false
     });
   });
-
+  // 3.5rem is used because Top Navbar is 3.5rem
   return (
-    <Layout>
+    <Layout className={styles['parent-layout']}> 
       <ErrorBoundary
         fallback={
           <FaErrorComp
@@ -327,6 +327,7 @@ function AppLayout({
           {hasSidebar && <AppSidebar />}
           <Layout
             className={cx(
+              'bg-white',
               {
                 [styles['layout-with-sidebar']]: hasSidebar
               },
@@ -342,6 +343,7 @@ function AppLayout({
             )}
           >
             <Content
+              style={{minHeight: 'auto'}}
               className={cx('bg-white', {
                 'py-6 px-10':
                   !checkMatchPath(

@@ -115,7 +115,7 @@ func (store *MemSQL) CreateDefaultSegment(projectID int64, entity string, isGrou
 		},
 		Type: U.GROUP_NAME_DOMAINS,
 	}
-	status, err := store.CreateSegment(projectID, &segmentPayload)
+	_, status, err := store.CreateSegment(projectID, &segmentPayload)
 	if status != http.StatusCreated {
 		log.WithError(err).Error("Failed to create default segment.")
 		return status, err

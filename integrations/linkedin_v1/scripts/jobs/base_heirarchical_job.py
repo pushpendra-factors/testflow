@@ -10,6 +10,7 @@ from cache.member_company_info import MemberCompany
 from metrics_aggregator.metrics_aggregator import MetricsAggregator
 from util.linkedin_api_service import LinkedinApiService
 from data_service.data_service import DataService
+from google_storage.google_storage import GoogleStorage
 
 class BaseHeirarchicalJob:
     meta_doc_type = ''
@@ -75,22 +76,36 @@ class BaseHeirarchicalJob:
     
     def execute_metadata_fetch_and_transform(self):
         metadata = self.linkedin_api_service_obj.get_metadata(self.linkedin_setting, self.meta_endpoint, self.meta_doc_type)
+        if len(self.timerange_for_meta) > 0:
+            GoogleStorage.get_instance().write(str(metadata), "daily", DATA_STATE_RAW, 
+                                            self.timerange_for_meta[len(self.timerange_for_meta)-1], self.linkedin_setting.project_id, 
+                                            self.linkedin_setting.ad_account, self.meta_doc_type)
 
         updated_meta = DataTransformation.transform_metadata_based_on_doc_type(metadata, self.meta_doc_type, 
                                                                     self.campaign_group_cache.campaign_group_info,
                                                                     self.campaign_cache.campaign_info_map,
                                                                     self.creative_cache.creative_info_map)
+        if len(self.timerange_for_meta) > 0:
+            GoogleStorage.get_instance().write(str(updated_meta), "daily", DATA_STATE_TRANSFORMED, 
+                                            self.timerange_for_meta[len(self.timerange_for_meta)-1], self.linkedin_setting.project_id, 
+                                            self.linkedin_setting.ad_account, self.meta_doc_type)
         return updated_meta
     
     def excute_insights_fetch_and_transform(self, timestamp):
         insights = self.linkedin_api_service_obj.get_insights(self.linkedin_setting, timestamp,
                                 self.insights_doc_type, self.pivot_insights)
+        GoogleStorage.get_instance().write(str(insights), "daily", DATA_STATE_RAW, 
+                                            timestamp, self.linkedin_setting.project_id, 
+                                            self.linkedin_setting.ad_account, self.insights_doc_type)
 
         transformed_insights = DataTransformation.update_insights_with_metadata(
                                             insights, self.insights_doc_type,
                                             self.campaign_group_cache.campaign_group_info,
                                             self.campaign_cache.campaign_info_map,
                                             self.creative_cache.creative_info_map)
+        GoogleStorage.get_instance().write(str(transformed_insights), "daily", DATA_STATE_TRANSFORMED, 
+                                            timestamp, self.linkedin_setting.project_id, 
+                                            self.linkedin_setting.ad_account, self.insights_doc_type)
         return transformed_insights
 
             

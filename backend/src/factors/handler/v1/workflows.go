@@ -25,13 +25,11 @@ func GetAllSavedWorkflowsHandler(c *gin.Context) (interface{}, int, string, stri
 	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 
 	if projectID == 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid project."})
 		return nil, http.StatusBadRequest, INVALID_PROJECT, "Invalid project ID.", true
 	}
 
 	workflows, errCode, err := store.GetStore().GetAllWorklfowsByProject(projectID)
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Failed to get saved workflows."})
 		return nil, errCode, PROCESSING_FAILED, "Failed to get saved workflows.", true
 	}
 
@@ -41,27 +39,23 @@ func GetAllSavedWorkflowsHandler(c *gin.Context) (interface{}, int, string, stri
 func CreateWorkflowHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid project."})
 		return nil, http.StatusBadRequest, INVALID_INPUT, ErrorMessages[INVALID_INPUT], true
 	}
 
 	agentID := U.GetScopeByKeyAsString(c, mid.SCOPE_LOGGEDIN_AGENT_UUID)
 	if agentID == "" {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid agent."})
 		return nil, http.StatusBadRequest, INVALID_INPUT, ErrorMessages[INVALID_INPUT], true
 	}
 
-	var workflow model.Workflow
+	var workflow model.WorkflowAlertBody
 	r := c.Request
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&workflow); err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Unable to decode the workflow body"})
-		return nil, http.StatusBadRequest, INVALID_INPUT, ErrorMessages[INVALID_INPUT], true
+		return nil, http.StatusBadRequest, INVALID_INPUT, "Unable to decode workflow body.", true
 	}
 
-	obj, errCode, err := store.GetStore().CreateWorkflow(projectID, agentID, workflow)
+	obj, errCode, err := store.GetStore().CreateWorkflow(projectID, agentID, "", workflow)
 	if err != nil {
-		c.AbortWithStatusJSON(errCode, gin.H{"error": err.Error()})
 		return nil, errCode, PROCESSING_FAILED, err.Error(), true
 	}
 
@@ -112,7 +106,7 @@ func EditWorkflowHandler(c *gin.Context) (interface{}, int, string, string, bool
 		return nil, http.StatusBadRequest, PROCESSING_FAILED, ErrorMessages[INVALID_INPUT], true
 	}
 
-	var workflow model.Workflow
+	var workflow model.WorkflowAlertBody
 	r := c.Request
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
@@ -120,7 +114,7 @@ func EditWorkflowHandler(c *gin.Context) (interface{}, int, string, string, bool
 		return nil, http.StatusBadRequest, PROCESSING_FAILED, ErrorMessages[PROCESSING_FAILED], true
 	}
 
-	newWorkflow, errCode, err := store.GetStore().CreateWorkflow(projectID, agentID, workflow)
+	newWorkflow, errCode, err := store.GetStore().CreateWorkflow(projectID, agentID, id, workflow)
 	if err != nil {
 		log.WithError(err).Error("Failed to edit workflow.")
 		return nil, errCode, PROCESSING_FAILED, "Failed to edit workflow.", true

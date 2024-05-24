@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"testing"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -38,6 +39,7 @@ func TestFactorsDeanonAccountLimitAlerts(t *testing.T) {
 	assert.Nil(t, err)
 
 	var factorsDeanonObj factors_deanon.FactorsDeanon
+	logCtx := log.WithField("project_id", project.ID)
 
 	t.Run("TestAccountLimitAlertForPartialLimitExceeded", func(t *testing.T) {
 
@@ -53,21 +55,21 @@ func TestFactorsDeanonAccountLimitAlerts(t *testing.T) {
 			}, nil
 		}
 
-		errCode, err := factorsDeanonObj.HandleAccountLimitAlert(project.ID, mockClient)
+		errCode, err := factorsDeanonObj.HandleAccountLimitAlert(project.ID, mockClient, logCtx)
 		assert.Nil(t, err)
 		assert.Equal(t, http.StatusOK, errCode)
 
 		// testing if key is set or not if the execute is done.
-		alertKey, _ := factors_deanon.GetAccountLimitEmailAlertCacheKey(project.ID, 10, factors_deanon.ACCOUNT_LIMIT_PARTIAL_EXCEEDED, util.TimeZoneStringIST)
+		alertKey, _ := factors_deanon.GetAccountLimitEmailAlertCacheKey(project.ID, 10, factors_deanon.ACCOUNT_LIMIT_PARTIAL_EXCEEDED, util.TimeZoneStringIST, logCtx)
 		exists, _ := cacheRedis.ExistsPersistent(alertKey)
 		assert.Equal(t, true, exists)
 
 		//Testing by sending the alert again
-		errCode, err = factorsDeanonObj.HandleAccountLimitAlert(project.ID, mockClient)
+		errCode, err = factorsDeanonObj.HandleAccountLimitAlert(project.ID, mockClient, logCtx)
 		assert.Nil(t, err)
 		assert.Equal(t, http.StatusForbidden, errCode)
 
-		DeleteAlertAndAccLimitRedisKeyAfterTesting(project.ID, factors_deanon.ACCOUNT_LIMIT_PARTIAL_EXCEEDED)
+		DeleteAlertAndAccLimitRedisKeyAfterTesting(project.ID, factors_deanon.ACCOUNT_LIMIT_PARTIAL_EXCEEDED, logCtx)
 
 	})
 
@@ -85,16 +87,16 @@ func TestFactorsDeanonAccountLimitAlerts(t *testing.T) {
 			}, nil
 		}
 
-		errCode, err := factorsDeanonObj.HandleAccountLimitAlert(project.ID, mockClient)
+		errCode, err := factorsDeanonObj.HandleAccountLimitAlert(project.ID, mockClient, logCtx)
 		assert.NotNil(t, err)
 		assert.Equal(t, http.StatusBadRequest, errCode)
 
 		// testing if key is set or not if the execute failed
-		alertKey, _ := factors_deanon.GetAccountLimitEmailAlertCacheKey(project.ID, 10, factors_deanon.ACCOUNT_LIMIT_PARTIAL_EXCEEDED, util.TimeZoneStringIST)
+		alertKey, _ := factors_deanon.GetAccountLimitEmailAlertCacheKey(project.ID, 10, factors_deanon.ACCOUNT_LIMIT_PARTIAL_EXCEEDED, util.TimeZoneStringIST, logCtx)
 		exists, _ := cacheRedis.ExistsPersistent(alertKey)
 		assert.Equal(t, false, exists)
 
-		DeleteAlertAndAccLimitRedisKeyAfterTesting(project.ID, factors_deanon.ACCOUNT_LIMIT_PARTIAL_EXCEEDED)
+		DeleteAlertAndAccLimitRedisKeyAfterTesting(project.ID, factors_deanon.ACCOUNT_LIMIT_PARTIAL_EXCEEDED, logCtx)
 
 	})
 
@@ -111,16 +113,16 @@ func TestFactorsDeanonAccountLimitAlerts(t *testing.T) {
 			}, nil
 		}
 
-		errCode, err := factorsDeanonObj.HandleAccountLimitAlert(project.ID, mockClient)
+		errCode, err := factorsDeanonObj.HandleAccountLimitAlert(project.ID, mockClient, logCtx)
 		assert.Nil(t, err)
 		assert.Equal(t, http.StatusOK, errCode)
 
 		//Testing by sending the alert again
-		errCode, err = factorsDeanonObj.HandleAccountLimitAlert(project.ID, mockClient)
+		errCode, err = factorsDeanonObj.HandleAccountLimitAlert(project.ID, mockClient, logCtx)
 		assert.Nil(t, err)
 		assert.Equal(t, http.StatusForbidden, errCode)
 
-		DeleteAlertAndAccLimitRedisKeyAfterTesting(project.ID, factors_deanon.ACCOUNT_LIMIT_FULLY_EXCEEDED)
+		DeleteAlertAndAccLimitRedisKeyAfterTesting(project.ID, factors_deanon.ACCOUNT_LIMIT_FULLY_EXCEEDED, logCtx)
 	})
 
 	t.Run("TestAccountLimitAlertForFullLimitExceededWhenExecuteFailed", func(t *testing.T) {
@@ -137,16 +139,16 @@ func TestFactorsDeanonAccountLimitAlerts(t *testing.T) {
 			}, nil
 		}
 
-		errCode, err := factorsDeanonObj.HandleAccountLimitAlert(project.ID, mockClient)
+		errCode, err := factorsDeanonObj.HandleAccountLimitAlert(project.ID, mockClient, logCtx)
 		assert.NotNil(t, err)
 		assert.Equal(t, http.StatusBadRequest, errCode)
 
 		// testing if key is set or not if the execute failed
-		alertKey, _ := factors_deanon.GetAccountLimitEmailAlertCacheKey(project.ID, 10, factors_deanon.ACCOUNT_LIMIT_FULLY_EXCEEDED, util.TimeZoneStringIST)
+		alertKey, _ := factors_deanon.GetAccountLimitEmailAlertCacheKey(project.ID, 10, factors_deanon.ACCOUNT_LIMIT_FULLY_EXCEEDED, util.TimeZoneStringIST, logCtx)
 		exists, _ := cacheRedis.ExistsPersistent(alertKey)
 		assert.Equal(t, false, exists)
 
-		DeleteAlertAndAccLimitRedisKeyAfterTesting(project.ID, factors_deanon.ACCOUNT_LIMIT_FULLY_EXCEEDED)
+		DeleteAlertAndAccLimitRedisKeyAfterTesting(project.ID, factors_deanon.ACCOUNT_LIMIT_FULLY_EXCEEDED, logCtx)
 
 	})
 
@@ -181,7 +183,7 @@ func AccountLimitCountIncrementForTesting(projectId int64, count int) {
 	i := 0
 	for i <= count {
 		val := util.RandomString(i + 5)
-		err := model.SetSixSignalMonthlyUniqueEnrichmentCount(projectId, val, util.TimeZoneStringIST)
+		err := model.SetFactorsDeanonMonthlyUniqueEnrichmentCount(projectId, val, util.TimeZoneStringIST)
 		if err != nil {
 			fmt.Println("Error in adding domain to redis key")
 		}
@@ -189,9 +191,9 @@ func AccountLimitCountIncrementForTesting(projectId int64, count int) {
 	}
 }
 
-func DeleteAlertAndAccLimitRedisKeyAfterTesting(projectId int64, exhaustType string) {
-	alertKey, _ := factors_deanon.GetAccountLimitEmailAlertCacheKey(projectId, 10, exhaustType, util.TimeZoneStringIST)
-	limitKey, _ := model.GetSixSignalMonthlyUniqueEnrichmentKey(projectId, util.GetCurrentMonthYear(util.TimeZoneStringIST))
+func DeleteAlertAndAccLimitRedisKeyAfterTesting(projectId int64, exhaustType string, logCtx *log.Entry) {
+	alertKey, _ := factors_deanon.GetAccountLimitEmailAlertCacheKey(projectId, 10, exhaustType, util.TimeZoneStringIST, logCtx)
+	limitKey, _ := model.GetFactorsDeanonMonthlyUniqueEnrichmentKey(projectId, util.GetCurrentMonthYear(util.TimeZoneStringIST))
 	var keys []*cache.Key
 	keys = append(keys, alertKey, limitKey)
 

@@ -14,6 +14,7 @@ from cache.campaign_group_info import CampaignGroupInfo
 from cache.campaign_info import CampaignInfo
 from data_service.data_service import DataService
 from metrics_aggregator.metrics_aggregator import MetricsAggregator
+from google_storage.google_storage import GoogleStorage
 
 
 parser = OptionParser()
@@ -88,7 +89,7 @@ if __name__ == '__main__':
     input_start_timestamp = options.input_start_timestamp
     input_end_timestamp = options.input_end_timestamp
 
-    globalObject = GlobalObjects(options.data_service_host)
+    globalObject = GlobalObjects(options.env, options.data_service_host)
     data_service_obj = DataService.get_instance()
     metrics_aggregator_obj = MetricsAggregator.get_instance()
 
