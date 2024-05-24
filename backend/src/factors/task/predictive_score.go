@@ -383,6 +383,7 @@ func PredictiveScoring2(projectId int64, configs map[string]interface{}) (map[st
 						newMap[maxTimestampCol] = eventDetails.EventTimestamp
 						newMap["loop"] = loop
 						accountInfos[AccID] = newMap
+						userPropCounts[AccID] = make(map[string]int)
 						newId = true
 					}
 					dataPoint := accountInfos[AccID]
