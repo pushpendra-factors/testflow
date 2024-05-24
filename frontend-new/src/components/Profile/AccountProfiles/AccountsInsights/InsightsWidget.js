@@ -1,7 +1,8 @@
 import React, { memo, useCallback, useEffect, useMemo } from 'react';
+import { useHistory } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import cx from 'classnames';
-import { Spin } from 'antd';
+import { Button, Spin } from 'antd';
 import {
   selectAccountPayload,
   selectEditInsightsMetricStatus,
@@ -13,6 +14,7 @@ import { SVG, Text } from 'Components/factorsComponents';
 import ControlledComponent from 'Components/ControlledComponent';
 import { selectSegments } from 'Reducers/timelines/selectors';
 import { resetEditMetricStatus } from 'Reducers/accountProfilesView/actions';
+import { PathUrls } from 'Routes/pathUrls';
 import {
   getCompareDate,
   getSegmentName,
@@ -28,6 +30,7 @@ function InsightsWidget({
   editWidgetGroupId
 }) {
   const dispatch = useDispatch();
+  const history = useHistory();
   const activeProject = useSelector((state) => state.global.active_project);
   const accountPayload = useSelector((state) => selectAccountPayload(state));
   const compareDateRange = getCompareDate(dateRange);
@@ -36,6 +39,15 @@ function InsightsWidget({
   );
   const segments = useSelector(selectSegments);
   const editMetricStatus = useSelector(selectEditInsightsMetricStatus);
+
+  const currentProjectSettings = useSelector(
+    (state) => state.global.currentProjectSettings
+  );
+
+  const isIntegrationDone =
+    widget.name === 'marketing'
+      ? Boolean(currentProjectSettings.int_hubspot)
+      : Boolean(currentProjectSettings.int_salesforce_enabled_agent_uuid);
 
   const insights = useSelector((state) =>
     selectInsightsByWidgetGroupId(
@@ -74,11 +86,16 @@ function InsightsWidget({
     [onEditMetricClick]
   );
 
+  const handleIntegrateNowClick = useCallback(() => {
+    history.push(PathUrls.SettingsIntegration);
+  }, []);
+
   useEffect(() => {
     if (
       accountPayload?.segment?.id != null &&
       insights.completed !== true &&
-      insights.loading !== true
+      insights.loading !== true &&
+      isIntegrationDone === true
     ) {
       dispatch(
         fetchInsights({
@@ -95,14 +112,16 @@ function InsightsWidget({
     widget.wid_g_id,
     insights.completed,
     insights.loading,
-    accountPayload?.segment?.id
+    accountPayload?.segment?.id,
+    isIntegrationDone
   ]);
 
   useEffect(() => {
     if (
       comparedSegmentId != null &&
       comparedSegmentInsights.completed !== true &&
-      comparedSegmentInsights.loading !== true
+      comparedSegmentInsights.loading !== true &&
+      isIntegrationDone === true
     ) {
       dispatch(
         fetchInsights({
@@ -119,7 +138,8 @@ function InsightsWidget({
     widget.wid_g_id,
     comparedSegmentInsights.completed,
     comparedSegmentInsights.loading,
-    comparedSegmentId
+    comparedSegmentId,
+    isIntegrationDone
   ]);
 
   useEffect(() => {
@@ -127,7 +147,8 @@ function InsightsWidget({
       accountPayload?.segment?.id != null &&
       compareInsights.completed !== true &&
       compareInsights.loading !== true &&
-      Boolean(comparedSegmentId) === false
+      Boolean(comparedSegmentId) === false &&
+      isIntegrationDone === true
     ) {
       dispatch(
         fetchInsights({
@@ -144,7 +165,8 @@ function InsightsWidget({
     widget.wid_g_id,
     compareInsights.completed,
     compareInsights.loading,
-    accountPayload?.segment?.id
+    accountPayload?.segment?.id,
+    isIntegrationDone
   ]);
 
   useEffect(() => {
@@ -241,7 +263,26 @@ function InsightsWidget({
           'items-center justify-center': isLoading
         })}
       >
-        <ControlledComponent controller={Boolean(isLoading) === true}>
+        <ControlledComponent controller={isIntegrationDone === false}>
+          <div className='flex flex-col justify-center items-center gap-y-5'>
+            <img alt='no-data' src='../../../../assets/images/disconnect.svg' />
+            <div className='flex flex-col justify-center items-center gap-y-2'>
+              <Text type='title' extraClass='mb-0' color='character-primary'>
+                Connect your CRM for this widget
+              </Text>
+              <Button
+                onClick={handleIntegrateNowClick}
+                type='text'
+                className={styles.linkButton}
+              >
+                Integrate now
+              </Button>
+            </div>
+          </div>
+        </ControlledComponent>
+        <ControlledComponent
+          controller={Boolean(isLoading) === true && isIntegrationDone === true}
+        >
           <Spin size='small' />
         </ControlledComponent>
         <ControlledComponent controller={Boolean(isCompleted) === true}>
