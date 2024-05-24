@@ -496,53 +496,66 @@ func CustomCors() gin.HandlerFunc {
 		corsConfig := cors.DefaultConfig()
 		corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "HEAD", "DELETE"}
 
-		if isSDKRequest(c.Request.URL.Path) {
-			corsConfig.AllowAllOrigins = true
-			corsConfig.AddAllowHeaders("Authorization")
-		} else {
-			if C.IsDevelopment() || C.IsStaging() {
-				log.Infof("Running custom cors in %s environment.", C.GetConfig().Env)
-				corsConfig.AllowOrigins = []string{
-					"http://localhost:8080",
-					"http://localhost:3000",
-					"http://localhost:8090",
-					"http://127.0.0.1:3000",
-					"http://factors-dev.com:3000",
-					"http://staging-app.factors.ai",
-					"https://staging-app.factors.ai",
-					"https://tufte-staging.factors.ai",
-					"https://staging-app-old.factors.ai",
-					"https://flash-staging.factors.ai",
-					"https://sloth-staging.factors.ai",
-					"https://violet.factors.app",
-					"https://blue.factors.app",
-					"https://dev-27343192.okta.com",
-				}
+		corsConfig.AllowOriginFunc = func(currentOrigin string) bool {
+			if isSDKRequest(c.Request.URL.Path) {
+				return true
 			} else {
-				corsConfig.AllowOrigins = []string{
-					"http://app.factors.ai",
-					"https://app.factors.ai",
-					"https://tufte-prod.factors.ai",
-					"https://app-old.factors.ai",
-					"http://localhost:3000",
-					"http://factors-dev.com:3000",
-					"https://flash.factors.ai",
-					"https://sloth.factors.ai",
-					"https://violet.factors.app",
-					"https://blue.factors.app",
+				var AllowedOrigins []string
+				if C.IsDevelopment() || C.IsStaging() {
+					log.Infof("Running custom cors in %s environment.", C.GetConfig().Env)
+					AllowedOrigins = []string{
+						"http://localhost:8080",
+						"http://localhost:3000",
+						"http://localhost:8090",
+						"http://127.0.0.1:3000",
+						"http://factors-dev.com:3000",
+						"http://staging-app.factors.ai",
+						"https://staging-app.factors.ai",
+						"https://tufte-staging.factors.ai",
+						"https://staging-app-old.factors.ai",
+						"https://flash-staging.factors.ai",
+						"https://sloth-staging.factors.ai",
+						"https://violet.factors.app",
+						"https://blue.factors.app",
+						"https://dev-27343192.okta.com",
+					}
+				} else {
+					AllowedOrigins = []string{
+						"http://app.factors.ai",
+						"https://app.factors.ai",
+						"https://tufte-prod.factors.ai",
+						"https://app-old.factors.ai",
+						"http://localhost:3000",
+						"http://factors-dev.com:3000",
+						"https://flash.factors.ai",
+						"https://sloth.factors.ai",
+						"https://violet.factors.app",
+						"https://blue.factors.app",
+					}
+				}
+				for _, origin := range AllowedOrigins {
+					if origin == currentOrigin {
+						return true
+					}
+					if strings.HasSuffix(currentOrigin, "okta.com") {
+						return true
+					}
 				}
 			}
-
-			corsConfig.AllowCredentials = true
-			corsConfig.AddAllowHeaders("Access-Control-Allow-Headers")
-			corsConfig.AddAllowHeaders("Access-Control-Allow-Origin")
-			corsConfig.AddAllowHeaders("content-type")
-			corsConfig.AddAllowHeaders("Authorization")
-			corsConfig.AddAllowHeaders(model.QueryCacheRequestInvalidatedCacheHeader)
-			corsConfig.AddAllowHeaders(model.QueryFunnelV2)
-			corsConfig.AddAllowHeaders(helpers.HeaderUserFilterOptForProfiles)
-			corsConfig.AddAllowHeaders(helpers.HeaderUserFilterOptForEventsAndUsers)
+			return false
 		}
+		if isSDKRequest(c.Request.URL.Path) {
+			corsConfig.AddAllowHeaders("Authorization")
+		}
+		corsConfig.AllowCredentials = true
+		corsConfig.AddAllowHeaders("Access-Control-Allow-Headers")
+		corsConfig.AddAllowHeaders("Access-Control-Allow-Origin")
+		corsConfig.AddAllowHeaders("content-type")
+		corsConfig.AddAllowHeaders("Authorization")
+		corsConfig.AddAllowHeaders(model.QueryCacheRequestInvalidatedCacheHeader)
+		corsConfig.AddAllowHeaders(model.QueryFunnelV2)
+		corsConfig.AddAllowHeaders(helpers.HeaderUserFilterOptForProfiles)
+		corsConfig.AddAllowHeaders(helpers.HeaderUserFilterOptForEventsAndUsers)
 		// Applys custom cors and proceed
 		cors.New(corsConfig)(c)
 		c.Next()
