@@ -256,18 +256,24 @@ const FAFilterSelect = ({
       return 'Select Property';
     }
 
-    switch (state.icon) {
-      case 'event':
-        return eventPropNames[state.name] || _.startCase(state.name);
-      case 'user' || 'user_g':
-        return userPropNames[state.name] || _.startCase(state.name);
-      case 'group':
-        return (
-          groupPropNames[state.groupName][state.name] || _.startCase(state.name)
-        );
-      default:
-        return _.startCase(state.name);
+    const propGroup =
+      state.groupName && state.groupName !== '' ? state.groupName : state.icon;
+
+    if (['user', 'user_g'].includes(propGroup)) {
+      return userPropNames[state.name] || _.startCase(state.name);
     }
+    if (propGroup === 'event') {
+      return eventPropNames[state.name] || _.startCase(state.name);
+    }
+    if (
+      !['group', 'user', 'user_g'].includes(propGroup) &&
+      ['group', 'user', 'user_g'].includes(state.icon)
+    ) {
+      return (
+        groupPropNames[state.groupName]?.[state.name] || _.startCase(state.name)
+      );
+    }
+    return _.startCase(state.name);
   };
 
   const renderPropSelect = () => {

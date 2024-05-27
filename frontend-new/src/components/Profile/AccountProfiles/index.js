@@ -379,6 +379,7 @@ function AccountProfiles({
     if (shouldCache) {
       if (!location.state.accountPayload) {
         setAccountPayload(INITIAL_ACCOUNT_PAYLOAD);
+        getAccounts(accountPayload);
       } else {
         const {
           currentPage: cachedCurrentPage,

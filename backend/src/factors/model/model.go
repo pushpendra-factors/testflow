@@ -988,6 +988,7 @@ type Model interface {
 	GetConfiguredEventPropertiesWithValues(projectID int64, eventID string, eventName string) (map[string]interface{}, int)
 	UpdateDefaultTablePropertiesConfig(projectID int64, profileType string, updatedConfig []string) (int, error)
 	UpdateSegmentTablePropertiesConfig(projectID int64, segmentID string, updatedConfig []string) (int, error)
+	GetDomainIDFromDomainName(projectID int64, domainName string, domainGroupID int) (string, error)
 
 	// Timeline consuming segment_marker
 	GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload, downloadLimitGiven bool) ([]model.Profile, int, string)
