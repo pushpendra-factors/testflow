@@ -51,14 +51,16 @@ func SetBatch(keyValue map[*cache.Key]string, expiryInSecs float64, useDB bool) 
 	}
 
 	// TODO: Writing to both. Remove redis once migration is completed.
-	redis.SetPersistentBatch(keyValue, expiryInSecs)
+	redisErr := redis.SetPersistentBatch(keyValue, expiryInSecs)
 
 	logCtx.Info("Writing to cache db.")
-	err := db.SetBatch(keyValue, expiryInSecs)
-	if err != nil {
-		logCtx.WithError(err).Warn("Failed to write to db cache.")
+	dbErr := db.SetBatch(keyValue, expiryInSecs)
+	if dbErr != nil {
+		logCtx.WithError(dbErr).Warn("Failed to write to db cache.")
 	}
-	return err
+
+	// Using redis error till we fix Long Data and other issues related to batch writing.
+	return redisErr
 }
 
 func Get(key *cache.Key, useDB bool) (string, error) {
@@ -106,7 +108,7 @@ func Del(keys []*cache.Key, useDB bool) error {
 	}
 
 	// TODO: Writing to both. Remove redis once migration is completed.
-	redis.Del(keys...)
+	redis.DelPersistent(keys...)
 
 	logCtx.Info("Writing to cache db.")
 	err := db.Del(keys...)
