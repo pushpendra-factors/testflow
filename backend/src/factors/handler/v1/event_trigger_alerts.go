@@ -114,6 +114,7 @@ func GetAllAlertsInOneHandler(c *gin.Context) (interface{}, int, string, string,
 				if err != nil {
 					return nil, http.StatusInternalServerError, "", "Failed to encode slack channels", true
 				}
+				log.Info("$$$$ slack channels json config ", string(slackChannelsJson.RawMessage))
 				alertConfig.SlackChannelsAndUserGroups = slackChannelsJson
 
 				alertConfigJson, err := U.EncodeStructTypeToPostgresJsonb(alertConfig)
@@ -121,11 +122,12 @@ func GetAllAlertsInOneHandler(c *gin.Context) (interface{}, int, string, string,
 					return nil, http.StatusInternalServerError, "", "Failed to encode alert configuration", true
 				}
 				alert.AlertConfiguration = alertConfigJson
-
+				log.Info("$$$$ alert config json config ", string(alertConfigJson.RawMessage))
 				alertJson, err := U.EncodeStructTypeToPostgresJsonb(alert)
 				if err != nil {
 					return nil, http.StatusInternalServerError, "", "Failed to encode weekly alert", true
 				}
+				log.Info("$$$$ alert json config ", string(alertJson.RawMessage))
 				kpiAlert.Alert = alertJson
 				kpis[tidx] = kpiAlert
 			}
