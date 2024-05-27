@@ -820,6 +820,11 @@ type Model interface {
 	DeleteTaskEndRecord(taskId uint64, projectId int64, delta uint64) (int, string)
 	GetAllProcessedIntervalsFromStartDate(taskID uint64, projectId int64, startDate *time.Time) ([]uint64, int, string)
 
+	DeleteAllEmbeddings() (int, string)
+	AddAllEmbeddings([]string, []string, [][]float32) (int, string)
+	GetMatchingEmbeddings([]float32) (int, string, model.PromptEmbeddingsPayload)
+	GetDBPromptsByProjectID(int64) (int, string, []string)
+
 	// project model metadata
 	CreateProjectModelMetadata(pmm *model.ProjectModelMetadata) (int, string)
 	GetProjectModelMetadata(projectId int64) ([]model.ProjectModelMetadata, int, string)

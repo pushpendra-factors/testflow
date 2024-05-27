@@ -28,7 +28,7 @@ def embed_sentence(sent, tokenizer=None, model=None, normalise=False):
         pe = pe / pe.norm(dim=1)[:, None]
     return pe
 
-def embed_sentences(sents, tokenizer=None, model=None, normalise=False):
+def embed_sentences(sents, tokenizer=None, model=None, normalise=True):
     tokenizer = get_tokenizer()
     model = get_model()
     ei = tokenizer(sents, padding=True, truncation=True, max_length=128, return_tensors='pt')

@@ -12,12 +12,14 @@ class AppConfig:
     GSC_OAUTH = None
     SENTRY = None
     CHAT_BUCKET = None
+    SCRATCH = None
 
     @classmethod
     def build(cls, argv):
         cls.build_adwords(argv)
         cls.build_gsc(argv)
         cls.CHAT_BUCKET = argv.chat_bucket_name
+        cls.SCRATCH = argv.scratch
 
     @classmethod
     def build_adwords(cls, argv):
