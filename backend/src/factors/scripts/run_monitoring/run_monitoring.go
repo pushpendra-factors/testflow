@@ -3,18 +3,13 @@ package main
 import (
 	// "bytes"
 	"encoding/json"
-	"factors/company_enrichment/factors_deanon"
 	C "factors/config"
-	"factors/model/model"
-	"factors/model/store"
 	mqlStore "factors/model/store/memsql"
 	"factors/util"
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"math"
 	"net/http"
-	"strconv"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -191,9 +186,6 @@ func main() {
 		return
 	}
 
-	// Factors Deanon enrichment count metrics monitoring
-	RunFactorsDeanonEnrichmentCheck()
-
 	monitoringPayload := map[string]interface{}{
 		"factorsSlowQueries":        (factorsSlowQueries)[:util.MinInt(5, len(factorsSlowQueries))],
 		"sqlAdminSlowQueries":       (sqlAdminSlowQueries)[:util.MinInt(5, len(sqlAdminSlowQueries))],
@@ -351,201 +343,4 @@ func MonitorSDKHealth(delayedTaskThreshold, sdkQueueThreshold, integrationQueueT
 	return delayedTaskCount, sdkQueueLength, integrationQueueLength,
 		C.IsQueueDuplicationEnabled(), duplicateDelayedTaskCount, duplicateSdkQueueLength, duplicateIntegrationQueueLength, false, healthCheckFailurePinged
 
-}
-
-// RunFactorsDeanonEnrichmentCheck checks the last run and on the basis of that monitor the metrics related to factors deanon enrichment.
-func RunFactorsDeanonEnrichmentCheck() {
-
-	startTime := time.Now().Unix()
-	var factorsDeanonAlertMap map[int64]map[string]float64
-	jobReport := make(map[string]interface{})
-	var err error
-	factorsDeanonAlertLastRun, err := model.GetFactorsDeanonAlertRedisResult()
-	if err != nil {
-		log.WithError(err).Error("failed to get factors deanon last run")
-		return
-	}
-	if startTime-factorsDeanonAlertLastRun >= 24*60*60 {
-		factorsDeanonAlertMap, err = MonitorFactorsDeanonDailyEnrichment()
-		if err != nil {
-			log.Error("Failed to run factors deanon enrichment check ", time.Now())
-			return
-		}
-		jobReport["jobReport"] = factorsDeanonAlertMap
-		if len(factorsDeanonAlertMap) > 0 {
-			C.PingHealthcheckForFailure(C.HealthcheckFactorsDeanonAlertPingID, jobReport)
-			model.SetFactorsDeanonAlertRedisResult(startTime)
-			return
-		}
-		model.SetFactorsDeanonAlertRedisResult(startTime)
-		C.PingHealthcheckForSuccess(C.HealthcheckFactorsDeanonAlertPingID, jobReport)
-	}
-
-}
-
-// MonitorFactorsDeanonDailyEnrichment fetches the project ids of the projects on paid plan and get the required metrics for each projects.
-func MonitorFactorsDeanonDailyEnrichment() (map[int64]map[string]float64, error) {
-
-	projectIds, errCode, errMsg, err := store.GetStore().GetAllProjectIdsUsingPaidPlan()
-	if errCode != http.StatusFound {
-		log.WithError(err).Error(errMsg)
-		C.PingHealthcheckForFailure(C.HealthcheckFactorsDeanonAlertPingID, "Failed to fetch project ids for monitoring factors deanonymisation.")
-		return nil, err
-	}
-
-	alertMap := make(map[int64]map[string]float64)
-	for _, projectId := range projectIds {
-
-		projectSettings, errCode := store.GetStore().GetProjectSetting(projectId)
-		if errCode != http.StatusFound {
-			log.WithField("project_id", projectId).Error("Failed to fetch project details.")
-			continue
-		}
-
-		isEligible, err := IsProjectEligibleForFactorsDeanonAlerts(projectSettings)
-		if err != nil {
-			log.WithField("project_id", projectId).Error("Failed to check eligibilty.")
-			continue
-		}
-		if !isEligible {
-			log.WithField("project_id", projectId).Info("Project not eligible for alert.")
-			continue
-		}
-
-		createdAt := projectSettings.CreatedAt.Unix()
-		currentTime := time.Now().Unix()
-		diffTime := currentTime - createdAt
-
-		if diffTime > 8*24*60*60 && diffTime <= 15*24*60*60 {
-			totalCountDiff, successfulCountDiff, err := CheckFactorsDeanonymisationAlertForRecentProjects(projectId)
-			if err != nil {
-				log.Error("Failed to get redis values")
-				return alertMap, err
-			}
-			if math.Abs(totalCountDiff) >= 0.3 || math.Abs(successfulCountDiff) >= 0.3 {
-				alertMap[projectId] = map[string]float64{"total_count": totalCountDiff, "successful_count": successfulCountDiff}
-			}
-		} else if diffTime > 15*24*60*60 {
-			totalCountDiff, successfulCountDiff, err := CheckFactorsDeanonymisationAlertForOlderProjects(projectId)
-			if err != nil {
-				log.Error("Failed to get redis values")
-				return alertMap, err
-			}
-			if math.Abs(totalCountDiff) >= 0.3 || math.Abs(successfulCountDiff) >= 0.3 {
-				alertMap[projectId] = map[string]float64{"total_count": totalCountDiff, "successful_count": successfulCountDiff}
-			}
-		}
-
-	}
-
-	return alertMap, nil
-}
-
-// CheckFactorsDeanonymisationAlertForRecentProjects checks alert data for projects that are 8 to 15 days older.
-func CheckFactorsDeanonymisationAlertForRecentProjects(projectId int64) (float64, float64, error) {
-
-	yesterdayDate := time.Now().AddDate(0, 0, -1).Format(util.DATETIME_FORMAT_YYYYMMDD)
-	eightDaysAgoDate := time.Now().AddDate(0, 0, -8).Format(util.DATETIME_FORMAT_YYYYMMDD)
-
-	yesterdayUint64, _ := strconv.ParseUint(yesterdayDate, 10, 64)
-	eightDaysAgoUint64, _ := strconv.ParseUint(eightDaysAgoDate, 10, 64)
-
-	// Fetching total api count for n-1 and n-8
-	yesterdayTotalApiCount, err := model.GetFactorsDeanonAPITotalHitCountResult(projectId, yesterdayUint64)
-	if err != nil {
-		return 0, 0, err
-	}
-	eightDaysAgoTotalApiCount, err := model.GetFactorsDeanonAPITotalHitCountResult(projectId, eightDaysAgoUint64)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	// Fetching successful(domain is present) api count for n-1 and n-8
-	yesterdaySuccessfulApiCount, err := model.GetFactorsDeanonAPICountResult(projectId, yesterdayUint64)
-	if err != nil {
-		return 0, 0, err
-	}
-	eightDaysAgoSuccessfulApiCount, err := model.GetFactorsDeanonAPICountResult(projectId, eightDaysAgoUint64)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	totalCountDiff := float64(yesterdayTotalApiCount-eightDaysAgoTotalApiCount) / float64(eightDaysAgoTotalApiCount)
-	successfulCountDiff := float64(yesterdaySuccessfulApiCount-eightDaysAgoSuccessfulApiCount) / float64(eightDaysAgoSuccessfulApiCount)
-
-	if eightDaysAgoTotalApiCount <= 0 {
-		return 0, 0, nil
-	}
-
-	return totalCountDiff, successfulCountDiff, nil
-
-}
-
-// CheckFactorsDeanonymisationAlertForOlderProjects checks alert data for projects that are older than 15 days.
-func CheckFactorsDeanonymisationAlertForOlderProjects(projectId int64) (float64, float64, error) {
-
-	currentDate := time.Now()
-	var last14DaysTotalApiCount []int
-	var last14DaysSuccessfulApiCount []int
-	for i := 1; i <= 14; i++ {
-		// Subtract i days from the current date
-		date, _ := strconv.ParseUint(currentDate.AddDate(0, 0, -i).Format(util.DATETIME_FORMAT_YYYYMMDD), 10, 64)
-
-		totalApiCount, err := model.GetFactorsDeanonAPITotalHitCountResult(projectId, date)
-		if err != nil {
-			return 0, 0, err
-		}
-		successfulApiCount, err := model.GetFactorsDeanonAPICountResult(projectId, date)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		last14DaysTotalApiCount = append(last14DaysTotalApiCount, totalApiCount)
-		last14DaysSuccessfulApiCount = append(last14DaysSuccessfulApiCount, successfulApiCount)
-	}
-
-	totalCountThisWeekSum := util.Sum(last14DaysTotalApiCount[:7])
-	totalCountPastWeekSum := util.Sum(last14DaysTotalApiCount[7:])
-	totalCountDiff := float64(totalCountThisWeekSum-totalCountPastWeekSum) / float64(totalCountPastWeekSum)
-
-	successfulCountThisWeekSum := util.Sum(last14DaysSuccessfulApiCount[:7])
-	successfulCountPastWeekSum := util.Sum(last14DaysSuccessfulApiCount[7:])
-	successfulCountDiff := float64(successfulCountThisWeekSum-successfulCountPastWeekSum) / float64(successfulCountPastWeekSum)
-
-	if totalCountPastWeekSum <= 0 {
-		return 0, 0, nil
-	}
-
-	return totalCountDiff, successfulCountDiff, nil
-}
-
-// IsProjectEligibleForFactorsDeanonAlerts checks if the project passes the creteria for factors deanon monitoring and alerts.
-func IsProjectEligibleForFactorsDeanonAlerts(projectSettings *model.ProjectSetting) (bool, error) {
-
-	projectId := projectSettings.ProjectId
-	logCtx := log.WithField("project_id", projectId)
-
-	featureFlag, err := store.GetStore().GetFeatureStatusForProjectV2(projectId, model.FEATURE_FACTORS_DEANONYMISATION, false)
-	if err != nil {
-		logCtx.Error("Failed to fetch feature flag")
-		return false, err
-	}
-	if !featureFlag {
-		return false, nil
-	}
-
-	isDeanonQuotaAvailable, err := factors_deanon.CheckingFactorsDeanonQuotaLimit(projectId)
-	if err != nil {
-		logCtx.Error("Error in checking deanon quota exhausted.")
-		return false, err
-	}
-	if !isDeanonQuotaAvailable {
-		return false, nil
-	}
-
-	intFactorsDeanon := projectSettings.IntFactorsSixSignalKey
-
-	eligible := featureFlag && isDeanonQuotaAvailable && *intFactorsDeanon
-
-	return eligible, nil
 }
