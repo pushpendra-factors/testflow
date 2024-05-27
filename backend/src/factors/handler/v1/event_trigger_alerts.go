@@ -82,7 +82,56 @@ func GetAllAlertsInOneHandler(c *gin.Context) (interface{}, int, string, string,
 	if errCode != http.StatusFound {
 		return nil, errCode, "", "Get kpi alerts failed", true
 	}
+	for tidx, kpiAlert := range kpis {
+		if kpiAlert.CreatedBy != agentUUID {
+			var alert model.Alert
+			err := U.DecodePostgresJsonbToStructType(kpiAlert.Alert, &alert)
+			if err != nil {
+				return nil, http.StatusInternalServerError, "", "Failed to decode weekly alert", true
+			}
 
+			var alertConfig model.AlertConfiguration
+			err = U.DecodePostgresJsonbToStructType(alert.AlertConfiguration, &alertConfig)
+			if err != nil {
+				return nil, http.StatusInternalServerError, "", "Failed to decode alert configuration", true
+			}
+			if alertConfig.IsSlackEnabled {
+				var slackChannels model.SlackChannelsAndUserGroups
+				err = U.DecodePostgresJsonbToStructType(alertConfig.SlackChannelsAndUserGroups, &slackChannels)
+				if err != nil {
+					return nil, http.StatusInternalServerError, "", "Failed to decode slack channels and user groups", true
+				}
+				for key, slackChannel := range slackChannels.SlackChannelsAndUserGroups {
+					for idx, channel := range slackChannel {
+						if channel.IsPrivate {
+							slackChannel[idx].Name = "#PRIVATE_CHANNEL"
+						}
+					}
+					slackChannels.SlackChannelsAndUserGroups[key] = slackChannel
+				}
+
+				slackChannelsJson, err := U.EncodeStructTypeToPostgresJsonb(slackChannels)
+				if err != nil {
+					return nil, http.StatusInternalServerError, "", "Failed to encode slack channels", true
+				}
+				alertConfig.SlackChannelsAndUserGroups = slackChannelsJson
+
+				alertConfigJson, err := U.EncodeStructTypeToPostgresJsonb(alertConfig)
+				if err != nil {
+					return nil, http.StatusInternalServerError, "", "Failed to encode alert configuration", true
+				}
+				alert.AlertConfiguration = alertConfigJson
+
+				alertJson, err := U.EncodeStructTypeToPostgresJsonb(alert)
+				if err != nil {
+					return nil, http.StatusInternalServerError, "", "Failed to encode weekly alert", true
+				}
+				kpiAlert.Alert = alertJson
+				kpis[tidx] = kpiAlert
+			}
+
+		}
+	}
 	alerts := make([]model.AlertInfo, 0)
 	alerts = append(alerts, triggers...)
 	alerts = append(alerts, kpis...)
