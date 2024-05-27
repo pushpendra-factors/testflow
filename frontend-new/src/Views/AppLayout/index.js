@@ -307,7 +307,7 @@ function AppLayout({
   });
   // 3.5rem is used because Top Navbar is 3.5rem
   return (
-    <Layout className={styles['parent-layout']}> 
+    <Layout className={styles['parent-layout']}>
       <ErrorBoundary
         fallback={
           <FaErrorComp
@@ -343,16 +343,35 @@ function AppLayout({
             )}
           >
             <Content
-              style={{minHeight: 'auto'}}
-              className={cx('bg-white', {
-                'py-6 px-10':
-                  !checkMatchPath(
-                    pathname,
-                    PathUrls.ProfileAccountDetailsURL
-                  ) &&
-                  !checkMatchPath(pathname, PathUrls.ProfilePeopleDetailsURL) &&
-                  !show_analytics_result
-              })}
+              style={{ minHeight: 'auto' }}
+              className={cx(
+                'bg-white',
+                {
+                  'py-6 px-10':
+                    pathname !== PathUrls.ProfileAccounts &&
+                    !checkMatchPath(
+                      pathname,
+                      PathUrls.ProfileAccountsSegmentsURL
+                    ) &&
+                    !checkMatchPath(
+                      pathname,
+                      PathUrls.ProfileAccountDetailsURL
+                    ) &&
+                    !checkMatchPath(
+                      pathname,
+                      PathUrls.ProfilePeopleDetailsURL
+                    ) &&
+                    !show_analytics_result
+                },
+                {
+                  'py-2':
+                    pathname === PathUrls.ProfileAccounts ||
+                    checkMatchPath(
+                      pathname,
+                      PathUrls.ProfileAccountsSegmentsURL
+                    )
+                }
+              )}
             >
               <Suspense fallback={<PageSuspenseLoader />}>
                 <AppLayoutRoutes
