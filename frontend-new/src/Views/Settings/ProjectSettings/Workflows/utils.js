@@ -22,10 +22,14 @@ const AlertTemplateToTheme = {
 };
 
 export const TemplateIDs = {
-  FACTORS_HUBSPOT_COMPANY: 4000000,
-  FACTORS_APOLLO_HUBSPOT_CONTACTS: 4000002,
-  FACTORS_SALESFORCE_COMPANY: 4000003,
-  FACTORS_APOLLO_SALESFORCE_CONTACTS: 4000004
+  FACTORS_HUBSPOT_COMPANY:
+    window.document.domain === 'app.factors.ai' ? 1000000 : 4000000,
+  FACTORS_APOLLO_HUBSPOT_CONTACTS:
+    window.document.domain === 'app.factors.ai' ? 1000001 : 4000002,
+  FACTORS_SALESFORCE_COMPANY:
+    window.document.domain === 'app.factors.ai' ? 1000002 : 4000003,
+  FACTORS_APOLLO_SALESFORCE_CONTACTS:
+    window.document.domain === 'app.factors.ai' ? 1000003 : 4000004
 };
 
 export const getAlertTemplatesTransformation = (data) => {

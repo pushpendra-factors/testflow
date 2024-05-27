@@ -3,7 +3,7 @@ import { SVG, Text } from 'Components/factorsComponents';
 import { PathUrls } from 'Routes/pathUrls';
 import { Avatar, Button, Input } from 'antd';
 import React, { useRef, useState } from 'react';
-import { useHistory } from 'react-router-dom';
+import { Link, useHistory } from 'react-router-dom';
 import VirtualList from 'rc-virtual-list';
 import styles from './../index.module.scss';
 import useKeyboardNavigation from 'hooks/useKeyboardNavigation';
@@ -207,7 +207,7 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
           id: 'item-1',
           text: 'Plans and Billing',
           props: {
-            href: '/settings/pricing?activeTab=billing',
+            to: '/settings/pricing?activeTab=billing',
             onClick: handleClosePopover
           }
         },
@@ -215,7 +215,7 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
           id: 'item-2',
           text: 'Invite users',
           props: {
-            href: '/settings/user',
+            to: '/settings/user',
             onClick: handleClosePopover
           }
         },
@@ -223,7 +223,7 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
           id: 'item-3',
           text: 'Enrichment Rules',
           props: {
-            href: '/settings/engagements',
+            to: '/settings/integration/factors_deanonymisation?activeTab=enrichmentRules',
             onClick: handleClosePopover
           }
         },
@@ -231,7 +231,7 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
           id: 'item-4',
           text: 'Setup Assist',
           props: {
-            href: '/checklist',
+            to: '/checklist',
             onClick: handleClosePopover
           }
         }
@@ -275,7 +275,8 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
           props: {
             target: '_blank',
             rel: 'noreferrer',
-            href: 'https://www.factors.ai/privacy-policy'
+            href: 'https://www.factors.ai/privacy-policy',
+            onClick: handleClosePopover
           }
         }
       ]
@@ -336,7 +337,11 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
                       key={eachGroup.id + eachItem.id}
                       className={` ${styles.popover_content__additionalActions}`}
                     >
-                      <a {...eachItem?.props}>{eachItem.text}</a>
+                      {eachItem.props.to ? (
+                        <Link {...eachItem?.props}>{eachItem.text}</Link>
+                      ) : (
+                        <a {...eachItem?.props}>{eachItem.text}</a>
+                      )}
                     </div>
                   );
                 })}

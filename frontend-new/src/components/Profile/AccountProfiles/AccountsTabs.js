@@ -1,58 +1,55 @@
 import React, { useCallback } from 'react';
-import { Tabs } from 'antd';
+import { Radio } from 'antd';
 import { useDispatch, useSelector } from 'react-redux';
 import { selectActiveTab } from 'Reducers/accountProfilesView/selectors';
 import { toggleAccountsTab } from 'Reducers/accountProfilesView/actions';
-import { Text } from 'Components/factorsComponents';
+import { SVG as Svg, Text } from 'Components/factorsComponents';
 import styles from './index.module.scss';
 
 export default function AccountsTabs() {
   const dispatch = useDispatch();
   const activeTab = useSelector((state) => selectActiveTab(state));
 
-  const handleTabChange = useCallback((newActiveTab) => {
-    dispatch(toggleAccountsTab(newActiveTab));
+  const handleTabChange = useCallback((e) => {
+    dispatch(toggleAccountsTab(e.target.value));
   }, []);
 
   return (
-    <Tabs
-      className={styles.accountsTabs}
-      activeKey={activeTab}
-      type='card'
-      size='small'
-      onChange={handleTabChange}
-    >
-      <Tabs.TabPane
-        tab={
+    <Radio.Group onChange={handleTabChange} value={activeTab}>
+      <Radio.Button className={styles['left-tab-button']} value='accounts'>
+        <div className='flex gap-x-1 justify-center items-center h-full'>
+          <Svg
+            size={16}
+            name='listUl'
+            color={activeTab === 'accounts' ? '#1890ff' : '#000'}
+          />
           <Text
             level={7}
-            color={
-              activeTab === 'accounts' ? 'brand-color-6' : 'neutral-gray-8'
-            }
+            color={activeTab === 'accounts' ? 'brand-color-6' : 'black'}
             type='title'
             extraClass='mb-0'
           >
-            Accounts
+            List
           </Text>
-        }
-        key='accounts'
-      />
-      <Tabs.TabPane
-        tab={
+        </div>
+      </Radio.Button>
+      <Radio.Button className={styles['right-tab-button']} value='insights'>
+        <div className='flex gap-x-1 justify-center items-center h-full'>
+          <Svg
+            size={16}
+            name='eye'
+            color={activeTab === 'insights' ? '#1890ff' : '#000'}
+          />
           <Text
             level={7}
-            mini
-            color={
-              activeTab === 'insights' ? 'brand-color-6' : 'neutral-gray-8'
-            }
+            color={activeTab === 'insights' ? 'brand-color-6' : 'black'}
             type='title'
             extraClass='mb-0'
           >
             Insights
           </Text>
-        }
-        key='insights'
-      />
-    </Tabs>
+        </div>
+      </Radio.Button>
+    </Radio.Group>
   );
 }

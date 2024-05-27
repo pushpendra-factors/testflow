@@ -165,6 +165,8 @@ func TestMain(m *testing.M) {
 		EnableDomainWebsitePropertiesByProjectID:            "*",
 		EnableDeviceServiceByProjectID:                      "*",
 		DeviceServiceURL:                                    "http://localhost:3000/device_service",
+		EnableCacheDBWriteProjects:                          "*",
+		EnableCacheDBReadProjects:                           "*",
 	}
 	C.InitConf(config)
 

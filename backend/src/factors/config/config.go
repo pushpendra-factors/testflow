@@ -372,6 +372,7 @@ type Configuration struct {
 	EnableCacheDBWriteProjects                           string
 	EnableCacheDBReadProjects                            string
 	SkipSalesforceLeadEnrichmentByProjectID              string
+	SalesforceEnrichOnlyObjects                          string
 }
 
 type Services struct {
@@ -3357,4 +3358,16 @@ func SkipSalesforceLeadEnrichmentByProjectID(projectID int64) bool {
 	}
 
 	return allowedProjectIDs[projectID]
+}
+
+func IsSalesforceEnabledEnrichObject(docTypeAlias string) bool {
+	objects := strings.TrimSpace(GetConfig().SalesforceEnrichOnlyObjects)
+	if objects == "" {
+		return true
+	}
+
+	if strings.Contains(GetConfig().SalesforceEnrichOnlyObjects, docTypeAlias) {
+		return true
+	}
+	return false
 }
