@@ -202,3 +202,13 @@
     display: none;
   }
 }
+
+.left-tab-button {
+  border-top-left-radius: 0.5rem !important;
+  border-bottom-left-radius: 0.5rem !important;
+}
+
+.right-tab-button {
+  border-top-right-radius: 0.5rem !important;
+  border-bottom-right-radius: 0.5rem !important;
+}

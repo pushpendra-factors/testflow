@@ -10,7 +10,7 @@ import {
   selectInsightsCompareSegmentBySegmentId
 } from 'Reducers/accountProfilesView/selectors';
 import { fetchInsights } from 'Reducers/accountProfilesView/services';
-import { SVG, Text } from 'Components/factorsComponents';
+import { SVG as Svg, Text } from 'Components/factorsComponents';
 import ControlledComponent from 'Components/ControlledComponent';
 import { selectSegments } from 'Reducers/timelines/selectors';
 import { resetEditMetricStatus } from 'Reducers/accountProfilesView/actions';
@@ -45,9 +45,8 @@ function InsightsWidget({
   );
 
   const isIntegrationDone =
-    widget.name === 'marketing'
-      ? Boolean(currentProjectSettings.int_hubspot)
-      : Boolean(currentProjectSettings.int_salesforce_enabled_agent_uuid);
+    Boolean(currentProjectSettings.int_hubspot) ||
+    Boolean(currentProjectSettings.int_salesforce_enabled_agent_uuid);
 
   const insights = useSelector((state) =>
     selectInsightsByWidgetGroupId(
@@ -242,10 +241,10 @@ function InsightsWidget({
     <div className='flex flex-col border rounded-lg'>
       <div className='p-4 border-b flex gap-x-3'>
         <ControlledComponent controller={widget.name === 'marketing'}>
-          <SVG name='analysis' size={24} color='#73D13D' />
+          <Svg name='analysis' size={24} color='#73D13D' />
         </ControlledComponent>
         <ControlledComponent controller={widget.name === 'sales'}>
-          <SVG name='lightBulbOn' size={24} color='#FFC53D' />
+          <Svg name='lightBulbOn' size={24} color='#FFC53D' />
         </ControlledComponent>
 
         <Text
