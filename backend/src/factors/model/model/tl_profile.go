@@ -559,7 +559,7 @@ func FindUserGroupByID(u User, id int) (string, error) {
 	}
 }
 
-func SetEventDisplaName(eventName string, displayNamesMap *map[string]string) string {
+func SetEventDisplayName(eventName string, displayNamesMap *map[string]string) string {
 	if displayName, exists := (*displayNamesMap)[eventName]; exists {
 		return displayName
 	}

@@ -223,35 +223,44 @@ function GroupBlock({
     );
   };
 
-  const renderGroupDisplayName = (opt, index) => {
-    let propertyName = '';
-    if (opt.property && opt.prop_category === 'user') {
-      propertyName = userPropNames[opt.property]
-        ? userPropNames[opt.property]
-        : PropTextFormat(opt.property);
+  const renderPropertyName = (state) => {
+    if (!state.property) {
+      return 'Select Property';
     }
-    if (opt.property && opt.prop_category === 'group') {
-      propertyName = groupPropNames[opt.groupName][opt.property]
-        ? groupPropNames[opt.GroupName][opt.property]
-        : PropTextFormat(opt.property);
+
+    const propGroup =
+      state.groupName && state.groupName !== ''
+        ? state.groupName
+        : state.prop_category;
+
+    if (['user', 'user_g'].includes(propGroup)) {
+      return userPropNames[state.property] || PropTextFormat(state.property);
     }
-    if (!opt.property) {
-      propertyName = 'Select property';
+    if (
+      !['group', 'user', 'user_g'].includes(propGroup) &&
+      ['group', 'user', 'user_g'].includes(state.prop_category)
+    ) {
+      return (
+        groupPropNames[state.groupName]?.[state.property] ||
+        PropTextFormat(state.property)
+      );
     }
-    return (
-      <Tooltip title={propertyName} color={TOOLTIP_CONSTANTS.DARK}>
-        <Button
-          icon={<SVG name={opt.prop_category} size={16} color='purple' />}
-          className='fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin'
-          type='link'
-          onClick={() => triggerDropDown(index)}
-        >
-          {!opt.property && <SVG name='plus' extraClass='mr-2' />}
-          {propertyName}
-        </Button>
-      </Tooltip>
-    );
+    return PropTextFormat(state.property);
   };
+
+  const renderGroupDisplayName = (opt, index) => (
+    <Tooltip title={renderPropertyName(opt)} color={TOOLTIP_CONSTANTS.DARK}>
+      <Button
+        icon={<SVG name={opt.prop_category} size={16} color='purple' />}
+        className='fa-button--truncate fa-button--truncate-xs btn-left-round filter-buttons-margin'
+        type='link'
+        onClick={() => triggerDropDown(index)}
+      >
+        {!opt.property && <SVG name='plus' extraClass='mr-2' />}
+        {renderPropertyName(opt)}
+      </Button>
+    </Tooltip>
+  );
 
   const renderExistingBreakdowns = () => {
     if (groupByState.global.length < 1) return null;

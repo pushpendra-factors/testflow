@@ -28,13 +28,13 @@ import GroupSelect from 'Components/GenericComponents/GroupSelect';
 import { selectedOptionsMapper } from 'Components/GenericComponents/FaSelect/utils';
 import truncateURL from 'Utils/truncateURL';
 import { processProperties, PropTextFormat } from 'Utils/dataFormatter';
+import CSVUploadModal from 'Components/CSVUploadModal';
 import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
 import { toCapitalCase } from '../../utils/global';
 import { DISPLAY_PROP, OPERATORS } from '../../utils/constants';
 import FaDatepicker from '../FaDatepicker';
 import { SVG, Text } from '../factorsComponents';
 import styles from './index.module.scss';
-import CSVUploadModal from 'Components/CSVUploadModal';
 // import truncateURL from 'Utils/truncateURL';
 
 const defaultOpProps = DEFAULT_OPERATOR_PROPS;
@@ -309,19 +309,25 @@ function FaFilterSelect({
       return 'Select Property';
     }
 
-    switch (state.icon) {
-      case 'event':
-        return eventPropNames[state.name] || PropTextFormat(state.name);
-      case 'user' || 'user_g':
-        return userPropNames[state.name] || PropTextFormat(state.name);
-      case 'group':
-        return (
-          groupPropNames[state.groupName]?.[state.name] ||
-          PropTextFormat(state.name)
-        );
-      default:
-        return PropTextFormat(state.name);
+    const propGroup =
+      state.groupName && state.groupName !== '' ? state.groupName : state.icon;
+
+    if (['user', 'user_g'].includes(propGroup)) {
+      return userPropNames[state.name] || PropTextFormat(state.name);
     }
+    if (propGroup === 'event') {
+      return eventPropNames[state.name] || PropTextFormat(state.name);
+    }
+    if (
+      !['group', 'user', 'user_g'].includes(propGroup) &&
+      ['group', 'user', 'user_g'].includes(state.icon)
+    ) {
+      return (
+        groupPropNames[state.groupName]?.[state.name] ||
+        PropTextFormat(state.name)
+      );
+    }
+    return PropTextFormat(state.name);
   };
 
   const getIcon = (state) => {
