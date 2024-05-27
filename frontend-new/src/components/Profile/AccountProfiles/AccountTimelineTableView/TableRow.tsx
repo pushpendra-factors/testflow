@@ -83,6 +83,7 @@ function TableRow({ event, eventPropsType = {}, onEventClick }: TableRowProps) {
           title={event.username || event.user_id}
           userID={event.user_id}
           isAnonymous={event.is_anonymous_user}
+          isGroupUser={event.is_group_user}
         />
       </td>
     </tr>

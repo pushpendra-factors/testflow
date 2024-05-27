@@ -166,7 +166,7 @@ function AccountTimelineBirdView({
                       className='userlist-avatar'
                       style={{
                         backgroundColor: `${
-                          user.name === 'group_user'
+                          user.isGroupUser
                             ? '#BAE7FF'
                             : iconColors[
                                 ALPHANUMSTR.indexOf(
@@ -177,7 +177,7 @@ function AccountTimelineBirdView({
                         fontSize: '16px'
                       }}
                     >
-                      {user.name === 'group_user' ? (
+                      {user.isGroupUser ? (
                         <SVG name='focus' size={20} />
                       ) : (
                         user.name.charAt(0).toUpperCase()
@@ -192,9 +192,7 @@ function AccountTimelineBirdView({
                       weight='medium'
                       extraClass='m-0'
                     >
-                      {user.name === 'group_user'
-                        ? 'Account Activity'
-                        : user.name}
+                      {user.isGroupUser ? 'Account Activity' : user.name}
                     </Text>
                     <Text type='title' truncate level={8} extraClass='m-0'>
                       {user.extraProp || '-'}

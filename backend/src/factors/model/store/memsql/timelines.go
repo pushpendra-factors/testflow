@@ -1611,14 +1611,13 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, isAnony
 			userActivity.AliasName = model.SetAliasName(userActivity.EventName, userActivity.EventType, properties)
 
 			// Display Names
+			displayName := model.SetEventDisplayName(userActivity.EventName, &eventDisplayNames)
 			if (*properties)[U.EP_IS_PAGE_VIEW] == true {
 				if _, exists := eventDisplayNames[userActivity.EventName]; !exists {
-
-					userActivity.DisplayName = "Page View"
+					displayName = "Page View"
 				}
-			} else {
-				userActivity.DisplayName = model.SetEventDisplayName(userActivity.EventName, &eventDisplayNames)
 			}
+			userActivity.DisplayName = displayName
 
 			// Event Icon
 			if (*properties)[U.EP_IS_PAGE_VIEW] == true {
@@ -2884,14 +2883,13 @@ func formatEventData(event *model.TimelineEvent, eventDisplayNames *map[string]s
 	event.AliasName = model.SetAliasName(event.Name, event.Type, properties)
 
 	// Display Names
-
+	displayName := model.SetEventDisplayName(event.Name, eventDisplayNames)
 	if (*properties)[U.EP_IS_PAGE_VIEW] == true {
 		if _, exists := (*eventDisplayNames)[event.Name]; !exists {
-			event.DisplayName = "Page View"
+			displayName = "Page View"
 		}
-	} else {
-		event.DisplayName = model.SetEventDisplayName(event.Name, eventDisplayNames)
 	}
+	event.DisplayName = displayName
 
 	// Event Icon
 	if (*properties)[U.EP_IS_PAGE_VIEW] == true {

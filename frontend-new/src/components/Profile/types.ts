@@ -52,6 +52,7 @@ export interface CustomStyles {
 export interface UsernameWithIconProps {
   title: string;
   userID: string;
+  isGroupUser: boolean;
   isAnonymous: boolean;
 }
 export interface TimelineEvent {
