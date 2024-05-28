@@ -31,7 +31,6 @@ const BingIntegration = ({
   bingAds
 }) => {
   const [loading, setLoading] = useState(false);
-  const [accounts, setAccounts] = useState(null);
 
   const onDisconnect = () => {
     Modal.confirm({
@@ -96,18 +95,18 @@ const BingIntegration = ({
     >
       <div className='flex w-full'>
         {bingAds.status && (
-          <div className='flex flex-col w-full'>
+          <div className='flex flex-col w-full mt-4'>
             <Text
               type='title'
-              level={6}
-              weight='bold'
+              level={7}
               color='character-primary'
+              weight='bold'
               extraClass='m-0'
             >
               Selected Bing Account
             </Text>
 
-            {accounts == '' ? (
+            {bingAds?.accounts == '' ? (
               <Text type='title' size={10} color='red' extraClass='m-0 mt-2'>
                 No ads account found or partial integration. Please disconnect
                 and try again.
@@ -115,7 +114,7 @@ const BingIntegration = ({
             ) : (
               <Input
                 disabled
-                value={accounts}
+                value={bingAds?.accounts}
                 style={{ width: 320, marginTop: 8, background: '#fff' }}
               />
             )}
