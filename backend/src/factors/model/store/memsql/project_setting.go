@@ -754,7 +754,7 @@ func (store *MemSQL) UpdateProjectSettings(projectId int64, settings *model.Proj
 			return nil, http.StatusInternalServerError
 		}
 
-		// func call to validate saml url, certificate 
+		// func call to validate saml url, certificate
 	}
 
 	var updatedProjectSetting model.ProjectSetting
@@ -2048,21 +2048,17 @@ func (store *MemSQL) GetIntegrationState(projectID int64, integrationName string
 	result := model.IntegrationState{}
 
 	if U.TimeNowUnix()-lastSyncedAt < model.IntegrationCheckFrequency[integrationName] {
-		result.State = model.SYNC_PENDING
-
-		result.Message = model.ErrorStateToErrorMessageMap[model.SYNC_PENDING]
+		result.State = model.SYNCED
+		result.Message = model.ErrorStateToErrorMessageMap[model.SYNCED]
 	} else if U.TimeNowUnix()-lastPulledAt < 2*model.IntegrationCheckFrequency[integrationName] {
-
+		result.State = model.SYNC_PENDING
+		result.Message = model.ErrorStateToErrorMessageMap[model.SYNC_PENDING]
+	} else {
 		result.State = model.PULL_DELAYED
 		result.Message = fmt.Sprintf(model.ErrorStateToErrorMessageMap[model.PULL_DELAYED], integrationName)
-
 		if msg, exists := model.ErrorStateToErrorMessageMap[fmt.Sprintf("%s_%s", integrationName, model.PULL_DELAYED)]; exists {
 			result.Message = msg
 		}
-
-	} else {
-		result.State = model.SYNCED
-		result.Message = model.ErrorStateToErrorMessageMap[model.SYNCED]
 	}
 
 	if U.ContainsStringInArray([]string{model.HUBSPOT, model.SALESFORCE, model.LEADSQUARED, model.MARKETO, model.LINKEDIN}, integrationName) {

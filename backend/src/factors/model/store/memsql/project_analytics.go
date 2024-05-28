@@ -529,9 +529,9 @@ func (store *MemSQL) GetIntegrationStatusesCount(settings model.ProjectSetting, 
 	}
 
 	if store.IsGoogleOrganicIntegrationAvailable(projectID) {
-		connected = append(connected, "Google Organic")
+		connected = append(connected, "Google Search Console")
 	} else {
-		disconnected = append(disconnected, "Google Organic")
+		disconnected = append(disconnected, "Google Search Console")
 	}
 
 	if store.IsMarketoIntegrationAvailable(projectID) {
