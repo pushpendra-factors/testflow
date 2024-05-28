@@ -4,6 +4,7 @@ import (
 	// "errors"
 	// mid "factors/middleware"
 	"crypto/x509"
+	"encoding/pem"
 	C "factors/config"
 	"factors/handler/helpers"
 	"factors/model/model"
@@ -12,9 +13,10 @@ import (
 	U "factors/util"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
-	"net/url"
+
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -105,11 +107,13 @@ func SamlCallbackHandler(c *gin.Context) {
 	projectIdString := c.Param("project_id")
 	if projectIdString == "" {
 		c.AbortWithStatusJSON(http.StatusBadRequest, "misconfigured acs url")
+		return
 	}
 	projectID, err = strconv.ParseInt(projectIdString, 10, 64)
 	if err != nil {
 		log.WithField("projectID ", projectIdString).Error("failed to parse project ID")
 		c.AbortWithStatus(http.StatusInternalServerError)
+		return
 	}
 
 	// get settings
@@ -117,6 +121,7 @@ func SamlCallbackHandler(c *gin.Context) {
 	setting, status := store.GetStore().GetProjectSetting(projectID)
 	if status != http.StatusFound {
 		c.AbortWithStatus(http.StatusInternalServerError)
+		return
 	}
 
 	// get saml configuration
@@ -124,12 +129,15 @@ func SamlCallbackHandler(c *gin.Context) {
 	if err != nil {
 		log.WithField("projectID ", projectIdString).Error("failed to get saml configuration")
 		c.AbortWithStatus(http.StatusInternalServerError)
+		return
 	}
 
-	cert, err := x509.ParseCertificate([]byte(samlConfig.Certificate))
+	certBlock, _ := pem.Decode([]byte(samlConfig.Certificate))
+	cert, err := x509.ParseCertificate(certBlock.Bytes)
 	if err != nil {
-		log.WithField("projectID ", projectIdString).Error("failed to parse x509 certificate from existing configuration")
+		log.WithField("projectID ", projectIdString).WithError(err).Error("failed to parse x509 certificate from existing configuration")
 		c.AbortWithStatus(http.StatusInternalServerError)
+		return
 	}
 
 	// This is the destination ID we expect to see in the SAML assertion. We
@@ -144,6 +152,11 @@ func SamlCallbackHandler(c *gin.Context) {
 	// get the user from relay state ?
 
 	samlResponse, err := saml.Verify(rawSAMLResponse, cert, expectedDestinationID, time.Now())
+	if err != nil {
+		log.WithField("projectID ", projectIdString).WithError(err).Error("failed to verify SAML Response")
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
 
 	// samlUserID will contain the user ID from the identity provider.
 	//
@@ -156,6 +169,7 @@ func SamlCallbackHandler(c *gin.Context) {
 		// TODO : decide on just in time user provisioning?
 		log.WithField("projectID ", projectIdString).Error("user does not exist.")
 		c.AbortWithStatus(http.StatusInternalServerError)
+		return
 	}
 
 	// log them in (ADD PROJECT LEVEL RESTRICTIONS)
@@ -183,7 +197,7 @@ func SamlCallbackHandler(c *gin.Context) {
 		c.SetSameSite(http.SameSiteNoneMode)
 	}
 	c.SetCookie(C.GetFactorsCookieName(), cookieData, helpers.SecondsInOneMonth, "/", domain, cookie, httpOnly)
-	c.Redirect(http.StatusPermanentRedirect, buildRedirectURLforLogin(c, "", ""))
+	c.Redirect(http.StatusSeeOther, buildRedirectURLforLogin(c, "login", ""))
 
 }
 
@@ -212,7 +226,7 @@ func buildRedirectURLforLogin(c *gin.Context, flow string, errMsg string) string
 	}
 	q := u.Query()
 	q.Set("error", errMsg)
-	q.Set("mode", "saml")
+	q.Set("mode", "auth0")
 	u.RawQuery = q.Encode()
 	return u.String()
 }
