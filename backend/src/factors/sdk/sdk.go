@@ -139,8 +139,14 @@ type AccountPayload struct {
 }
 
 type AccountTrackPayload struct {
-	Domain string          `json:"domain"`
-	Event  U.PropertiesMap `json:"event"`
+	Domain string                   `json:"domain"`
+	Event  AccountTrackPayloadEvent `json:"event"`
+}
+
+type AccountTrackPayloadEvent struct {
+	Name       string          `json:"name"`
+	Timestamp  int64           `json:"timestamp"`
+	Properties U.PropertiesMap `json:"properties"`
 }
 
 const (

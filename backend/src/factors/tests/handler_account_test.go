@@ -127,6 +127,7 @@ func TestSDKTrackAccount(t *testing.T) {
 		json.Unmarshal(propertiesBytes.([]byte), &eventPropertiesBytes)
 
 		assert.Equal(t, eventPropertiesBytes["country"], "United States")
+		assert.Equal(t, eventPropertiesBytes[U.EP_SKIP_SESSION], U.PROPERTY_VALUE_TRUE)
 
 	})
 
