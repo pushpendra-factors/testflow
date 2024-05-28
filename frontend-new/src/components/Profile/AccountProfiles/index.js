@@ -1268,7 +1268,7 @@ function AccountProfiles({
         </div>
       </ControlledComponent>
 
-      <div className='flex justify-between items-center border-b pb-2 px-10'>
+      <div className='flex justify-between items-center pb-2 px-10'>
         <div className='flex gap-x-2  items-center'>
           <div className='flex items-center rounded justify-center h-10 w-10'>
             <SVG name={titleIcon} size={32} color={titleIconColor} />
