@@ -97,7 +97,7 @@ function ConnectedScreen() {
           >
             customer support
           </span>{' '}
-          team if you want to change your de-anonymisation provider
+          team if you want to change your Deanonymization provider
         </Text>
       </div>
       <div className='mt-4'>

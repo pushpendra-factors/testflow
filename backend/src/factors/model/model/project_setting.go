@@ -31,24 +31,33 @@ var IntegrationCheckFrequency = map[string]int64{
 
 var FeatureDisplayNameMap = map[string]string{
 
-	"Slack":           FEATURE_SLACK,
-	"Factors 6Signal": FEATURE_FACTORS_DEANONYMISATION,
-	"Client 6Signal":  FEATURE_SIX_SIGNAL,
-	"Clearbit":        FEATURE_CLEARBIT,
-	"G2":              FEATURE_G2,
-	"Lead Squared":    FEATURE_LEADSQUARED,
-	"Marketo":         FEATURE_MARKETO,
-	"Linkedin":        FEATURE_LINKEDIN,
-	"Google Organic":  FEATURE_GOOGLE_ORGANIC,
-	"Adwords":         FEATURE_GOOGLE_ADS,
-	"Facebook":        FEATURE_FACEBOOK,
-	"Bing":            FEATURE_BING_ADS,
-	"Salesforce":      FEATURE_SALESFORCE,
-	"Hubspot":         FEATURE_HUBSPOT,
-	"Rudderstack":     FEATURE_RUDDERSTACK,
-	"Drift":           FEATURE_DRIFT,
-	"Segment":         FEATURE_SEGMENT,
-	"Teams":           FEATURE_TEAMS,
+	"Slack":                 FEATURE_SLACK,
+	"Factors 6Signal":       FEATURE_FACTORS_DEANONYMISATION,
+	"Client 6Signal":        FEATURE_SIX_SIGNAL,
+	"Clearbit":              FEATURE_CLEARBIT,
+	"G2":                    FEATURE_G2,
+	"Lead Squared":          FEATURE_LEADSQUARED,
+	"Marketo":               FEATURE_MARKETO,
+	"Linkedin":              FEATURE_LINKEDIN,
+	"Google Search Console": FEATURE_GOOGLE_ORGANIC,
+	"Adwords":               FEATURE_GOOGLE_ADS,
+	"Facebook":              FEATURE_FACEBOOK,
+	"Bing":                  FEATURE_BING_ADS,
+	"Salesforce":            FEATURE_SALESFORCE,
+	"Hubspot":               FEATURE_HUBSPOT,
+	"Rudderstack":           FEATURE_RUDDERSTACK,
+	"Drift":                 FEATURE_DRIFT,
+	"Segment":               FEATURE_SEGMENT,
+	"Teams":                 FEATURE_TEAMS,
+}
+
+func FeatureDisplayNameByFeatureName(value string) string {
+	for key, v := range FeatureDisplayNameMap {
+		if v == value {
+			return key
+		}
+	}
+	return ""
 }
 
 type ProjectSetting struct {
@@ -196,7 +205,7 @@ var ErrorStateToErrorMessageMap = map[string]string{
 	SYNCED:               "Unhealthy trigger hasn’t occurred",
 	HEAVY_DELAYED:        "“Data will not be lost, just delayed”",
 	CLIENT_TOKEN_EXPIRED: "client side token expired",
-	LIMIT_EXCEED:         "Factors Deanomysation Limit Exhausted",
+	LIMIT_EXCEED:         "Factors Deanomyzation Limit Exhausted",
 	DISCONNECTED:         "Disconnected",
 	CONNECTED:            "Connected",
 	fmt.Sprintf("%s_%s", FEATURE_RUDDERSTACK, PULL_DELAYED): "We are encountering a delay in syncing your data from RudderStack. Please check the destination settings inside your RudderStack account.",

@@ -257,3 +257,12 @@ def prepare_data(raw_data_path='data.json', abbreviate=True):
     if abbreviate:
         abbreviate_data(df)
     return df
+
+
+def remove_data_with_prompt(dataframe, exclude_prompts):
+    if not exclude_prompts:
+        return dataframe
+
+    filtered_dataframe = dataframe[~dataframe['prompt'].isin(exclude_prompts)]
+    return filtered_dataframe
+

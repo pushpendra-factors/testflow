@@ -22,7 +22,7 @@ func main() {
 	var env string
 	defer U.NotifyOnPanic("Script#events_cube_aggregation_deploy", env)
 
-	overrideHealthcheckPingID, jobForLargeTimerange, env, statusCode := parseFlagsAndInitConfig()
+	overrideHealthcheckPingID, jobForLargeTimerange, jobForTestProjectsOnly, env, statusCode := parseFlagsAndInitConfig()
 	if statusCode != http.StatusOK {
 		log.Error("Failed in parsing flags")
 		os.Exit(1)
@@ -51,50 +51,52 @@ func main() {
 	// Since DB doesnt store timezone, we always get result of max timestamp of present data in UTC.
 	// We compute beginning of date in respective timezone from it.
 	for index, project := range allProjects {
-		key = fmt.Sprintf("%v:%v", index, project.ID)
-		if _, exists := allowedProjectIdsMap[project.ID]; exists {
-			minTimestampToFillData, maxTimestampToFillData, location, errString := GetMinMaxTimestampToFillAndLocation(project, tableCreated)
-			if errString != "" {
-				addToJobReport(jobReport, true, errString, key)
-				jobReport["failures"][key] = errString
-				continue
-			}
+		if (jobForTestProjectsOnly && C.IsWebsiteAggregationTestEnabled(project.ID)) || (!jobForTestProjectsOnly && !C.IsWebsiteAggregationTestEnabled(project.ID)) {
+			key = fmt.Sprintf("%v:%v", index, project.ID)
+			if _, exists := allowedProjectIdsMap[project.ID]; exists {
+				minTimestampToFillData, maxTimestampToFillData, location, errString := GetMinMaxTimestampToFillAndLocation(project, tableCreated)
+				if errString != "" {
+					addToJobReport(jobReport, true, errString, key)
+					jobReport["failures"][key] = errString
+					continue
+				}
 
-			if !U.IsAllowedToRunInThisJob(minTimestampToFillData, maxTimestampToFillData, jobForLargeTimerange) {
-				continue
-			}
+				if !U.IsAllowedToRunInThisJob(minTimestampToFillData, maxTimestampToFillData, jobForLargeTimerange) {
+					continue
+				}
 
-			dashboardCreationStatusCode := storeSelected.CreatePredefWebAggDashboardIfNotExists(project.ID)
-			if dashboardCreationStatusCode != http.StatusCreated && dashboardCreationStatusCode != http.StatusFound {
-				log.WithField("project", project.ID).Error("Failed during dashboard creation")
-				addToJobReport(jobReport, true, "Failed during dashboard creation", key)
-			}
+				dashboardCreationStatusCode := storeSelected.CreatePredefWebAggDashboardIfNotExists(project.ID)
+				if dashboardCreationStatusCode != http.StatusCreated && dashboardCreationStatusCode != http.StatusFound {
+					log.WithField("project", project.ID).Error("Failed during dashboard creation")
+					addToJobReport(jobReport, true, "Failed during dashboard creation", key)
+				}
 
-			splitTimeRanges := U.GetSplitTimerangesIn7DayRanges(minTimestampToFillData, maxTimestampToFillData, project.TimeZone, location)
+				splitTimeRanges := U.GetSplitTimerangesIn7DayRanges(minTimestampToFillData, maxTimestampToFillData, project.TimeZone, location)
 
-			numberOfDays := U.GetNumberOfDays(minTimestampToFillData, maxTimestampToFillData)
-			jobStartTimestamp := time.Now().In(location)
+				numberOfDays := U.GetNumberOfDays(minTimestampToFillData, maxTimestampToFillData)
+				jobStartTimestamp := time.Now().In(location)
 
-			// Logic: compute minTimestamp to fill Data. set currentTo to minTimestamp + 7DaysEod.
-			// If currentTo < todays beginning, fill for 7 days.
-			// else currentTo will be now with buffer.
+				// Logic: compute minTimestamp to fill Data. set currentTo to minTimestamp + 7DaysEod.
+				// If currentTo < todays beginning, fill for 7 days.
+				// else currentTo will be now with buffer.
 
-			for _, fromAndTo := range splitTimeRanges {
-				if C.IsWebsiteAggregationTestEnabled(project.ID) {
-					if isError, errorString, tableCreated = executeDbtCommandTest(project, fromAndTo[0].Unix(), fromAndTo[1].Unix(), tableCreated); isError {
-						break
-					}
-				} else {
-					if isError, errorString, tableCreated = executeDbtCommand(project, fromAndTo[0].Unix(), fromAndTo[1].Unix(), tableCreated); isError {
-						break
+				for _, fromAndTo := range splitTimeRanges {
+					if C.IsWebsiteAggregationTestEnabled(project.ID) {
+						if isError, errorString, tableCreated = executeDbtCommandTest(project, fromAndTo[0].Unix(), fromAndTo[1].Unix(), tableCreated); isError {
+							break
+						}
+					} else {
+						if isError, errorString, tableCreated = executeDbtCommand(project, fromAndTo[0].Unix(), fromAndTo[1].Unix(), tableCreated); isError {
+							break
+						}
 					}
 				}
-			}
 
-			// Metrics calculation
-			jobEndTimestamp := time.Now().In(location)
-			addToJobReport(jobReport, isError, errorString, key)
-			addMetricsToReportIfCrossesThreshold(jobReport, jobEndTimestamp.Sub(jobStartTimestamp).Seconds(), numberOfDays, project.ID)
+				// Metrics calculation
+				jobEndTimestamp := time.Now().In(location)
+				addToJobReport(jobReport, isError, errorString, key)
+				addMetricsToReportIfCrossesThreshold(jobReport, jobEndTimestamp.Sub(jobStartTimestamp).Seconds(), numberOfDays, project.ID)
+			}
 		}
 	}
 
@@ -109,7 +111,7 @@ func main() {
 	}
 }
 
-func parseFlagsAndInitConfig() (string, bool, string, int) {
+func parseFlagsAndInitConfig() (string, bool, bool, string, int) {
 	env := flag.String("env", "development", "")
 	memSQLHost := flag.String("memsql_host", C.MemSQLDefaultDBParams.Host, "")
 	isPSCHost := flag.Int("memsql_is_psc_host", C.MemSQLDefaultDBParams.IsPSCHost, "")
@@ -121,6 +123,7 @@ func parseFlagsAndInitConfig() (string, bool, string, int) {
 	primaryDatastore := flag.String("primary_datastore", C.DatastoreTypeMemSQL, "Primary datastore type as memsql or postgres")
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
 	jobForLargeTimerange := flag.Bool("job_for_large_timerange", false, "Job for large timerange.")
+	jobForTestProjectsOnly := flag.Bool("job_for_test_projects_only", false, "Job for test projects only.")
 	websiteAggregationTestEnabledProjects := flag.String("website_aggregation_test_enabled_projects", "", "Flag - website aggregation test enabled projects")
 
 	appName := "events_cube_aggregation_deploy"
@@ -129,7 +132,7 @@ func parseFlagsAndInitConfig() (string, bool, string, int) {
 	if *env != "development" && *env != "staging" && *env != "production" {
 		err := fmt.Errorf("env [ %s ] not recognised", *env)
 		panic(err)
-		return "", false, *env, http.StatusBadRequest
+		return "", false, false, *env, http.StatusBadRequest
 	}
 
 	config := &C.Configuration{
@@ -154,10 +157,10 @@ func parseFlagsAndInitConfig() (string, bool, string, int) {
 	err := C.InitDB(*config)
 	if err != nil {
 		log.Fatal("Init Config failed.")
-		return "", false, "", http.StatusBadRequest
+		return "", false, false, "", http.StatusBadRequest
 	}
 
-	return *overrideHealthcheckPingID, *jobForLargeTimerange, *env, http.StatusOK
+	return *overrideHealthcheckPingID, *jobForLargeTimerange, *jobForTestProjectsOnly, *env, http.StatusOK
 }
 
 func getAllowedProjectIDsAndAllProjectsTimezone() (map[int64]bool, []model.Project, string, int) {

@@ -174,6 +174,7 @@ func main() {
 	enableDomainWebsitePropertiesByProjectID := flag.String("enable_domain_website_properties_by_project_id", "", "")
 	enableDeletedRecordProjectID := flag.String("enable_deleted_record_by_project_id", "", "")
 	skipLeadEnrichmentByProjectID := flag.String("skip_lead_processing_by_project_id", "", "")
+	enrichOnlyObjects := flag.String("enrich_only_objects", "", "")
 
 	flag.Parse()
 
@@ -262,6 +263,7 @@ func main() {
 		EnableDomainWebsitePropertiesByProjectID:             *enableDomainWebsitePropertiesByProjectID,
 		EnableSalesforceDeletedRecordByProjectID:             *enableDeletedRecordProjectID,
 		SkipSalesforceLeadEnrichmentByProjectID:              *skipLeadEnrichmentByProjectID,
+		SalesforceEnrichOnlyObjects:                          *enrichOnlyObjects,
 	}
 
 	C.InitConf(config)

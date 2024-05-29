@@ -57,9 +57,9 @@ func Get(key *cache.Key) (string, error) {
 		return "", errors.New("cache db not enabled")
 	}
 
-	var value string
+	var record CacheDBRecord
 	db := config.GetServices().Db
-	err = db.Table(tableNameCacheTable).Select("v").Limit(1).Where("project_id = ? AND k = ?", key.ProjectID, k).Find(&value).Error
+	err = db.Table(tableNameCacheTable).Select("v").Limit(1).Where("project_id = ? AND k = ?", key.ProjectID, k).Find(&record).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return "", ErrKeyNotExists
@@ -67,7 +67,7 @@ func Get(key *cache.Key) (string, error) {
 		return "", err
 	}
 
-	return value, nil
+	return record.Value, nil
 }
 
 func GetIfExists(key *cache.Key) (string, bool, error) {
@@ -160,7 +160,8 @@ func Set(key *cache.Key, value string, expiryInSecs float64) error {
 }
 
 func SetBatch(keyValue map[*cache.Key]string, expiryInSecs float64) error {
-	cacheRecords := make([]*CacheDBRecord, 0)
+	valuesStmnt := ""
+	params := make([]interface{}, 0)
 	for k, v := range keyValue {
 		cacheRecord, err := getCacheRecord(k, v, expiryInSecs)
 		// Fail if one failure. Parity with redis implementation.
@@ -168,11 +169,17 @@ func SetBatch(keyValue map[*cache.Key]string, expiryInSecs float64) error {
 			return err
 		}
 
-		cacheRecords = append(cacheRecords, cacheRecord)
+		if valuesStmnt != "" {
+			valuesStmnt = valuesStmnt + ", "
+		}
+		valuesStmnt = valuesStmnt + "(?, ?, ?, ?, ?, ?, ?)"
+		params = append(params, cacheRecord.ProjectID, cacheRecord.Key, cacheRecord.Value,
+			cacheRecord.ExpiryInSecs, cacheRecord.ExpiresAt, util.TimeNowZ(), util.TimeNowZ())
 	}
 
+	stmnt := "INSERT INTO cache_db (`project_id`, `k`, `v`, `expiry_in_secs`, `expires_at`, `created_at`, `updated_at`) VALUES " + valuesStmnt
 	db := config.GetServices().Db
-	err := db.Table(tableNameCacheTable).Create(cacheRecords).Error
+	err := db.Exec(stmnt, params...).Error
 	if err != nil {
 		return err
 	}

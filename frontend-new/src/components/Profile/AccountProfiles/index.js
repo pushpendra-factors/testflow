@@ -28,7 +28,8 @@ import {
   setActiveDomainAction,
   setDrawerVisibleAction,
   setFiltersDirtyAction,
-  setNewSegmentModeAction
+  setNewSegmentModeAction,
+  toggleAccountsTab
 } from 'Reducers/accountProfilesView/actions';
 import useFeatureLock from 'hooks/useFeatureLock';
 import { FEATURES } from 'Constants/plans.constants';
@@ -337,6 +338,10 @@ function AccountProfiles({
 
   useEffect(() => {
     runInit();
+
+    return () => {
+      dispatch(toggleAccountsTab('accounts'));
+    };
   }, [segmentID, segments, accountPayload]);
 
   const getAccounts = async (payload) => {
@@ -371,6 +376,7 @@ function AccountProfiles({
     if (shouldCache) {
       if (!location.state.accountPayload) {
         setAccountPayload(INITIAL_ACCOUNT_PAYLOAD);
+        getAccounts(accountPayload);
       } else {
         const {
           currentPage: cachedCurrentPage,
@@ -1214,22 +1220,20 @@ function AccountProfiles({
         </div>
       </ControlledComponent>
 
-      <div className='flex flex-col gap-y-6'>
-        <div className='flex justify-between items-center'>
-          <div className='flex gap-x-2  items-center'>
-            <div className='flex items-center rounded justify-center h-10 w-10'>
-              <SVG name={titleIcon} size={32} color={titleIconColor} />
-            </div>
-            <Text
-              type='title'
-              level={3}
-              weight='bold'
-              extraClass='mb-0'
-              id='fa-at-text--page-title'
-            >
-              {pageTitle}
-            </Text>
+      <div className='flex justify-between items-center pb-2 px-10'>
+        <div className='flex gap-x-2  items-center'>
+          <div className='flex items-center rounded justify-center h-10 w-10'>
+            <SVG name={titleIcon} size={32} color={titleIconColor} />
           </div>
+          <Text
+            type='title'
+            level={3}
+            weight='bold'
+            extraClass='mb-0'
+            id='fa-at-text--page-title'
+          >
+            {pageTitle}
+          </Text>
         </div>
         <ControlledComponent
           controller={
@@ -1241,7 +1245,7 @@ function AccountProfiles({
       </div>
 
       <ControlledComponent controller={activeTab === 'accounts'}>
-        <div className='flex justify-between items-center my-4'>
+        <div className='flex justify-between items-center py-4 px-10'>
           <div className='flex items-center gap-x-2 w-full'>
             {renderPropertyFilter()}
             {renderSaveSegmentButton()}
@@ -1267,7 +1271,7 @@ function AccountProfiles({
             (!newSegmentMode || areFiltersDirty)
           }
         >
-          <>
+          <div className='px-10'>
             {renderTable()}
             <div className='logo-attrib'>
               <a
@@ -1279,7 +1283,7 @@ function AccountProfiles({
                 Logos provided by Clearbit
               </a>
             </div>
-          </>
+          </div>
         </ControlledComponent>
         <ControlledComponent
           controller={
@@ -1302,8 +1306,12 @@ function AccountProfiles({
         </ControlledComponent>
       </ControlledComponent>
 
-      <ControlledComponent controller={activeTab === 'insights'}>
-        <div className='my-4 flex-1 flex flex-col'>
+      <ControlledComponent
+        controller={
+          activeTab === 'insights' && accountPayload?.segment?.id != null
+        }
+      >
+        <div className='my-4 flex-1 flex flex-col px-10'>
           <AccountsInsights />
         </div>
       </ControlledComponent>

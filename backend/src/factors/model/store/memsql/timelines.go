@@ -286,9 +286,9 @@ func (store *MemSQL) GetTimeRangeWindow(profileType string, whereStmt string, li
 	fromStr := fmt.Sprintf("%s AND last_activity < ?", whereStmt)
 	timeWindowQParams = append(timeWindowQParams, model.FormatTimeToString(gorm.NowFunc()))
 
-	queryStrmt := fmt.Sprintf("SELECT %s FROM (SELECT COALESCE(last_event_at, updated_at) AS last_activity FROM users %s ORDER BY last_activity DESC LIMIT %d);", windowSelectStr, fromStr, limitVal)
+	queryStmt := fmt.Sprintf("SELECT %s FROM (SELECT COALESCE(last_event_at, updated_at) AS last_activity FROM users %s ORDER BY last_activity DESC LIMIT %d);", windowSelectStr, fromStr, limitVal)
 	db := C.GetServices().Db
-	err := db.Raw(queryStrmt, timeWindowQParams...).Scan(&timeWindow).Error
+	err := db.Raw(queryStmt, timeWindowQParams...).Scan(&timeWindow).Error
 	if err != nil {
 		return nil, http.StatusInternalServerError, "Failed Setting Time Range."
 	}
@@ -1577,13 +1577,13 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, isAnony
 	}
 
 	// Event Display Names
-	eventDisplaNames := U.STANDARD_EVENTS_DISPLAY_NAMES
+	eventDisplayNames := U.STANDARD_EVENTS_DISPLAY_NAMES
 	errCode, projectDisplayNames := store.GetDisplayNamesForAllEvents(projectID)
 	if errCode != http.StatusFound {
 		log.WithError(err).WithField("project_id", projectID).Error("Error fetching display names for the project")
 	} else {
 		for key, value := range projectDisplayNames {
-			eventDisplaNames[key] = value
+			eventDisplayNames[key] = value
 		}
 	}
 
@@ -1611,11 +1611,13 @@ func (store *MemSQL) GetUserActivities(projectID int64, identity string, isAnony
 			userActivity.AliasName = model.SetAliasName(userActivity.EventName, userActivity.EventType, properties)
 
 			// Display Names
+			displayName := model.SetEventDisplayName(userActivity.EventName, &eventDisplayNames)
 			if (*properties)[U.EP_IS_PAGE_VIEW] == true {
-				userActivity.DisplayName = "Page View"
-			} else {
-				userActivity.DisplayName = model.SetEventDisplaName(userActivity.EventName, &eventDisplaNames)
+				if _, exists := eventDisplayNames[userActivity.EventName]; !exists {
+					displayName = "Page View"
+				}
 			}
+			userActivity.DisplayName = displayName
 
 			// Event Icon
 			if (*properties)[U.EP_IS_PAGE_VIEW] == true {
@@ -2757,6 +2759,18 @@ func removeEngagementColumns(existingColumns []string) []string {
 	return updatedColumns
 }
 
+func (store *MemSQL) GetDomainIDFromDomainName(projectID int64, domainName string, domainGroupID int) (string, error) {
+	var domainUser model.User
+	db := C.GetServices().Db
+	queryStmt := fmt.Sprintf("SELECT id FROM users WHERE project_id = ? AND group_%d_id = ? AND is_group_user = 1 AND source = 9 LIMIT 1;", domainGroupID)
+	params := []interface{}{projectID, domainName}
+	err := db.Raw(queryStmt, params...).Scan(&domainUser).Error
+	if err != nil {
+		return "", fmt.Errorf("failed to get domain ID from domain name")
+	}
+	return domainUser.ID, nil
+}
+
 func (store *MemSQL) GetTopEventsForADomain(projectID int64, domainName string) ([]model.TimelineEvent, int) {
 	var eventsList []model.TimelineEvent
 	logFields := log.Fields{
@@ -2767,6 +2781,12 @@ func (store *MemSQL) GetTopEventsForADomain(projectID int64, domainName string) 
 	domainGroup, errCode := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
 	if errCode != http.StatusFound {
 		log.WithFields(logFields).Error("Domain group not found")
+		return eventsList, http.StatusInternalServerError
+	}
+
+	domainID, err := store.GetDomainIDFromDomainName(projectID, domainName, domainGroup.ID)
+	if err != nil {
+		log.WithFields(logFields).Error(err)
 		return eventsList, http.StatusInternalServerError
 	}
 
@@ -2789,7 +2809,10 @@ func (store *MemSQL) GetTopEventsForADomain(projectID int64, domainName string) 
 			is_group_user
 			FROM users
 		WHERE project_id = ?
-			AND group_%d_user_id = (SELECT id FROM users WHERE project_id = ? AND group_%d_id = ? AND source = ? LIMIT 1)
+			AND (
+				id = ?
+				OR group_%d_user_id = ?
+			)
 		ORDER BY last_event_at DESC
 		LIMIT 25
 		) AS domain_users ON events.user_id = domain_users.id
@@ -2798,19 +2821,13 @@ func (store *MemSQL) GetTopEventsForADomain(projectID int64, domainName string) 
 	WHERE events.project_id = ?
 		AND event_names.name NOT IN (%s)
 	ORDER BY events.timestamp DESC
-	LIMIT 100;`, U.UP_NAME, domainGroup.ID, domainGroup.ID, eventNamesToExcludePlaceholders)
+	LIMIT 100;`, U.UP_NAME, domainGroup.ID, eventNamesToExcludePlaceholders)
 
 	excludedEventNamesArgs := make([]interface{}, len(model.ExcludedEvents))
 	for i, name := range model.ExcludedEvents {
 		excludedEventNamesArgs[i] = name
 	}
-	queryArgs := []interface{}{
-		projectID,
-		projectID,
-		domainName,
-		model.UserSourceDomains,
-		projectID,
-	}
+	queryArgs := []interface{}{projectID, domainID, domainID, projectID}
 	queryArgs = append(queryArgs, excludedEventNamesArgs...)
 
 	db := C.GetServices().Db
@@ -2822,13 +2839,13 @@ func (store *MemSQL) GetTopEventsForADomain(projectID int64, domainName string) 
 	}
 
 	// Event Display Names
-	eventDisplaNames := U.STANDARD_EVENTS_DISPLAY_NAMES
+	eventDisplayNames := U.STANDARD_EVENTS_DISPLAY_NAMES
 	errCode, projectDisplayNames := store.GetDisplayNamesForAllEvents(projectID)
 	if errCode != http.StatusFound {
 		log.WithError(err).WithField("project_id", projectID).Error("Error fetching display names for the project")
 	} else {
 		for key, value := range projectDisplayNames {
-			eventDisplaNames[key] = value
+			eventDisplayNames[key] = value
 		}
 	}
 
@@ -2853,7 +2870,7 @@ func (store *MemSQL) GetTopEventsForADomain(projectID int64, domainName string) 
 				eventConfigProps = timelinesConfig.EventsConfig["PageView"]
 			}
 
-			formatEventData(&event, &eventDisplaNames, properties, eventConfigProps)
+			formatEventData(&event, &eventDisplayNames, properties, eventConfigProps)
 		}
 		eventsList = append(eventsList, event)
 	}
@@ -2861,16 +2878,18 @@ func (store *MemSQL) GetTopEventsForADomain(projectID int64, domainName string) 
 	return eventsList, http.StatusOK
 }
 
-func formatEventData(event *model.TimelineEvent, eventDisplaNames *map[string]string, properties *map[string]interface{}, configProperties []string) {
+func formatEventData(event *model.TimelineEvent, eventDisplayNames *map[string]string, properties *map[string]interface{}, configProperties []string) {
 	// Set AliasName
 	event.AliasName = model.SetAliasName(event.Name, event.Type, properties)
 
 	// Display Names
+	displayName := model.SetEventDisplayName(event.Name, eventDisplayNames)
 	if (*properties)[U.EP_IS_PAGE_VIEW] == true {
-		event.DisplayName = "Page View"
-	} else {
-		event.DisplayName = model.SetEventDisplaName(event.Name, eventDisplaNames)
+		if _, exists := (*eventDisplayNames)[event.Name]; !exists {
+			displayName = "Page View"
+		}
 	}
+	event.DisplayName = displayName
 
 	// Event Icon
 	if (*properties)[U.EP_IS_PAGE_VIEW] == true {

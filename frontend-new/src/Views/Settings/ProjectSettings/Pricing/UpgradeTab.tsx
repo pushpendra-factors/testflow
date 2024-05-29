@@ -176,9 +176,8 @@ function UpgradeTab({ buyAddonLoading, handleBuyAddonClick }: UpgradeTabProps) {
               extraClass='m-0'
               color='character-secondary'
             >
-              Check out all our plans and their included features to find the
-              one that fits your needs. We are always available for a call if
-              you ever need help finding the right one for your organisation.{' '}
+              Factors offers plans for teams of all sizes. Check out our
+              features below or get a customised demo for your team.
             </Text>
           </div>
           <a href={PRICING_HELP_LINK} target='_blank' rel='noreferrer'>

@@ -27,6 +27,7 @@ import {
 } from './util';
 import { IntegrationContext } from './IntegrationContext';
 import styles from './index.module.scss';
+import { PathUrls } from 'Routes/pathUrls';
 
 const IntegrationWithId = ({
   currentProjectSettingsLoading,
@@ -51,21 +52,21 @@ const IntegrationWithId = ({
   const integrationStatusValue = getIntegrationStatus(
     integrationStatus?.[integrationId]
   );
-  const integrationActionText = getIntegrationActionText(
-    integrationStatus?.[integrationId]
-  );
+  // const integrationActionText = getIntegrationActionText(
+  //   integrationStatus?.[integrationId]
+  // );
   const { integrationInfo } = useIntegrationCheck();
   const isIntegrated = integrationInfo?.[integrationId];
   const showIntegrationStatusFlag = showIntegrationStatus(userEmail);
   const integrationStatusMessage = integrationStatus?.[integrationId]?.message;
-  // const lastSyncDetail =
-  //   showIntegrationStatusFlag &&
-  //   integrationStatus?.[integrationId]?.last_synced_at &&
-  //   isIntegrated
-  //     ? `Last sync: ${moment
-  //         .unix(integrationStatus?.[integrationId]?.last_synced_at)
-  //         .fromNow()}`
-  //     : '';
+  const lastSyncDetail =
+    showIntegrationStatusFlag &&
+    integrationStatus?.[integrationId]?.last_synced_at &&
+    isIntegrated
+      ? `Last sync: ${moment
+          .unix(integrationStatus?.[integrationId]?.last_synced_at)
+          .fromNow()}`
+      : '';
 
   const isErrorState = integrationStatusValue === 'error';
   const isPendingState = integrationStatusValue === 'pending';
@@ -78,18 +79,18 @@ const IntegrationWithId = ({
       : '#52C41A';
 
   const ActionStatus =
-    isErrorState || isPendingState || isConnectedState ? (
+    lastSyncDetail && (isErrorState || isPendingState || isConnectedState) ? (
       <div className='flex gap-2 items-center'>
         <SVG name='SyncAlt' size='20' color={actionStatusColor} />
         <Text type='title' level={7} color='character-primary' extraClass='m-0'>
-          {integrationActionText}
+          {lastSyncDetail}
         </Text>
       </div>
     ) : undefined;
 
   const handleBackClick = () => {
     sessionStorage.setItem('integration-card', integrationId);
-    history.goBack();
+    history.push(PathUrls.SettingsIntegration);
   };
 
   const integrationCallback = () => {

@@ -61,7 +61,7 @@ const LinkedInIntegration = ({
           if (response.status < 400) {
             response.json().then((e) => {
               setOauthResponse(e);
-              fetch(`${getHostURL()}/integrations/linkedin/ad_accounts`, {
+              fetch(`${getBackendHost()}/integrations/linkedin/ad_accounts`, {
                 method: 'POST',
                 body: JSON.stringify({
                   access_token: e?.access_token

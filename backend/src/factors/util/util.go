@@ -2036,3 +2036,25 @@ func GetAllMapKeys(maps ...interface{}) map[string]bool {
 
 	return keysMap
 }
+
+func GetMapValuesSum(mp map[string]int) int {
+	sum := 0
+	for _, k := range mp {
+		sum += k
+	}
+
+	return sum
+}
+
+func GetMergedAndAddedMap(a map[string]int, b map[string]int) map[string]int {
+	newMap := make(map[string]int)
+	for k, v := range a {
+		newMap[k] = v
+	}
+
+	for k, v := range b {
+		newMap[k] += v
+	}
+
+	return newMap
+}

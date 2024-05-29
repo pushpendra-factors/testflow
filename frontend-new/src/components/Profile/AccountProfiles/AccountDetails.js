@@ -714,7 +714,7 @@ function AccountDetails({
 
     if (view === 'birdview') {
       const knownUsers = timelineUsers.filter(
-        (user) => !user?.isAnonymous && user?.name !== 'group_user'
+        (user) => !user?.isAnonymous && !user?.isGroupUser
       );
       const anonymousUsers = timelineUsers.filter((user) => user?.isAnonymous);
       const groupedAnonymousUser = anonymousUsers.length
@@ -733,9 +733,7 @@ function AccountDetails({
             }
           ]
         : [];
-      const accountUser = timelineUsers.filter(
-        (user) => user?.name === 'group_user'
-      );
+      const accountUser = timelineUsers.filter((user) => user?.isGroupUser);
 
       filteredUsers.push(
         ...knownUsers,
@@ -747,7 +745,7 @@ function AccountDetails({
     }
 
     if (isFreePlan) {
-      return filteredUsers.filter((user) => user?.username !== 'group_user');
+      return filteredUsers.filter((user) => !user.isGroupUser);
     }
 
     return filteredUsers;

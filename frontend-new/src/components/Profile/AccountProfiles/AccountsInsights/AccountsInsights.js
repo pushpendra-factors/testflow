@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Spin, notification, Button } from 'antd';
 import FaDatepicker from 'Components/FaDatepicker';
 import ControlledComponent from 'Components/ControlledComponent';
-import { SVG, SVG as Svg, Text } from 'Components/factorsComponents';
+import { SVG as Svg, Text } from 'Components/factorsComponents';
 import {
   selectAccountPayload,
   selectEditInsightsMetricStatus,
@@ -187,7 +187,7 @@ export default function AccountsInsights() {
           <div className='flex gap-x-4 justify-center items-center'>
             <Button
               onClick={handleLearnMoreClick}
-              icon={<SVG size={16} color='#8c8c8c' name='arrowUpRightSquare' />}
+              icon={<Svg size={16} color='#8c8c8c' name='arrowUpRightSquare' />}
             >
               Learn more
             </Button>

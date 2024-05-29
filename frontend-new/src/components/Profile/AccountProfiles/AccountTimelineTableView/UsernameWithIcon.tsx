@@ -8,23 +8,24 @@ import { UsernameWithIconProps } from 'Components/Profile/types';
 function UsernameWithIcon({
   title,
   userID,
+  isGroupUser,
   isAnonymous = true
 }: UsernameWithIconProps): JSX.Element {
-  const getUsernameInitial = (user: string) => user.charAt(0).toUpperCase();
+  const getUsernameInitial = () => title.charAt(0).toUpperCase();
 
-  const getBackgroundColor = (user: string) => {
-    const index = ALPHANUMSTR.indexOf(getUsernameInitial(user)) % 8;
+  const getBackgroundColor = () => {
+    const index = ALPHANUMSTR.indexOf(getUsernameInitial()) % 8;
     return iconColors[index];
   };
 
-  const renderUsername = (user: string, isAnon: boolean) => {
-    if (user === 'group_user') {
+  const renderUsername = () => {
+    if (isGroupUser) {
       return 'Account Activity';
     }
-    if (isAnon) {
+    if (isAnonymous) {
       return 'Anonymous User';
     }
-    return user;
+    return title;
   };
 
   return (
@@ -39,18 +40,15 @@ function UsernameWithIcon({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: getBackgroundColor(title),
+              backgroundColor: getBackgroundColor(),
               fontSize: '16px'
             }}
           >
-            {getUsernameInitial(title)}
+            {getUsernameInitial()}
           </Avatar>
         )}
       </div>
-      <TextWithOverflowTooltip
-        text={renderUsername(title, isAnonymous)}
-        extraClass='text'
-      />
+      <TextWithOverflowTooltip text={renderUsername()} extraClass='text' />
     </>
   );
 }
