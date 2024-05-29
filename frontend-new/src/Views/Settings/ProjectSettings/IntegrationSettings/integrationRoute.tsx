@@ -10,7 +10,12 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { FaErrorComp, FaErrorLog } from 'factorsComponents';
 import PageSuspenseLoader from 'Components/SuspenseLoaders/PageSuspenseLoader';
 
-import { fetchProjectSettings, fetchProjectSettingsV1 } from 'Reducers/global';
+import {
+  fetchBingAdsIntegration,
+  fetchMarketoIntegration,
+  fetchProjectSettings,
+  fetchProjectSettingsV1
+} from 'Reducers/global';
 import { ConnectedProps, connect } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import logger from 'Utils/logger';
@@ -26,7 +31,9 @@ import { IntegrationStatusData } from './types';
 function IntegrationMain({
   activeProject,
   fetchProjectSettings,
-  fetchProjectSettingsV1
+  fetchProjectSettingsV1,
+  fetchBingAdsIntegration,
+  fetchMarketoIntegration
 }: IntegrationRouteProps) {
   const { path } = useRouteMatch();
   const [contextData, setContextData] = useState({
@@ -40,6 +47,8 @@ function IntegrationMain({
       setContextData((cData) => ({ ...cData, dataLoading: false }));
     });
     fetchProjectSettingsV1(activeProject.id);
+    fetchBingAdsIntegration(activeProject.id);
+    fetchMarketoIntegration(activeProject.id);
   }, []);
 
   // fetching integration status data
@@ -109,7 +118,9 @@ const mapDispatchToProps = (dispatch) =>
   bindActionCreators(
     {
       fetchProjectSettings,
-      fetchProjectSettingsV1
+      fetchProjectSettingsV1,
+      fetchBingAdsIntegration,
+      fetchMarketoIntegration
     },
     dispatch
   );

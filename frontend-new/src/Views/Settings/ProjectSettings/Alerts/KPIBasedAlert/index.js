@@ -172,7 +172,7 @@ const KPIBasedAlert = ({
       const obj =
         alertDetails?.alert_configuration?.slack_channels_and_user_groups;
       for (const key in obj) {
-        if (obj[key].length > 0) {
+        if (obj[key]?.length > 0) {
           setViewSelectedChannels(obj[key]);
           if (alertState.state === 'edit') {
             setSaveSelectedChannel(obj[key]);
@@ -1659,7 +1659,18 @@ const KPIBasedAlert = ({
                           color='grey'
                           extraClass='m-0 ml-4 my-2'
                         >
-                          {`#${channel.name}`}
+                          {channel?.is_private ? (
+                            <>
+                              <SVG
+                                name='Lock'
+                                color='gray'
+                                extraClass='inline'
+                              />{' '}
+                              {channel?.name}
+                            </>
+                          ) : (
+                            `#${channel?.name}`
+                          )}
                         </Text>
                       </div>
                     ))}
@@ -1679,8 +1690,47 @@ const KPIBasedAlert = ({
                 </Col>
               </Row>
             ) : (
-              <Row className='mt-2 ml-2'>
+              <Row className='mt-1 ml-2'>
                 <Col span={10} className='m-0'>
+                  <div className='mt-1 mb-2 flex' style={{ width: '375px' }}>
+                    <Popover
+                      placement='right'
+                      overlayInnerStyle={{ width: '340px' }}
+                      title={null}
+                      content={
+                        <div className='m-0 m-2'>
+                          <p className='m-0 text-gray-900 text-base font-bold'>
+                            Preview of the alert in Slack
+                          </p>
+                          <p className='m-0 mb-2 text-gray-700'>
+                            The message will be sent from your name
+                          </p>
+                          <img
+                            className='m-0'
+                            src='../../../../../assets/icons/privateAlertPreview.png'
+                          />
+                        </div>
+                      }
+                    >
+                      <div className='inline mr-1'>
+                        <SVG
+                          name='InfoCircle'
+                          size={16}
+                          color='grey'
+                          extraClass='inline'
+                        />
+                      </div>
+                    </Popover>
+                    <Text
+                      type='title'
+                      level={7}
+                      color='grey'
+                      extraClass='m-0 inline'
+                    >
+                      If you select a private channel, the alert message will be
+                      sent through your account.
+                    </Text>
+                  </div>
                   <Button
                     type='link'
                     onClick={() => setShowSelectChannelsModal(true)}

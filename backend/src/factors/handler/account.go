@@ -90,6 +90,10 @@ func CreateAccountHandler(c *gin.Context) {
 		return
 	}
 
+	if accountPayload.Properties == nil {
+		accountPayload.Properties = U.PropertiesMap{}
+	}
+
 	accountPayload.Properties[U.UP_IS_OFFLINE] = true
 
 	accountPayloadJsonb, err := U.EncodeStructTypeToPostgresJsonb(accountPayload.Properties)
@@ -251,7 +255,7 @@ func TrackAccountEventHandler(c *gin.Context) {
 		return
 	}
 
-	if accountTrackPayload.Domain == "" || accountTrackPayload.Event == nil {
+	if accountTrackPayload.Event.Name == "" || accountTrackPayload.Event.Properties == nil || accountTrackPayload.Domain == "" || accountTrackPayload.Event.Timestamp == 0 {
 
 		c.AbortWithError(http.StatusBadRequest, errors.New("Invalid request. Domain Name unavailable"))
 		return
@@ -267,9 +271,10 @@ func TrackAccountEventHandler(c *gin.Context) {
 		return
 	}
 
-	timestamp, _ := U.GetPropertyValueAsInt64(accountTrackPayload.Event["timestamp"])
+	timestamp, _ := U.GetPropertyValueAsInt64(accountTrackPayload.Event.Timestamp)
 
-	accountPayloadJsonb, err := U.EncodeStructTypeToPostgresJsonb(accountTrackPayload.Event["properties"])
+	accountTrackPayload.Event.Properties[U.EP_SKIP_SESSION] = U.PROPERTY_VALUE_TRUE
+	accountPayloadJsonb, err := U.EncodeStructTypeToPostgresJsonb(accountTrackPayload.Event.Properties)
 	if err != nil {
 		logCtx.Error("Failed to check for  group user by group id.")
 		c.AbortWithError(http.StatusInternalServerError, errors.New("Failed to check for  group user by group id."))
@@ -277,7 +282,7 @@ func TrackAccountEventHandler(c *gin.Context) {
 	}
 	eventName := &model.EventName{
 		ProjectId: projectID,
-		Name:      U.GetPropertyValueAsString(accountTrackPayload.Event["name"]),
+		Name:      U.GetPropertyValueAsString(accountTrackPayload.Event.Name),
 		Type:      model.TYPE_USER_CREATED_EVENT_NAME,
 	}
 	eventDetails, eventNameErrCode := store.GetStore().CreateOrGetEventName(eventName)
