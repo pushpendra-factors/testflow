@@ -707,7 +707,9 @@ function AccountProfiles({
   );
 
   const navigateToAccountsEngagement = useCallback(() => {
-    history.push(PathUrls.ConfigureEngagements);
+    history.push(
+      `${PathUrls.SettingsCustomDefinition}?activeTab=engagementScoring`
+    );
   }, []);
 
   const moreActionsContent = () => {
@@ -1141,13 +1143,12 @@ function AccountProfiles({
         .sort((a, b) => {
           if ('score' in a) {
             if (a.score < b.score) return 1;
-            else if (a.score > b.score) return -1;
-            return 0;
-          } else {
-            if (a.domain_name < b.domain_name) return 1;
-            else if (a.domain_name > b.domain_name) return -1;
+            if (a.score > b.score) return -1;
             return 0;
           }
+          if (a.domain_name < b.domain_name) return 1;
+          if (a.domain_name > b.domain_name) return -1;
+          return 0;
         })
         .forEach((d) => {
           const values = selectedOptions.map((elem) => {

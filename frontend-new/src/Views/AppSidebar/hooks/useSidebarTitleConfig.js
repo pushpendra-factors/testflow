@@ -3,7 +3,6 @@ import { PathUrls } from '../../../routes/pathUrls';
 import {
   checkMatchPath,
   isAlertsUrl,
-  isConfigurationUrl,
   isSettingsUrl
 } from '../appSidebar.helpers';
 
@@ -60,13 +59,7 @@ const useSidebarTitleConfig = () => {
       iconColor: '#8C8C8C'
     };
   }
-  if (isConfigurationUrl(pathname)) {
-    return {
-      title: 'Configure',
-      icon: 'configure_Filled',
-      iconColor: '#8C8C8C'
-    };
-  }
+
   return '';
 };
 

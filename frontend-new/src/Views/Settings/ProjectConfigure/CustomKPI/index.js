@@ -40,9 +40,8 @@ import {
   getCustomKPIQuery,
   getStateFromCustomKPIqueryGroup
 } from 'Views/CoreQuery/utils';
-import GroupSelect from 'Components/GenericComponents/GroupSelect';
-import { convertAndAddPropertiesToGroupSelectOptions } from 'Utils/dataFormatter';
 import FaSelect from 'Components/GenericComponents/FaSelect';
+import EmptyScreen from 'Components/EmptyScreen';
 import EventQueryBlock from './EventQueryBlock';
 import {
   INITIAL_SESSION_ANALYTICS_SEQ,
@@ -50,7 +49,6 @@ import {
 } from '../../../../utils/constants';
 import QueryBlock from './QueryBlock';
 import styles from './index.module.scss';
-import EmptyScreen from 'Components/EmptyScreen';
 
 const { Option } = Select;
 
@@ -241,15 +239,14 @@ function CustomKPI({
       align: 'right',
       width: 75,
       render: (obj) => (
-        <Dropdown overlay={() => menu(obj)} trigger={['click']}>
+        <Dropdown
+          overlay={() => menu(obj)}
+          trigger={['click']}
+          placement='bottomRight'
+        >
           <Button
             type='text'
-            icon={
-              <MoreOutlined
-                rotate={90}
-                style={{ color: 'gray', fontSize: '18px' }}
-              />
-            }
+            icon={<MoreOutlined style={{ color: 'gray', fontSize: '18px' }} />}
           />
         </Dropdown>
       )
@@ -1170,23 +1167,36 @@ function CustomKPI({
   return (
     <div className='fa-container'>
       <Row gutter={[24, 24]} justify='center'>
-        <Col span={22}>
-          <div className='mb-10'>
+        <Col span={24}>
+          <div className=''>
             {pageMode === 'Initial' && (
               <>
                 <Row>
-                  <Col span={12}>
+                  <Col span={18}>
+                    <Text type='title' level={7} color='grey' extraClass='m-0'>
+                      Create personalized metrics tailored to your specific
+                      objectives, whether it's conversion rates, engagement
+                      metrics, or revenue targets.
+                    </Text>
                     <Text
                       type='title'
-                      level={3}
-                      weight='bold'
-                      extraClass='m-0'
-                      id='fa-at-text--page-title'
+                      level={7}
+                      color='grey'
+                      extraClass='m-0 mt-2'
                     >
-                      Custom KPIs
+                      Monitor progress, measure success, and gain actionable
+                      insights to drive continuous improvement and achieve your
+                      business milestones.{' '}
+                      <a
+                        href='https://help.factors.ai/en/articles/7284181-custom-kpis'
+                        target='_blank'
+                        rel='noreferrer'
+                      >
+                        Learn more
+                      </a>
                     </Text>
                   </Col>
-                  <Col span={12}>
+                  <Col span={6}>
                     <div className='flex justify-end'>
                       <Button
                         onClick={() => {
@@ -1194,44 +1204,16 @@ function CustomKPI({
                           setPageMode('Create');
                         }}
                         type='primary'
-                        icon={<SVG name={'plus'} color={'white'} size={16} />}
+                        icon={<SVG name='plus' color='white' size={16} />}
                       >
                         Add New
                       </Button>
                     </div>
                   </Col>
                 </Row>
-                <Row className='mt-4'>
+                <Row className=''>
                   <Col span={24}>
                     <div className='mt-6'>
-                      <Text
-                        type='title'
-                        level={7}
-                        color='grey-2'
-                        extraClass='m-0'
-                      >
-                        Create personalized metrics tailored to your specific
-                        objectives, whether it's conversion rates, engagement
-                        metrics, or revenue targets.
-                      </Text>
-                      <Text
-                        type='title'
-                        level={7}
-                        color='grey-2'
-                        extraClass='m-0 mt-2'
-                      >
-                        Monitor progress, measure success, and gain actionable
-                        insights to drive continuous improvement and achieve
-                        your business milestones.{' '}
-                        <a
-                          href='https://help.factors.ai/en/articles/7284181-custom-kpis'
-                          target='_blank'
-                          rel='noreferrer'
-                        >
-                          Learn more
-                        </a>
-                      </Text>
-
                       {tableData.length > 0 ? (
                         <Table
                           className='fa-table--basic mt-8'
@@ -1244,10 +1226,8 @@ function CustomKPI({
                       ) : (
                         <EmptyScreen
                           loading={tableLoading}
-                          title={`Define custom metrics to monitor conversion rates, track engagement metrics, and measure revenue targets tailored to your organization’s definitions.`}
-                          learnMore={
-                            'https://help.factors.ai/en/articles/7284181-custom-kpis'
-                          }
+                          title='Define custom metrics to monitor conversion rates, track engagement metrics, and measure revenue targets tailored to your organization’s definitions.'
+                          learnMore='https://help.factors.ai/en/articles/7284181-custom-kpis'
                         />
                       )}
                     </div>

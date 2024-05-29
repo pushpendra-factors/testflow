@@ -1,15 +1,11 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
-import {
-  settingsMenuItems,
-  getConfigureMenuItems,
-  settingsCategorisedMap
-} from 'Components/FaHeader/FaHeader';
+import { settingsCategorisedMap } from 'Components/FaHeader/FaHeader';
 import { WhiteListedAccounts } from 'Routes/constants';
 import { useSelector } from 'react-redux';
 import { PathUrls } from 'Routes/pathUrls';
 import SidebarMenuItem from './SidebarMenuItem';
-import { checkMatchPath, isConfigurationUrl } from './appSidebar.helpers';
+import { checkMatchPath } from './appSidebar.helpers';
 
 const SettingItem = ({ item }) => {
   const location = useLocation();
@@ -38,18 +34,8 @@ const SettingItem = ({ item }) => {
 };
 
 const SettingsSidebar = () => {
-  const location = useLocation();
-  const { pathname } = location;
-
   const agentState = useSelector((state) => state.agent);
   const activeAgent = agentState?.agent_details?.email;
-
-  const menuList = useMemo(() => {
-    if (isConfigurationUrl(pathname)) {
-      return getConfigureMenuItems(activeAgent);
-    }
-    return settingsMenuItems;
-  }, [pathname, activeAgent]);
 
   return (
     <div className='flex flex-col gap-y-1 px-2'>
@@ -60,10 +46,10 @@ const SettingsSidebar = () => {
         return (
           <>
             <SettingItem item={item} />
-            <div className={`border-bottom--thin-2`}></div>
-            {item.items.map((subItem) => {
-              return <SettingItem item={subItem} />;
-            })}
+            <div className='border-bottom--thin-2' />
+            {item.items.map((subItem) => (
+              <SettingItem item={subItem} />
+            ))}
           </>
         );
       })}
