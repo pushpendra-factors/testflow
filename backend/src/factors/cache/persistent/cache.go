@@ -54,12 +54,10 @@ func SetBatch(keyValue map[*cache.Key]string, expiryInSecs float64, useDB bool) 
 	redisErr := redis.SetPersistentBatch(keyValue, expiryInSecs)
 	logCtx.Info("Writing to cache db.")
 
-	/*
-		dbErr := db.SetBatch(keyValue, expiryInSecs)
-		if dbErr != nil {
-			logCtx.WithError(dbErr).Warn("Failed to write to db cache.")
-		}
-	*/
+	dbErr := db.SetBatch(keyValue, expiryInSecs)
+	if dbErr != nil {
+		logCtx.WithError(dbErr).Warn("Failed to write to db cache.")
+	}
 
 	// Using redis error till we fix Long Data and other issues related to batch writing.
 	return redisErr
