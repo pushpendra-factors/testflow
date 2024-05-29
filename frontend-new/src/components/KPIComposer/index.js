@@ -1,7 +1,14 @@
 import React, { useState, useEffect, memo, useMemo } from 'react';
 import { connect, useSelector } from 'react-redux';
+import { useParams } from 'react-router-dom';
 import { bindActionCreators } from 'redux';
 import { Button } from 'antd';
+import { fetchEventNames } from 'Reducers/coreQuery/middleware';
+import { resetGroupByAction } from 'Reducers/coreQuery/actions';
+import { areKpisInSameGroup } from 'Utils/kpiQueryComposer.helpers';
+import _, { isEqual } from 'lodash';
+import { getKPIPropertyMappings } from 'Reducers/kpi';
+import { ReactSortable } from 'react-sortablejs';
 import { SVG } from '../factorsComponents';
 import styles from './index.module.scss';
 import QueryBlock from './QueryBlock';
@@ -12,19 +19,13 @@ import {
   INITIAL_SESSION_ANALYTICS_SEQ,
   QUERY_OPTIONS_DEFAULT_VALUE
 } from '../../utils/constants';
-import FaDatepicker from '../../components/FaDatepicker';
+import FaDatepicker from '../FaDatepicker';
 import ComposerBlock from '../QueryCommons/ComposerBlock';
 import CriteriaSection from './CriteriaSection';
-import { fetchEventNames } from 'Reducers/coreQuery/middleware';
-import { resetGroupByAction } from 'Reducers/coreQuery/actions';
 import { getValidGranularityOptions } from '../../utils/dataFormatter';
 import { DefaultDateRangeFormat } from '../../Views/CoreQuery/utils';
 import GlobalFilterBlock from './GlobalFilterBlock';
 import GroupByBlock from './GroupByBlock';
-import { areKpisInSameGroup } from 'Utils/kpiQueryComposer.helpers';
-import _, { isEqual } from 'lodash';
-import { getKPIPropertyMappings } from 'Reducers/kpi';
-import { ReactSortable } from 'react-sortablejs';
 
 function KPIComposer({
   queries,
@@ -48,6 +49,7 @@ function KPIComposer({
   const [eventBlockOpen, setEventBlockOpen] = useState(true);
   const { groupBy } = useSelector((state) => state.coreQuery);
   const [sameGrpState, setSameGrpState] = useState(null);
+  const { query_id } = useParams();
 
   const DefaultQueryOptsVal = {
     ...QUERY_OPTIONS_DEFAULT_VALUE,
@@ -85,22 +87,21 @@ function KPIComposer({
     return blockList;
   };
 
-  const isSameKPIGrp = useMemo(() => {
-    return areKpisInSameGroup({ kpis: queries });
-  }, [queries]);
+  const isSameKPIGrp = useMemo(
+    () => areKpisInSameGroup({ kpis: queries }),
+    [queries]
+  );
 
   useEffect(() => {
     // Filters gets reset when ever query groups are changed
     setSameGrpState(isSameKPIGrp);
     if (!isSameKPIGrp && !_.isEmpty(queries)) {
-      //fetch common properties if different group
+      // fetch common properties if different group
       if (queries.length > 1 && !isSameKPIGrp) {
-        let payload = queries?.map((item) => {
-          return {
-            name: item?.group,
-            derived_kpi: item?.qt == 'derived' ? true : false
-          };
-        });
+        const payload = queries?.map((item) => ({
+          name: item?.group,
+          derived_kpi: item?.qt == 'derived'
+        }));
         getKPIPropertyMappings(activeProject?.id, payload).catch((err) => {
           console.log('getKPIPropertyMappings err', err);
           return null;
@@ -118,19 +119,17 @@ function KPIComposer({
     // }
     if (!_.isNull(sameGrpState)) {
       if (sameGrpState != isSameKPIGrp) {
-        setQueryOptions((currState) => {
-          return {
-            ...currState,
-            globalFilters: DefaultQueryOptsVal.globalFilters
-          };
-        });
+        setQueryOptions((currState) => ({
+          ...currState,
+          globalFilters: DefaultQueryOptsVal.globalFilters
+        }));
         resetGroupByAction();
       }
     }
   }, [isSameKPIGrp]);
 
   const setGlobalFiltersOption = (filters) => {
-    const opts = Object.assign({}, queryOptions);
+    const opts = { ...queryOptions };
     opts.globalFilters = filters;
     setQueryOptions(opts);
   };
@@ -162,14 +161,15 @@ function KPIComposer({
     try {
       if (queryType === QUERY_TYPE_KPI && queries.length === 0) {
         return null;
-      } else {
-        return (
-          <div
-            className={
-              !collapse ? styles.composer_footer : styles.composer_footer_right
-            }
-          >
-            {!collapse ? (
+      }
+      return (
+        <div
+          className={
+            !collapse ? styles.composer_footer : styles.composer_footer_right
+          }
+        >
+          {!collapse ? (
+            !query_id && (
               <FaDatepicker
                 customPicker
                 presetRange
@@ -181,50 +181,48 @@ function KPIComposer({
                     ? 'topRight'
                     : 'bottomRight'
                 }
-                buttonSize={'large'}
+                buttonSize='large'
                 range={{
                   startDate: queryOptions.date_range.from,
                   endDate: queryOptions.date_range.to
                 }}
                 onSelect={setDateRange}
               />
-            ) : (
-              <Button
-                className={'mr-2'}
-                size={'large'}
-                type={'default'}
-                onClick={() => setCollapse(false)}
-              >
-                <SVG name={'arrowUp'} size={20} extraClass={'mr-1'}></SVG>
-                Collapse all
-              </Button>
-            )}
+            )
+          ) : (
             <Button
-              className={'ml-2'}
-              size={'large'}
-              type='primary'
-              onClick={handleRunQueryCamp}
+              className='mr-2'
+              size='large'
+              type='default'
+              onClick={() => setCollapse(false)}
             >
-              Run Analysis
+              <SVG name='arrowUp' size={20} extraClass='mr-1' />
+              Collapse all
             </Button>
-          </div>
-        );
-      }
+          )}
+          <Button
+            className='ml-2'
+            size='large'
+            type='primary'
+            onClick={handleRunQueryCamp}
+          >
+            Run Analysis
+          </Button>
+        </div>
+      );
     } catch (err) {
       console.log(err);
     }
   };
 
-  const renderEACrit = () => {
-    return (
-      <div>
-        <CriteriaSection
-          queryCount={queries.length}
-          queryType={QUERY_TYPE_EVENT}
-        ></CriteriaSection>
-      </div>
-    );
-  };
+  const renderEACrit = () => (
+    <div>
+      <CriteriaSection
+        queryCount={queries.length}
+        queryType={QUERY_TYPE_EVENT}
+      />
+    </div>
+  );
 
   const renderCriteria = () => {
     try {
@@ -233,13 +231,13 @@ function KPIComposer({
 
         return (
           <ComposerBlock
-            blockTitle={'CRITERIA'}
+            blockTitle='CRITERIA'
             isOpen={criteriaBlockOpen}
-            showIcon={true}
+            showIcon
             onClick={() => {
               setCriteriaBlockOpen(!criteriaBlockOpen);
             }}
-            extraClass={'no-padding-l'}
+            extraClass='no-padding-l'
           >
             <div className={styles.criteria}>{renderEACrit()}</div>
           </ComposerBlock>
@@ -257,11 +255,11 @@ function KPIComposer({
     try {
       return (
         <ComposerBlock
-          blockTitle={'KPI TO ANALYSE'}
+          blockTitle='KPI TO ANALYSE'
           isOpen={eventBlockOpen}
-          showIcon={true}
+          showIcon
           onClick={() => setEventBlockOpen(!eventBlockOpen)}
-          extraClass={'no-padding-l'}
+          extraClass='no-padding-l'
         >
           <ReactSortable
             list={queries}
@@ -274,7 +272,7 @@ function KPIComposer({
             {queryList()}
           </ReactSortable>
           {queries.length < 10 && (
-            <div key={'init'} className={styles.composer_body__query_block}>
+            <div key='init' className={styles.composer_body__query_block}>
               <QueryBlock
                 queryType={queryType}
                 index={queries.length + 1}
