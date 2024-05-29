@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import ViewBasicSettings from './ViewBasicSettings';
-import EditBasicSettings from './EditBasicSettings';
 import { connect } from 'react-redux';
 import { fetchProjectAgents, fetchAgentInfo } from 'Reducers/agentActions';
 import { fetchProjectsList } from 'Reducers/global';
 import { Row, Col } from 'antd';
+import EditBasicSettings from './EditBasicSettings';
+import ViewBasicSettings from './ViewBasicSettings';
 
 function BasicSettings({
   fetchProjectAgents,
   fetchAgentInfo,
   fetchProjectsList,
-  activeProject,
+  activeProject
 }) {
   const [editMode, setEditMode] = useState(false);
 
@@ -23,9 +23,9 @@ function BasicSettings({
     getData();
   }, [activeProject]);
   return (
-    <div className={'fa-container'}>
+    <div className='fa-container'>
       <Row gutter={[24, 24]} justify='center'>
-        <Col span={22}>
+        <Col span={24}>
           {editMode ? (
             <EditBasicSettings setEditMode={setEditMode} />
           ) : (
@@ -37,10 +37,10 @@ function BasicSettings({
   );
 }
 const mapStateToProps = (state) => ({
-  activeProject: state.global.active_project,
+  activeProject: state.global.active_project
 });
 export default connect(mapStateToProps, {
   fetchProjectAgents,
   fetchAgentInfo,
-  fetchProjectsList,
+  fetchProjectsList
 })(BasicSettings);

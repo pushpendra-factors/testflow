@@ -12,7 +12,6 @@ import {
 } from 'antd';
 import { Text } from 'factorsComponents';
 import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import InviteUsers from './InviteUsers';
 import { connect } from 'react-redux';
 import {
   fetchProjectAgents,
@@ -20,6 +19,8 @@ import {
   updateAgentRole
 } from 'Reducers/agentActions';
 import MomentTz from 'Components/MomentTz';
+import CommonSettingsHeader from 'Components/GenericComponents/CommonSettingsHeader';
+import InviteUsers from './InviteUsers';
 
 const { confirm } = Modal;
 
@@ -37,7 +38,7 @@ function UserSettings({
   const [confirmLoading, setConfirmLoading] = useState(false);
 
   const confirmRemove = (uuid) => {
-    let agent = agents.filter((agent) => agent.email === currentAgent.email);
+    const agent = agents.filter((agent) => agent.email === currentAgent.email);
     confirm({
       title: 'Do you want to remove this user?',
       icon: <ExclamationCircleOutlined />,
@@ -87,20 +88,18 @@ function UserSettings({
     });
   };
 
-  const menu = (values) => {
-    return (
-      <Menu>
-        <Menu.Item key='0' onClick={() => confirmRemove(values.uuid)}>
-          <a>Remove User</a>
+  const menu = (values) => (
+    <Menu>
+      <Menu.Item key='0' onClick={() => confirmRemove(values.uuid)}>
+        <a>Remove User</a>
+      </Menu.Item>
+      {values.role === 1 && (
+        <Menu.Item key='1' onClick={() => confirmRoleChange(values.uuid)}>
+          <a>Make Project Admin</a>
         </Menu.Item>
-        {values.role === 1 && (
-          <Menu.Item key='1' onClick={() => confirmRoleChange(values.uuid)}>
-            <a>Make Project Admin</a>
-          </Menu.Item>
-        )}
-      </Menu>
-    );
-  };
+      )}
+    </Menu>
+  );
 
   const columns = [
     {
@@ -109,13 +108,8 @@ function UserSettings({
       key: 'name',
       render: (text) => (
         <div className='flex items-center'>
-          <Avatar src='assets/avatar/avatar.png' className={'mr-2'} size={24} />
-          <Text
-            type={'title'}
-            level={7}
-            weight={'bold'}
-            extraClass={'m-0 ml-2'}
-          >
+          <Avatar src='assets/avatar/avatar.png' className='mr-2' size={24} />
+          <Text type='title' level={7} weight='bold' extraClass='m-0 ml-2'>
             {' '}
             {text}
           </Text>{' '}
@@ -143,7 +137,7 @@ function UserSettings({
       key: 'actions',
       render: (values) => (
         <Dropdown overlay={() => menu(values)} trigger={['click']}>
-          <Button size={'large'} type='text' icon={<MoreOutlined />} />
+          <Button size='large' type='text' icon={<MoreOutlined />} />
         </Dropdown>
       )
     }
@@ -162,7 +156,7 @@ function UserSettings({
           key: index,
           name: `${
             agent.first_name || agent.last_name
-              ? agent.first_name + ' ' + agent.last_name
+              ? `${agent.first_name} ${agent.last_name}`
               : '---'
           }`,
           email: agent.email,
@@ -171,8 +165,8 @@ function UserSettings({
             agent.last_logged_in
               ? MomentTz(agent.last_logged_in).fromNow()
               : !agent.is_email_verified
-              ? 'Pending Invite'
-              : '---'
+                ? 'Pending Invite'
+                : '---'
           }`,
           actions: values
         });
@@ -193,38 +187,28 @@ function UserSettings({
   };
 
   return (
-    <div className={'fa-container'}>
+    <div className='fa-container'>
       <Row gutter={[24, 24]} justify='center'>
-        <Col span={22}>
-          <div className={'mb-10 pl-4'}>
-            <Row>
-              <Col span={12}>
-                <Text
-                  type={'title'}
-                  level={3}
-                  weight={'bold'}
-                  extraClass={'m-0'}
-                  id={'fa-at-text--page-title'}
-                >
-                  Users and Roles
-                </Text>
-              </Col>
-              <Col span={12}>
-                <div className={'flex justify-end'}>
+        <Col span={24}>
+          <div className='mb-10 pl-4'>
+            <CommonSettingsHeader
+              title='Users and Roles'
+              actionsNode={
+                <div className='flex justify-end'>
                   <Button
-                    size={'large'}
+                    size='large'
                     disabled={dataLoading}
                     onClick={() => setInviteModal(true)}
                   >
                     Invite Users
                   </Button>
                 </div>
-              </Col>
-            </Row>
-            <Row className={'mt-8'}>
+              }
+            />
+            <Row className='mt-2'>
               <Col span={24}>
                 <Table
-                  className={'fa-table--basic'}
+                  className='fa-table--basic'
                   loading={dataLoading}
                   dataSource={dataSource}
                   columns={columns}

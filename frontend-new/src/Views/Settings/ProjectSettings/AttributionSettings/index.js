@@ -2,16 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { connect } from 'react-redux';
 import { Text } from 'factorsComponents';
 import { Row, Col, Button, Tabs, Select, message } from 'antd';
-import SelectKPIBlock from './SelectKPIBlock';
-import {
-  udpateProjectSettings,
-  fetchProjectSettings
-} from '../../../../reducers/global';
 import {
   AttributionGroupOptions,
   DealOrOppurtunity,
   CompanyOrAccount
 } from 'Utils/constants';
+import CommonSettingsHeader from 'Components/GenericComponents/CommonSettingsHeader';
+import SelectKPIBlock from './SelectKPIBlock';
+import {
+  udpateProjectSettings,
+  fetchProjectSettings
+} from '../../../../reducers/global';
 
 const { TabPane } = Tabs;
 const { Option } = Select;
@@ -64,29 +65,27 @@ const AttributionSettings = ({
   }
 
   const onWindowChange = (val) => {
-    const opts = Object.assign({}, attrConfig);
+    const opts = { ...attrConfig };
     opts.attribution_window = val;
     setAttrConfig(opts);
   };
 
   const onQueryTypeChange = (val) => {
-    const opts = Object.assign({}, attrConfig);
+    const opts = { ...attrConfig };
     opts.query_type = val;
     setAttrConfig(opts);
   };
 
-  const renderEditActions = () => {
-    return (
-      <div className={`flex justify-end`}>
-        <Button className={'mr-2'} size={'large'} onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type={'primary'} size={'large'} onClick={onSave}>
-          Save
-        </Button>
-      </div>
-    );
-  };
+  const renderEditActions = () => (
+    <div className='flex justify-end'>
+      <Button className='mr-2' size='large' onClick={onCancel}>
+        Cancel
+      </Button>
+      <Button type='primary' size='large' onClick={onSave}>
+        Save
+      </Button>
+    </div>
+  );
 
   const onSave = () => {
     udpateProjectSettings(activeProject.id, {
@@ -129,7 +128,7 @@ const AttributionSettings = ({
 
     if (value.length < 10) {
       blockList.push(
-        <div key={'init'}>
+        <div key='init'>
           <SelectKPIBlock
             header={header}
             index={value.length + 1}
@@ -159,9 +158,9 @@ const AttributionSettings = ({
           onQueryTypeChange(val);
         }}
       >
-        {queryTypes.map((qType, index) => {
-          return <Option value={qType[1]}>{qType[0]}</Option>;
-        })}
+        {queryTypes.map((qType, index) => (
+          <Option value={qType[1]}>{qType[0]}</Option>
+        ))}
       </Select>
     );
   };
@@ -177,90 +176,79 @@ const AttributionSettings = ({
           onWindowChange(val);
         }}
       >
-        {window.map((days, index) => {
-          return (
-            <Option value={days}>
-              {Number.isInteger(days) &&
-                `${days} ${days === 1 ? 'day' : 'days'}`}
-            </Option>
-          );
-        })}
+        {window.map((days, index) => (
+          <Option value={days}>
+            {Number.isInteger(days) && `${days} ${days === 1 ? 'day' : 'days'}`}
+          </Option>
+        ))}
       </Select>
     );
   };
 
-  const attributionWindow = () => {
-    return (
-      <div>
-        <Row>
-          <Col span={24}>
-            <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>
-              Attributions Window
-            </Text>
-          </Col>
-          <Col span={18}>
-            <Text type={'title'} level={7} extraClass={'m-0'}>
-              Changing the attribution window will only apply going forward.
-              These changes will be reflected in all reports within the
-              Analytics property.
-            </Text>
-          </Col>
-          <Col span={24}>
-            <div className={'mt-4'}>{selectWindow()}</div>
-          </Col>
-        </Row>
-      </div>
-    );
-  };
+  const attributionWindow = () => (
+    <div>
+      <Row>
+        <Col span={24}>
+          <Text type='title' level={6} weight='bold' extraClass='m-0'>
+            Attributions Window
+          </Text>
+        </Col>
+        <Col span={18}>
+          <Text type='title' level={7} extraClass='m-0'>
+            Changing the attribution window will only apply going forward. These
+            changes will be reflected in all reports within the Analytics
+            property.
+          </Text>
+        </Col>
+        <Col span={24}>
+          <div className='mt-4'>{selectWindow()}</div>
+        </Col>
+      </Row>
+    </div>
+  );
 
-  const renderAttributionQueryType = () => {
-    return (
-      <div>
-        <Row>
-          <Col span={24}>
-            <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>
-              Attributions Query Type
-            </Text>
-          </Col>
-          <Col span={18}>
-            {/* <Text type={'title'} level={7} extraClass={'m-0'}>
+  const renderAttributionQueryType = () => (
+    <div>
+      <Row>
+        <Col span={24}>
+          <Text type='title' level={6} weight='bold' extraClass='m-0'>
+            Attributions Query Type
+          </Text>
+        </Col>
+        <Col span={18}>
+          {/* <Text type={'title'} level={7} extraClass={'m-0'}>
               Changing the attribution window will only apply going forward.
               These changes will be reflected in all reports within the
               Analytics property.
             </Text> */}
-          </Col>
-          <Col span={24}>
-            <div className={'mt-4'}>{selectQueryType()}</div>
-          </Col>
-        </Row>
-      </div>
-    );
-  };
+        </Col>
+        <Col span={24}>
+          <div className='mt-4'>{selectQueryType()}</div>
+        </Col>
+      </Row>
+    </div>
+  );
 
-  const renderAttributionContent = () => {
-    return (
-      <Tabs activeKey={`${tabNo}`} onChange={callback}>
-        {tabsArray.map((name, index) => {
-          return (
-            <TabPane tab={name[0]} key={index}>
-              <div
-                style={{
-                  border: '1px solid #f0f0f0',
-                  padding: '20px',
-                  paddingTop: 0
-                }}
-              >
-                {kpiList(name[1])}
-              </div>
-            </TabPane>
-          );
-        })}
-      </Tabs>
-    );
-  };
+  const renderAttributionContent = () => (
+    <Tabs activeKey={`${tabNo}`} onChange={callback}>
+      {tabsArray.map((name, index) => (
+        <TabPane tab={name[0]} key={index}>
+          <div
+            style={{
+              border: '1px solid #f0f0f0',
+              padding: '20px',
+              paddingTop: 0
+            }}
+          >
+            {kpiList(name[1])}
+          </div>
+        </TabPane>
+      ))}
+    </Tabs>
+  );
 
   const onGroupAttributionChange = (val) => {
-    const updatedAttrConfig = Object.assign({}, attrConfig);
+    const updatedAttrConfig = { ...attrConfig };
     if (val === CompanyOrAccount) {
       updatedAttrConfig.hubspot_companies = true;
       updatedAttrConfig.salesforce_accounts = true;
@@ -289,72 +277,70 @@ const AttributionSettings = ({
     return null;
   };
 
-  const selectGroupAttribution = () => {
-    return (
-      <Select
-        value={getGroupAttributionValue()}
-        style={{ width: 300 }}
-        placement='bottomLeft'
-        onChange={(val) => {
-          onGroupAttributionChange(val);
-        }}
-      >
-        {AttributionGroupOptions.map((group) => {
-          return (
-            <Option value={group} key={group}>
-              {group}
-            </Option>
-          );
-        })}
-      </Select>
-    );
-  };
+  const selectGroupAttribution = () => (
+    <Select
+      value={getGroupAttributionValue()}
+      style={{ width: 300 }}
+      placement='bottomLeft'
+      onChange={(val) => {
+        onGroupAttributionChange(val);
+      }}
+    >
+      {AttributionGroupOptions.map((group) => (
+        <Option value={group} key={group}>
+          {group}
+        </Option>
+      ))}
+    </Select>
+  );
 
-  const groupAttribution = () => {
-    return (
-      <div>
-        <Row>
-          <Col span={24}>
-            <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>
-              Group Attribution
-            </Text>
-          </Col>
-          <Col span={18}>
-            <Text type={'title'} level={7} extraClass={'m-0'}>
-              This option allows you to attribute revenue to either all contacts
-              associated with Deals / Opportunities Or all contacts associated
-              with the Company/ Account. By default this is set to Company /
-              Account. Pick one below.
-            </Text>
-          </Col>
-          <Col span={24}>
-            <div className={'mt-4'}>{selectGroupAttribution()}</div>
-          </Col>
-        </Row>
-      </div>
-    );
-  };
+  const groupAttribution = () => (
+    <div>
+      <Row>
+        <Col span={24}>
+          <Text type='title' level={6} weight='bold' extraClass='m-0'>
+            Group Attribution
+          </Text>
+        </Col>
+        <Col span={18}>
+          <Text type='title' level={7} extraClass='m-0'>
+            This option allows you to attribute revenue to either all contacts
+            associated with Deals / Opportunities Or all contacts associated
+            with the Company/ Account. By default this is set to Company /
+            Account. Pick one below.
+          </Text>
+        </Col>
+        <Col span={24}>
+          <div className='mt-4'>{selectGroupAttribution()}</div>
+        </Col>
+      </Row>
+    </div>
+  );
 
   return (
-    <div className={'fa-container'}>
+    <div className='fa-container'>
+      <CommonSettingsHeader
+        title='Attribution Configuration'
+        actionsNode={renderEditActions()}
+      />
       <Row gutter={[24, 24]} justify='center'>
-        <Col span={22}>
-          <Row className={`flex items-center`}>
-            <Col span={12}>
+        <Col span={24}>
+          <Row className='flex items-center'>
+            {/* <Col span={12}>
               <Text
-                type={'title'}
+                type='title'
                 level={3}
-                weight={'bold'}
-                extraClass={'m-0 m-1'}
-                id={'fa-at-text--page-title'}
+                weight='bold'
+                extraClass='m-0 m-1'
+                id='fa-at-text--page-title'
               >
                 Attribution Configuration
               </Text>
             </Col>
-            <Col span={12}>{renderEditActions()}</Col>
+            <Col span={12}>{renderEditActions()}</Col> */}
           </Row>
           <Row>
-            <div className={'fa-warning'}>
+            <div className='fa-warning'>
               This is configured at the time of initial setup. We don't support
               to change it at the moment. Please contact customer support for
               more details.
@@ -362,12 +348,12 @@ const AttributionSettings = ({
           </Row>
           <Row>
             <Col span={24}>
-              <Text type={'title'} level={6} weight={'bold'} extraClass={'m-0'}>
+              <Text type='title' level={6} weight='bold' extraClass='m-0'>
                 KPI's to contribute
               </Text>
             </Col>
             <Col span={24}>
-              <Text type={'title'} level={7} extraClass={'m-0'}>
+              <Text type='title' level={7} extraClass='m-0'>
                 Select the KPI's to be considered as part of Attribution
                 Reporting. You can select upto 5 KPI's to atrribution.
               </Text>
@@ -375,22 +361,22 @@ const AttributionSettings = ({
           </Row>
           <Row>
             <Col span={24}>
-              <div className={'mt-6'}>{renderAttributionContent()}</div>
+              <div className='mt-6'>{renderAttributionContent()}</div>
             </Col>
           </Row>
           <Row>
             <Col span={24}>
-              <div className={'my-6'}>{attributionWindow()}</div>
+              <div className='my-6'>{attributionWindow()}</div>
             </Col>
           </Row>
           <Row>
             <Col span={24}>
-              <div className={'my-6'}>{renderAttributionQueryType()}</div>
+              <div className='my-6'>{renderAttributionQueryType()}</div>
             </Col>
           </Row>
           <Row>
             <Col span={24}>
-              <div className={'my-6'}>{groupAttribution()}</div>
+              <div className='my-6'>{groupAttribution()}</div>
             </Col>
           </Row>
         </Col>

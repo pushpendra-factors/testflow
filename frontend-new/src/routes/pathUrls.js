@@ -19,23 +19,27 @@ export const PathUrls = {
   VisitorIdentificationReport: '/reports/visitor_report',
   PathAnalysis: '/path-analysis',
   PathAnalysisInsights: '/path-analysis/insights',
-  ConfigureEvents: '/settings/events',
-  ConfigureProperties: '/settings/properties',
-  ConfigureContentGroups: '/settings/contentgroups',
-  ConfigureTouchPoints: '/settings/touchpoints',
-  ConfigureCustomKpi: '/settings/customkpi',
-  ConfigureDataPoints: '/settings/explaindp',
-  ConfigureEngagements: '/settings/engagements',
-  ConfigureAttribution: '/settings/attribution',
-  ConfigurePlans: '/settings/plans',
-  ConfigurePlansAdmin: '/settings/plans/admin',
+
+  // general settings
   SettingsGeneral: '/settings/general',
-  SettingsUser: '/settings/user',
+  SettingsMembers: '/settings/members',
+  SettingsPricing: '/settings/pricing',
+  SettingsSharing: '/settings/project/sharing',
+
+  // personal settings
+  SettingsPersonalUser: '/settings/user',
+  SettingsPersonalProjects: '/settings/projects',
+
+  // data management settings
   SettingsIntegration: '/settings/integration',
   SettingsIntegrationURLID: '/settings/integration/:integration_id',
   IntegrationCallbackRedirection: '/callback/integration/:integration_id',
-  SettingsSharing: '/settings/sharing',
-  SettingsPricing: '/settings/pricing',
+  SettingsTouchpointDefinition: '/settings/touchpoint_definition',
+  SettingsCustomDefinition: '/settings/custom_definition',
+  SettingsAttribution: '/settings/attribution',
+  ConfigurePlans: '/settings/plans',
+  ConfigurePlansAdmin: '/settings/plans/admin',
+
   Settings: '/settings',
   Upgrade: '/upgrade',
   Onboarding: '/onboarding',
