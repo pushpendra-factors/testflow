@@ -34,7 +34,8 @@ const mapUser = ({
   name,
   extraProp,
   id,
-  isAnonymous
+  isAnonymous,
+  isGroupUser: name === 'group_user'
 });
 
 export const formatAccountTimeline = (data) => {

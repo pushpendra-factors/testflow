@@ -96,25 +96,24 @@ func GetAllAlertsInOneHandler(c *gin.Context) (interface{}, int, string, string,
 				return nil, http.StatusInternalServerError, "", "Failed to decode alert configuration", true
 			}
 			if alertConfig.IsSlackEnabled {
-				var slackChannels model.SlackChannelsAndUserGroups
+				var slackChannels map[string][]model.SlackChannel
 				err = U.DecodePostgresJsonbToStructType(alertConfig.SlackChannelsAndUserGroups, &slackChannels)
 				if err != nil {
 					return nil, http.StatusInternalServerError, "", "Failed to decode slack channels and user groups", true
 				}
-				for key, slackChannel := range slackChannels.SlackChannelsAndUserGroups {
+				for key, slackChannel := range slackChannels {
 					for idx, channel := range slackChannel {
 						if channel.IsPrivate {
-							slackChannel[idx].Name = "#PRIVATE_CHANNEL"
+							slackChannel[idx].Name = "PRIVATE_CHANNEL"
 						}
 					}
-					slackChannels.SlackChannelsAndUserGroups[key] = slackChannel
+					slackChannels[key] = slackChannel
 				}
 
 				slackChannelsJson, err := U.EncodeStructTypeToPostgresJsonb(slackChannels)
 				if err != nil {
 					return nil, http.StatusInternalServerError, "", "Failed to encode slack channels", true
 				}
-				log.Info("$$$$ slack channels json config ", string(slackChannelsJson.RawMessage))
 				alertConfig.SlackChannelsAndUserGroups = slackChannelsJson
 
 				alertConfigJson, err := U.EncodeStructTypeToPostgresJsonb(alertConfig)
@@ -122,12 +121,10 @@ func GetAllAlertsInOneHandler(c *gin.Context) (interface{}, int, string, string,
 					return nil, http.StatusInternalServerError, "", "Failed to encode alert configuration", true
 				}
 				alert.AlertConfiguration = alertConfigJson
-				log.Info("$$$$ alert config json config ", string(alertConfigJson.RawMessage))
 				alertJson, err := U.EncodeStructTypeToPostgresJsonb(alert)
 				if err != nil {
 					return nil, http.StatusInternalServerError, "", "Failed to encode weekly alert", true
 				}
-				log.Info("$$$$ alert json config ", string(alertJson.RawMessage))
 				kpiAlert.Alert = alertJson
 				kpis[tidx] = kpiAlert
 			}
