@@ -732,10 +732,11 @@ func InitDataServiceRoutes(r *gin.Engine) {
 	dataServiceRouteGroup.POST("/task/end", responseWrapper(V1.InsertTaskEndRecordHandler))
 	dataServiceRouteGroup.DELETE("/task/end", responseWrapper(V1.DeleteTaskEndRecordHandler))
 	dataServiceRouteGroup.GET("/task/dependent_task_done", responseWrapper(V1.IsDependentTaskDoneHandler))
-	dataServiceRouteGroup.POST("/chat/job/scratch", IH.DataServiceAddEmbeddingsFromScratch)
-	dataServiceRouteGroup.POST("/chat/job/new", IH.DataServiceAddNewEmbeddings)
-	dataServiceRouteGroup.GET("/chat/job", IH.DataServiceGetDBPrompts)
+
+	dataServiceRouteGroup.POST("/chat/job", IH.DataServiceAddEmbeddings)
 	dataServiceRouteGroup.GET("/chat/app/matching", IH.DataServiceGetMatchingEmbeddings)
+	dataServiceRouteGroup.GET("/chat/job/missing", IH.DataServiceGetMissingPrompts)
+	dataServiceRouteGroup.DELETE("/chat/job", IH.DataServiceDeleteDataByProjectId)
 
 }
 

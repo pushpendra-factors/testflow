@@ -52,7 +52,7 @@ class ChatHandler(BaseHandler):
             kpi_config = json.loads(cls.request.body)["kpi_config"]
             log.info('prompt: %s', prompt)
             prompt_emb = embed_sentence(prompt, normalise=True)
-            matching_embeddings_data =  FactorsDataService.get_matching_chat_embeddings(prompt_emb)
+            matching_embeddings_data =  FactorsDataService.get_matching_chat_embeddings(0, prompt_emb)
             result = get_answer_using_ir_model(cls, prompt, matching_embeddings_data['data'])
             # if app.CONFIG.ADWORDS_APP.env == "development":
             #     result = get_answer_from_ir_model_local(cls, prompt)

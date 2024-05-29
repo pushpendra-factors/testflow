@@ -265,10 +265,11 @@ class FactorsDataService:
         return sync_info_with_type
 
     @classmethod
-    def get_matching_chat_embeddings(cls, query_embedding):
+    def get_matching_chat_embeddings(cls, project_id, query_embedding):
         url = cls.data_service_path + "/chat/app/matching"
         payload = {
             "query_embedding": query_embedding.flatten().tolist(),
+            "project_id": project_id
         }
         response = requests.get(url, json=payload)
 
