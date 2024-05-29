@@ -32,6 +32,17 @@ func CloseReadQuery(rows *sql.Rows, tx *sql.Tx) {
 	}
 }
 
+func CloseTx(tx *sql.Tx) {
+	if tx == nil {
+		return
+	}
+
+	err := tx.Commit()
+	if err != nil {
+		log.WithError(err).WithField("stack", string(debug.Stack())).Error("Failed to commit on transaction.")
+	}
+}
+
 // DBReadRows Creates [][]interface{} from sql result rows.
 // Ref: https://kylewbanks.com/blog/query-result-to-map-in-golang
 func DBReadRows(rows *sql.Rows, tx *sql.Tx, queryID string) ([]string, [][]interface{}, error) {
