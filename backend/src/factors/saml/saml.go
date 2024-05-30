@@ -81,7 +81,7 @@ var ErrInvalidRecipient = errors.New("saml: invalid recipient")
 //
 // Verify does not check if cert is expired.
 func Verify(samlResponse string, cert *x509.Certificate, recipient string, now time.Time) (Response, error) {
-	// Recipient="http://factors-dev.com:8080/saml/acs"
+	recipient = "https://staging-api.factors.ai/project/51/saml/acs"
 
 	data, err := base64.StdEncoding.DecodeString(samlResponse)
 	if err != nil {
