@@ -60,6 +60,7 @@ const (
 	FEATURE_WORKFLOWS               = "workflows"
 	CONF_CUSTOM_PROPERTIES          = "conf_custom_properties"
 	CONF_CUSTOM_EVENTS              = "conf_custom_events"
+	FEATURE_LINKEDIN_FREQ_CAPPING   = "linkedin_frequency_capping"
 )
 
 func GetAllAvailableFeatures() []string {
