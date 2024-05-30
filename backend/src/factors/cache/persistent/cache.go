@@ -52,8 +52,8 @@ func SetBatch(keyValue map[*cache.Key]string, expiryInSecs float64, useDB bool) 
 
 	// TODO: Writing to both. Remove redis once migration is completed.
 	redisErr := redis.SetPersistentBatch(keyValue, expiryInSecs)
-
 	logCtx.Info("Writing to cache db.")
+
 	dbErr := db.SetBatch(keyValue, expiryInSecs)
 	if dbErr != nil {
 		logCtx.WithError(dbErr).Warn("Failed to write to db cache.")

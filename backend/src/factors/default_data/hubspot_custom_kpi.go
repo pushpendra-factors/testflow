@@ -94,13 +94,19 @@ var defaultHubspotCustomKPIs = []model.CustomMetric{
 	},
 	{
 		Name:        model.HubspotAvgDealSize,
-		Description: "Sum of Customers divided by Sum of Opps by cohort of Contact Create Date",
+		Description: "Avg Deal size",
 		TypeOfQuery: 1,
 		ObjectType:  model.HubspotDealsDisplayCategory,
 	},
 	{
 		Name:        model.HubspotClosedWonDeals,
 		Description: "Closed  Won Deals",
+		TypeOfQuery: 1,
+		ObjectType:  model.HubspotDealsDisplayCategory,
+	},
+	{
+		Name:        model.HubspotClosedWonDealsCreatedDate,
+		Description: "Closed won Deals (Create Date)",
 		TypeOfQuery: 1,
 		ObjectType:  model.HubspotDealsDisplayCategory,
 	},
@@ -557,6 +563,25 @@ var defaultHubspotCustomKPITransformations = []model.CustomMetricTransformation{
 		Entity:    model.UserEntity,
 	},
 	{
+		AggregateFunction:     model.UniqueAggregateFunction,
+		AggregateProperty:     "",
+		AggregatePropertyType: "categorical",
+		Filters: []model.KPIFilter{
+			{
+				ObjectType:       "",
+				PropertyName:     "$hubspot_deal_dealstage",
+				PropertyDataType: "categorical",
+				Entity:           model.UserEntity,
+				Condition:        model.EqualsOpStr,
+				Value:            "closedwon",
+				LogicalOp:        "AND",
+			},
+		},
+		DateField: "$hubspot_deal_createdate",
+		EventName: "",
+		Entity:    model.UserEntity,
+	},
+	{
 		AggregateFunction:      model.AverageAggregateFunction,
 		AggregateProperty:      "$hubspot_deal_createdate",
 		AggregatePropertyType:  "datetime",
@@ -672,7 +697,7 @@ var defaultHubspotDerivedKPITransformations = []model.KPIQueryGroup{
 			{
 				Category:         model.ProfileCategory,
 				DisplayCategory:  model.HubspotDealsDisplayCategory,
-				Metrics:          []string{model.HubspotClosedWonDeals},
+				Metrics:          []string{model.HubspotClosedWonDealsCreatedDate},
 				Filters:          []model.KPIFilter{},
 				GroupBy:          []model.KPIGroupBy{},
 				GroupByTimestamp: "",

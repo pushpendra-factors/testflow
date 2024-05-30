@@ -18,19 +18,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var avgProps = []string{"ep#$initial_page_load_time",
-	"ep#$initial_page_spent_time",
-	"ep#$initial_page_scroll_percent",
-	"ep#$page_load_time",
-	"ep#$page_spent_time",
-	"ep#$page_scroll_percent",
-	"up#$initial_page_load_time",
-	"up#$initial_page_spent_time",
-	"up#$initial_page_scroll_percent",
-	"up#$latest_page_load_time",
-	"up#$latest_page_spent_time",
-	"up#$latest_page_scroll_percent"}
-
 var props = map[string]string{
 	"ep#$initial_referrer_domain":                                "first",
 	"ep#$is_first_session":                                       "first",
@@ -266,7 +253,7 @@ func PredictiveScoring2(projectId int64, configs map[string]interface{}) (map[st
 	countDatapoints := 0
 
 	outputEndDayTimestamp := endTimestamp
-	outputStartDayTimestamp := outputEndDayTimestamp - (int64(daysOfOutput) * U.Per_day_epoch)
+	outputStartDayTimestamp := 1 + outputEndDayTimestamp - (int64(daysOfOutput) * U.Per_day_epoch)
 
 	inputStartDayTimestamp := outputStartDayTimestamp - (int64(daysOfInput) * U.Per_day_epoch)
 	inputEndDayTimestamp := outputStartDayTimestamp - 1
@@ -503,8 +490,8 @@ func PredictiveScoring2(projectId int64, configs map[string]interface{}) (map[st
 				}
 			}
 			countIds += 1
-			log.Info("countIds: ", countIds)
 		}
+		log.Info("countIds: ", countIds)
 		countDatapoints += countIds
 
 		timestampToGoBack := (int64(gapDaysForNextInput) * U.Per_day_epoch)
