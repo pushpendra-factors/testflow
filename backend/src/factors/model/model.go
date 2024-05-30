@@ -1186,4 +1186,13 @@ type Model interface {
 
 	//Weekly Mailmodo Emails
 	GetWeeklyMailmodoEmailsMetrics(projectId, startTimeStamp, endTimeStamp int64) (model.WeeklyMailmodoEmailMetrics, error)
+	// linkedin frequency capping
+	GetLinkedinCappingConfig(projectID int64) ([]model.LinkedinCappingConfig, int)
+	CreateLinkedinCappingRule(projectID int64, linkedinCappingRule *model.LinkedinCappingRule) int
+	GetAllLinkedinCappingRules(projectID int64) ([]model.LinkedinCappingRule, int)
+	GetLinkedinCappingRule(projectID int64, ruleID string) (model.LinkedinCappingRule, int)
+	UpdateLinkedinCappingRule(projectID int64, ruleID string) int
+	DeleteLinkedinCappingRule(projectID int64, ruleID string) int
+	GetLinkedinCappingExclusionsForRule(projectID int64, ruleID string) ([]model.LinkedinExclusion, int)
+	GetAllLinkedinCappingExclusionsForTimerange(projectID int64, startTimestamp int64, endTimestamp int64) ([]model.LinkedinExclusion, int)
 }
