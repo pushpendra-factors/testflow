@@ -94,7 +94,7 @@ function CustomKPI({
   const inputComponentRef = useAutoFocus(
     pageMode === 'Create' || pageMode === 'Edit'
   );
-  const [timePeriodRangeProperties, setTimePeriosRangeProperties] = useState(
+  const [timePeriodRangeProperties, setTimePeriodRangeProperties] = useState(
     []
   );
   const [timePeriodRangeDDVisible, setTimePeriodRangeDDVisible] = useState([
@@ -353,7 +353,7 @@ function CustomKPI({
               // onClick={deleteItem}
               className='fa-btn--custom ml-2'
               onClick={() => {
-                setTimePeriosRangeProperties((prev) =>
+                setTimePeriodRangeProperties((prev) =>
                   prev.filter((e, i) => i !== eachIndex)
                 );
               }}
@@ -388,7 +388,7 @@ function CustomKPI({
             setTimePeriodRangeDDVisible([false, -1]);
           }}
           optionClickCallback={(value) => {
-            setTimePeriosRangeProperties((p) => {
+            setTimePeriodRangeProperties((p) => {
               if (p.length < 2) {
                 return [...p, value];
               }
@@ -646,7 +646,7 @@ function CustomKPI({
     ]);
 
     setFilterDDValues(DDvalues);
-    setTimePeriosRangeProperties([]);
+    setTimePeriodRangeProperties([]);
     // Below logic is added to pick the Time period based Properties
     // whenever user opens or creates a copy of it
     const pr1 = viewKPIDetails?.transformations?.agPr;
@@ -659,9 +659,14 @@ function CustomKPI({
         const l = tmpRes[0]?.properties?.find((e) => e.name === pr1);
         const l2 = tmpRes[0]?.properties?.find((e) => e.name === pr2);
         if (l && l2) {
-          setTimePeriosRangeProperties([
+          setTimePeriodRangeProperties([
             { label: l.display_name, value: pr1 },
             { label: l2.display_name, value: pr2 }
+          ]);
+        } else {
+          setTimePeriodRangeProperties([
+            { label: pr1, value: pr1 },
+            { label: pr2, value: pr2 }
           ]);
         }
       }
