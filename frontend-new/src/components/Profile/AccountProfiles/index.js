@@ -111,6 +111,8 @@ function AccountProfiles({
   deleteSegment,
   getTop100Events
 }) {
+  const tableRef = useRef();
+
   const dispatch = useDispatch();
   const history = useHistory();
   const location = useLocation();
@@ -997,7 +999,8 @@ function AccountProfiles({
         defaultSorterInfo,
         projectDomainsList,
         onClickOpen,
-        onClickOpenNewTab
+        onClickOpenNewTab,
+        previewState: preview
       })
     );
   }, [
@@ -1005,10 +1008,9 @@ function AccountProfiles({
     groupPropNames,
     tableColumnsList,
     defaultSorterInfo,
-    projectDomainsList
+    projectDomainsList,
+    preview
   ]);
-
-  const tableRef = useRef();
 
   useEffect(() => {
     // This is the name of Account which was opened recently
@@ -1043,6 +1045,12 @@ function AccountProfiles({
     }
   };
 
+  const getRowClassName = (account) => {
+    const isActive =
+      preview?.drawerVisible && account?.domain_name === preview?.domain?.name;
+    return isActive ? 'active cursor-pointer' : 'cursor-pointer';
+  };
+
   const renderTable = useCallback(() => {
     const mergeColumns = newTableColumns.map((col) => ({
       ...col,
@@ -1065,7 +1073,7 @@ function AccountProfiles({
           className='fa-table--profileslist'
           dataSource={tableData}
           columns={mergeColumns}
-          rowClassName='cursor-pointer'
+          rowClassName={getRowClassName}
           pagination={{
             position: ['bottom', 'left'],
             defaultPageSize: '25',
@@ -1079,7 +1087,7 @@ function AccountProfiles({
         />
       </div>
     );
-  }, [tableData, newTableColumns]);
+  }, [tableData, newTableColumns, preview]);
 
   const handleSaveSegment = async (segmentPayload) => {
     try {
@@ -1128,48 +1136,47 @@ function AccountProfiles({
 
   const generateCSVData = useCallback(
     (data, selectedOptions) => {
-      const csvRows = [];
-      const headers = selectedOptions.map(
-        (propName) =>
-          `"${
-            downloadCSVOptions.find((elem) => elem.prop_name === propName)
-              ?.display_name
-          }"`
-      );
-      headers.unshift('"Account Domain"');
-      csvRows.push(headers.join(','));
-
-      data
-        .sort((a, b) => {
-          if ('score' in a) {
-            if (a.score < b.score) return 1;
-            if (a.score > b.score) return -1;
-            return 0;
-          }
-          if (a.domain_name < b.domain_name) return 1;
-          if (a.domain_name > b.domain_name) return -1;
-          return 0;
+      // Generate CSV headers
+      const headers = [
+        '"Account Domain"',
+        ...selectedOptions.map((propName) => {
+          const option = downloadCSVOptions.find(
+            (elem) => elem.prop_name === propName
+          );
+          return `"${option?.display_name}"`;
         })
-        .forEach((d) => {
-          const values = selectedOptions.map((elem) => {
-            const propType = getPropType(tableColumnsList, elem);
+      ];
 
-            return elem === 'last_activity'
-              ? d.last_activity?.replace('T', ' ').replace('Z', '')
-              : renderValue(
-                  d.table_props[elem],
-                  propType,
-                  elem,
-                  projectDomainsList,
-                  true
-                );
-          });
-          values.unshift(d.domain_name);
+      // Sort data
+      const sortedData = data.sort((a, b) => {
+        if ('score' in a) {
+          return b.score - a.score;
+        }
+        return a.domain_name.localeCompare(b.domain_name);
+      });
 
-          csvRows.push(values);
+      // Generate CSV rows
+      const csvRows = sortedData.map((d) => {
+        const values = selectedOptions.map((elem) => {
+          const propType = getPropType(tableColumnsList, elem);
+          if (elem === 'last_activity') {
+            return d.last_activity?.replace('T', ' ').replace('Z', '');
+          }
+          return renderValue(
+            d.table_props[elem],
+            propType,
+            elem,
+            projectDomainsList,
+            true
+          );
         });
+        return [d.domain_name, ...values];
+      });
 
-      return csvRows.join('\n');
+      // Combine headers and rows into CSV string
+      return [headers.join(','), ...csvRows.map((row) => row.join(','))].join(
+        '\n'
+      );
     },
     [selectedTableColumnsList]
   );

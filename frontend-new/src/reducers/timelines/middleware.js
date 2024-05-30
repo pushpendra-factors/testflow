@@ -238,20 +238,25 @@ export const getTop100Events = (projectID, domainName) => async (dispatch) => {
   dispatch({ type: 'FETCH_TOP100_EVENTS_LOADING', domainName });
   try {
     const response = await fetchTop100Events(projectID, domainName);
-    const events = response.data.map((event) => ({
-      ...event,
-      username: event.username || event.user_id,
-      enabled: true
-    }));
+    const events = response.data
+      ? response.data.map((event) => ({
+          ...event,
+          username: event.username || event.user_id,
+          enabled: true
+        }))
+      : [];
+
     const eventPropertiesMap = {};
     events.forEach((event) => {
       eventPropertiesMap[event.id] = event.properties;
     });
+
     dispatch({
       type: 'FETCH_TOP100_EVENTS_FULFILLED',
-      payload: events || [],
+      payload: events,
       domainName
     });
+
     dispatch({
       type: 'FETCH_EVENT_CONFIG_PROPERTIES_MAP_FULFILLED',
       payload: eventPropertiesMap

@@ -5,4 +5,11 @@ export interface TextWithTooltipProps {
   disabled?: boolean;
   maxLines?: number;
   color?: string;
+  hasLink?: boolean;
+  linkTo?: string;
+  linkState?: object;
+  onClick: () => void;
+  active?: boolean;
+  activeClass?: string;
+  alwaysShowTooltip?: boolean;
 }

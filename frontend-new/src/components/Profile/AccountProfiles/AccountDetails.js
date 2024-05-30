@@ -240,7 +240,6 @@ function AccountDetails({
 
   const activeId = useMemo(() => {
     const id = atob(location.pathname.split('/').pop());
-    document.title = 'Accounts - FactorsAI';
     return id;
   }, [location]);
 
@@ -252,6 +251,10 @@ function AccountDetails({
     },
     []
   );
+
+  useEffect(() => {
+    document.title = 'Accounts - FactorsAI';
+  }, []);
 
   useEffect(() => {
     if (timelineViewMode) {
@@ -796,7 +799,6 @@ function AccountDetails({
       granularity,
       collapseAll
     );
-    document.title = 'Accounts - FactorsAI';
     setBirdviewFormatEvents(data);
   }, [activities, granularity]);
 

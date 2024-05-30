@@ -220,7 +220,8 @@ export const getColumns = ({
   defaultSorterInfo,
   projectDomainsList,
   onClickOpen,
-  onClickOpenNewTab
+  onClickOpenNewTab,
+  previewState
 }) => {
   const accountColumn = {
     title: <div className={headerClassStr}>Account Domain</div>,
@@ -247,18 +248,35 @@ export const getColumns = ({
               height='24'
               loading='lazy'
             />
-            <TextWithOverflowTooltip text={domain.name} />
+            <TextWithOverflowTooltip
+              alwaysShowTooltip
+              text={domain.name}
+              hasLink
+              linkTo={`/profiles/accounts/${btoa(
+                domain.identity || domain.id
+              )}`}
+              onClick={(e) => e.preventDefault() && e.stopPropagation()}
+              active={
+                previewState?.drawerVisible &&
+                previewState?.domain?.name === domain.name
+              }
+              activeClass='active-link'
+            />
           </div>
           <div className='inline-flex gap--4 preview-btns'>
-            <Button
-              size='small'
-              onClick={(e) => {
-                e.stopPropagation();
-                onClickOpen(domain);
-              }}
-            >
-              Open
-            </Button>
+            <Tooltip title='Open'>
+              <Button
+                size='small'
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClickOpen(domain);
+                }}
+                className='flex items-center'
+                style={{ padding: '0 4px' }} // temp styling
+              >
+                <SVG name='expand' />
+              </Button>
+            </Tooltip>
             <Tooltip title='Open in new tab'>
               <Button
                 onClick={(e) => {
@@ -267,6 +285,7 @@ export const getColumns = ({
                 }}
                 size='small'
                 className='flex items-center'
+                style={{ padding: '0 6px' }} // temp styling
               >
                 <SVG name='ArrowUpRightSquare' size='12' />
               </Button>
