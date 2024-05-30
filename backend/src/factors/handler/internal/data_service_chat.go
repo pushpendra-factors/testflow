@@ -9,37 +9,7 @@ import (
 	"net/http"
 )
 
-func DataServiceAddEmbeddingsFromScratch(c *gin.Context) {
-	r := c.Request
-
-	var promptEmbeddings model.PromptEmbeddingsPayload
-	decoder := json.NewDecoder(r.Body)
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&promptEmbeddings); err != nil {
-		log.WithError(err).Error("Failed to decode Json request")
-		c.AbortWithStatusJSON(http.StatusInternalServerError,
-			gin.H{"error": "Invalid request json."})
-		return
-	}
-
-	errCode, msg := store.GetStore().DeleteAllEmbeddings()
-	if errCode != http.StatusAccepted {
-		c.AbortWithStatusJSON(errCode, gin.H{"error": msg})
-		return
-	}
-
-	errCode, msg = store.GetStore().AddAllEmbeddings(promptEmbeddings.IndexedPrompts, promptEmbeddings.IndexedQueries, promptEmbeddings.IndexedPromptEmbs)
-	if errCode != http.StatusCreated {
-		log.WithField("document", promptEmbeddings).Error("Failed to insert the promptEmbeddings")
-		c.AbortWithStatusJSON(errCode,
-			gin.H{"error": "Failed to add prompt embedding"})
-		return
-	}
-
-	c.JSON(errCode, gin.H{"message": "Successfully added all prompt embeddings from scratch"})
-}
-
-func DataServiceAddNewEmbeddings(c *gin.Context) {
+func DataServiceAddEmbeddings(c *gin.Context) {
 	r := c.Request
 
 	var promptEmbeddings model.PromptEmbeddingsPayload
@@ -52,7 +22,7 @@ func DataServiceAddNewEmbeddings(c *gin.Context) {
 		return
 	}
 
-	errCode, msg := store.GetStore().AddAllEmbeddings(promptEmbeddings.IndexedPrompts, promptEmbeddings.IndexedQueries, promptEmbeddings.IndexedPromptEmbs)
+	errCode, msg := store.GetStore().AddAllEmbeddings(promptEmbeddings.ProjectId, promptEmbeddings.IndexedPrompts, promptEmbeddings.IndexedQueries, promptEmbeddings.IndexedPromptEmbs)
 	if errCode != http.StatusCreated {
 		log.WithField("document", promptEmbeddings).Error(msg)
 		c.AbortWithStatusJSON(errCode,
@@ -76,7 +46,7 @@ func DataServiceGetMatchingEmbeddings(c *gin.Context) {
 		return
 	}
 
-	statusCode, msg, embeddings := store.GetStore().GetMatchingEmbeddings(payload.QueryEmbedding)
+	statusCode, msg, embeddings := store.GetStore().GetMatchingEmbeddings(payload.ProjectId, payload.QueryEmbedding)
 	if statusCode != http.StatusOK {
 		log.Error("Failed to retrieve embeddings")
 		c.JSON(statusCode, gin.H{"error": msg})
@@ -86,7 +56,35 @@ func DataServiceGetMatchingEmbeddings(c *gin.Context) {
 	c.JSON(statusCode, gin.H{"message": msg, "data": embeddings})
 }
 
-func DataServiceGetDBPrompts(c *gin.Context) {
+func DataServiceGetMissingPrompts(c *gin.Context) {
+	r := c.Request
+
+	type QueryPayload struct {
+		ProjectID int64    `json:"project_id"`
+		Prompts   []string `json:"indexed_prompts"`
+	}
+
+	var payload QueryPayload
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&payload); err != nil {
+		log.WithError(err).Error("Failed to decode Json request on get matching embeddings handler")
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "Invalid request json."})
+		return
+	}
+
+	statusCode, msg, prompts := store.GetStore().GetMissingPromptsByProjectID(payload.ProjectID, payload.Prompts)
+	if statusCode != http.StatusOK {
+		log.Error("Failed to retrieve embeddings")
+		c.JSON(statusCode, gin.H{"error": msg})
+		return
+	}
+
+	c.JSON(statusCode, gin.H{"message": msg, "data": prompts})
+}
+
+func DataServiceDeleteDataByProjectId(c *gin.Context) {
 	r := c.Request
 
 	type QueryPayload struct {
@@ -102,13 +100,12 @@ func DataServiceGetDBPrompts(c *gin.Context) {
 			gin.H{"error": "Invalid request json."})
 		return
 	}
-
-	statusCode, msg, prompts := store.GetStore().GetDBPromptsByProjectID(payload.ProjectID)
-	if statusCode != http.StatusOK {
+	errCode, msg := store.GetStore().DeleteEmbeddingsByProject(payload.ProjectID)
+	if errCode != http.StatusAccepted {
 		log.Error("Failed to retrieve embeddings")
-		c.JSON(statusCode, gin.H{"error": msg})
+		c.JSON(errCode, gin.H{"error": msg})
 		return
 	}
 
-	c.JSON(statusCode, gin.H{"message": msg, "data": prompts})
+	c.JSON(errCode, gin.H{"message": msg})
 }

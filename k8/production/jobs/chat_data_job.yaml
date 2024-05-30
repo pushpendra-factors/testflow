@@ -28,8 +28,10 @@ spec:
             - $(ENV)
             - --chat_bucket
             - factors-staging-misc
-            - --scratch
-            - "False"
+            - --mode
+            - ""
+            - --project_id
+            - '0'
             - --oauth_secret
             - $(GOOGLE_OAUTH_SECRET)
             - --developer_token

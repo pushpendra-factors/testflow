@@ -6,32 +6,34 @@ import (
 	"factors/model/model"
 	log "github.com/sirupsen/logrus"
 	"net/http"
+	"strings"
 	"time"
 )
 
-func (store *MemSQL) DeleteAllEmbeddings() (int, string) {
+func (store *MemSQL) DeleteEmbeddingsByProject(projectId int64) (int, string) {
 	logFields := log.Fields{
-		"method": "DeleteAllEmbeddings",
+		"method":     "DeleteEmbeddingsByProject",
+		"project_id": projectId,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
 	db := C.GetServices().Db
 
-	// Delete all rows from the PromptEmbeddings table
-	query := db.Delete(&model.PromptEmbeddings{})
+	// Delete all rows from the PromptEmbeddings table where the project ID matches the given project ID
+	query := db.Where("project_id = ?", projectId).Delete(&model.PromptEmbeddings{})
 	if err := query.Error; err != nil {
-		log.WithError(err).Error("Failed deleting all prompt embeddings")
+		log.WithError(err).Error("Failed deleting all prompt embeddings for project ID", projectId)
 		return http.StatusInternalServerError, "Failed deleting all prompt embeddings"
 	}
 
 	if query.RowsAffected == 0 {
-		log.Info("No embeddings found to delete")
+		log.Info("No embeddings found to delete for project ID", projectId)
 	}
 
-	return http.StatusAccepted, ""
+	return http.StatusAccepted, "Successfully deleted chat data"
 }
 
-func (store *MemSQL) AddAllEmbeddings(prompts []string, queries []string, embeddings [][]float32) (int, string) {
+func (store *MemSQL) AddAllEmbeddings(projectId int64, prompts []string, queries []string, embeddings [][]float32) (int, string) {
 	logFields := log.Fields{
 		"method": "AddAllEmbeddings",
 	}
@@ -58,7 +60,7 @@ func (store *MemSQL) AddAllEmbeddings(prompts []string, queries []string, embedd
 		}
 
 		// Create a new record in the PromptEmbeddings table
-		if err := db.Create(&model.PromptEmbeddings{Prompt: prompt, Query: query, Embedding: embeddingJSON}).Error; err != nil {
+		if err := db.Create(&model.PromptEmbeddings{ProjectID: projectId, Prompt: prompt, Query: query, Embedding: embeddingJSON}).Error; err != nil {
 			log.WithError(err).Error("Failed to insert prompt and embedding")
 			return http.StatusInternalServerError, "Failed to insert prompt and embedding"
 		}
@@ -67,7 +69,7 @@ func (store *MemSQL) AddAllEmbeddings(prompts []string, queries []string, embedd
 	return http.StatusCreated, "Successfully inserted all prompt embeddings"
 }
 
-func (store *MemSQL) GetMatchingEmbeddings(queryEmbedding []float32) (int, string, model.PromptEmbeddingsPayload) {
+func (store *MemSQL) GetMatchingEmbeddings(projectId int64, queryEmbedding []float32) (int, string, model.PromptEmbeddingsPayload) {
 	logFields := log.Fields{
 		"method": "GetTopMatchingEmbeddings",
 	}
@@ -85,11 +87,12 @@ func (store *MemSQL) GetMatchingEmbeddings(queryEmbedding []float32) (int, strin
 	query := `SELECT project_id, prompt, query, embedding,
 		embedding <*> ? AS score
 	FROM prompt_embeddings
+	WHERE project_id = ?
 	ORDER BY score DESC
 	LIMIT 10;`
 
 	// Execute the query and process the results
-	rows, err := db.Raw(query, embeddingJSON).Rows()
+	rows, err := db.Raw(query, embeddingJSON, projectId).Rows()
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve top matching embeddings")
 		return http.StatusInternalServerError, "Failed to retrieve top matching embeddings", model.PromptEmbeddingsPayload{}
@@ -130,34 +133,47 @@ func (store *MemSQL) GetMatchingEmbeddings(queryEmbedding []float32) (int, strin
 	}
 }
 
-func (store *MemSQL) GetDBPromptsByProjectID(projectID int64) (int, string, []string) {
+func (store *MemSQL) GetMissingPromptsByProjectID(projectID int64, givenPrompts []string) (int, string, []string) {
 	logFields := log.Fields{
-		"method":    "GetDBPromptsByProjectID",
+		"method":    "GetMissingPromptsByProjectID",
 		"projectID": projectID,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
+	if len(givenPrompts) == 0 {
+		return http.StatusOK, "No prompts given", nil
+	}
+
 	db := C.GetServices().Db
 
-	// Prepare the query
-	query := `SELECT prompt FROM prompt_embeddings WHERE project_id = ?`
+	// Create placeholders for the query
+	placeholders := make([]string, len(givenPrompts))
+	args := make([]interface{}, len(givenPrompts)+1)
+	args[0] = projectID
+	for i, prompt := range givenPrompts {
+		placeholders[i] = "?"
+		args[i+1] = prompt
+	}
+
+	// Prepare the query to find existing prompts
+	query := `SELECT prompt FROM prompt_embeddings WHERE project_id = ? AND prompt IN (` + strings.Join(placeholders, ",") + `)`
 
 	// Execute the query and process the results
-	rows, err := db.Raw(query, projectID).Rows()
+	rows, err := db.Raw(query, args...).Rows()
 	if err != nil {
 		log.WithError(err).Error("Failed to retrieve prompts by project ID")
 		return http.StatusInternalServerError, "Failed to retrieve prompts by project ID", nil
 	}
 	defer rows.Close()
 
-	var prompts []string
+	existingPrompts := make(map[string]int)
 	for rows.Next() {
 		var prompt string
 		if err := rows.Scan(&prompt); err != nil {
 			log.WithError(err).Error("Failed to scan prompt")
 			return http.StatusInternalServerError, "Failed to scan prompt", nil
 		}
-		prompts = append(prompts, prompt)
+		existingPrompts[prompt] = 1
 	}
 
 	if err := rows.Err(); err != nil {
@@ -165,5 +181,13 @@ func (store *MemSQL) GetDBPromptsByProjectID(projectID int64) (int, string, []st
 		return http.StatusInternalServerError, "Error iterating over rows", nil
 	}
 
-	return http.StatusOK, "Successfully retrieved prompts", prompts
+	// Determine missing prompts
+	var missingPrompts []string
+	for _, prompt := range givenPrompts {
+		if _, found := existingPrompts[prompt]; !found {
+			missingPrompts = append(missingPrompts, prompt)
+		}
+	}
+
+	return http.StatusOK, "Successfully retrieved missing prompts", missingPrompts
 }
