@@ -2781,7 +2781,7 @@ func (store *MemSQL) GetTopEventsForADomain(projectID int64, domainName string) 
 	domainGroup, errCode := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
 	if errCode != http.StatusFound {
 		log.WithFields(logFields).Error("Domain group not found")
-		return eventsList, http.StatusInternalServerError
+		return []model.TimelineEvent{}, http.StatusInternalServerError
 	}
 
 	domainID, err := store.GetDomainIDFromDomainName(projectID, domainName, domainGroup.ID)
