@@ -922,3 +922,32 @@ func TestAccScoreFilterIsknownIsUnknown(t *testing.T) {
 		assert.ElementsMatch(t, ids, ev_rules[idx], fmt.Sprintf("events :%d", idx))
 	}
 }
+
+func TestUpdateEventChannel(t *testing.T) {
+
+	e1 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$pageview", "et": 165120963, "ecd": 1, "epr": {}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
+	// e2 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$pageview", "et": 165120963, "ecd": 1, "epr": {"$browser": "Chrome",  "$channel": "Paid Search", "$city": "Queanbeyan","$country": "Australia"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
+	// e3 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$pageview", "et": 165120963, "ecd": 1, "epr": {"$browser": "Chrome", "$channel": "Paid Search", "$city": "Queanbeyan"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
+	// e4 := string(`{"uid": "pp5", "ujt": 1651209637, "en": "$pageview", "et": 165120963, "ecd": 1, "epr": {"$browser": "Chrome",  "$channel": "Paid Search", "$city": "Queanbeyan"}, "upr": {}, "g1ui": "t1", "g3ui": "t2", "g3ui": "t3"}`)
+
+	// ev := []string{e1, e2, e3, e4}
+	// var events []*P.CounterEventFormat = make([]*P.CounterEventFormat, 0)
+	var user T.AggEventsOnUserAndGroup
+	user.EventsCount = make(map[string]*M.EventAgg)
+	user.Properties = make(map[string]T.PropAggregate)
+	user.User_id = "pp5"
+	user.Is_group = false
+
+	// for _, e := range ev {
+	// 	var testev *P.CounterEventFormat
+	// 	err := json.Unmarshal([]byte(e), &testev)
+	// 	assert.Nil(t, err)
+	// 	events = append(events, testev)
+	// }
+	var event *P.CounterEventFormat
+	err := json.Unmarshal([]byte(e1), &event)
+	assert.Nil(t, err)
+	err = T.UpdateEventChannel_(&user, event)
+	assert.Nil(t, err)
+
+}
