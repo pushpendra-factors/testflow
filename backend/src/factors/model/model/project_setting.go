@@ -197,7 +197,7 @@ var ErrorStateToErrorMessageMap = map[string]string{
 	SYNCED:               "Unhealthy trigger hasn’t occurred",
 	HEAVY_DELAYED:        "“Data will not be lost, just delayed”",
 	CLIENT_TOKEN_EXPIRED: "client side token expired",
-	LIMIT_EXCEED:         "Factors Deanomyzation Limit Exhausted",
+	LIMIT_EXCEED:         "Factors Deanonymization Limit Exhausted",
 	DISCONNECTED:         "Disconnected",
 	CONNECTED:            "Connected",
 	fmt.Sprintf("%s_%s", FEATURE_RUDDERSTACK, PULL_DELAYED): "We are encountering a delay in syncing your data from RudderStack. Please check the destination settings inside your RudderStack account.",
