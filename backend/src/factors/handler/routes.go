@@ -585,14 +585,6 @@ func InitIntRoutes(r *gin.Engine) {
 		mid.SetAuthorizedProjectsByLoggedInAgent(), mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}),
 		IntLinkedinAddAccessTokenHandler)
 
-	intRouteGroup.POST("/linkedin/write/auth", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}), IntLinkedinWriteAuthHandler)
-	intRouteGroup.POST("/linkedin/write/ad_accounts", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}), IntLinkedinWriteAccountHandler)
-
-	intRouteGroup.POST("/linkedin/write/add_access_token",
-		mid.SetLoggedInAgent(),
-		mid.SetAuthorizedProjectsByLoggedInAgent(), mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}),
-		IntLinkedinWriteAddAccessTokenHandler)
-
 	intRouteGroup.POST("/salesforce/enable",
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(), mid.FeatureMiddleware([]string{M.FEATURE_SALESFORCE}),

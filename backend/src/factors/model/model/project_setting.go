@@ -114,34 +114,26 @@ type ProjectSetting struct {
 	//Salesforce settings
 	IntSalesforceEnabledAgentUUID *string `json:"int_salesforce_enabled_agent_uuid,omitempty"`
 	//Linkedin related fields
-	IntLinkedinAdAccount          string  `json:"int_linkedin_ad_account"`
-	IntLinkedinAccessToken        string  `json:"int_linkedin_access_token"`
-	IntLinkedinRefreshToken       string  `json:"int_linkedin_refresh_token"`
-	IntLinkedinRefreshTokenExpiry int64   `json:"int_linkedin_refresh_token_expiry"`
-	IntLinkedinAccessTokenExpiry  int64   `json:"int_linkedin_access_token_expiry"`
-	IntLinkedinAgentUUID          *string `json:"int_linkedin_agent_uuid"`
-
-	//LinkedWrite related fields
-
-	IntLinkedinWriteAdAccount    string  `json:"int_linkedin_write_ad_account"`
-	IntLinkedinWriteAccessToken  string  `json:"int_linkedin_write_access_token"`
-	IntLinkedinWriteRefreshToken string  `json:"int_linkedin_write_refresh_token"`
-	IntLinkedinWriteAgentUUID    *string `json:"int_linkedin_write_agent_uuid"`
-
-	IntDrift                     *bool           `gorm:"not null;default:false" json:"int_drift,omitempty"`
-	IntGoogleIngestionTimezone   string          `json:"int_google_ingestion_timezone"`
-	IntFacebookIngestionTimezone string          `json:"int_facebook_ingestion_timezone"`
-	IntClearBit                  *bool           `gorm:"not null;default:false" json:"int_clear_bit,omitempty"`
-	IntClientSixSignalKey        *bool           `gorm:"not null;default:false" json:"int_client_six_signal_key,omitempty"`
-	IntFactorsSixSignalKey       *bool           `gorm:"not null;default:false" json:"int_factors_six_signal_key,omitempty"`
-	IntAdwordsClientManagerMap   *postgres.Jsonb `json:"int_adwords_client_manager_map"`
-	ClearbitKey                  string          `json:"clearbit_key"`
-	Client6SignalKey             string          `json:"client6_signal_key"`
-	Factors6SignalKey            string          `json:"factors6_signal_key"`
-	LeadSquaredConfig            *postgres.Jsonb `json:"lead_squared_config"`
-	IsWeeklyInsightsEnabled      bool            `json:"is_weekly_insights_enabled"`
-	IsExplainEnabled             bool            `json:"is_explain_enabled"`
-	IntegrationBits              string          `json: "-"`
+	IntLinkedinAdAccount          string          `json:"int_linkedin_ad_account"`
+	IntLinkedinAccessToken        string          `json:"int_linkedin_access_token"`
+	IntLinkedinRefreshToken       string          `json:"int_linkedin_refresh_token"`
+	IntLinkedinRefreshTokenExpiry int64           `json:"int_linkedin_refresh_token_expiry"`
+	IntLinkedinAccessTokenExpiry  int64           `json:"int_linkedin_access_token_expiry"`
+	IntLinkedinAgentUUID          *string         `json:"int_linkedin_agent_uuid"`
+	IntDrift                      *bool           `gorm:"not null;default:false" json:"int_drift,omitempty"`
+	IntGoogleIngestionTimezone    string          `json:"int_google_ingestion_timezone"`
+	IntFacebookIngestionTimezone  string          `json:"int_facebook_ingestion_timezone"`
+	IntClearBit                   *bool           `gorm:"not null;default:false" json:"int_clear_bit,omitempty"`
+	IntClientSixSignalKey         *bool           `gorm:"not null;default:false" json:"int_client_six_signal_key,omitempty"`
+	IntFactorsSixSignalKey        *bool           `gorm:"not null;default:false" json:"int_factors_six_signal_key,omitempty"`
+	IntAdwordsClientManagerMap    *postgres.Jsonb `json:"int_adwords_client_manager_map"`
+	ClearbitKey                   string          `json:"clearbit_key"`
+	Client6SignalKey              string          `json:"client6_signal_key"`
+	Factors6SignalKey             string          `json:"factors6_signal_key"`
+	LeadSquaredConfig             *postgres.Jsonb `json:"lead_squared_config"`
+	IsWeeklyInsightsEnabled       bool            `json:"is_weekly_insights_enabled"`
+	IsExplainEnabled              bool            `json:"is_explain_enabled"`
+	IntegrationBits               string          `json: "-"`
 	// Rudderstack integration settings.
 	IntRudderstack          *bool           `gorm:"not null;default:false" json:"int_rudderstack,omitempty"`
 	ProjectCurrency         string          `json:"currency"`
