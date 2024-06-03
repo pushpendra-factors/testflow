@@ -152,6 +152,9 @@ func Set(key *cache.Key, value string, expiryInSecs float64) error {
 			if err != nil {
 				return err
 			}
+
+			// return nil after update on duplicate.
+			return nil
 		}
 		return err
 	}
