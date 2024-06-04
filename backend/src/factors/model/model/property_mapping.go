@@ -54,7 +54,7 @@ type PropertyMapping struct {
 	IsDeleted     bool            `json:"is_deleted"`
 }
 
-func (propertyMapping *PropertyMapping) IsValid(properties []Property) (bool, string) {
+func (propertyMapping *PropertyMapping) IsValid(properties []Property, customSourcesLength int) (bool, string) {
 
 	// TODO: more validation to be added, $ _ validation
 	if propertyMapping.DisplayName == "" || !U.IsValidPropertyDisplayName(propertyMapping.DisplayName) {
@@ -64,6 +64,24 @@ func (propertyMapping *PropertyMapping) IsValid(properties []Property) (bool, st
 	// Validating properties
 	if len(properties) < 2 {
 		return false, "At least two properties requiered for property_mapping - property_mapping handler."
+	}
+
+	displayCategories := make([]string, 0)
+	for _, property := range properties {
+		displayCategories = append(displayCategories, property.DisplayCategory)
+	}
+
+	isCustomAdsPresent := false
+	for _, displayCategory := range displayCategories {
+		_, present := SectionBitMapping[displayCategory]
+		if !present {
+			isCustomAdsPresent = true
+			break
+		}
+	}
+
+	if isCustomAdsPresent && customSourcesLength > 6 {
+		return false, "Too many custom sources in channels are there for property_mapping - property_mapping handler."
 	}
 
 	dataType := properties[0].DataType
