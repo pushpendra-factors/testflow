@@ -48,7 +48,7 @@ function AttributionTable({
           key !== 'Cost Per Conversion' &&
           key !== 'Conversion Rate' &&
           !key.includes('Linked Event')
-          ) {
+        ) {
           result[key] = rest[key];
         } else {
           const changePercent = calcChangePerc(
@@ -61,16 +61,16 @@ function AttributionTable({
           result[`${key} change`] = isNaN(changePercent)
             ? '0%'
             : changePercent === 'Infinity' || changePercent === '-Infinity'
-            ? 'Infinity'
-            : changePercent + '%';
+              ? 'Infinity'
+              : changePercent + '%';
         }
       });
-      
+
       return result;
     });
 
     return {
-      fileName: `${reportTitle}.csv`,
+      fileName: reportTitle,
       data: mappedData
     };
   };

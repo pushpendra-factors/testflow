@@ -1,11 +1,13 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useContext } from 'react';
 import { useSelector } from 'react-redux';
 import DataTable from '../../../../components/DataTable';
 import {
   getTableColumns,
   getDataInTableFormat,
   getDateBasedColumns,
-  getDateBasedTableData
+  getDateBasedTableData,
+  formatDataInSeriesFormat,
+  formatData
 } from './utils';
 import {
   CHART_TYPE_BARCHART,
@@ -16,6 +18,12 @@ import {
 import { isSeriesChart } from '../../../../utils/dataFormatter';
 import { EVENT_COUNT_KEY } from '../eventsAnalytics.constants';
 import { getEventDisplayName } from '../eventsAnalytics.helpers';
+import { CoreQueryContext } from 'Context/CoreQueryContext';
+import {
+  fetchDataCSVDownload,
+  getEventsCSVData,
+  getQuery
+} from 'Views/CoreQuery/utils';
 
 function SingleEventSingleBreakdownTable({
   data,
@@ -39,7 +47,8 @@ function SingleEventSingleBreakdownTable({
   comparisonApplied,
   compareCategories,
   frequency,
-  eventGroup
+  eventGroup,
+  resultState
 }) {
   const [searchText, setSearchText] = useState('');
   const {
@@ -54,43 +63,87 @@ function SingleEventSingleBreakdownTable({
   const [dateBasedColumns, setDateBasedColumns] = useState([]);
   const [tableData, setTableData] = useState([]);
   const [dateBasedTableData, setDateBasedTableData] = useState([]);
+  const { show_criteria: result_criteria, performance_criteria: user_type } =
+    useSelector((state) => state.analyticsQuery);
+  const { active_project } = useSelector((state) => state.global);
+  const coreQueryContext = useContext(CoreQueryContext);
+  const activeTableData =
+    chartType === CHART_TYPE_BARCHART ? tableData : dateBasedTableData;
+  const tableDataSelector = useCallback(
+    (data) =>
+      chartType === CHART_TYPE_BARCHART
+        ? getDataInTableFormat(data, searchText, sorter)
+        : getDateBasedTableData(
+            data,
+            searchText,
+            dateSorter,
+            categories,
+            comparisonApplied,
+            compareCategories,
+            frequency
+          ),
+    [seriesData, searchText, dateSorter, chartType]
+  );
 
-  const getCSVData = useCallback(() => {
-    const activeTableData =
-      chartType === CHART_TYPE_BARCHART ? tableData : dateBasedTableData;
-    return {
-      fileName: `${reportTitle}.csv`,
-      data: activeTableData.map(
-        ({ index, label, value, name, marker, ...rest }) => {
-          const result = {};
-          Object.keys(rest).forEach((key) => {
-            if (key === 'data') {
-              return;
-            }
-            if (key === EVENT_COUNT_KEY) {
-              result[getEventDisplayName({ eventNames, event: events[0] })] =
-                rest[EVENT_COUNT_KEY];
-              return;
-            }
-            if (key === events[0]) {
-              result[getEventDisplayName({ eventNames, event: events[0] })] =
-                rest[events[0]];
-              return;
-            }
-            result[key] = rest[key];
-          });
-          return result;
-        }
-      )
-    };
-  }, [
-    chartType,
-    tableData,
-    dateBasedTableData,
-    reportTitle,
-    eventNames,
-    events
-  ]);
+  const fetchData = async () => {
+    const results = await fetchDataCSVDownload(coreQueryContext, {
+      projectID: active_project?.id,
+      step2Properties: {
+        result_criteria,
+        user_type,
+        shouldStack: chartType === CHART_TYPE_BARCHART,
+        durationObj,
+        resultState
+      },
+      formatData,
+      formatDataBasedOnChart: formatDataInSeriesFormat,
+      tableDataSelector,
+      getCSVDataCallback,
+      EventBreakDownType: 'sesb',
+      formatDataParams: {},
+      formatDataBasedOnChartParams: {}
+    });
+    return results;
+  };
+
+  const getCSVDataCallback = useCallback(
+    (data) =>
+      data.map(({ index, label, value, name, marker, ...rest }) => {
+        const result = {};
+        Object.keys(rest).forEach((key) => {
+          if (key === 'data') {
+            return;
+          }
+          if (key === EVENT_COUNT_KEY) {
+            result[getEventDisplayName({ eventNames, event: events[0] })] =
+              rest[EVENT_COUNT_KEY];
+            return;
+          }
+          if (key === events[0]) {
+            result[getEventDisplayName({ eventNames, event: events[0] })] =
+              rest[events[0]];
+            return;
+          }
+          result[key] = rest[key];
+        });
+        return result;
+      }),
+
+    [chartType, eventNames, events]
+  );
+  async function getCSVData() {
+    try {
+      let csvData = [];
+      csvData = await fetchData();
+      return {
+        fileName: reportTitle,
+        data: csvData
+      };
+    } catch (error) {
+      console.error(error);
+      return [];
+    }
+  }
 
   useEffect(() => {
     setColumns(
@@ -163,7 +216,6 @@ function SingleEventSingleBreakdownTable({
       )
     );
   }, [seriesData, searchText, dateSorter]);
-
   const selectedRowKeys = useCallback((rows) => rows.map((vp) => vp.index), []);
 
   const onSelectionChange = useCallback(

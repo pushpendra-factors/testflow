@@ -3,7 +3,11 @@ import lowerCase from 'lodash/lowerCase';
 import startCase from 'lodash/startCase';
 
 import { EMPTY_ARRAY, generateRandomKey, groupFilters } from 'Utils/global';
-import { formatFilterDate, isDateInMilliSeconds } from 'Utils/dataFormatter';
+import {
+  formatFilterDate,
+  generateColors,
+  isDateInMilliSeconds
+} from 'Utils/dataFormatter';
 import MomentTz from 'Components/MomentTz';
 import _ from 'lodash';
 
@@ -25,7 +29,8 @@ import {
   MARKETING_TOUCHPOINTS,
   PREDEFINED_DATES,
   QUERY_TYPE_PROFILE,
-  QUERY_OPTIONS_DEFAULT_VALUE
+  QUERY_OPTIONS_DEFAULT_VALUE,
+  TOTAL_USERS_CRITERIA
 } from 'Utils/constants';
 
 import {
@@ -34,6 +39,7 @@ import {
   reverseDateOperatorMap
 } from 'Utils/operatorMapping';
 import moment from 'moment';
+import { getEventsData } from 'Reducers/coreQuery/services';
 import {
   CORE_QUERY_INITIAL_STATE,
   FILTER_TYPES,
@@ -130,7 +136,7 @@ const getNewSegmentKeys = (ev) => ({
 });
 
 export const getEventsWithProperties = (queries) =>
-  queries.map((ev) => {
+  queries?.map((ev) => {
     const ewp = { an: ev.alias, na: ev.label, grpa: ev.group };
     ewp.pr = formatFiltersForQuery(ev.filters);
     if (ev.range) {
@@ -1966,3 +1972,196 @@ export const getStateFromCustomKPIqueryGroup = (
   }
   return queries;
 };
+
+export function jsonToCsv(jsonData) {
+  if (jsonData && jsonData.length === 0) return ``;
+  let csv = '';
+  // Get the headers
+  const headers = Object.keys(jsonData[0]);
+  csv += `${headers.join(',')}\n`;
+  // Add the data
+  jsonData.forEach((row) => {
+    const data = headers.map((header) => JSON.stringify(row[header])).join(','); // Add JSON.stringify statement
+    csv += `${data}\n`;
+  });
+  return csv;
+}
+
+export const getEventsCSVData = async (
+  id,
+  query, // Query Object
+  { result_criteria, user_type, shouldStack, durationObj, resultState }, // 2nd Step
+  formatData, // Step 3
+  formatDataBasedOnChart, // Step 4
+  tableDataSelector,
+  getCSVData,
+  EventBreakDownType,
+  formatDataParams = {},
+  formatDataBasedOnChartParams = {},
+  comparisonQuery = null
+) => {
+  try {
+    const resultantDataTransformation = (a) => {
+      if (result_criteria === TOTAL_EVENTS_CRITERIA) {
+        return formatApiData(a.result_group[0], a.result_group[1]);
+      }
+      if (result_criteria === TOTAL_USERS_CRITERIA) {
+        if (user_type === EACH_USER_TYPE) {
+          return formatApiData(a.result_group[0], a.result_group[1]);
+        }
+        return a.result_group[0];
+      }
+    };
+    const res = await getEventsData(
+      id,
+      query,
+      null, // we need to call fresh query when granularity is changed
+      false,
+      null,
+      true
+    );
+    const data = res.data.result || res.data;
+    let resultantData = null;
+    resultantData = resultantDataTransformation(data);
+
+    let comparisonRes;
+    let comparisonData;
+    let comparisonResultantData;
+    if (comparisonQuery && comparisonQuery.length > 0 && comparisonQuery[0]) {
+      comparisonRes = await getEventsData(
+        id,
+        comparisonQuery,
+        null,
+        false,
+        null,
+        true
+      );
+      comparisonData = comparisonRes.data.result || comparisonRes.data;
+      comparisonResultantData = resultantDataTransformation(comparisonData);
+    }
+
+    let d = [];
+    let aggData = [];
+    if (EventBreakDownType === 'sesb') {
+      aggData = formatData(resultantData, comparisonResultantData);
+      if (shouldStack) {
+        d = aggData;
+      } else {
+        d = formatDataBasedOnChart(
+          resultantData,
+          aggData,
+          durationObj.frequency,
+          comparisonResultantData // comparison Data
+        )?.data;
+      }
+    } else if (EventBreakDownType === 'semb') {
+      // Single Event Multiple Breakdown
+      // No Comparison Is there in this Case
+      aggData = formatData(resultantData);
+      if (shouldStack) {
+        d = aggData;
+      } else {
+        d = formatDataBasedOnChart(
+          resultantData,
+          aggData,
+          durationObj.frequency,
+          resultantData // comparison Data
+        )?.data;
+      }
+    } else if (EventBreakDownType === 'meb') {
+      // Multiple Events with Breakdown
+      // No Compare
+      const appliedColors = generateColors(
+        formatDataBasedOnChartParams?.queries.length
+      );
+      aggData = formatData(
+        resultantData,
+        formatDataBasedOnChartParams.queries,
+        appliedColors,
+        formatDataParams.eventNames
+      );
+      if (shouldStack) {
+        d = aggData;
+      } else {
+        d = formatDataBasedOnChart(
+          resultantData,
+          aggData,
+          formatDataParams.eventNames,
+          durationObj.frequency
+        )?.data;
+      }
+    } else if (EventBreakDownType === 'nob') {
+      // No-Breakdown Table
+      // Here we have comparison, but by default we can't download it for now.
+
+      aggData = formatData(
+        resultantData,
+        formatDataParams.arrayMapper,
+        comparisonResultantData
+      );
+      d = formatDataBasedOnChart(
+        aggData,
+        formatDataParams.arrayMapper,
+        formatDataParams.eventNames,
+        comparisonResultantData
+      )?.data;
+    } else if (EventBreakDownType === 'eb') {
+      // EventBreakdown Table
+      aggData = formatData(resultantData);
+      d = aggData;
+    }
+    const tmp = tableDataSelector(d);
+    const jsonArray = getCSVData(tmp);
+
+    return jsonArray;
+  } catch (error) {
+    console.log('Error', error);
+    return [];
+  }
+};
+export async function fetchDataCSVDownload(
+  coreQueryContext,
+  getEventsCSVDataParams
+) {
+  const q = coreQueryContext?.resultState?.data?.meta?.query;
+  const cq =
+    coreQueryContext.coreQueryState?.comparison_data?.data?.meta?.query ||
+    coreQueryContext?.comparison_data?.data?.meta?.query;
+
+  const q1 = [q];
+  const cq1 = [cq];
+  if (q) {
+    q1.push({ ...q, gbt: '' });
+  }
+  if (cq) {
+    cq1.push({ ...cq, gbt: '' });
+  }
+  // step2Properties have 5 props
+  // (result_criteria, user_type, shouldStack, durationObj, resultState)
+
+  const {
+    projectID,
+    step2Properties,
+    formatData,
+    formatDataBasedOnChart,
+    tableDataSelector,
+    getCSVDataCallback,
+    EventBreakDownType,
+    formatDataParams = {},
+    formatDataBasedOnChartParams = {}
+  } = getEventsCSVDataParams;
+  const results = await getEventsCSVData(
+    projectID,
+    q1,
+    step2Properties,
+    formatData,
+    formatDataBasedOnChart,
+    tableDataSelector,
+    getCSVDataCallback,
+    EventBreakDownType,
+    formatDataParams,
+    formatDataBasedOnChartParams,
+    cq1
+  );
+  return results;
+}
