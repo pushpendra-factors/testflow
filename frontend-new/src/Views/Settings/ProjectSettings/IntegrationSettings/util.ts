@@ -176,14 +176,13 @@ export const getIntegrationStatus = (
     case 'success':
       status = 'connected';
       break;
-    case 'client_token_expired':
+    case 'client_side_token_expired':
     case 'limit_exceed':
       status = 'error';
       break;
-    case 'pull_delayed':
     case 'delayed':
-    case 'heavy_delayed':
-    case 'sync_pending':
+    case 'large_data_delayed':
+    case 'pending':
       status = 'pending';
       break;
     default:
@@ -203,14 +202,13 @@ export const getIntegrationActionText = (
     case 'synced':
       actionText = 'Connected';
       break;
-    case 'client_token_expired':
+    case 'client_side_token_expired':
     case 'limit_exceed':
       actionText = 'Action Required';
       break;
-    case 'pull_delayed':
     case 'delayed':
-    case 'heavy_delayed':
-    case 'sync_pending':
+    case 'large_data_delayed':
+    case 'pending':
       actionText = 'Data Sync Pending';
       break;
     default:
