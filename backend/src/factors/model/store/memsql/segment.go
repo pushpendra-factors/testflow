@@ -50,6 +50,7 @@ func (store *MemSQL) CreateSegment(projectId int64, segmentPayload *model.Segmen
 		Query:       querySegment,
 		Type:        segmentPayload.Type,
 		UpdatedAt:   U.TimeNowZ(),
+		FolderID: 0,
 	}
 
 	db := C.GetServices().Db

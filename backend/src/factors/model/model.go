@@ -1015,6 +1015,16 @@ type Model interface {
 	CreateDefaultSegment(projectID int64, entity string, isGroup bool) (int, error)
 	GetSegmentByGivenIds(projectId int64, segmentIds []string) (map[string][]model.Segment, int)
 	UpdateMarkerRunSegment(projectID int64, ids []string, updateTime time.Time) int
+	
+	// Segment Folder Item ( Segment Itself )
+	MoveSegmentFolderItem(projectID int64, segmentID string, folderID int64, folder_type string) int
+	MoveSegmentToNewFolder(projectID int64, segmentID string, folderName string, folder_type string) int
+	
+	// segment folders
+	GetAllSegmentFolders(projectID int64,folder_type string) ([]model.SegmentFolder, int)
+	CreateSegmentFolder(projectID int64, name string, folder_type string) int
+	UpdateSegmentFolderByID(projectID int64, id int64, name string, folder_type string) int
+	DeleteSegmentFolderByID(projectID int64, id int64, folder_type string) int
 
 	// segment analytics
 	GetWidgetGroupAndWidgetsForConfig(projectID int64) ([]model.WidgetGroup, string, int)
