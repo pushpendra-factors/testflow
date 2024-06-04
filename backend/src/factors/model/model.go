@@ -820,10 +820,10 @@ type Model interface {
 	DeleteTaskEndRecord(taskId uint64, projectId int64, delta uint64) (int, string)
 	GetAllProcessedIntervalsFromStartDate(taskID uint64, projectId int64, startDate *time.Time) ([]uint64, int, string)
 
-	DeleteAllEmbeddings() (int, string)
-	AddAllEmbeddings([]string, []string, [][]float32) (int, string)
-	GetMatchingEmbeddings([]float32) (int, string, model.PromptEmbeddingsPayload)
-	GetDBPromptsByProjectID(int64) (int, string, []string)
+	DeleteEmbeddingsByProject(int64) (int, string)
+	AddAllEmbeddings(int64, []string, []string, [][]float32) (int, string)
+	GetMatchingEmbeddings(int64, []float32) (int, string, model.PromptEmbeddingsPayload)
+	GetMissingPromptsByProjectID(int64, []string) (int, string, []string)
 
 	// project model metadata
 	CreateProjectModelMetadata(pmm *model.ProjectModelMetadata) (int, string)
@@ -1186,4 +1186,13 @@ type Model interface {
 
 	//Weekly Mailmodo Emails
 	GetWeeklyMailmodoEmailsMetrics(projectId, startTimeStamp, endTimeStamp int64) (model.WeeklyMailmodoEmailMetrics, error)
+	// linkedin frequency capping
+	GetLinkedinCappingConfig(projectID int64) ([]model.LinkedinCappingConfig, int)
+	CreateLinkedinCappingRule(projectID int64, linkedinCappingRule *model.LinkedinCappingRule) int
+	GetAllLinkedinCappingRules(projectID int64) ([]model.LinkedinCappingRule, int)
+	GetLinkedinCappingRule(projectID int64, ruleID string) (model.LinkedinCappingRule, int)
+	UpdateLinkedinCappingRule(projectID int64, ruleID string) int
+	DeleteLinkedinCappingRule(projectID int64, ruleID string) int
+	GetLinkedinCappingExclusionsForRule(projectID int64, ruleID string) ([]model.LinkedinExclusion, int)
+	GetAllLinkedinCappingExclusionsForTimerange(projectID int64, startTimestamp int64, endTimestamp int64) ([]model.LinkedinExclusion, int)
 }

@@ -475,6 +475,17 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/paragon/workflow", V1.TriggerParagonWorkflow)
 	authRouteGroup.DELETE("/:project_id/paragon/workflow", V1.DisableParagonWorflowForUser)
 
+	// frequency capping linkedin
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/linkedin_capping/rules/config", responseWrapper(GetLinkedinCappingConfigHandler))
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/linkedin_capping/rules", responseWrapper(CreateLinkedinCappingRulesHandler))
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/linkedin_capping/rules", responseWrapper(GetLinkedinCappingRulesHandler))
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/linkedin_capping/rules/:rule_id", responseWrapper(GetLinkedinCappingRuleByRuleIDHandler))
+	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/linkedin_capping/rules/:rule_id", responseWrapper(UpdateLinkedinCappingRulesHandler))
+	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/linkedin_capping/rules/:rule_id", responseWrapper(DeleteLinkedinCappingRulesHandler))
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/linkedin_capping/exclusions/rule/:rule_id", responseWrapper(GetLinkedinCappingExclusionsByRuleIDHandler))
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/linkedin_capping/exclusions/:timestamp", responseWrapper(GetLinkedinCappingExclusionsHandler))
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/linkedin_capping/exclusions/dashboard", responseWrapper(GetLinkedinCappingExclusionsDashboardHandler))
+
 	// factors_deanon
 	authRouteGroup.POST("/:project_id/factors_deanon/provider/:name/enable", mid.FeatureMiddleware([]string{M.FEATURE_FACTORS_DEANONYMISATION}), UpdateFactorsDeanonProvider)
 
@@ -732,10 +743,11 @@ func InitDataServiceRoutes(r *gin.Engine) {
 	dataServiceRouteGroup.POST("/task/end", responseWrapper(V1.InsertTaskEndRecordHandler))
 	dataServiceRouteGroup.DELETE("/task/end", responseWrapper(V1.DeleteTaskEndRecordHandler))
 	dataServiceRouteGroup.GET("/task/dependent_task_done", responseWrapper(V1.IsDependentTaskDoneHandler))
-	dataServiceRouteGroup.POST("/chat/job/scratch", IH.DataServiceAddEmbeddingsFromScratch)
-	dataServiceRouteGroup.POST("/chat/job/new", IH.DataServiceAddNewEmbeddings)
-	dataServiceRouteGroup.GET("/chat/job", IH.DataServiceGetDBPrompts)
+
+	dataServiceRouteGroup.POST("/chat/job", IH.DataServiceAddEmbeddings)
 	dataServiceRouteGroup.GET("/chat/app/matching", IH.DataServiceGetMatchingEmbeddings)
+	dataServiceRouteGroup.GET("/chat/job/missing", IH.DataServiceGetMissingPrompts)
+	dataServiceRouteGroup.DELETE("/chat/job", IH.DataServiceDeleteDataByProjectId)
 
 }
 

@@ -99,7 +99,7 @@ var mapOfTypeToLinkedinJobCTEAlias = map[string]string{
 var errorEmptyLinkedinDocument = errors.New("empty linked document")
 
 const linkedinFilterQueryStr = "SELECT DISTINCT(LCASE(JSON_EXTRACT_STRING(value, ?))) as filter_value FROM linkedin_documents WHERE project_id = ? AND" +
-	" " + "customer_ad_account_id = ? AND type = ? AND JSON_EXTRACT_STRING(value, ?) IS NOT NULL AND timestamp BETWEEN ? AND ? LIMIT 5000"
+	" " + "customer_ad_account_id in ( ? ) AND type = ? AND JSON_EXTRACT_STRING(value, ?) IS NOT NULL AND timestamp BETWEEN ? AND ? LIMIT 5000"
 
 const fromLinkedinDocuments = " FROM linkedin_documents "
 
@@ -1041,13 +1041,14 @@ func (store *MemSQL) getLinkedinFilterValuesByType(projectID int64, docType int,
 		logCtx.Info(integrationNotAvailable)
 		return []interface{}{}, http.StatusNotFound
 	}
+	customerAccountIDs := strings.Split(customerAccountID, ",")
 	logCtx = log.WithField("project_id", projectID).WithField("doc_type", docType).WithField("req_id", reqID)
 	from, to := model.GetFromAndToDatesForFilterValues()
-	params := []interface{}{property, projectID, customerAccountID, docType, property, from, to}
+	params := []interface{}{property, projectID, customerAccountIDs, docType, property, from, to}
 	_, resultRows, err := store.ExecuteSQL(linkedinFilterQueryStr, params, logCtx)
 	if err != nil {
 		logCtx.WithError(err).WithField("query", linkedinFilterQueryStr).WithField("params", params).Error(model.LinkedinSpecificError)
-		return make([]interface{}, 0, 0), http.StatusInternalServerError
+		return make([]interface{}, 0), http.StatusInternalServerError
 	}
 
 	return Convert2DArrayTo1DArray(resultRows), http.StatusFound
@@ -1076,8 +1077,9 @@ func (store *MemSQL) GetLinkedinSQLQueryAndParametersForFilterValues(projectID i
 		logCtx.Info(integrationNotAvailable)
 		return "", nil, http.StatusNotFound
 	}
+	customerAccountIDs := strings.Split(customerAccountID, ",")
 	from, to := model.GetFromAndToDatesForFilterValues()
-	params := []interface{}{linkedinInternalFilterProperty, projectID, customerAccountID, docType, linkedinInternalFilterProperty, from, to}
+	params := []interface{}{linkedinInternalFilterProperty, projectID, customerAccountIDs, docType, linkedinInternalFilterProperty, from, to}
 
 	return "(" + linkedinFilterQueryStr + ")", params, http.StatusFound
 }

@@ -6,6 +6,7 @@ import (
 	"factors/cache"
 	cacheDB "factors/cache/db"
 	"factors/model/model"
+	U "factors/util"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -14,8 +15,8 @@ func TestCacheDBSetBatch(t *testing.T) {
 
 	var records = make(map[*cache.Key]string, 0)
 
-	cacheKey1, _ := model.GetValuesByEventPropertyRollUpCacheKey(2, "$session", "$property1", "20240524")
-	cacheKey2, _ := model.GetValuesByEventPropertyRollUpCacheKey(2, "$session", "$property2", "20240524")
+	cacheKey1, _ := model.GetValuesByEventPropertyRollUpCacheKey(2, "$session", U.RandomLowerAphaNumString(5), "20240524")
+	cacheKey2, _ := model.GetValuesByEventPropertyRollUpCacheKey(2, "$session", U.RandomLowerAphaNumString(5), "20240524")
 
 	records[cacheKey1] = "value1"
 	records[cacheKey2] = "value2"

@@ -160,9 +160,17 @@ func Set(key *cache.Key, value string, expiryInSecs float64) error {
 }
 
 func SetBatch(keyValue map[*cache.Key]string, expiryInSecs float64) error {
-	valuesStmnt := ""
-	params := make([]interface{}, 0)
+	db := config.GetServices().Db
+	tx, err := db.DB().Begin()
+	defer util.CloseTx(tx)
+	if err != nil {
+		return err
+	}
+
 	for k, v := range keyValue {
+		valuesStmnt := ""
+		params := make([]interface{}, 0)
+
 		cacheRecord, err := getCacheRecord(k, v, expiryInSecs)
 		// Fail if one failure. Parity with redis implementation.
 		if err != nil {
@@ -172,16 +180,16 @@ func SetBatch(keyValue map[*cache.Key]string, expiryInSecs float64) error {
 		if valuesStmnt != "" {
 			valuesStmnt = valuesStmnt + ", "
 		}
-		valuesStmnt = valuesStmnt + "(?, ?, ?, ?, ?, ?, ?)"
+
+		valuesStmnt = valuesStmnt + "(?, ?, ?, ?, ?, ?, ?);"
 		params = append(params, cacheRecord.ProjectID, cacheRecord.Key, cacheRecord.Value,
 			cacheRecord.ExpiryInSecs, cacheRecord.ExpiresAt, util.TimeNowZ(), util.TimeNowZ())
-	}
 
-	stmnt := "INSERT INTO cache_db (`project_id`, `k`, `v`, `expiry_in_secs`, `expires_at`, `created_at`, `updated_at`) VALUES " + valuesStmnt
-	db := config.GetServices().Db
-	err := db.Exec(stmnt, params...).Error
-	if err != nil {
-		return err
+		stmnt := "INSERT INTO cache_db (`project_id`, `k`, `v`, `expiry_in_secs`, `expires_at`, `created_at`, `updated_at`) VALUES " + valuesStmnt
+		_, err = tx.Exec(stmnt, params...)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

@@ -1567,6 +1567,8 @@ CREATE TABLE IF NOT EXISTS prompt_embeddings (
     prompt TEXT,
     query TEXT,
     embedding VECTOR(768, F32) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (project_id, prompt)
     );
 
