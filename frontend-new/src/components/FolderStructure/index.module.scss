@@ -1,0 +1,178 @@
+$background-color: #f5f5f5;
+// This represents whole list of folders
+.folder {
+  margin: 2px;
+  padding: 6px 12px;
+  color: #000000a6;
+
+  :global(.ant-popover-arrow) {
+    display: none;
+  }
+
+  // This represents caret Right or Down container of Each Folder
+  & .folder_header {
+    width: 100%;
+    display: flex;
+    padding: 4px 8px;
+    justify-content: space-between;
+    user-select: none;
+    border-radius: 8px;
+    align-items: center;
+    transition-duration: 0.3s;
+    text-transform: capitalize;
+    cursor: pointer;
+    // &:hover {
+    //   background-color: $background-color;
+    // }
+
+    & .folder_actions_button {
+      // border: 1px solid #dedede;
+
+      border: none;
+      background-color: transparent;
+      border-radius: 4px !important;
+      transition-duration: 0;
+
+      &:hover {
+        background-color: #f5f5f5;
+      }
+    }
+  }
+  // This is Each Folder ITem
+  & .folder_item {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    user-select: none;
+    align-items: center;
+
+    border-radius: 8px;
+    padding: 8px;
+
+    transition-duration: 200ms;
+    cursor: pointer;
+    text-transform: capitalize;
+
+    &:hover {
+      background-color: $background-color;
+    }
+    & .folder_item_actions {
+      visibility: hidden;
+      margin-right: 8px;
+    }
+    &:hover .folder_item_actions {
+      visibility: visible;
+    }
+  }
+}
+// This Represents 1st Level of Popover Options
+.popover_list {
+  min-width: 150px;
+  & > div {
+    display: flex;
+    justify-content: left;
+    align-items: center;
+    width: 100%;
+    gap: 6px;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  & .submenu {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+
+    & > div > div {
+      display: flex;
+      gap: 6px;
+    }
+  }
+
+  & > div:hover {
+    background-color: $background-color;
+  }
+}
+
+// When Popover is hovered
+// Folder item which was selected for show Popover,
+// should get its background changed
+.folder_item:has(:global(.ant-popover-open)) {
+  background-color: $background-color;
+  border-radius: 8px;
+}
+
+.popover_list:has(:global(.ant-popover-open)) {
+  background-color: $background-color;
+  border-radius: 8px;
+}
+
+.popover_list_container,
+.submenu_list_container {
+  z-index: 1000;
+  :global(.ant-popover-inner) {
+    border-radius: 8px;
+  }
+  :global(.ant-popover-inner-content) {
+    padding: 6px !important;
+  }
+  :global(.ant-popover-arrow) {
+    display: none;
+  }
+}
+
+.submenu_list {
+  & .submenu_item {
+    display: flex;
+    justify-content: left;
+    align-items: center;
+    width: 100%;
+    gap: 6px;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+
+    &:hover {
+      background-color: $background-color;
+    }
+  }
+
+  & .submenu_list_group {
+    max-height: 200px;
+    overflow: scroll;
+    text-transform: capitalize;
+  }
+}
+
+.input {
+  background-color: #fafafa;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+  margin: 4px 0 4px 0;
+
+  &:hover {
+    border-color: #b6b6b6;
+  }
+  &:focus {
+    border-color: #b6b6b6;
+    box-shadow: 0 0 0 2px #b6b6b633;
+  }
+}
+
+.search_results_container {
+  padding: 12px;
+  & > div {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    margin: 1px 0;
+    transition-duration: 300ms;
+    &:hover {
+      background-color: #f5f5f5;
+    }
+  }
+}

@@ -12,7 +12,8 @@ import {
   Avatar,
   Input,
   Form,
-  Tooltip
+  Tooltip,
+  message
 } from 'antd';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
@@ -42,6 +43,8 @@ import ResizableTitle from 'Components/Resizable';
 import logger from 'Utils/logger';
 import useAutoFocus from 'hooks/useAutoFocus';
 import {
+  moveSegmentToNewFolder,
+  updateSegmentToFolder,
   updateTableProperties,
   updateTablePropertiesForSegment
 } from 'Reducers/timelines';
@@ -73,7 +76,8 @@ import {
   createNewSegment,
   getSavedSegments,
   updateSegmentForId,
-  deleteSegment
+  deleteSegment,
+  getSegmentFolders
 } from '../../../reducers/timelines/middleware';
 import ProfilesWrapper from '../ProfilesWrapper';
 import { getUserOptions } from './userProfiles.helpers';
@@ -94,9 +98,38 @@ import {
   headerClassStr,
   iconColors
 } from '../constants';
+import { FolderItemOptions } from 'Components/FolderStructure/FolderItem';
 
 const userOptions = getUserOptions();
 
+function SearchBar({ handleUsersSearch, listSearchItems, onSearchClose }) {
+  const searchBarRef = useAutoFocus();
+  return (
+    <div className='flex items-center justify-between'>
+      <Form
+        name='basic'
+        labelCol={{ span: 8 }}
+        wrapperCol={{ span: 16 }}
+        onFinish={handleUsersSearch}
+        autoComplete='off'
+      >
+        <Form.Item name='users'>
+          <Input
+            ref={searchBarRef}
+            size='large'
+            defaultValue={listSearchItems ? listSearchItems.join(', ') : null}
+            placeholder='Search Users'
+            style={{ width: '240px', 'border-radius': '5px' }}
+            prefix={<SVG name='search' size={24} color='#8c8c8c' />}
+          />
+        </Form.Item>
+      </Form>
+      <Button type='text' className='search-btn' onClick={onSearchClose}>
+        <SVG name='close' size={24} color='#8c8c8c' />
+      </Button>
+    </div>
+  );
+}
 function UserProfiles({
   createNewSegment,
   getSavedSegments,
@@ -107,7 +140,8 @@ function UserProfiles({
   fetchMarketoIntegration,
   fetchBingAdsIntegration,
   updateSegmentForId,
-  deleteSegment
+  deleteSegment,
+  getSegmentFolders
 }) {
   const dispatch = useDispatch();
   const history = useHistory();
@@ -134,11 +168,10 @@ function UserProfiles({
   const [appliedFilters, setAppliedFilters] = useState(
     INITIAL_USER_PROFILES_FILTERS_STATE
   );
-  const [showSegmentActions, setShowSegmentActions] = useState(false);
   const [moreActionsModalMode, setMoreActionsModalMode] = useState(null);
   const [peopleRow, setPeopleRow] = useState(null);
 
-  const { contacts } = useSelector((state) => state.timelines);
+  const { contacts, segmentFolders } = useSelector((state) => state.timelines);
 
   const {
     bingAds,
@@ -601,7 +634,7 @@ function UserProfiles({
     }
     const userPropsWithEnableKey = formatUserPropertiesToCheckList(
       userPropertiesModified,
-      tableProps.filter(
+      tableProps?.filter(
         (entry) => entry !== '' && entry !== undefined && entry !== null
       )
     );
@@ -898,39 +931,14 @@ function UserProfiles({
     setSearchBarOpen(true);
   };
 
-  function SearchBar() {
-    const searchBarRef = useAutoFocus();
-    return (
-      <div className='flex items-center justify-between'>
-        <Form
-          name='basic'
-          labelCol={{ span: 8 }}
-          wrapperCol={{ span: 16 }}
-          onFinish={handleUsersSearch}
-          autoComplete='off'
-        >
-          <Form.Item name='users'>
-            <Input
-              ref={searchBarRef}
-              size='large'
-              defaultValue={listSearchItems ? listSearchItems.join(', ') : null}
-              placeholder='Search Users'
-              style={{ width: '240px', 'border-radius': '5px' }}
-              prefix={<SVG name='search' size={24} color='#8c8c8c' />}
-            />
-          </Form.Item>
-        </Form>
-        <Button type='text' className='search-btn' onClick={onSearchClose}>
-          <SVG name='close' size={24} color='#8c8c8c' />
-        </Button>
-      </div>
-    );
-  }
-
   const renderSearchSection = () => (
     <div className='relative'>
       <ControlledComponent controller={searchBarOpen}>
-        <SearchBar />
+        <SearchBar
+          handleUsersSearch={handleUsersSearch}
+          listSearchItems={listSearchItems}
+          onSearchClose={onSearchClose}
+        />
       </ControlledComponent>
       <ControlledComponent controller={!searchBarOpen}>
         <Tooltip title='Search'>
@@ -964,62 +972,60 @@ function UserProfiles({
     </Popover>
   );
 
-  const moreActionsContent = () => (
-    <div className='flex flex-col'>
-      <div className='flex flex-col'>
-        <div
-          role='button'
-          tabIndex={-1}
-          onClick={() => {
-            setShowSegmentActions(false);
-            setMoreActionsModalMode(moreActionsMode.RENAME);
-          }}
-          className='flex cursor-pointer hover:bg-gray-100 gap-x-4 items-center py-2 px-4'
-        >
-          <SVG size={20} name='edit_query' color='#8c8c8c' />
-          <Text type='title' color='character-primary' extraClass='mb-0'>
-            Rename Segment
-          </Text>
-        </div>
-        <div
-          role='button'
-          tabIndex={-2}
-          onClick={() => {
-            setShowSegmentActions(false);
-            setMoreActionsModalMode(moreActionsMode.DELETE);
-          }}
-          className='flex cursor-pointer hover:bg-gray-100 gap-x-4 items-center py-2 px-4'
-        >
-          <SVG size={20} name='trash' color='#8c8c8c' />
-          <Text type='title' color='character-primary' extraClass='mb-0'>
-            Delete Segment
-          </Text>
-        </div>
-      </div>
-    </div>
-  );
-
+  const moveSegmentToFolder = (folderID, segmentID) => {
+    updateSegmentToFolder(
+      activeProject.id,
+      segmentID,
+      {
+        folder_id: folderID
+      },
+      'user'
+    )
+      .then(async () => {
+        await getSavedSegments(activeProject.id);
+        message.success('Segment Moved');
+      })
+      .catch((err) => {
+        console.error(err);
+        message.error('Segment failed to move');
+      });
+  };
+  const handleMoveToNewFolder = (segmentID, folder_name) => {
+    moveSegmentToNewFolder(
+      activeProject?.id,
+      segmentID,
+      {
+        name: folder_name
+      },
+      'user'
+    )
+      .then(async () => {
+        getSegmentFolders(activeProject.id, 'user');
+        await getSavedSegments(activeProject.id);
+        message.success('Segment Moved to New Folder');
+      })
+      .catch((err) => {
+        console.error(err);
+        message.error('Failed to move segment');
+      });
+  };
   const renderMoreActions = () => (
-    <Popover
-      placement='bottomLeft'
-      visible={showSegmentActions}
-      onVisibleChange={(visible) => {
-        setShowSegmentActions(visible);
-      }}
-      onClick={() => {
-        setShowSegmentActions(true);
-      }}
-      trigger='click'
-      content={moreActionsContent}
-      overlayClassName={cx(
-        'fa-activity--filter',
-        styles['more-actions-popover']
-      )}
-    >
-      <Button className='search-btn' type='text'>
-        <SVG size={24} color='#8c8c8c' name='more' />
-      </Button>
-    </Popover>
+    <div className='cursor-pointer'>
+      <FolderItemOptions
+        id={timelinePayload?.segment?.id}
+        unit='segment'
+        folder_id={timelinePayload?.segment?.folder_id}
+        folders={[{ id: 0, name: 'All Segments' }, ...segmentFolders.peoples]}
+        handleEditUnit={() => {
+          setMoreActionsModalMode(moreActionsMode.RENAME);
+        }}
+        handleDeleteUnit={() => {
+          setMoreActionsModalMode(moreActionsMode.DELETE);
+        }}
+        moveToExistingFolder={moveSegmentToFolder}
+        handleNewFolder={handleMoveToNewFolder}
+      />
+    </div>
   );
 
   const handleTableChange = (pageParams, somedata, sorter) => {
@@ -1248,7 +1254,8 @@ const mapDispatchToProps = (dispatch) =>
       fetchBingAdsIntegration,
       udpateProjectSettings,
       updateSegmentForId,
-      deleteSegment
+      deleteSegment,
+      getSegmentFolders
     },
     dispatch
   );

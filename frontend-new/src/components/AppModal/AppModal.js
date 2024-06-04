@@ -16,6 +16,7 @@ const AppModal = (props) => {
     isLoading,
     className,
     children,
+    maskClosable,
     ...rest
   } = props;
 
@@ -32,6 +33,7 @@ const AppModal = (props) => {
       closable={closable}
       confirmLoading={isLoading}
       cancelText={cancelText}
+      maskClosable={maskClosable}
       {...rest}
     >
       {children}
@@ -45,14 +47,19 @@ AppModal.propTypes = {
   children: PropTypes.element,
   visible: PropTypes.bool,
   width: PropTypes.number,
-  title: PropTypes.oneOfType([PropTypes.string, PropTypes.instanceOf(null)]),
+  title: PropTypes.oneOfType([
+    PropTypes.string,
+    PropTypes.instanceOf(null),
+    PropTypes.object
+  ]),
   onOk: PropTypes.func,
   onCancel: PropTypes.func,
   okText: PropTypes.string,
   cancelText: PropTypes.string,
   closable: PropTypes.bool,
   isLoading: PropTypes.bool,
-  className: PropTypes.string
+  className: PropTypes.string,
+  maskClosable: PropTypes.bool
 };
 
 AppModal.defaultProps = {
@@ -65,5 +72,6 @@ AppModal.defaultProps = {
   cancelText: 'Cancel',
   closable: false,
   isLoading: false,
-  className: 'fa-modal--regular'
+  className: 'fa-modal--regular',
+  maskClosable: false
 };
