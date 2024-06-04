@@ -9,7 +9,7 @@ function NoBreakdownTable({
   reportTitle = 'Profile Analytics',
   handleSorting,
   sorter,
-  isWidgetModal,
+  isWidgetModal
 }) {
   const [searchText, setSearchText] = useState('');
   const [columns, setColumns] = useState([]);
@@ -27,10 +27,10 @@ function NoBreakdownTable({
 
   const getCSVData = () => {
     return {
-      fileName: `${reportTitle}.csv`,
+      fileName: reportTitle,
       data: tableData.map(({ index, color, ...rest }) => {
         return rest;
-      }),
+      })
     };
   };
 

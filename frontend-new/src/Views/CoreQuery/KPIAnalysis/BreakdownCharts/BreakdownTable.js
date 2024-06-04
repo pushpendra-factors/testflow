@@ -120,7 +120,7 @@ const BreakdownTable = ({
   const getCSVData = useCallback(() => {
     if (!isSeriesChart(chartType)) {
       return {
-        fileName: 'KPI.csv',
+        fileName: 'KPI',
         data: tableData.map(({ index, label, value, metricType, ...rest }) => {
           const result = {};
           for (const key in rest) {
@@ -155,7 +155,7 @@ const BreakdownTable = ({
       };
     }
     return {
-      fileName: 'KPI.csv',
+      fileName: 'KPI',
       data: dateBasedTableData.map(
         ({
           index,

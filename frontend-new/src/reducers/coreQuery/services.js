@@ -39,13 +39,19 @@ export const getEventsData = (
   query_group,
   dashboard,
   isQuery = false,
-  query_id = ''
+  query_id = '',
+  is_download = false
 ) => {
   let url;
   if (!dashboard) {
-    url = `${host}projects/${projectId}/v1/query${
-      query_id ? `?&query_id=${query_id}` : ''
-    }`;
+    url = new URL(`${host}projects/${projectId}/v1/query`);
+    if (query_id) {
+      url.searchParams.append('query_id', query_id);
+    }
+    if (is_download) {
+      url.searchParams.append('download', is_download ? 50000 : 0);
+    }
+    url = url.href;
   } else {
     url = `${host}projects/${projectId}/v1/query?refresh=${
       dashboard.refresh

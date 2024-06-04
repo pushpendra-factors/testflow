@@ -80,7 +80,7 @@ function BreakdownTable({
 
   const getCSVData = () => {
     return {
-      fileName: `${reportTitle}.csv`,
+      fileName: reportTitle,
       data: tableData.map(({ index, color, label, ...rest }) => {
         const result = {};
         for (const key in rest) {

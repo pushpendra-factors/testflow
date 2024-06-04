@@ -1201,9 +1201,11 @@ const CoreQuery = () => {
       runFunnelQuery,
       setQueries,
       updateCoreQueryReducer,
-      resetComparisonData
+      resetComparisonData,
+      resultState: coreQueryState.resultState
     }),
     [
+      coreQueryState.resultState,
       coreQueryState,
       runQuery,
       queryChange,
