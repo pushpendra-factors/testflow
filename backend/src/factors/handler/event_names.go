@@ -212,7 +212,32 @@ type EventNamesByUserResponsePayload struct {
 	AllowedDisplayNameGroups map[string]string   `json:"allowed_display_name_groups"`
 }
 
+func updateEventNamesWithMandatoryEvents(eventNames map[string][]string, mandatoryEventsList []string) map[string][]string {
+	if eventNames == nil {
+		eventNames = make(map[string][]string)
+	}
+
+	websiteActivityEvents := eventNames[U.WebsiteActivityEvent]
+	filteredEvents := []string{}
+
+	mandatoryEventsSet := make(map[string]struct{})
+	for _, event := range mandatoryEventsList {
+		mandatoryEventsSet[event] = struct{}{}
+	}
+
+	for _, event := range websiteActivityEvents {
+		if _, found := mandatoryEventsSet[event]; !found {
+			filteredEvents = append(filteredEvents, event)
+		}
+	}
+
+	filteredEvents = append(mandatoryEventsList, filteredEvents...)
+	eventNames[U.WebsiteActivityEvent] = filteredEvents
+	return eventNames
+}
+
 func GetEventNamesByUserHandler(c *gin.Context) {
+	mandatoryEventsList := []string{U.EVENT_NAME_SESSION, U.EVENT_NAME_FORM_SUBMITTED, U.EVENT_NAME_FORM_FILL}
 	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatus(http.StatusBadRequest)
@@ -233,6 +258,9 @@ func GetEventNamesByUserHandler(c *gin.Context) {
 		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
+
+	// Update event names with mandatory events
+	eventNames = updateEventNamesWithMandatoryEvents(eventNames, mandatoryEventsList)
 
 	eventNames = RemoveGroupEventNamesOnUserEventNames(eventNames)
 
@@ -315,8 +343,11 @@ func GetEventNamesByUserHandler(c *gin.Context) {
 		eventNames = MoveCustomEventNamesOnUserEventNames(eventNames, customEventNameGroups)
 	}
 
-	c.JSON(http.StatusOK, EventNamesByUserResponsePayload{EventNames: U.FilterEmptyKeysAndValues(projectId, eventNames), DisplayNames: U.FilterDisplayNameEmptyKeysAndValues(projectId, displayNameEvents), AllowedDisplayNameGroups: U.GetStandardDisplayNameGroups()})
-
+	c.JSON(http.StatusOK, EventNamesByUserResponsePayload{
+		EventNames:               U.FilterEmptyKeysAndValues(projectId, eventNames),
+		DisplayNames:             U.FilterDisplayNameEmptyKeysAndValues(projectId, displayNameEvents),
+		AllowedDisplayNameGroups: U.GetStandardDisplayNameGroups(),
+	})
 }
 
 func GetEventNamesByGroupHandler(c *gin.Context) {
