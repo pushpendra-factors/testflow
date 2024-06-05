@@ -71,7 +71,6 @@ export const formatAccountTimeline = (data) => {
   );
 
   return {
-    name: data.name,
     domain: data.domain_name,
     leftpane_props: data.leftpane_props,
     overview: data.overview,
