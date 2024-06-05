@@ -278,10 +278,10 @@ func AggEventsOnUsers(file io.ReadCloser, userGroupCount map[string]*AggEventsOn
 		if val, ok := userGroupCount[event.UserId]; ok {
 			// get ruleIds from filter events
 			ruleIds := FilterEvents(event, mweights)
-			err := updateEventChannel(val, event)
-			if err != nil {
-				log.Error("Unable to update channel")
-			}
+			// err := updateEventChannel(val, event)
+			// if err != nil {
+			// 	log.Error("Unable to update channel")
+			// }
 
 			// get rule_ids from filter events
 			// if rule_ids is already present in val.EventsCount
@@ -511,13 +511,23 @@ func getChannelInfo(event *P.CounterEventFormat) string {
 	if propvalKey, ok := event.EventProperties[U.EP_CHANNEL]; ok {
 		propval := U.GetPropertyValueAsString(propvalKey)
 		return propval
+	} else {
+		log.WithField("event without channel", event).Errorf("Unable to get channel info")
 	}
 	return ""
+}
+
+func UpdateEventChannel_(user *AggEventsOnUserAndGroup, event *P.CounterEventFormat) error {
+	return updateEventChannel(user, event)
 }
 
 func updateEventChannel(user *AggEventsOnUserAndGroup, event *P.CounterEventFormat) error {
 
 	channel := getChannelInfo(event)
+	if _, channel_ok := user.Properties[U.EP_CHANNEL]; !channel_ok {
+		return nil
+	}
+
 	if channel != "" {
 		if _, ok := user.Properties[U.EP_CHANNEL]; !ok {
 			var prp PropAggregate

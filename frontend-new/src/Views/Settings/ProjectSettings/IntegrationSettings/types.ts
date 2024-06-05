@@ -34,16 +34,14 @@ export interface IntegrationStatusData {
 
 export interface IntegrationStatus {
   state:
-    | ''
     | 'connected'
     | 'success'
     | 'disconnected'
     | 'synced'
     | 'delayed'
-    | 'pull_delayed'
-    | 'sync_pending'
-    | 'heavy_delayed'
-    | 'client_token_expired'
+    | 'pending'
+    | 'large_data_delayed'
+    | 'client_side_token_expired'
     | 'limit_exceed';
   last_synced_at: number;
   message?: string;

@@ -1234,11 +1234,7 @@ function AccountProfiles({
             {pageTitle}
           </Text>
         </div>
-        <ControlledComponent
-          controller={
-            featureLock(email) && Boolean(accountPayload?.segment?.id)
-          }
-        >
+        <ControlledComponent controller={Boolean(accountPayload?.segment?.id)}>
           <AccountsTabs />
         </ControlledComponent>
       </div>

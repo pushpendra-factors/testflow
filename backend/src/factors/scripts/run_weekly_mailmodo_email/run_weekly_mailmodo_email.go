@@ -127,7 +127,7 @@ func main() {
 			}
 
 			if !isEmailAllowed {
-				projectIdToEmailFailureMap[projectId]["Blocked/Unsubscribed Mails"] = append(projectIdToEmailFailureMap[projectId][err], email)
+				projectIdToEmailFailureMap[projectId]["Blocked/Unsubscribed Mails"] = append(projectIdToEmailFailureMap[projectId]["Blocked/Unsubscribed Mails"], email)
 				continue
 			}
 
@@ -136,6 +136,12 @@ func main() {
 		}
 
 	}
+
+	if len(projectIdToEmailFailureMap) > 0 || len(errToProjectIDMap) > 0 {
+		log.Warn("Email Failure Map: ", projectIdToEmailFailureMap)
+		log.Warn("Error Map: ", errToProjectIDMap)
+	}
+
 }
 
 func GetAgentEmailByProjectID(projectId int64) ([]string, int) {
