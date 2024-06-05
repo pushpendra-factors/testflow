@@ -106,13 +106,14 @@ func getCacheRecord(key *cache.Key, value string, expiryInSecs float64) (*CacheD
 		return nil, errors.New("invalid value")
 	}
 
-	if expiryInSecs <= 0 {
-		return nil, errors.New("invalid expiry")
-	}
-
 	k, err := key.Key()
 	if err != nil {
 		return nil, err
+	}
+
+	// Any expiry set less than equal to 0 is set to 1 year.
+	if expiryInSecs <= 0 {
+		expiryInSecs = 31560000
 	}
 
 	cacheRecord := &CacheDBRecord{
