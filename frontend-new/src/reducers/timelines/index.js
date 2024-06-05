@@ -1,6 +1,13 @@
 import { SET_ACTIVE_PROJECT } from 'Reducers/types';
 import { del, get, getHostUrl, post, put } from '../../utils/request';
-import { SEGMENT_DELETED } from './types';
+import {
+  LOADING_SEGMENT_FOLDER,
+  SEGMENT_DELETED,
+  SET_ACCOUNTS_SEGMENT_FOLDERS_FAILED,
+  SET_ACCOUNT_SEGMENT_FOLDERS,
+  SET_PEOPLES_SEGMENT_FOLDERS_FAILED,
+  SET_PEOPLE_SEGMENT_FOLDERS
+} from './types';
 
 let host = getHostUrl();
 host = host[host.length - 1] === '/' ? host : `${host}/`;
@@ -14,6 +21,12 @@ const initialState = {
   segmentCreateStatus: '',
   segmentUpdateStatus: '',
   segments: {},
+  segmentFolders: {
+    isLoading: true,
+    isSuccess: false,
+    accounts: [],
+    peoples: []
+  },
   activePageView: '',
   accountPreview: {},
   userConfigProperties: {},
@@ -45,12 +58,31 @@ export default function (state = initialState, action) {
       return { ...state, contactDetails: { isLoading: false, data: {} } };
     case 'FETCH_PROFILE_ACCOUNTS_LOADING':
       return { ...state, accounts: { ...state.accounts, isLoading: true } };
-    case 'FETCH_PROFILE_ACCOUNTS_FULFILLED':
-      const updatedData = { ...state.accounts.data };
-      updatedData[action.segmentID || 'default'] = action.payload;
-      return { ...state, accounts: { isLoading: false, data: updatedData } };
-    case 'FETCH_PROFILE_ACCOUNTS_FAILED':
-      return { ...state, accounts: { ...state.accounts, isLoading: false } };
+    case 'FETCH_PROFILE_ACCOUNTS_FULFILLED': {
+      return {
+        ...state,
+        accounts: {
+          isLoading: false,
+          data: {
+            ...state.accounts.data,
+            [action.segmentID]: action.payload
+          }
+        }
+      };
+    }
+    case 'FETCH_PROFILE_ACCOUNTS_FAILED': {
+      return {
+        ...state,
+        accounts: {
+          isLoading: false,
+          data: {
+            ...state.accounts.data,
+            [action.segmentID]: []
+          }
+        }
+      };
+    }
+
     case 'FETCH_PROFILE_ACCOUNT_DETAILS_LOADING':
       return { ...state, accountDetails: { isLoading: true, data: {} } };
     case 'FETCH_PROFILE_ACCOUNT_DETAILS_FULFILLED':
@@ -157,6 +189,55 @@ export default function (state = initialState, action) {
           segmentId: action.payload
         })
       };
+    case SET_ACCOUNT_SEGMENT_FOLDERS:
+      return {
+        ...state,
+        segmentFolders: {
+          ...state.segmentFolders,
+          isLoading: false,
+          isSuccess: true,
+          accounts: action.payload
+        }
+      };
+    case SET_PEOPLE_SEGMENT_FOLDERS:
+      return {
+        ...state,
+        segmentFolders: {
+          ...state.segmentFolders,
+          isLoading: false,
+          isSuccess: true,
+          peoples: action.payload
+        }
+      };
+    case SET_ACCOUNTS_SEGMENT_FOLDERS_FAILED:
+      return {
+        ...state,
+        segmentFolders: {
+          ...state.segmentFolders,
+          isLoading: false,
+          isSuccess: false,
+          accounts: []
+        }
+      };
+    case SET_PEOPLES_SEGMENT_FOLDERS_FAILED:
+      return {
+        ...state,
+        segmentFolders: {
+          ...state.segmentFolders,
+          isLoading: false,
+          isSuccess: false,
+          peoples: []
+        }
+      };
+    case LOADING_SEGMENT_FOLDER:
+      return {
+        ...state,
+        segmentFolders: {
+          ...state.segmentFolders,
+          isLoading: true
+        }
+      };
+
     default:
       return state;
   }
@@ -295,4 +376,45 @@ export const updateTablePropertiesForSegment = (
 ) => {
   const url = `${host}projects/${projectID}/v1/profiles/segments/${segmentID}/table_properties`;
   return put(null, url, payload);
+};
+
+export const fetchSegmentFolders = (projectID, folder_type) => {
+  const url = `${host}projects/${projectID}/segment_folders?type=${folder_type}`;
+  return get(null, url);
+};
+export const renameSegmentFolders = (
+  projectID,
+  folderID,
+  payload,
+  folder_type
+) => {
+  const url = `${host}projects/${projectID}/segment_folders/${folderID}?type=${folder_type}`;
+  return put(null, url, payload);
+};
+export const deleteSegmentFolders = (projectID, folderID, folder_type) => {
+  const url = `${host}projects/${projectID}/segment_folders/${folderID}?type=${folder_type}`;
+  return del(null, url);
+};
+// Move segment(:id) to Folder(with id) which needs to be passed via body
+// payload = {folder_id: string | number}
+export const updateSegmentToFolder = (
+  projectID,
+  segmentID,
+  payload,
+  folder_type
+) => {
+  const url = `${host}projects/${projectID}/segment_folders_item/${segmentID}?type=${folder_type}`;
+  return put(null, url, payload);
+};
+
+// Move segment(:id) to Folder(with id) which needs to be passed via body
+// payload = {folder_id: string | number}
+export const moveSegmentToNewFolder = (
+  projectID,
+  segmentID,
+  payload,
+  folder_type
+) => {
+  const url = `${host}projects/${projectID}/segment_folders_item/${segmentID}?type=${folder_type}`;
+  return post(null, url, payload);
 };

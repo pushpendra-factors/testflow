@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import cx from 'classnames';
 import { Layout, Dropdown, Menu, Button } from 'antd';
 import { Link, useHistory, useLocation } from 'react-router-dom';
@@ -8,10 +8,9 @@ import ProjectModal from 'Components/ProjectModal';
 import {
   isAccountsUrl,
   isAlertsUrl,
-  isAttributionsUrl,
-  isConfigurationUrl,
+  // isAttributionsUrl,
   isReportsMainUrl,
-  isReportsUrl,
+  // isReportsUrl,
   isSettingsUrl
 } from 'Views/AppSidebar/appSidebar.helpers';
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
@@ -27,32 +26,17 @@ export const getConfigureMenuItems = (email) => {
       url: PathUrls.SettingsIntegration
     },
     {
-      label: 'Events',
-      url: PathUrls.ConfigureEvents
+      label: 'Touchpoints Definitions',
+      url: PathUrls.SettingsTouchpointDefinition
     },
     {
-      label: 'Properties',
-      url: PathUrls.ConfigureProperties
+      label: 'Custom Definitions',
+      url: PathUrls.SettingsCustomDefinition
     },
-    {
-      label: 'Content Groups',
-      url: PathUrls.ConfigureContentGroups
-    },
-    {
-      label: 'Touchpoints',
-      url: PathUrls.ConfigureTouchPoints
-    },
-    {
-      label: 'Custom KPIs',
-      url: PathUrls.ConfigureCustomKpi
-    },
-    {
-      label: 'Engagements',
-      url: PathUrls.ConfigureEngagements
-    },
+
     {
       label: 'Attribution',
-      url: PathUrls.ConfigureAttribution
+      url: PathUrls.SettingsAttribution
     }
   ];
   if (email === SolutionsAccountId) {
@@ -72,7 +56,7 @@ const ProjectSettingsSubItems = [
   },
   {
     label: 'Members',
-    url: PathUrls.SettingsUser,
+    url: PathUrls.SettingsMembers,
     lineBreak: false
   },
   {
@@ -89,9 +73,13 @@ const ProjectSettingsSubItems = [
 
 const PersonalSettingsSubItems = [
   {
-    label: 'User',
-    url: PathUrls.SettingsUser,
+    label: 'User Settings',
+    url: PathUrls.SettingsPersonalUser,
     lineBreak: false
+  },
+  {
+    label: 'My Projects',
+    url: PathUrls.SettingsPersonalProjects
   }
 ];
 
@@ -110,11 +98,12 @@ export const settingsCategorisedMap = (email) => [
     items: ProjectSettingsSubItems,
     hoverable: false
   },
-  // {
-  //   label: 'Personal Settings',
-  //   icon: 'user',
-  //   items: PersonalSettingsSubItems
-  // },
+  {
+    label: 'Personal Settings',
+    icon: 'user',
+    items: PersonalSettingsSubItems,
+    hoverable: false
+  },
   {
     label: 'Data Management',
     icon: 'database',
@@ -131,7 +120,7 @@ export const settingsMenuItems = [
   },
   {
     label: 'Users',
-    url: PathUrls.SettingsUser,
+    url: PathUrls.SettingsMembers,
     lineBreak: true
   },
   {
@@ -218,25 +207,6 @@ const reportsMainMenu = (
         </Text>
       </Link>
     </Menu.Item>
-  </Menu>
-);
-
-const renderConfigureMenu = (email) => (
-  <Menu className={styles['dropdown-menu']}>
-    <Menu.Item disabled className={styles['dropdown-menu-item']}>
-      <Text color='disabled' level={7} type='title' extraClass='mb-0'>
-        Settings
-      </Text>
-    </Menu.Item>
-    {getConfigureMenuItems(email).map((item) => (
-      <Menu.Item key={item.label} className={styles['dropdown-menu-item']}>
-        <Link to={item.url}>
-          <Text color='black' level={7} type='title' extraClass='mb-0'>
-            {item.label}
-          </Text>
-        </Link>
-      </Menu.Item>
-    ))}
   </Menu>
 );
 

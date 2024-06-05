@@ -15,20 +15,15 @@ export const isSettingsUrl = (pathname) =>
   pathname === PathUrls.SettingsGeneral ||
   pathname === PathUrls.SettingsIntegration ||
   pathname === PathUrls.SettingsSharing ||
-  pathname === PathUrls.SettingsUser ||
+  pathname === PathUrls.SettingsMembers ||
   pathname === PathUrls.SettingsPricing ||
+  pathname === PathUrls.SettingsPersonalProjects ||
+  pathname === PathUrls.SettingsPersonalUser ||
+  pathname === PathUrls.SettingsTouchpointDefinition ||
+  pathname === PathUrls.SettingsCustomDefinition ||
+  pathname === PathUrls.ConfigurePlans ||
+  pathname === PathUrls.SettingsAttribution ||
   checkMatchPath(pathname, PathUrls.SettingsIntegrationURLID);
-
-export const isConfigurationUrl = (pathname) =>
-  pathname === PathUrls.ConfigureContentGroups ||
-  pathname === PathUrls.ConfigureCustomKpi ||
-  pathname === PathUrls.ConfigureDataPoints ||
-  pathname === PathUrls.ConfigureEvents ||
-  pathname === PathUrls.ConfigureProperties ||
-  pathname === PathUrls.ConfigureTouchPoints ||
-  pathname === PathUrls.ConfigureEngagements ||
-  pathname === PathUrls.ConfigureAttribution ||
-  pathname === PathUrls.ConfigurePlans;
 
 export const isAccountsUrl = (pathname) =>
   pathname === PathUrls.ProfileAccounts ||

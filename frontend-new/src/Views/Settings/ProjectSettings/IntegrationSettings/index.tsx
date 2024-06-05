@@ -4,11 +4,12 @@ import {
   SVG,
   Text
 } from 'Components/factorsComponents';
-import { Button, Divider, Input, Select, Skeleton } from 'antd';
+import { Input, Select, Skeleton } from 'antd';
 import React, { useContext, useState } from 'react';
 
 import { ErrorBoundary } from 'react-error-boundary';
 import useIntegrationCheck from 'hooks/useIntegrationCheck';
+import CommonSettingsHeader from 'Components/GenericComponents/CommonSettingsHeader';
 import styles from './index.module.scss';
 import {
   IntegrationPageCategories,
@@ -119,28 +120,13 @@ const IntegrationSettings = () => {
       )}
       {!integrationStatusLoading && (
         <>
-          <div>
-            <Text
-              type='title'
-              level={4}
-              color='character-primary'
-              weight='bold'
-              extraClass='m-0 mt-2'
-            >
-              Integrations
-            </Text>
-            <Text
-              type='title'
-              level={7}
-              color='character-secondary'
-              extraClass='w-3/4'
-            >
-              Unlock productivity with our robust ecosystem of seamless software
+          <CommonSettingsHeader
+            title='Integrations'
+            description='Unlock productivity with our robust ecosystem of seamless software
               integrations.Unlock productivity with our robust ecosystem of
-              seamless software integrations.
-            </Text>
-          </div>
-          <Divider style={{ marginBottom: 0 }} />
+              seamless software integrations.'
+          />
+
           <div className={styles.integrationHeader}>
             <div className=' flex items-center justify-between w-full'>
               <div>
@@ -161,7 +147,7 @@ const IntegrationSettings = () => {
               </div>
             </div>
           </div>
-          <div className='mb-6'>{renderIntegrationBody()}</div>
+          <div className='mb-6 mt-6'>{renderIntegrationBody()}</div>
         </>
       )}
     </ErrorBoundary>

@@ -170,42 +170,28 @@ const IntegrationRedirection = lazyWithRetry(
     )
 );
 
-// Configuration
+// settings personal
 
-const Events = lazyWithRetry(
+const SettingsPersonalUser = lazyWithRetry(
   () =>
     import(
-      /* webpackChunkName: "configuration" */ '../Views/Settings/ProjectConfigure/Events'
+      /* webpackChunkName: "settings-personal" */ '../Views/Settings/UserSettings/ViewUserDetails'
     )
 );
-const PropertySettings = lazyWithRetry(
+
+const SettingsPersonalProjects = lazyWithRetry(
   () =>
     import(
-      /* webpackChunkName: "configuration" */ '../Views/Settings/ProjectConfigure/PropertySettings'
+      /* webpackChunkName: "settings-personal" */ '../Views/Settings/UserSettings/ProjectDetails'
     )
 );
-const ContentGroups = lazyWithRetry(
-  () =>
-    import(
-      /* webpackChunkName: "configuration" */ '../Views/Settings/ProjectConfigure/ContentGroups'
-    )
-);
-const CustomKPI = lazyWithRetry(
-  () =>
-    import(
-      /* webpackChunkName: "configuration" */ '../Views/Settings/ProjectConfigure/CustomKPI'
-    )
-);
-const EngagementConfig = lazyWithRetry(
-  () =>
-    import(
-      /* webpackChunkName: "configuration" */ '../Views/Settings/ProjectConfigure/Engagement'
-    )
-);
+
+// Settings data management
+
 const AttributionSettings = lazyWithRetry(
   () =>
     import(
-      /* webpackChunkName: "configuration" */ '../Views/Settings/ProjectSettings/AttributionSettings'
+      /* webpackChunkName: "settings-attribution" */ '../Views/Settings/ProjectSettings/AttributionSettings'
     )
 );
 const ConfigurePlans = lazyWithRetry(
@@ -225,7 +211,14 @@ const ConfigurePlanAdmin = lazyWithRetry(
 const Touchpoints = lazyWithRetry(
   () =>
     import(
-      /* webpackChunkName: "configuration" */ '../Views/Settings/ProjectConfigure/Touchpoints'
+      /* webpackChunkName: "settings-touchpoint" */ '../Views/Settings/ProjectConfigure/Touchpoints'
+    )
+);
+
+const CustomDefinition = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "settings-custom-definition" */ '../Views/Settings/ProjectConfigure/CustomDefinition'
     )
 );
 
@@ -298,65 +291,6 @@ const FeatureLockedPathAnalysisReport = withFeatureLockHOC(PathAnalysisReport, {
   )
 });
 
-const FeatureLockedPropertySettings = withFeatureLockHOC(PropertySettings, {
-  featureName: FEATURES.CONF_CUSTOM_PROPERTIES,
-  LockedComponent: (props) => (
-    <CommonLockedComponent
-      title='Properties'
-      description='Harness the full potential of your advertising data with Custom Properties. By associating distinct attributes with your data, you gain precise control over configuring and analyzing your ad campaigns. Customize and tailor your data to align perfectly with your business objectives, ensuring optimal insights and enhanced advertising optimization.'
-      learnMoreLink='https://help.factors.ai/en/articles/7284109-custom-properties'
-      {...props}
-    />
-  )
-});
-
-const FeatureLockedConfigureContentGroups = withFeatureLockHOC(ContentGroups, {
-  featureName: FEATURES.FEATURE_CONTENT_GROUPS,
-  LockedComponent: (props) => (
-    <CommonLockedComponent
-      title='Content Groups'
-      description='Create logical collections of related URLs, such as blog articles or product pages, to analyze their impact on leads, revenue, and pipeline stages. Compare the performance of different content groups, identify optimization opportunities, and enhance your content marketing efforts to drive better results.'
-      learnMoreLink='https://help.factors.ai/en/articles/7284125-content-groups'
-      {...props}
-    />
-  )
-});
-
-const FeatureLockedConfigureTouchpoints = withFeatureLockHOC(Touchpoints, {
-  featureName: FEATURES.FEATURE_OFFLINE_TOUCHPOINTS,
-  LockedComponent: (props) => (
-    <CommonLockedComponent
-      title='Touchpoints'
-      description='Effortlessly map and standardize your marketing parameters. Connect and align UTMs and other parameters used across your marketing efforts to a standardized set. Query and filter by different parameter values within Factors, enabling seamless tracking and analysis of customer touchpoints'
-      {...props}
-    />
-  )
-});
-
-const FeatureLockedConfigureCustomKPI = withFeatureLockHOC(CustomKPI, {
-  featureName: FEATURES.FEATURE_CUSTOM_METRICS,
-  LockedComponent: (props) => (
-    <CommonLockedComponent
-      title='Custom KPIs'
-      description="Create personalized metrics tailored to your specific objectives, whether it's conversion rates, engagement metrics, or revenue targets. Monitor progress, measure success, and gain actionable insights to drive continuous improvement and achieve your business milestones."
-      learnMoreLink='https://help.factors.ai/en/articles/7284181-custom-kpis'
-      {...props}
-    />
-  )
-});
-
-const FeatureLockedConfigureEvents = withFeatureLockHOC(Events, {
-  featureName: FEATURES.CONF_CUSTOM_EVENTS,
-  LockedComponent: (props) => (
-    <CommonLockedComponent
-      title='Events'
-      description='Track and analyze user interactions in a way that aligns perfectly with your business objectives. Define and capture custom events that matter most to your business, such as clicks, form submissions, lifecycle stage changes, or other specific actions.'
-      learnMoreLink='https://help.factors.ai/en/articles/7284092-custom-events'
-      {...props}
-    />
-  )
-});
-
 const FeatureLockConfigurationAttribution = withFeatureLockHOC(
   AttributionSettings,
   {
@@ -400,20 +334,6 @@ const FeatureLockConfigurationWorkflows = withFeatureLockHOC(Workflows, {
     />
   )
 });
-
-const FeatureLockedConfigurationEngagement = withFeatureLockHOC(
-  EngagementConfig,
-  {
-    featureName: FEATURES.FEATURE_ACCOUNT_SCORING,
-    LockedComponent: (props) => (
-      <CommonLockedComponent
-        title='Engagement Scoring'
-        description='Some events matter more than others, and are better indicators of buying intent. Configure scores for them, tag them as intent signals, and more.'
-        {...props}
-      />
-    )
-  }
-);
 
 const FeatureLockedFactorsInsightsNew = withFeatureLockHOC(FactorsInsightsNew, {
   featureName: FEATURES.FEATURE_EXPLAIN,
@@ -558,9 +478,9 @@ export const APP_LAYOUT_ROUTES = {
     Component: BasicSettings,
     Private: true
   },
-  SettingsUser: {
+  SettingsMembers: {
     exact: true,
-    path: PathUrls.SettingsUser,
+    path: PathUrls.SettingsMembers,
     Component: UserSettings,
     Private: true
   },
@@ -588,36 +508,36 @@ export const APP_LAYOUT_ROUTES = {
     Component: PricingComponent,
     Private: true
   },
-  ConfigureEvents: {
+
+  // personal settings
+  SettingsPersonalUser: {
     exact: true,
-    path: PathUrls.ConfigureEvents,
-    Component: FeatureLockedConfigureEvents,
+    path: PathUrls.SettingsPersonalUser,
+    name: 'settingsPersonalUser',
+    Component: SettingsPersonalUser,
     Private: true
   },
-  ConfigureProperties: {
+  SettingsPersonalProjects: {
     exact: true,
-    path: PathUrls.ConfigureProperties,
-    Component: FeatureLockedPropertySettings,
+    path: PathUrls.SettingsPersonalProjects,
+    name: 'settingsPersonalUser',
+    Component: SettingsPersonalProjects,
     Private: true
   },
-  ConfigureContentGroups: {
+
+  SettingsTouchpointDefinition: {
     exact: true,
-    path: PathUrls.ConfigureContentGroups,
-    Component: FeatureLockedConfigureContentGroups,
+    path: PathUrls.SettingsTouchpointDefinition,
+    Component: Touchpoints,
     Private: true
   },
-  ConfigureTouchPoints: {
+  SettingsCustomDefinition: {
     exact: true,
-    path: PathUrls.ConfigureTouchPoints,
-    Component: FeatureLockedConfigureTouchpoints,
+    path: PathUrls.SettingsCustomDefinition,
+    Component: CustomDefinition,
     Private: true
   },
-  ConfigureCustomKpi: {
-    exact: true,
-    path: PathUrls.ConfigureCustomKpi,
-    Component: FeatureLockedConfigureCustomKPI,
-    Private: true
-  },
+
   Alerts: {
     exact: true,
     path: PathUrls.Alerts,
@@ -630,15 +550,10 @@ export const APP_LAYOUT_ROUTES = {
     Component: FeatureLockConfigurationWorkflows,
     Private: false
   },
-  ConfigureEngagements: {
+
+  SettingsAttribution: {
     exact: true,
-    path: PathUrls.ConfigureEngagements,
-    Component: FeatureLockedConfigurationEngagement,
-    Private: true
-  },
-  ConfigurationAttribution: {
-    exact: true,
-    path: PathUrls.ConfigureAttribution,
+    path: PathUrls.SettingsAttribution,
     Component: FeatureLockConfigurationAttribution,
     Private: true
   },

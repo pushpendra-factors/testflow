@@ -470,9 +470,9 @@ function CoreQuery({
     }
   }, [activeProject, getCampaignConfigData]);
 
-  const updateResultState = useCallback((newState) => {
+  const updateResultState = (newState) => {
     setResultState(newState);
-  }, []);
+  };
 
   const updateAppliedBreakdown = useCallback(() => {
     const newAppliedBreakdown = [...groupBy.event, ...groupBy.global];
@@ -1785,7 +1785,8 @@ function CoreQuery({
       setQueries,
       setProfileQueries,
       runAttributionQuery,
-      updateCoreQueryReducer
+      updateCoreQueryReducer,
+      resultState
     }),
     [
       coreQueryState,
@@ -1812,10 +1813,10 @@ function CoreQuery({
       runAttributionQuery,
       setNavigatedFromDashboard,
       setNavigatedFromAnalyse,
-      updateCoreQueryReducer
+      updateCoreQueryReducer,
+      resultState
     ]
   );
-
   if (loading) {
     return (
       <CoreQueryContext.Provider value={contextValue}>
@@ -1897,7 +1898,6 @@ function CoreQuery({
       </CoreQueryContext.Provider>
     );
   }
-
   if (isIntegrationEnabled) {
     return (
       <ErrorBoundary

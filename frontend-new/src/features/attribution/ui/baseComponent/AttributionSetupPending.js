@@ -2,9 +2,9 @@ import React from 'react';
 import { Link, useHistory } from 'react-router-dom';
 import { Button } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
-import styles from './index.module.scss';
 import { ABOUT_ATTRIBUTION_LINK } from 'Attribution/utils/constants';
 import { PathUrls } from 'Routes/pathUrls';
+import styles from './index.module.scss';
 
 function AttributionSetupPending() {
   const history = useHistory();
@@ -39,7 +39,7 @@ function AttributionSetupPending() {
           <Button
             type='primary'
             size='large'
-            onClick={() => history.push(PathUrls.ConfigureAttribution)}
+            onClick={() => history.push(PathUrls.SettingsAttribution)}
           >
             Setup Now
           </Button>

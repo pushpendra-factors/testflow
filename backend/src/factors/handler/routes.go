@@ -326,7 +326,17 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.GET("/:project_id/segments/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(GetSegmentByIdHandler))
 	authRouteGroup.PUT("/:project_id/segments/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), UpdateSegmentHandler)
 	authRouteGroup.DELETE("/:project_id/segments/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), DeleteSegmentByIdHandler)
-
+	
+	// Segment Folders
+	authRouteGroup.GET("/:project_id/segment_folders", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(GetAllSegmentFoldersByProjectIDHandler))
+	authRouteGroup.POST("/:project_id/segment_folders", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(CreateSegmentFolderRouteHandler))
+	authRouteGroup.PUT("/:project_id/segment_folders/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(UpdateSegmentFolderByIDHandler))
+	authRouteGroup.DELETE("/:project_id/segment_folders/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(DeleteSegmentFolderByIDHandler))
+	// Segment Folder Item ( Segment itself )
+	authRouteGroup.PUT("/:project_id/segment_folders_item/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(MoveSegmentFolderItemHandler))
+	authRouteGroup.POST("/:project_id/segment_folders_item/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(MoveSegmentToNewFolderHandler))
+	
+	
 	// Segment analysis
 	authRouteGroup.GET("/:project_id/segments/analytics/config", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENTKPI_OVERVIEW}), GetSegmentAnalyticsConfigHandler)
 	authRouteGroup.POST("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENTKPI_OVERVIEW}), responseWrapper(AddNewWidgetToWidgetGroupHandler))

@@ -3,14 +3,12 @@ import { Button, Spin } from 'antd';
 import { connect, useDispatch } from 'react-redux';
 import { bindActionCreators } from 'redux';
 import { useHistory } from 'react-router-dom';
-import { isEmpty,get } from 'lodash';
+import { isEmpty, get } from 'lodash';
 
 import { SVG, Text } from 'Components/factorsComponents';
 import FaDatepicker from 'Components/FaDatepicker';
 import { fetchAttributionActiveUnits } from 'Attribution/state/services';
 import { QUERY_TYPE_ATTRIBUTION } from 'Utils/constants';
-import NoReports from './NoReports';
-import SortableCards from './SortableCards';
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import { setItemToLocalStorage } from 'Utils/localStorage.helpers';
 import { getDashboardDateRange } from 'Views/Dashboard/utils';
@@ -22,6 +20,8 @@ import {
   ATTRIBUTION_QUERY_DELETED,
   ATTRIBUTION_WIDGET_DELETED
 } from 'Attribution/state/action.constants';
+import SortableCards from './SortableCards';
+import NoReports from './NoReports';
 import { PathUrls } from '../../../../routes/pathUrls';
 
 function Reports({
@@ -78,15 +78,17 @@ function Reports({
     }
   }, [currentProjectSettings, currentProjectSettingsLoading]);
 
-  const activeUnits = useMemo(() => {
-    return attributionDashboardUnits.data.filter(
-      (elem) =>
-        savedQueries.findIndex(
-          (sq) =>
-            sq.id === elem.query_id && sq.query.cl === QUERY_TYPE_ATTRIBUTION
-        ) > -1
-    );
-  }, [attributionDashboardUnits, savedQueries]);
+  const activeUnits = useMemo(
+    () =>
+      attributionDashboardUnits.data.filter(
+        (elem) =>
+          savedQueries.findIndex(
+            (sq) =>
+              sq.id === elem.query_id && sq.query.cl === QUERY_TYPE_ATTRIBUTION
+          ) > -1
+      ),
+    [attributionDashboardUnits, savedQueries]
+  );
 
   const deleteWidget = useCallback(async () => {
     try {
@@ -147,7 +149,7 @@ function Reports({
             weight='bold'
             color='black'
             extraClass='m-0'
-            id={'fa-at-text--page-title'}
+            id='fa-at-text--page-title'
           >
             Attribution Reports
           </Text>
@@ -164,14 +166,14 @@ function Reports({
             placement='bottomRight'
             className='mr-2'
             onSelect={handleDurationChange}
-            withoutYesterday={true}
+            withoutYesterday
           />
         </div>
         <div className='flex items-center gap-2'>
           <Button
             type='link'
             size='large'
-            onClick={() => history.push(PathUrls.ConfigureAttribution)}
+            onClick={() => history.push(PathUrls.SettingsAttribution)}
           >
             Configuration
           </Button>

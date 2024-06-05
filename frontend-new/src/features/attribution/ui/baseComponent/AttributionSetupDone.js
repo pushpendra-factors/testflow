@@ -2,8 +2,8 @@ import React from 'react';
 import { Link, useHistory } from 'react-router-dom';
 import { Button } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
-import styles from './index.module.scss';
 import { ATTRIBUTION_BASICS_LINK } from 'Attribution/utils/constants';
+import styles from './index.module.scss';
 import { PathUrls } from '../../../../routes/pathUrls';
 
 function AttributionSetupDone() {
@@ -17,7 +17,7 @@ function AttributionSetupDone() {
           weight='bold'
           color='black'
           extraClass='m-0'
-          id={'fa-at-text--page-title'}
+          id='fa-at-text--page-title'
         >
           Attribution Reports
         </Text>
@@ -25,7 +25,7 @@ function AttributionSetupDone() {
           <Button
             type='link'
             size='large'
-            onClick={() => history.push(PathUrls.ConfigureAttribution)}
+            onClick={() => history.push(PathUrls.SettingsAttribution)}
           >
             Configuration
           </Button>

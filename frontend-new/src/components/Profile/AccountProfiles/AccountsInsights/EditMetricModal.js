@@ -165,7 +165,7 @@ function EditMetricModal({
           <div className='flex justify-between items-center'>
             <Link
               className='flex items-center gap-x-1'
-              to={PathUrls.ConfigureCustomKpi}
+              to={`${PathUrls.SettingsCustomDefinition}?activeTab=customKPI`}
             >
               <SVG size={16} color='#1890FF' name='arrowUpRightSquare' />
               <Text

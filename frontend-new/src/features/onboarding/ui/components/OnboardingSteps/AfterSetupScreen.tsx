@@ -1,11 +1,11 @@
 import { Button, Col, Divider, Row } from 'antd';
 import useMobileView from 'hooks/useMobileView';
 import React from 'react';
-import IllustrationImage from '../../../../../assets/images/onboarding_step5.png';
 import { SVG, Text } from 'Components/factorsComponents';
-import OnboardingHeader from '../OnboardingHeader';
 import { useHistory } from 'react-router-dom';
 import { PathUrls } from 'Routes/pathUrls';
+import OnboardingHeader from '../OnboardingHeader';
+import IllustrationImage from '../../../../../assets/images/onboarding_step5.png';
 import style from './index.module.scss';
 
 const AfterSetupScreen = ({
@@ -20,42 +20,40 @@ const AfterSetupScreen = ({
     svgName: string,
     url: string,
     color: string
-  ) => {
-    return (
-      <div
-        className={`p-4 gap-6 cursor-pointer flex justify-between items-center ${style.outlineBorder} `}
-        onClick={() => history.push(url)}
-      >
-        <div className='flex gap-4'>
-          <div className={`p-2 h-full  ${style.outlineBorder}`}>
-            <SVG name={svgName} size='40' color={color} />
-          </div>
-          <div>
-            <Text
-              type={'title'}
-              color='character-primary'
-              level={6}
-              weight={'bold'}
-              extraClass='m-0 mb-1'
-            >
-              {title}
-            </Text>
-            <Text
-              type={'title'}
-              color='character-secondary'
-              level={7}
-              extraClass='m-0'
-            >
-              {subTitle}
-            </Text>
-          </div>
+  ) => (
+    <div
+      className={`p-4 gap-6 cursor-pointer flex justify-between items-center ${style.outlineBorder} `}
+      onClick={() => history.push(url)}
+    >
+      <div className='flex gap-4'>
+        <div className={`p-2 h-full  ${style.outlineBorder}`}>
+          <SVG name={svgName} size='40' color={color} />
         </div>
         <div>
-          <SVG name='ChevronRight' size='16' />
+          <Text
+            type='title'
+            color='character-primary'
+            level={6}
+            weight='bold'
+            extraClass='m-0 mb-1'
+          >
+            {title}
+          </Text>
+          <Text
+            type='title'
+            color='character-secondary'
+            level={7}
+            extraClass='m-0'
+          >
+            {subTitle}
+          </Text>
         </div>
       </div>
-    );
-  };
+      <div>
+        <SVG name='ChevronRight' size='16' />
+      </div>
+    </div>
+  );
   return (
     <>
       <OnboardingHeader
@@ -86,23 +84,23 @@ const AfterSetupScreen = ({
             }`}
           >
             <Text
-              type={'title'}
+              type='title'
               level={3}
-              color={'character-primary'}
-              weight={'bold'}
+              color='character-primary'
+              weight='bold'
             >
               Congratulations, Your Project is ready{' '}
               <span role='img' aria-label='congratulations'>
                 🎉
               </span>
             </Text>
-            <Text type={'title'} level={6} color='character-secondary'>
+            <Text type='title' level={6} color='character-secondary'>
               Yeah! Your project setup is now complete. We have started pulling
               data into your project and you can soon expect to see accounts we
               have identified for you.
             </Text>
             <Text
-              type={'title'}
+              type='title'
               level={6}
               color='character-secondary'
               extraClass='m-0'
@@ -113,7 +111,7 @@ const AfterSetupScreen = ({
             <div>
               <Button
                 type='primary'
-                className={'m-0 mt-4'}
+                className='m-0 mt-4'
                 onClick={() => history.push(PathUrls.ProfileAccounts)}
               >
                 Continue to project
@@ -122,7 +120,7 @@ const AfterSetupScreen = ({
           </Col>
           <Divider />
           <Col span={24} className='mb-5'>
-            <Text type={'title'} level={6} color='character-secondary'>
+            <Text type='title' level={6} color='character-secondary'>
               What do you want to get started with first?
             </Text>
           </Col>
@@ -141,7 +139,7 @@ const AfterSetupScreen = ({
                 'Invite your teammates',
                 'Invite people from your team to achieve more using Factors',
                 'UserPlusRegular',
-                PathUrls.SettingsUser,
+                PathUrls.SettingsMembers,
                 '#13C2C2'
               )}
             </Col>

@@ -116,7 +116,7 @@ const NoBreakdownTable = ({
       chartType !== CHART_TYPE_SPARKLINES ? dateBasedTableData : tableData;
     const format = DATE_FORMATS[frequency] || DATE_FORMATS.date;
     return {
-      fileName: 'KPI.csv',
+      fileName: 'KPI',
       data: activeTableData.map(
         ({ index, label, date, compareDate, ...rest }) => {
           if (chartType === CHART_TYPE_SPARKLINES) {

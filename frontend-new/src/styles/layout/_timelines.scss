@@ -732,9 +732,11 @@
     height: calc(100vh - 280px);
     overflow: scroll !important;
   }
+
   & table {
     min-width: unset !important;
   }
+
   & .ant-table-content thead tr {
     top: 0;
     position: sticky;
@@ -764,18 +766,12 @@
     .ant-table-row {
       .ant-table-cell {
         border-bottom: 1px solid $fa-color-neutral-grey-3;
-        // border: none;
-        background-color: #fff;
         font-weight: $font-weight--regular;
         font-size: 14px;
         line-height: 24px;
         padding: 10px 12px;
         color: $fa-color--mono-6;
       }
-
-      // .ant-table-column-sort, .ant-table-column-has-sorters{
-      //     background-color: transparent;
-      // }
     }
   }
 
@@ -791,25 +787,51 @@
     padding: 0 !important;
     height: 48px;
 
-    & > div {
+    &>div {
       padding: 0 16px;
     }
   }
 
   & tr {
+    &.active {
+      td {
+        background-color: #fafafa !important;
+      }
+    }
+
+    a {
+      color: unset;
+
+      &:hover {
+        color: #1890ff;
+        text-decoration: underline;
+        text-decoration-color: #1890ff;
+      }
+    }
+
     .preview-btns {
       display: none;
       transition: all 0.3s;
     }
   }
 
-  & tr:hover td {
-    background-color: #fafafa !important;
-
-    .preview-btns {
-      display: inline-flex;
+  & tr:hover {
+    td {
       background-color: #fafafa !important;
-      cursor: pointer;
+
+      &:hover {
+        a {
+          color: #1890ff;
+          text-decoration: underline;
+          text-decoration-color: #1890ff;
+        }
+      }
+
+      .preview-btns {
+        display: inline-flex;
+        background-color: #fafafa !important;
+        cursor: pointer;
+      }
     }
   }
 
@@ -1379,4 +1401,16 @@
   background-repeat: no-repeat;
   background-size: 100% 16px, 100% 16px, 100% 8px, 100% 8px;
   background-attachment: local, local, scroll, scroll;
+}
+
+.bg-active-row {
+  background-color: $fa-color-neutral-grey-2
+}
+
+.active-link {
+  a {
+    color: #1890ff !important;
+    text-decoration: underline !important;
+    text-decoration-color: #1890ff !important;
+  }
 }

@@ -124,7 +124,7 @@ function FunnelsResultTable({
     try {
       if (!comparisonChartData) {
         return {
-          fileName: `${reportTitle}.csv`,
+          fileName: reportTitle,
           data: tableData.map(
             ({ index, value, name, nonConvertedName, ...rest }) => {
               arrayMapper.forEach((elem) => {
@@ -221,7 +221,7 @@ function FunnelsResultTable({
           data.push(rest);
         });
         return {
-          fileName: `${reportTitle}.csv`,
+          fileName: reportTitle,
           data
         };
       }

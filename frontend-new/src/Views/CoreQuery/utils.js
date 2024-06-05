@@ -3,7 +3,11 @@ import lowerCase from 'lodash/lowerCase';
 import startCase from 'lodash/startCase';
 
 import { EMPTY_ARRAY, generateRandomKey, groupFilters } from 'Utils/global';
-import { formatFilterDate, isDateInMilliSeconds } from 'Utils/dataFormatter';
+import {
+  formatFilterDate,
+  generateColors,
+  isDateInMilliSeconds
+} from 'Utils/dataFormatter';
 import MomentTz from 'Components/MomentTz';
 import _ from 'lodash';
 
@@ -25,7 +29,8 @@ import {
   MARKETING_TOUCHPOINTS,
   PREDEFINED_DATES,
   QUERY_TYPE_PROFILE,
-  QUERY_OPTIONS_DEFAULT_VALUE
+  QUERY_OPTIONS_DEFAULT_VALUE,
+  TOTAL_USERS_CRITERIA
 } from 'Utils/constants';
 
 import {
@@ -34,9 +39,11 @@ import {
   reverseDateOperatorMap
 } from 'Utils/operatorMapping';
 import moment from 'moment';
+import { getEventsData } from 'Reducers/coreQuery/services';
 import {
   CORE_QUERY_INITIAL_STATE,
   FILTER_TYPES,
+  INITIAL_EVENT_WITH_PROPERTIES_STATE,
   INITIAL_STATE
 } from './constants';
 
@@ -121,15 +128,26 @@ export const formatBreakdown = (opt) => {
 export const formatBreakdownsForQuery = (breakdownArr) =>
   breakdownArr.map((breakdown) => formatBreakdown(breakdown));
 
+const getNewSegmentKeys = (ev) => ({
+  range: ev.range,
+  iep: ev.isEventPerformed,
+  freqOp: ev.frequencyOperator,
+  freq: ev.frequency
+});
+
 export const getEventsWithProperties = (queries) =>
-  queries.map((ev) => {
-    const filterProps = formatFiltersForQuery(ev.filters);
-    return {
-      an: ev.alias,
-      na: ev.label,
-      grpa: ev.group,
-      pr: filterProps
-    };
+  queries?.map((ev) => {
+    const ewp = { an: ev.alias, na: ev.label, grpa: ev.group };
+    ewp.pr = formatFiltersForQuery(ev.filters);
+    if (ev.range) {
+      Object.assign(ewp, getNewSegmentKeys(ev));
+    }
+    if (!ewp.iep) {
+      delete ewp.freq;
+      delete ewp.freqOp;
+    }
+
+    return ewp;
   });
 
 export const getQuery = (
@@ -1181,22 +1199,36 @@ export const processBreakdownsFromQuery = (breakdownArray) =>
     overAllIndex: index
   }));
 
+const getNewSegmentKeysFromQuery = (e) => ({
+  range: e.range,
+  isEventPerformed: e.iep,
+  frequencyOperator:
+    e.freqOp || INITIAL_EVENT_WITH_PROPERTIES_STATE.frequencyOperator,
+  frequency: e.freq || INITIAL_EVENT_WITH_PROPERTIES_STATE.frequency
+});
+
 export const getStateQueryFromRequestQuery = (requestQuery) => {
   const events = (requestQuery?.ewp || []).map((e) => {
     const eventFilters = processFiltersFromQuery(e.pr);
+    const segmentAdditionalKeys = {};
+
+    if (e.range) {
+      Object.assign(segmentAdditionalKeys, getNewSegmentKeysFromQuery(e));
+    }
+
     return {
       alias: e.an,
       label: e.na,
       group: e.grpa,
       filters: eventFilters,
-      key: generateRandomKey()
+      key: generateRandomKey(),
+      ...segmentAdditionalKeys
     };
   });
 
-  const globalFilters =
-    requestQuery?.gup && Array.isArray(requestQuery.gup)
-      ? processFiltersFromQuery(requestQuery.gup)
-      : [];
+  const globalFilters = Array.isArray(requestQuery?.gup)
+    ? processFiltersFromQuery(requestQuery.gup)
+    : [];
 
   const queryType = requestQuery.cl;
   const eventsCondition = requestQuery.ec;
@@ -1204,12 +1236,9 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
     requestQuery.grpa || QUERY_OPTIONS_DEFAULT_VALUE.group_analysis;
   const sessionAnalyticsSeq = INITIAL_SESSION_ANALYTICS_SEQ;
 
-  const event = processBreakdownsFromQuery(requestQuery?.gbp || []).filter(
-    (b) => b.eventIndex
-  );
-  const global = processBreakdownsFromQuery(requestQuery?.gbp || []).filter(
-    (b) => !b.eventIndex
-  );
+  const breakdowns = processBreakdownsFromQuery(requestQuery?.gbp || []);
+  const eventBreakdowns = breakdowns.filter((b) => b.eventIndex);
+  const globalBreakdowns = breakdowns.filter((b) => !b.eventIndex);
 
   const dateRange = {
     from: requestQuery.fr * 1000,
@@ -1217,28 +1246,32 @@ export const getStateQueryFromRequestQuery = (requestQuery) => {
     frequency: requestQuery.gbt
   };
 
-  const result = {
+  const funnelConversionDuration =
+    queryType === QUERY_TYPE_FUNNEL && requestQuery.cnvtm
+      ? {
+          funnelConversionDurationNumber: parseInt(
+            requestQuery.cnvtm.slice(0, -1)
+          ),
+          funnelConversionDurationUnit: requestQuery.cnvtm.slice(-1)
+        }
+      : {
+          funnelConversionDurationNumber:
+            CORE_QUERY_INITIAL_STATE.funnelConversionDurationNumber,
+          funnelConversionDurationUnit:
+            CORE_QUERY_INITIAL_STATE.funnelConversionDurationUnit
+        };
+
+  return {
     events,
     queryType,
     eventsCondition,
     groupAnalysis,
     session_analytics_seq: sessionAnalyticsSeq,
     globalFilters,
-    breakdown: { event, global },
+    breakdown: { event: eventBreakdowns, global: globalBreakdowns },
     dateRange,
-    ...(queryType === QUERY_TYPE_FUNNEL && {
-      funnelConversionDurationNumber:
-        requestQuery.cnvtm != null
-          ? parseInt(requestQuery.cnvtm.slice(0, -1))
-          : CORE_QUERY_INITIAL_STATE.funnelConversionDurationNumber,
-      funnelConversionDurationUnit:
-        requestQuery.cnvtm != null
-          ? requestQuery.cnvtm.slice(-1)
-          : CORE_QUERY_INITIAL_STATE.funnelConversionDurationUnit
-    })
+    ...funnelConversionDuration
   };
-
-  return result;
 };
 
 export const DefaultDateRangeFormat = {
@@ -1939,3 +1972,196 @@ export const getStateFromCustomKPIqueryGroup = (
   }
   return queries;
 };
+
+export function jsonToCsv(jsonData) {
+  if (jsonData && jsonData.length === 0) return ``;
+  let csv = '';
+  // Get the headers
+  const headers = Object.keys(jsonData[0]);
+  csv += `${headers.join(',')}\n`;
+  // Add the data
+  jsonData.forEach((row) => {
+    const data = headers.map((header) => JSON.stringify(row[header])).join(','); // Add JSON.stringify statement
+    csv += `${data}\n`;
+  });
+  return csv;
+}
+
+export const getEventsCSVData = async (
+  id,
+  query, // Query Object
+  { result_criteria, user_type, shouldStack, durationObj, resultState }, // 2nd Step
+  formatData, // Step 3
+  formatDataBasedOnChart, // Step 4
+  tableDataSelector,
+  getCSVData,
+  EventBreakDownType,
+  formatDataParams = {},
+  formatDataBasedOnChartParams = {},
+  comparisonQuery = null
+) => {
+  try {
+    const resultantDataTransformation = (a) => {
+      if (result_criteria === TOTAL_EVENTS_CRITERIA) {
+        return formatApiData(a.result_group[0], a.result_group[1]);
+      }
+      if (result_criteria === TOTAL_USERS_CRITERIA) {
+        if (user_type === EACH_USER_TYPE) {
+          return formatApiData(a.result_group[0], a.result_group[1]);
+        }
+        return a.result_group[0];
+      }
+    };
+    const res = await getEventsData(
+      id,
+      query,
+      null, // we need to call fresh query when granularity is changed
+      false,
+      null,
+      true
+    );
+    const data = res.data.result || res.data;
+    let resultantData = null;
+    resultantData = resultantDataTransformation(data);
+
+    let comparisonRes;
+    let comparisonData;
+    let comparisonResultantData;
+    if (comparisonQuery && comparisonQuery.length > 0 && comparisonQuery[0]) {
+      comparisonRes = await getEventsData(
+        id,
+        comparisonQuery,
+        null,
+        false,
+        null,
+        true
+      );
+      comparisonData = comparisonRes.data.result || comparisonRes.data;
+      comparisonResultantData = resultantDataTransformation(comparisonData);
+    }
+
+    let d = [];
+    let aggData = [];
+    if (EventBreakDownType === 'sesb') {
+      aggData = formatData(resultantData, comparisonResultantData);
+      if (shouldStack) {
+        d = aggData;
+      } else {
+        d = formatDataBasedOnChart(
+          resultantData,
+          aggData,
+          durationObj.frequency,
+          comparisonResultantData // comparison Data
+        )?.data;
+      }
+    } else if (EventBreakDownType === 'semb') {
+      // Single Event Multiple Breakdown
+      // No Comparison Is there in this Case
+      aggData = formatData(resultantData);
+      if (shouldStack) {
+        d = aggData;
+      } else {
+        d = formatDataBasedOnChart(
+          resultantData,
+          aggData,
+          durationObj.frequency,
+          resultantData // comparison Data
+        )?.data;
+      }
+    } else if (EventBreakDownType === 'meb') {
+      // Multiple Events with Breakdown
+      // No Compare
+      const appliedColors = generateColors(
+        formatDataBasedOnChartParams?.queries.length
+      );
+      aggData = formatData(
+        resultantData,
+        formatDataBasedOnChartParams.queries,
+        appliedColors,
+        formatDataParams.eventNames
+      );
+      if (shouldStack) {
+        d = aggData;
+      } else {
+        d = formatDataBasedOnChart(
+          resultantData,
+          aggData,
+          formatDataParams.eventNames,
+          durationObj.frequency
+        )?.data;
+      }
+    } else if (EventBreakDownType === 'nob') {
+      // No-Breakdown Table
+      // Here we have comparison, but by default we can't download it for now.
+
+      aggData = formatData(
+        resultantData,
+        formatDataParams.arrayMapper,
+        comparisonResultantData
+      );
+      d = formatDataBasedOnChart(
+        aggData,
+        formatDataParams.arrayMapper,
+        formatDataParams.eventNames,
+        comparisonResultantData
+      )?.data;
+    } else if (EventBreakDownType === 'eb') {
+      // EventBreakdown Table
+      aggData = formatData(resultantData);
+      d = aggData;
+    }
+    const tmp = tableDataSelector(d);
+    const jsonArray = getCSVData(tmp);
+
+    return jsonArray;
+  } catch (error) {
+    console.log('Error', error);
+    return [];
+  }
+};
+export async function fetchDataCSVDownload(
+  coreQueryContext,
+  getEventsCSVDataParams
+) {
+  const q = coreQueryContext?.resultState?.data?.meta?.query;
+  const cq =
+    coreQueryContext.coreQueryState?.comparison_data?.data?.meta?.query ||
+    coreQueryContext?.comparison_data?.data?.meta?.query;
+
+  const q1 = [q];
+  const cq1 = [cq];
+  if (q) {
+    q1.push({ ...q, gbt: '' });
+  }
+  if (cq) {
+    cq1.push({ ...cq, gbt: '' });
+  }
+  // step2Properties have 5 props
+  // (result_criteria, user_type, shouldStack, durationObj, resultState)
+
+  const {
+    projectID,
+    step2Properties,
+    formatData,
+    formatDataBasedOnChart,
+    tableDataSelector,
+    getCSVDataCallback,
+    EventBreakDownType,
+    formatDataParams = {},
+    formatDataBasedOnChartParams = {}
+  } = getEventsCSVDataParams;
+  const results = await getEventsCSVData(
+    projectID,
+    q1,
+    step2Properties,
+    formatData,
+    formatDataBasedOnChart,
+    tableDataSelector,
+    getCSVDataCallback,
+    EventBreakDownType,
+    formatDataParams,
+    formatDataBasedOnChartParams,
+    cq1
+  );
+  return results;
+}

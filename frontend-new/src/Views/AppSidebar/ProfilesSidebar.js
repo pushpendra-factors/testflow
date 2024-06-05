@@ -1,8 +1,7 @@
-import React, { Fragment, useState } from 'react';
-import noop from 'lodash/noop';
+import React, { useCallback, useEffect, useState } from 'react';
 import cx from 'classnames';
-import { useDispatch, useSelector } from 'react-redux';
-import { Button } from 'antd';
+import { connect, useDispatch, useSelector } from 'react-redux';
+import { Button, message, notification } from 'antd';
 import { getUserOptionsForDropdown } from 'Components/Profile/UserProfiles/userProfiles.helpers';
 import { SVG, Text } from 'Components/factorsComponents';
 import {
@@ -13,16 +12,26 @@ import {
   setNewSegmentModeAction,
   setTimelinePayloadAction
 } from 'Reducers/userProfilesView/actions';
-import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
-import styles from './index.module.scss';
-import SidebarMenuItem from './SidebarMenuItem';
-import SidebarSearch from './SidebarSearch';
+import FolderStructure from 'Components/FolderStructure';
+import {
+  deleteSegment,
+  getSavedSegments,
+  getSegmentFolders,
+  updateSegmentForId
+} from 'Reducers/timelines/middleware';
+import {
+  deleteSegmentFolders,
+  moveSegmentToNewFolder,
+  renameSegmentFolders,
+  updateSegmentToFolder
+} from 'Reducers/timelines';
+import DeleteSegmentModal from 'Components/Profile/AccountProfiles/DeleteSegmentModal';
+import RenameSegmentModal from 'Components/Profile/AccountProfiles/RenameSegmentModal';
+import { bindActionCreators } from 'redux';
+import logger from 'Utils/logger';
 import { ProfilesSidebarIconsMapping } from './appSidebar.constants';
-import { getSegmentColorCode } from './appSidebar.helpers';
-
-function NewSegmentItem() {
-  return <SidebarMenuItem text='Untitled Segment 1' isActive onClick={noop} />;
-}
+import SidebarMenuItem from './SidebarMenuItem';
+import styles from './index.module.scss';
 
 function GroupItem({ group }) {
   const dispatch = useDispatch();
@@ -55,13 +64,90 @@ function GroupItem({ group }) {
   );
 }
 
-function SegmentItem({ segment }) {
+function ProfilesSidebar({
+  getSegmentFolders,
+  getSavedSegments,
+  deleteSegment,
+  updateSegmentForId
+}) {
   const dispatch = useDispatch();
+  const userOptions = getUserOptionsForDropdown();
   const timelinePayload = useSelector((state) => selectTimelinePayload(state));
+  const { segmentFolders } = useSelector((state) => state.timelines);
+  const { active_project } = useSelector((state) => state.global);
   const activeSegment = timelinePayload?.segment;
-  const { newSegmentMode } = useSelector((state) => state.userProfilesView);
+  const [modalState, setModalState] = useState({
+    rename: false,
+    delete: false,
+    unit: null
+  });
 
-  const changeActiveSegment = () => {
+  const userSegmentsList = useSelector((state) => selectSegmentsList(state));
+  useEffect(() => {
+    getSegmentFolders(active_project?.id, 'user');
+    // need to add segment folders for people too
+  }, []);
+  const handleMoveToNewFolder = (segmentID, folder_name) => {
+    moveSegmentToNewFolder(
+      active_project.id,
+      segmentID,
+      {
+        name: folder_name
+      },
+      'user'
+    )
+      .then(async () => {
+        getSegmentFolders(active_project.id, 'user');
+        await getSavedSegments(active_project.id);
+        message.success('Segment Moved to New Folder');
+      })
+      .catch((err) => {
+        console.error(err);
+        message.error('Failed to move segment');
+      });
+  };
+  const moveSegmentToFolder = (event, folderID, segmentID) => {
+    updateSegmentToFolder(
+      active_project.id,
+      segmentID,
+      {
+        folder_id: folderID
+      },
+      'user'
+    )
+      .then(async () => {
+        await getSavedSegments(active_project.id);
+        message.success('Segment Moved');
+      })
+      .catch((err) => {
+        console.error(err);
+        message.error('Segment failed to move');
+      });
+  };
+  const handleRenameFolder = (folderId, name) => {
+    renameSegmentFolders(active_project.id, folderId, { name }, 'user')
+      .then(async () => {
+        getSegmentFolders(active_project.id, 'user');
+        message.success('Folder Renamed');
+      })
+      .catch((err) => {
+        console.error(err);
+      });
+  };
+  const handleDeleteFolder = (folderId) => {
+    deleteSegmentFolders(active_project.id, folderId, 'user')
+      .then(async () => {
+        getSegmentFolders(active_project.id, 'user');
+        await getSavedSegments(active_project.id);
+        message.success('Folder Deleted');
+      })
+      .catch((err) => {
+        console.error(err);
+        message.error('Folder to Delete');
+      });
+  };
+
+  const changeActiveSegment = (segment) => {
     const opts = { ...timelinePayload };
     opts.source = segment?.type;
     opts.segment = segment;
@@ -69,79 +155,82 @@ function SegmentItem({ segment }) {
     dispatch(setTimelinePayloadAction(opts));
   };
 
-  const setActiveSegment = () => {
+  const setActiveSegment = (segment) => {
     if (activeSegment?.id !== segment?.id) {
-      changeActiveSegment();
+      changeActiveSegment(segment);
     }
   };
 
-  const isActive =
-    activeSegment?.id === segment?.id && newSegmentMode === false;
-  const iconColor = getSegmentColorCode(segment?.name);
+  const handleRenameSegment = async (name) => {
+    try {
+      const segmentId = modalState.unit?.id;
 
-  return (
-    <SidebarMenuItem
-      text={segment?.name}
-      isActive={isActive}
-      onClick={setActiveSegment}
-      icon='pieChart'
-      iconColor={iconColor}
-    />
-  );
-}
+      await updateSegmentForId(active_project.id, segmentId, { name });
+      getSavedSegments(active_project.id);
 
-function ProfilesSidebar() {
-  const [searchText, setSearchText] = useState('');
-  const dispatch = useDispatch();
-  const userOptions = getUserOptionsForDropdown();
-  const { newSegmentMode } = useSelector((state) => state.userProfilesView);
-
-  const userSegmentsList = useSelector((state) => selectSegmentsList(state));
-
+      setModalState({ rename: false, delete: false, unit: null });
+      notification.success({
+        message: 'Segment renamed successfully',
+        duration: 5
+      });
+    } catch (error) {
+      logger.error(error);
+    }
+  };
+  const handleDeleteSegment = () => {
+    deleteSegment({
+      projectId: active_project.id,
+      segmentId: modalState.unit?.id
+    })
+      .then(() => {
+        setModalState({ rename: false, delete: false, unit: null });
+        notification.success({
+          message: 'Segment deleted successfully',
+          duration: 5
+        });
+      })
+      .finally(() => {
+        dispatch(
+          setTimelinePayloadAction({
+            source: 'All',
+            segment: {}
+          })
+        );
+      });
+  };
+  const handleCancelModal = useCallback(() => {
+    setModalState({ delete: false, rename: false, unit: null });
+  }, []);
   return (
     <div className='flex flex-col gap-y-5'>
       <div
         className={cx(
-          'flex flex-col gap-y-6 overflow-auto',
+          'flex flex-col gap-y-1 overflow-auto',
           styles['accounts-list-container']
         )}
       >
-        <div className='flex flex-col gap-y-3 px-4'>
-          <Text
-            type='title'
-            level={8}
-            extraClass='mb-0 px-2'
-            color='character-secondary'
-          >
-            Segments
-          </Text>
-          <div className='flex flex-col gap-y-1'>
-            <SidebarSearch
-              searchText={searchText}
-              setSearchText={setSearchText}
-              placeholder='Search segment'
-            />
-            <ControlledComponent controller={newSegmentMode === true}>
-              <NewSegmentItem />
-            </ControlledComponent>
-            {userOptions.slice(1).map((option) => (
-              <GroupItem key={option[0]} group={option} />
-            ))}
-            <Fragment key='users'>
-              {userSegmentsList
-                ?.filter((segment) =>
-                  segment?.name
-                    ?.toLowerCase()
-                    .includes(searchText.toLowerCase())
-                )
-                ?.sort((a, b) => a.name.localeCompare(b.name))
-                ?.map((value) => (
-                  <SegmentItem key={value.id} segment={value} />
-                ))}
-            </Fragment>
-          </div>
+        <div className='px-2'>
+          {userOptions.slice(1).map((option) => (
+            <GroupItem key={option[0]} group={option} />
+          ))}
         </div>
-      </div>
+        <FolderStructure
+          folders={segmentFolders.peoples}
+          items={userSegmentsList?.sort((a, b) => a.name.localeCompare(b.name))}
+          unit='segment'
+          handleNewFolder={handleMoveToNewFolder}
+          moveToExistingFolder={moveSegmentToFolder}
+          onRenameFolder={handleRenameFolder}
+          onDeleteFolder={handleDeleteFolder}
+          onUnitClick={setActiveSegment}
+          handleEditUnit={(unit) => {
+            setModalState({ rename: true, unit, delete: false });
+          }}
+          handleDeleteUnit={(unit) => {
+            setModalState({ rename: false, unit, delete: true });
+          }}
+        />
+      </div>{' '}
       <div className='px-4'>
         <Button
           className={cx(
@@ -153,7 +242,7 @@ function ProfilesSidebar() {
           }}
         >
           <SVG
-            name={'plus'}
+            name='plus'
             size={16}
             extraClass={styles.sidebar_action_button__content}
             isFill={false}
@@ -167,8 +256,29 @@ function ProfilesSidebar() {
           </Text>
         </Button>
       </div>
+      <DeleteSegmentModal
+        segmentName={modalState?.unit?.name}
+        visible={modalState.delete}
+        onCancel={handleCancelModal}
+        onOk={handleDeleteSegment}
+      />
+      <RenameSegmentModal
+        segmentName={modalState?.unit?.name}
+        visible={modalState.rename}
+        onCancel={handleCancelModal}
+        handleSubmit={handleRenameSegment}
+      />
     </div>
   );
 }
-
-export default ProfilesSidebar;
+const mapDispatchToProps = (dispatch) =>
+  bindActionCreators(
+    {
+      getSegmentFolders,
+      getSavedSegments,
+      deleteSegment,
+      updateSegmentForId
+    },
+    dispatch
+  );
+export default connect(null, mapDispatchToProps)(ProfilesSidebar);

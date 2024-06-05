@@ -1,6 +1,7 @@
 import { Tooltip } from 'antd';
 import React, { useEffect, useRef, useState } from 'react';
 import { CustomStyles } from 'Components/Profile/types';
+import { Link } from 'react-router-dom';
 import { TextWithTooltipProps } from './types';
 
 function TextWithOverflowTooltip({
@@ -8,7 +9,14 @@ function TextWithOverflowTooltip({
   tooltipText,
   extraClass,
   disabled = false,
-  maxLines = 1
+  maxLines = 1,
+  hasLink = false,
+  linkTo = '',
+  linkState = {},
+  onClick,
+  active,
+  activeClass = '',
+  alwaysShowTooltip = false
 }: TextWithTooltipProps) {
   const styles: CustomStyles = {
     '--max-lines': maxLines
@@ -24,7 +32,7 @@ function TextWithOverflowTooltip({
         element.offsetWidth < element.scrollWidth ||
         element.offsetHeight < element.scrollHeight;
       const hasTooltipText = tooltipText ? text !== tooltipText : false;
-      setShowTooltip(isOverflowing || hasTooltipText);
+      setShowTooltip(alwaysShowTooltip || isOverflowing || hasTooltipText);
     }
   }, [text, tooltipText]);
 
@@ -38,9 +46,21 @@ function TextWithOverflowTooltip({
         ref={tooltipRef}
         className={`${
           maxLines > 1 ? 'text-with-tooltip--multiline' : 'text-with-tooltip'
-        } ${extraClass || ''}`}
+        } ${extraClass || ''} ${active ? activeClass : ''}`}
       >
-        {text}
+        {hasLink ? (
+          <Link
+            onClick={onClick}
+            to={{
+              pathname: linkTo,
+              state: linkState
+            }}
+          >
+            {text}
+          </Link>
+        ) : (
+          <span onClick={onClick}>{text}</span>
+        )}
       </div>
     </Tooltip>
   );

@@ -5,16 +5,17 @@ import { Avatar, Button, Input } from 'antd';
 import React, { useRef, useState } from 'react';
 import { Link, useHistory } from 'react-router-dom';
 import VirtualList from 'rc-virtual-list';
-import styles from './../index.module.scss';
 import useKeyboardNavigation from 'hooks/useKeyboardNavigation';
 import useAutoFocus from 'hooks/useAutoFocus';
 import { useProductFruitsApi } from 'react-product-fruits';
-import { ProjectListsPopoverContentType } from './types';
 import { useSelector } from 'react-redux';
 import { PLANS, PLANS_V0 } from 'Constants/plans.constants';
 import { meetLink } from 'Utils/meetLink';
-const renderProjectImage = (project: any) => {
-  return project.profile_picture ? (
+import { ProjectListsPopoverContentType } from './types';
+import styles from '../index.module.scss';
+
+const renderProjectImage = (project: any) =>
+  project.profile_picture ? (
     <img
       src={project.profile_picture}
       style={{
@@ -36,7 +37,6 @@ const renderProjectImage = (project: any) => {
       }}
     >{`${project?.name?.charAt(0)}`}</Avatar>
   );
-};
 function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
   const {
     variant,
@@ -292,7 +292,8 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
         onClick={() => {
           if (variant === 'app') {
             setShowPopOver(false);
-            showUserSettingsModal();
+            // showUserSettingsModal();
+            history.push(PathUrls.SettingsPersonalUser);
           }
         }}
       >
@@ -327,32 +328,24 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
 
       {variant === 'app' && showProjectsList === false && (
         <>
-          {actionsList.map((eachGroup, eachGroupIndex) => {
-            return (
-              <React.Fragment key={eachGroup.id}>
-                <div className='px-4 py-2 text-xs'>{eachGroup.group}</div>
-                {eachGroup.items.map((eachItem) => {
-                  return (
-                    <div
-                      key={eachGroup.id + eachItem.id}
-                      className={` ${styles.popover_content__additionalActions}`}
-                    >
-                      {eachItem.props.to ? (
-                        <Link {...eachItem?.props}>{eachItem.text}</Link>
-                      ) : (
-                        <a {...eachItem?.props}>{eachItem.text}</a>
-                      )}
-                    </div>
-                  );
-                })}
-
+          {actionsList.map((eachGroup, eachGroupIndex) => (
+            <React.Fragment key={eachGroup.id}>
+              <div className='px-4 py-2 text-xs'>{eachGroup.group}</div>
+              {eachGroup.items.map((eachItem) => (
                 <div
-                  className='fa-popupcard-divider'
-                  style={{ margin: '4px 0' }}
-                ></div>
-              </React.Fragment>
-            );
-          })}
+                  key={eachGroup.id + eachItem.id}
+                  className={` ${styles.popover_content__additionalActions}`}
+                >
+                  <a {...eachItem?.props}>{eachItem.text}</a>
+                </div>
+              ))}
+
+              <div
+                className='fa-popupcard-divider'
+                style={{ margin: '4px 0' }}
+              />
+            </React.Fragment>
+          ))}
         </>
       )}
 

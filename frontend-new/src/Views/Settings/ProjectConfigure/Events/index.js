@@ -1,29 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Row,
-  Col,
-  Switch,
-  Menu,
-  Dropdown,
-  Button,
-  Tabs,
-  Table,
-  Tag,
-  Space,
-  message
-} from 'antd';
+import { Row, Col, Menu, Dropdown, Button, Table, message } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { connect } from 'react-redux';
-import SmartEventsForm from './SmartEvents/SmartEventsForm';
-import {
-  fetchEventNames,
-  getUserPropertiesV2
-} from 'Reducers/coreQuery/middleware';
+import { fetchEventNames } from 'Reducers/coreQuery/middleware';
 import { MoreOutlined } from '@ant-design/icons';
 import { removeSmartEvents, fetchSmartEvents } from 'Reducers/events';
 import EmptyScreen from 'Components/EmptyScreen';
-
-const { TabPane } = Tabs;
+import SmartEventsForm from './SmartEvents/SmartEventsForm';
 
 function Events({
   smart_events,
@@ -37,31 +20,29 @@ function Events({
   const [seletedEvent, setSeletedEvent] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const menu = (values) => {
-    return (
-      <Menu>
-        <Menu.Item key='0' onClick={() => confirmRemove(values)}>
-          <a>Remove Event</a>
-        </Menu.Item>
-        <Menu.Item key='0' onClick={() => viewEvent(values)}>
-          <a>View Event</a>
-        </Menu.Item>
-      </Menu>
-    );
-  };
+  const menu = (values) => (
+    <Menu>
+      <Menu.Item key='0' onClick={() => confirmRemove(values)}>
+        <a>Remove Event</a>
+      </Menu.Item>
+      <Menu.Item key='0' onClick={() => viewEvent(values)}>
+        <a>View Event</a>
+      </Menu.Item>
+    </Menu>
+  );
 
   const columns = [
     {
       title: 'Display name',
       dataIndex: 'name',
       key: 'name',
-      render: (text) => <span className={'capitalize'}>{text}</span>
+      render: (text) => <span className='capitalize'>{text}</span>
     },
     {
       title: 'Source',
       dataIndex: 'source',
       key: 'source',
-      render: (text) => <span className={'capitalize'}>{text}</span>
+      render: (text) => <span className='capitalize'>{text}</span>
     },
     {
       title: '',
@@ -113,7 +94,7 @@ function Events({
   useEffect(() => {
     fetchEventNames(activeProject.id);
     if (smart_events) {
-      let smartEventsArray = [];
+      const smartEventsArray = [];
       smart_events?.map((item, index) => {
         smartEventsArray.push({
           key: index,
@@ -130,98 +111,76 @@ function Events({
     setShowSmartEventForm(true);
   };
   return (
-    <div className={'fa-container'}>
+    <div className='fa-container'>
       <Row gutter={[24, 24]} justify='center'>
-        <Col span={22}>
-          <div className={'mb-10'}>
+        <Col span={24}>
+          <div className='mb-10'>
             {!showSmartEventForm && (
               <>
                 <Row>
-                  <Col span={12}>
+                  <Col span={18}>
+                    <Text type='title' level={7} color='grey' extraClass='m-0'>
+                      Track and analyze user interactions in a way that aligns
+                      perfectly with your business objectives.
+                    </Text>
                     <Text
-                      type={'title'}
-                      level={3}
-                      weight={'bold'}
-                      extraClass={'m-0'}
-                      id={'fa-at-text--page-title'}
+                      type='title'
+                      level={7}
+                      color='grey'
+                      extraClass='m-0 mt-2'
                     >
-                      Events
+                      Define and capture custom events that matter most to your
+                      business, such as clicks, form submissions, lifecycle
+                      stage changes, or other specific actions.{' '}
+                      <a
+                        href='https://help.factors.ai/en/articles/7284092-custom-events'
+                        target='_blank'
+                        rel='noreferrer'
+                      >
+                        Learn more
+                      </a>
                     </Text>
                   </Col>
-                  <Col span={12}>
-                    <div className={'flex justify-end'}>
+                  <Col span={6}>
+                    <div className='flex justify-end'>
                       <Button
                         type='primary'
                         onClick={handleNewEvent}
-                        icon={<SVG name={'plus'} color={'white'} size={16} />}
+                        icon={<SVG name='plus' color='white' size={16} />}
                       >
                         New Event
                       </Button>
                     </div>
                   </Col>
                 </Row>
-                <Row className={'mt-4'}>
+                <Row className='mt-4'>
                   <Col span={24}>
-                    <div className={'mt-6'}>
-                      <Text
-                        type={'title'}
-                        level={7}
-                        color={'grey-2'}
-                        extraClass={'m-0'}
-                      >
-                        Track and analyze user interactions in a way that aligns
-                        perfectly with your business objectives.
-                      </Text>
-                      <Text
-                        type={'title'}
-                        level={7}
-                        color={'grey-2'}
-                        extraClass={'m-0 mt-2'}
-                      >
-                        Define and capture custom events that matter most to
-                        your business, such as clicks, form submissions,
-                        lifecycle stage changes, or other specific actions.{' '}
-                        <a
-                          href='https://help.factors.ai/en/articles/7284092-custom-events'
-                          target='_blank'
-                        >
-                          Learn more
-                        </a>
-                      </Text>
-
-                      <Tabs defaultActiveKey='1'>
-                        <TabPane tab='Custom Events' key='1'>
-                          {smartEvents && smartEvents.length > 0 ? (
-                            <Table
-                              className='fa-table--basic mt-4'
-                              columns={columns}
-                              dataSource={smartEvents}
-                              pagination={false}
-                              loading={loading}
-                            />
-                          ) : (
-                            <EmptyScreen
-                              title={`Set up unique touch points on your website that track user interactions that go beyond what's automatically tracked by Factors. For example, you can track signups, form submissions, lifecycle stage changes, or other specific actions.`}
-                              learnMore={
-                                'https://help.factors.ai/en/articles/7284092-custom-events'
-                              }
-                              loading={loading}
-                            />
-                          )}
-                        </TabPane>
-                      </Tabs>
+                    <div className='mt-6'>
+                      {smartEvents && smartEvents.length > 0 ? (
+                        <Table
+                          className='fa-table--basic mt-4'
+                          columns={columns}
+                          dataSource={smartEvents}
+                          pagination={false}
+                          loading={loading}
+                        />
+                      ) : (
+                        <EmptyScreen
+                          title={`Set up unique touch points on your website that track user interactions that go beyond what's automatically tracked by Factors. For example, you can track signups, form submissions, lifecycle stage changes, or other specific actions.`}
+                          learnMore='https://help.factors.ai/en/articles/7284092-custom-events'
+                          loading={loading}
+                        />
+                      )}
                     </div>
                   </Col>
                 </Row>
               </>
             )}
             {showSmartEventForm && (
-              <>
-                <SmartEventsForm
-                  seletedEvent={seletedEvent}
-                  setShowSmartEventForm={setShowSmartEventForm}
-                />
-              </>
+              <SmartEventsForm
+                seletedEvent={seletedEvent}
+                setShowSmartEventForm={setShowSmartEventForm}
+              />
             )}
           </div>
         </Col>
