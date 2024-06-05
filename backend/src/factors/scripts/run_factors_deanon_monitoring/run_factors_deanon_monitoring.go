@@ -31,7 +31,8 @@ func main() {
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
 	overrideHealthcheckPingID := flag.String("healthcheck_ping_id", "", "Override default healthcheck ping id.")
-	thresholdValue := flag.Float64("threshold_value", 0.3, "Percent threshold value for alerts")
+	totalApiCountDiffthresholdValue := flag.Float64("total_api_count_diff_threshold_value", 0.3, "Percent threshold value for total API count diff alerts")
+	successfulApiCountDiffthresholdValue := flag.Float64("successful_api_count_diff_threshold_value", 0.3, "Percent threshold value for successful API count diff alerts")
 
 	flag.Parse()
 
@@ -97,6 +98,7 @@ func main() {
 			continue
 		}
 
+		projectIdString := fmt.Sprintf("%v", projectId)
 		projectCreatedAt := projectSettings.CreatedAt.Unix()
 		currentTime := time.Now().Unix()
 		diffTime := currentTime - projectCreatedAt
@@ -107,9 +109,10 @@ func main() {
 				logCtx.WithError(err).Error("Failed to get API count difference.")
 				continue
 			}
-			if math.Abs(totalCountDiff) >= *thresholdValue && math.Abs(successfulCountDiff) >= *thresholdValue {
+			if math.Abs(totalCountDiff) >= *totalApiCountDiffthresholdValue && math.Abs(successfulCountDiff) >= *successfulApiCountDiffthresholdValue {
 				msgMap["total_count_diff"] = totalCountDiff
 				msgMap["success_count_diff"] = successfulCountDiff
+				alertMap[projectIdString] = msgMap
 			}
 
 		} else if diffTime > 15*24*60*60 {
@@ -119,14 +122,13 @@ func main() {
 				continue
 			}
 
-			if math.Abs(totalCountDiff) >= *thresholdValue && math.Abs(successfulCountDiff) >= *thresholdValue {
+			if math.Abs(totalCountDiff) >= *totalApiCountDiffthresholdValue && math.Abs(successfulCountDiff) >= *successfulApiCountDiffthresholdValue {
 				msgMap["total_count_diff"] = totalCountDiff
 				msgMap["success_count_diff"] = successfulCountDiff
+				alertMap[projectIdString] = msgMap
+
 			}
 		}
-
-		projectIdString := fmt.Sprintf("%v", projectId)
-		alertMap[projectIdString] = msgMap
 
 	}
 

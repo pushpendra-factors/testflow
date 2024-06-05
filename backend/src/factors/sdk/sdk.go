@@ -920,7 +920,7 @@ func FillCompanyIdentificationUserProperties(projectId int64, clientIP string, p
 
 			}
 		}
-	} else if enrichByFactorsDeanon, err := factorsDeanon.IsEligible(projectSettings, isoCode, pageUrl, logCtx); enrichByFactorsDeanon {
+	} else if enrichByFactorsDeanon, _ := factorsDeanon.IsEligible(projectSettings, isoCode, pageUrl, logCtx); enrichByFactorsDeanon {
 		domain, status := factorsDeanon.Enrich(projectSettings, userProperties, eventProperties, userId, clientIP, logCtx)
 		if status == 1 {
 			factorsDeanon.Meter(projectId, domain, logCtx)
@@ -936,7 +936,7 @@ func FillCompanyIdentificationUserProperties(projectId int64, clientIP string, p
 		if errCode != http.StatusOK && errCode != http.StatusForbidden {
 			logCtx.WithField("error", err).Error("Failed to send account limit alert.")
 		}
-	} else if err == nil && !enrichByFactorsDeanon {
+	} else if isDeanonQuotaAvailable, err := factors_deanon.CheckingFactorsDeanonQuotaLimit(projectId); err == nil && !isDeanonQuotaAvailable {
 		status := store.GetStore().UpdateProjectSettingsIntegrationStatus(projectId, model.FEATURE_FACTORS_DEANONYMISATION, model.LIMIT_EXCEED)
 		if status != http.StatusAccepted {
 			log.WithFields(log.Fields{"project_id": projectId}).Warn("Failed to update integration status")

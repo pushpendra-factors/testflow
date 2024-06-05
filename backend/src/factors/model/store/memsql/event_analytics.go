@@ -262,7 +262,7 @@ func (store *MemSQL) RunInsightsQuery(projectId int64, query model.Query, enable
 
 	result, err, reqID := store.ExecQuery(stmnt, params)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed executing SQL query generated.")
+		logCtx.WithError(err).WithField("stmnt", stmnt).WithField("params", params).Error("Failed executing SQL query generated.")
 		return &model.QueryResult{}, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
 
