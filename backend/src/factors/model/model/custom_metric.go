@@ -250,12 +250,6 @@ func (transform *CustomMetricTransformation) IsValid(queryType int, metricType s
 		return false
 	}
 
-	for _, transformation := range transform.Filters {
-		if strings.Contains(transformation.PropertyName, " ") {
-			return false
-		}
-	}
-
 	if queryType == ProfileQueryType {
 		if metricType == "" {
 			if !U.ContainsStringInArray(CustomMetricProfilesAggregateFunctions, transform.AggregateFunction) {
