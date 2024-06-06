@@ -160,6 +160,7 @@ function DashboardFoldersLayout({ onDeleteDashboardClick }) {
         ...foldersListWithoutAllBoards,
         { ...allBoardsFolder, isAllBoard: true }
       ]}
+      active_item={activeDashboard?.id}
       items={allDashboardsList}
       unit='dashboard'
       handleNewFolder={onNewFolderCreation}

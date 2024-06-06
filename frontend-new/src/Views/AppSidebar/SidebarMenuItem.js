@@ -20,7 +20,7 @@ const SidebarMenuItem = ({
         role={hoverable && 'button'}
         onClick={onClick}
         className={cx(
-          'rounded-md p-2 flex justify-between gap-x-2 items-center',
+          'rounded-md p-2 pl-1 flex justify-between gap-x-2 items-center',
           {
             [styles['active']]: isActive
           },
