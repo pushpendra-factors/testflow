@@ -135,6 +135,7 @@ function DashboardSidebar() {
           onClick={() => {
             dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_OPEN });
           }}
+          className='mx-4'
           type='dashed'
           icon={<PlusOutlined />}
         >

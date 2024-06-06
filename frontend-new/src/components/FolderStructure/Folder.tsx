@@ -6,7 +6,7 @@ import {
   RightOutlined
 } from '@ant-design/icons';
 import React, { useContext, useState } from 'react';
-import { Button, Popover } from 'antd';
+import { Button, Popover, Tooltip } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import FolderItem from './FolderItem';
 import styles from './index.module.scss';
@@ -59,7 +59,10 @@ function Folder(props: FolderPropType) {
         className={styles.folder_header}
       >
         <div>
-          {showItems ? <CaretDownFilled /> : <CaretRightFilled />} {name}
+          {showItems ? <CaretDownFilled /> : <CaretRightFilled />}
+          <div>
+            <Tooltip title={name}>{name}</Tooltip>
+          </div>
         </div>{' '}
         {!isAllBoard && (
           <span className={styles.folder_actions}>

@@ -220,6 +220,7 @@ function AccountsSidebar({
           <FolderStructure
             folders={segmentFolders?.accounts || []}
             items={segmentsList}
+            active_item={activeSegment?.id}
             unit='segment'
             onRenameFolder={handleRenameFolder}
             onDeleteFolder={handleDeleteFolder}
@@ -228,6 +229,7 @@ function AccountsSidebar({
             handleEditUnit={handleEditUnit}
             handleDeleteUnit={handleDeleteUnit}
             moveToExistingFolder={moveSegmentToFolder}
+            showItemIcons
           />
         )}
       </div>

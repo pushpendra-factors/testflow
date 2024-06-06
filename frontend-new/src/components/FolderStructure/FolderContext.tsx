@@ -35,6 +35,8 @@ type folderContextType = {
   setFolderModalState: React.SetStateAction<any>;
   unit: string;
   folders: Array<FolderType>;
+  active_item: string | number | null;
+  showItemIcons: boolean;
 };
 export const FolderContext = createContext<folderContextType>({
   handleNewFolder: (e: any, id: number | string) => undefined,
@@ -51,5 +53,7 @@ export const FolderContext = createContext<folderContextType>({
   folderModalState: folderModalInitState,
   setFolderModalState: (prevState: any) => undefined,
   unit: 'segment',
-  folders: Array(0)
+  folders: Array(0),
+  active_item: null,
+  showItemIcons: false
 });

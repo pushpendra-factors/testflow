@@ -1,9 +1,11 @@
 import React, { useContext, useMemo, useState } from 'react';
-import { Divider, Input, Popover } from 'antd';
+import { Divider, Input, Popover, Tooltip } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import {
   DeleteOutlined,
   EditOutlined,
+  FolderOpenFilled,
+  LoadingOutlined,
   PlusOutlined,
   RightOutlined
 } from '@ant-design/icons';
@@ -64,7 +66,12 @@ const PopoverOptionWrapper = ({
                         }
                   }
                 >
-                  {eachSubMenu.title}
+                  {false ? <LoadingOutlined /> : <FolderOpenFilled />}
+                  <div>
+                    <Tooltip title={eachSubMenu.title} placement='right'>
+                      {eachSubMenu.title}
+                    </Tooltip>
+                  </div>
                 </div>
               ))}
             </div>
@@ -234,14 +241,20 @@ function FolderItem(props: FolderItemPropType) {
   const iconColor = getSegmentColorCode(data?.name);
   return (
     <div
-      className={styles.folder_item}
+      className={`${styles.folder_item} ${
+        id === contextValue.active_item ? styles.active_item : ''
+      }`}
       onClick={() => contextValue.onUnitClick(data)}
     >
       <div className='flex justify-left gap-2'>
-        <div>
-          <SVG name={SegmentIcon(data?.name)} size={20} color={iconColor} />
+        {contextValue.showItemIcons && (
+          <div>
+            <SVG name={SegmentIcon(data?.name)} size={20} color={iconColor} />
+          </div>
+        )}
+        <div className={styles.folder_item_name}>
+          <Tooltip title={data.name}>{data.name}</Tooltip>
         </div>
-        <div>{data.name}</div>
       </div>
       <div className={styles.folder_item_actions}>
         <FolderItemOptions

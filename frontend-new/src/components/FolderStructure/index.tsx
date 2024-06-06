@@ -16,6 +16,8 @@ import { FolderType, ItemType } from './type';
 type FolderStructurePropType = {
   folders: Array<FolderType>;
   items: Array<ItemType>;
+  active_item: string | number | null;
+  showItemIcons: boolean;
 
   unit: string;
 
@@ -43,6 +45,8 @@ function FolderStructure(props: FolderStructurePropType) {
   const {
     folders,
     items,
+    active_item,
+    showItemIcons,
     unit,
     handleNewFolder,
     moveToExistingFolder,
@@ -112,9 +116,11 @@ function FolderStructure(props: FolderStructurePropType) {
       folderModalState,
       setFolderModalState,
       unit,
-      folders
+      folders,
+      active_item,
+      showItemIcons
     }),
-    [folders, unit, folderModalState]
+    [folders, unit, folderModalState, active_item]
   );
   const handleModalCancel = () => {
     setFolderModalState(folderModalInitState);
@@ -168,11 +174,11 @@ function FolderStructure(props: FolderStructurePropType) {
       visible={folderModalState.visible}
       onCancel={handleModalCancel}
       onOk={handleModalSubmit}
-      okText='Save'
+      okText={folderModalState.action === 'delete' ? 'Confirm' : 'Save'}
       maskClosable
-      title={RenderModalTitle}
     >
       <div className='flex flex-col gap-y-5'>
+        {RenderModalTitle}
         <div className='flex flex-col gap-y-2'>
           {folderModalState.action !== 'delete' && (
             <>

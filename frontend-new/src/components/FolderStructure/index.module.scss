@@ -1,8 +1,9 @@
 $background-color: #f5f5f5;
 // This represents whole list of folders
 .folder {
-  margin: 2px;
-  padding: 6px 12px;
+  margin: 2px auto;
+  padding: 0px 12px;
+  width: 264px;
   color: #000000a6;
 
   :global(.ant-popover-arrow) {
@@ -13,18 +14,26 @@ $background-color: #f5f5f5;
   & .folder_header {
     width: 100%;
     display: flex;
-    padding: 4px 8px;
+    padding: 4px 8px 4px 10px;
     justify-content: space-between;
     user-select: none;
     border-radius: 8px;
-    align-items: center;
     transition-duration: 0.3s;
-    text-transform: capitalize;
     cursor: pointer;
     // &:hover {
     //   background-color: $background-color;
     // }
-
+    & > div {
+      align-items: center;
+      display: flex;
+      gap: 10px;
+      & > div {
+        text-wrap: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 160px;
+      }
+    }
     & .folder_actions_button {
       // border: 1px solid #dedede;
 
@@ -37,6 +46,10 @@ $background-color: #f5f5f5;
         background-color: #f5f5f5;
       }
     }
+  }
+  & .active_item,
+  & .active_item:hover {
+    background-color: #e6f7ff !important;
   }
   // This is Each Folder ITem
   & .folder_item {
@@ -51,7 +64,6 @@ $background-color: #f5f5f5;
 
     transition-duration: 200ms;
     cursor: pointer;
-    text-transform: capitalize;
 
     &:hover {
       background-color: $background-color;
@@ -63,20 +75,27 @@ $background-color: #f5f5f5;
     &:hover .folder_item_actions {
       visibility: visible;
     }
+    & .folder_item_name {
+      max-width: 160px;
+      text-wrap: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   }
 }
 // This Represents 1st Level of Popover Options
 .popover_list {
-  min-width: 150px;
+  min-width: 160px;
   & > div {
     display: flex;
     justify-content: left;
     align-items: center;
     width: 100%;
-    gap: 6px;
-    padding: 8px;
-    border-radius: 8px;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 0px;
     cursor: pointer;
+    text-transform: capitalize;
   }
 
   & .submenu {
@@ -103,20 +122,21 @@ $background-color: #f5f5f5;
   background-color: $background-color;
   border-radius: 8px;
 }
-
-.popover_list:has(:global(.ant-popover-open)) {
+m .popover_list:has(:global(.ant-popover-open)) {
   background-color: $background-color;
-  border-radius: 8px;
+  border-radius: 0px;
 }
 
 .popover_list_container,
 .submenu_list_container {
   z-index: 1000;
   :global(.ant-popover-inner) {
-    border-radius: 8px;
+    border-radius: 6px;
+    min-width: 240px;
+    transform: translate(-10px, 0px);
   }
   :global(.ant-popover-inner-content) {
-    padding: 6px !important;
+    padding: 4px 0px !important;
   }
   :global(.ant-popover-arrow) {
     display: none;
@@ -129,10 +149,16 @@ $background-color: #f5f5f5;
     justify-content: left;
     align-items: center;
     width: 100%;
+    max-width: 240px;
     gap: 6px;
-    padding: 8px;
-    border-radius: 8px;
+    padding: 8px 12px;
+    border-radius: 0px;
     cursor: pointer;
+    & > div {
+      text-overflow: ellipsis;
+      overflow: hidden;
+      text-wrap: nowrap;
+    }
 
     &:hover {
       background-color: $background-color;
@@ -142,7 +168,6 @@ $background-color: #f5f5f5;
   & .submenu_list_group {
     max-height: 200px;
     overflow: scroll;
-    text-transform: capitalize;
   }
 }
 
