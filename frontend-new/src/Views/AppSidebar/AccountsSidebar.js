@@ -214,11 +214,11 @@ function AccountsSidebar({
           styles['accounts-list-container']
         )}
       >
-        {segmentFolders.loading ? (
+        {segmentFolders?.isLoading ? (
           <LoadingOutlined />
         ) : (
           <FolderStructure
-            folders={segmentFolders.accounts}
+            folders={segmentFolders?.accounts || []}
             items={segmentsList}
             unit='segment'
             onRenameFolder={handleRenameFolder}
