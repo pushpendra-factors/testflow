@@ -75,7 +75,6 @@ type TimelinePayload struct {
 }
 
 type AccountDetails struct {
-	Name            string                 `json:"name"`
 	DomainName      string                 `json:"domain_name"`
 	Properties      *postgres.Jsonb        `json:"-"`
 	LeftPaneProps   map[string]interface{} `json:"leftpane_props"`

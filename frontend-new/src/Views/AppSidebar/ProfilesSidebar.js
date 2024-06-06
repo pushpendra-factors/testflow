@@ -215,9 +215,10 @@ function ProfilesSidebar({
           ))}
         </div>
         <FolderStructure
-          folders={segmentFolders.peoples}
+          folders={segmentFolders?.peoples || []}
           items={userSegmentsList?.sort((a, b) => a.name.localeCompare(b.name))}
           unit='segment'
+          active_item={activeSegment?.id}
           handleNewFolder={handleMoveToNewFolder}
           moveToExistingFolder={moveSegmentToFolder}
           onRenameFolder={handleRenameFolder}
@@ -229,6 +230,7 @@ function ProfilesSidebar({
           handleDeleteUnit={(unit) => {
             setModalState({ rename: false, unit, delete: true });
           }}
+          showItemIcons
         />
       </div>{' '}
       <div className='px-4'>

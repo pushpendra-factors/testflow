@@ -214,12 +214,13 @@ function AccountsSidebar({
           styles['accounts-list-container']
         )}
       >
-        {segmentFolders.loading ? (
+        {segmentFolders?.isLoading ? (
           <LoadingOutlined />
         ) : (
           <FolderStructure
-            folders={segmentFolders.accounts}
+            folders={segmentFolders?.accounts || []}
             items={segmentsList}
+            active_item={activeSegment?.id}
             unit='segment'
             onRenameFolder={handleRenameFolder}
             onDeleteFolder={handleDeleteFolder}
@@ -228,6 +229,7 @@ function AccountsSidebar({
             handleEditUnit={handleEditUnit}
             handleDeleteUnit={handleDeleteUnit}
             moveToExistingFolder={moveSegmentToFolder}
+            showItemIcons
           />
         )}
       </div>

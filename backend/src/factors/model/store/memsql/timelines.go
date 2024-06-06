@@ -1704,14 +1704,12 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, domainID stri
 		accountDetails, status = store.AccountPropertiesForDomainsEnabledV2(projectID, domainID, groupName, timelinesConfig)
 	} else {
 		groupUserString, propertiesDecoded, params, status = store.AccountPropertiesForDomainsDisabledV1(projectID, domainID)
-		accountDetails = FormatAccountDetails(projectID, propertiesDecoded, groupName, accountDetails.DomainName)
 		accountDetails.LeftPaneProps = FilterConfiguredProperties(timelinesConfig.AccountConfig.TableProps, &propertiesDecoded)
 		accountDetails.Milestones = FilterConfiguredProperties(timelinesConfig.AccountConfig.Milestones, &propertiesDecoded)
 	}
 
 	if C.IsDomainEnabled(projectID) && status == http.StatusNotFound {
 		accountDetails, propertiesDecoded, status = store.GetUserDetailsAssociatedToDomain(projectID, domainID)
-		accountDetails = FormatAccountDetails(projectID, propertiesDecoded, groupName, accountDetails.DomainName)
 		accountDetails.LeftPaneProps = make(map[string]interface{})
 		accountDetails.Milestones = make(map[string]interface{})
 
@@ -2168,10 +2166,6 @@ func FetchAccountDetailsFromProps(projectID int64, groupName string, domainName 
 			log.Error("Unable to decode account properties.")
 			return accountDetails, http.StatusInternalServerError
 		}
-		// add name and hostname
-		if accountDetails.Name == "" {
-			accountDetails = FormatAccountDetails(projectID, *props, groupName, accountDetails.DomainName)
-		}
 
 		// allow only source from groups: skip in case of eg source = 1
 		source := *accountGroupDetail.Source
@@ -2346,45 +2340,6 @@ func (store *MemSQL) GetAccountsAssociatedToDomain(projectID int64, id string, d
 		return []model.User{}, http.StatusInternalServerError
 	}
 	return accountGroupDetails, http.StatusFound
-}
-
-func FormatAccountDetails(projectID int64, propertiesDecoded map[string]interface{},
-	groupName string, hostName string) model.AccountDetails {
-	var companyNameProps, hostNameProps []string
-	var accountDetails model.AccountDetails
-
-	if C.IsDomainEnabled(projectID) && groupName != U.GROUP_NAME_DOMAINS {
-		if model.IsAllowedGroupName(groupName) {
-			hostNameProps = []string{model.HostNameGroup[groupName]}
-			companyNameProps = []string{model.AccountNames[groupName], U.UP_COMPANY}
-		}
-	} else {
-		companyNameProps = model.NameProps
-		hostNameProps = model.HostNameProps
-	}
-
-	nameProps := append(companyNameProps, hostNameProps...)
-	for _, prop := range nameProps {
-		if name, exists := (propertiesDecoded)[prop]; exists {
-			accountDetails.Name = fmt.Sprintf("%s", name)
-			break
-		}
-	}
-	if hostName != "" {
-		accountDetails.DomainName = hostName
-	} else {
-		for _, prop := range hostNameProps {
-			if host, exists := (propertiesDecoded)[prop]; exists {
-				accountDetails.DomainName = fmt.Sprintf("%s", host)
-				break
-			}
-		}
-	}
-
-	if accountDetails.Name == "" && accountDetails.DomainName != "" {
-		accountDetails.Name = accountDetails.DomainName
-	}
-	return accountDetails
 }
 
 func FilterConfiguredProperties(propsToFilter []string, propertiesDecoded *map[string]interface{}) map[string]interface{} {
@@ -2614,8 +2569,8 @@ func (store *MemSQL) UpdateConfigForEvent(projectID int64, eventName string, upd
 		return http.StatusInternalServerError, err
 	}
 
-	updateFields := map[string]interface{}{
-		"timelines_config": tlConfigEncoded,
+	updateFields := model.ProjectSetting{
+		TimelinesConfig: tlConfigEncoded,
 	}
 
 	err = db.Model(&model.ProjectSetting{}).Where("project_id = ?", projectID).Update(updateFields).Error
@@ -2684,27 +2639,83 @@ func (store *MemSQL) GetConfiguredUserPropertiesWithValues(projectID int64, id s
 	return filteredProperties, http.StatusOK
 }
 
-func (store *MemSQL) UpdateTimelineConfigForEngagementScoring(projectID int64, isScoringEnabled bool) error {
+func (store *MemSQL) UpdateProfilesConfigForFeatureScoring(projectID int64, isScoringEnabled bool) error {
 	// Fetch timelinesConfig
 	timelinesConfig, err := store.GetTimelinesConfig(projectID)
 	if err != nil {
-		return fmt.Errorf("failed to fetch timelinesConfig")
+		return err
 	}
 
-	updatedColumns, isUpdated := getUpdatedTableColumns(timelinesConfig.AccountConfig.TableProps, isScoringEnabled)
+	// Update Default Config
+	if err := store.UpdateDefaultTimelinesConfigForFeatureScoring(projectID, &timelinesConfig, isScoringEnabled); err != nil {
+		return err
+	}
 
-	if isUpdated {
-		timelinesConfig.AccountConfig.TableProps = updatedColumns
-		tlConfigEncoded, err := U.EncodeStructTypeToPostgresJsonb(timelinesConfig)
-		if err != nil {
+	// Update Segments
+	if err := store.UpdateAllSegmentsConfigForFeatureScoring(projectID, isScoringEnabled); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (store *MemSQL) UpdateDefaultTimelinesConfigForFeatureScoring(projectID int64, timelinesConfig *model.TimelinesConfig, isScoringEnabled bool) error {
+	updatedColumns, isUpdated := getUpdatedTableColumns(timelinesConfig.AccountConfig.TableProps, isScoringEnabled)
+	if !isUpdated {
+		return nil
+	}
+
+	timelinesConfig.AccountConfig.TableProps = updatedColumns
+	tlConfigEncoded, err := U.EncodeStructTypeToPostgresJsonb(timelinesConfig)
+	if err != nil {
+		return err
+	}
+
+	_, errCode := store.UpdateProjectSettings(projectID, &model.ProjectSetting{TimelinesConfig: tlConfigEncoded})
+	if errCode != http.StatusAccepted {
+		return fmt.Errorf("failed to update account table columns")
+	}
+
+	return nil
+}
+
+func (store *MemSQL) UpdateAllSegmentsConfigForFeatureScoring(projectID int64, isScoringEnabled bool) error {
+	segments, errCode := store.GetAllSegments(projectID)
+	if errCode != http.StatusFound {
+		return fmt.Errorf("failed to fetch segments")
+	}
+
+	accountSegments := segments[model.GROUP_NAME_DOMAINS]
+
+	for _, segment := range accountSegments {
+		if err := store.UpdateSegmentConfigForFeatureScoring(projectID, &segment, isScoringEnabled); err != nil {
 			return err
 		}
+	}
 
-		// Update project settings
-		_, errCode := store.UpdateProjectSettings(projectID, &model.ProjectSetting{TimelinesConfig: tlConfigEncoded})
-		if errCode != http.StatusAccepted {
-			return fmt.Errorf("failed to update account table columns")
-		}
+	return nil
+}
+
+func (store *MemSQL) UpdateSegmentConfigForFeatureScoring(projectID int64, segment *model.Segment, isScoringEnabled bool) error {
+	query := model.Query{}
+	if err := U.DecodePostgresJsonbToStructType(segment.Query, &query); err != nil {
+		return err
+	}
+
+	updatedColumns, isUpdated := getUpdatedTableColumns(query.TableProps, isScoringEnabled)
+	if !isUpdated {
+		return nil
+	}
+
+	query.TableProps = updatedColumns
+	queryEncoded, err := U.EncodeStructTypeToPostgresJsonb(&query)
+	if err != nil {
+		return err
+	}
+
+	db := C.GetServices().Db
+	if err = db.Exec("UPDATE segments SET query = ? WHERE project_id = ? AND id = ?", queryEncoded, projectID, segment.Id).Error; err != nil {
+		return err
 	}
 
 	return nil
@@ -2999,8 +3010,8 @@ func (store *MemSQL) UpdateDefaultTablePropertiesConfig(projectID int64, profile
 		return http.StatusInternalServerError, err
 	}
 
-	updateFields := map[string]interface{}{
-		"timelines_config": tlConfigEncoded,
+	updateFields := model.ProjectSetting{
+		TimelinesConfig: tlConfigEncoded,
 	}
 
 	err = db.Model(&model.ProjectSetting{}).Where("project_id = ?", projectID).Update(updateFields).Error
@@ -3052,12 +3063,7 @@ func (store *MemSQL) UpdateSegmentTablePropertiesConfig(projectID int64, segment
 		return http.StatusInternalServerError, err
 	}
 
-	updateFields := map[string]interface{}{
-		"query": segmentQueryEncoded,
-	}
-
-	err = db.Model(&model.Segment{}).Where("project_id = ? AND id = ?", projectID, segmentID).Update(updateFields).Error
-	if err != nil {
+	if err = db.Exec("UPDATE segments SET query = ? WHERE project_id = ? AND id = ?", segmentQueryEncoded, projectID, segmentID).Error; err != nil {
 		switch {
 		case gorm.IsRecordNotFoundError(err):
 			return http.StatusNotFound, err

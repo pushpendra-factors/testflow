@@ -34,6 +34,7 @@ import {
 import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 import logger from 'Utils/logger';
 import EmptyScreen from 'Components/EmptyScreen';
+import { isArray } from 'lodash';
 import AccountOverview from './AccountOverview';
 import UpgradeModal from '../UpgradeModal';
 import { PathUrls } from '../../../routes/pathUrls';
@@ -329,8 +330,10 @@ function AccountDetails({
   useEffect(() => {
     const mergedProps = [];
     const filterProps = {};
-
-    filterProps[GROUP_NAME_DOMAINS] = groupProperties[GROUP_NAME_DOMAINS];
+    if (isArray(groupProperties[GROUP_NAME_DOMAINS])) {
+      filterProps[GROUP_NAME_DOMAINS] = groupProperties[GROUP_NAME_DOMAINS];
+      mergedProps.push(...groupProperties[GROUP_NAME_DOMAINS]);
+    }
     Object.keys(groups?.account_groups || {}).forEach((group) => {
       const values = groupProperties?.[group] || [];
       mergedProps.push(...values);
@@ -351,7 +354,6 @@ function AccountDetails({
         label: opt.label,
         values: opt.values
       }));
-
     setListProperties(mergedProps);
     setFilterProperties(groupProps);
   }, [groupProperties, groups]);
@@ -528,8 +530,7 @@ function AccountDetails({
   );
 
   const renderHeader = () => {
-    const accountName =
-      accountDetails?.data?.name || accountDetails?.data?.domain;
+    const accountName = accountDetails?.data?.domain;
     return (
       <div className='fa-timeline--header'>
         <div className='flex items-center'>
@@ -683,7 +684,7 @@ function AccountDetails({
               extraClass='m-0 mr-1 py-2'
               weight='bold'
             >
-              {accountDetails?.data?.name || accountDetails?.data?.domain}
+              {accountDetails?.data?.domain}
             </Text>
             <SVG name='ArrowUpRightSquare' size={16} />
           </a>
