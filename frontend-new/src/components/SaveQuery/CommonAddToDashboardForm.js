@@ -16,14 +16,16 @@ function AddToDashboardForm({
   selectedDashboards = [],
   setSelectedDashboards,
   dashboardPresentation,
-  setDashboardPresentation
+  setDashboardPresentation,
+  shouldShowAddToDashboardByDefault = false
 }) {
   const { dashboards, activeDashboard } = useSelector(
     (state) => state.dashboard
   );
 
   useEffect(() => {
-    setSelectedDashboards([activeDashboard.id]);
+    if (shouldShowAddToDashboardByDefault)
+      setSelectedDashboards([activeDashboard.id]);
     return () => {
       setSelectedDashboards([]);
     };
@@ -97,12 +99,14 @@ AddToDashboardForm.propTypes = {
   selectedDashboards: PropTypes.arrayOf(PropTypes.string),
   setSelectedDashboards: PropTypes.func,
   dashboardPresentation: PropTypes.string,
-  setDashboardPresentation: PropTypes.func
+  setDashboardPresentation: PropTypes.func,
+  shouldShowAddToDashboardByDefault: PropTypes.bool
 };
 
 AddToDashboardForm.defaultProps = {
   selectedDashboards: EMPTY_ARRAY,
   setSelectedDashboards: noop,
   dashboardPresentation: EMPTY_STRING,
-  setDashboardPresentation: noop
+  setDashboardPresentation: noop,
+  shouldShowAddToDashboardByDefault: false
 };
