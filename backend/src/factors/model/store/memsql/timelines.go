@@ -1704,14 +1704,12 @@ func (store *MemSQL) GetProfileAccountDetailsByID(projectID int64, domainID stri
 		accountDetails, status = store.AccountPropertiesForDomainsEnabledV2(projectID, domainID, groupName, timelinesConfig)
 	} else {
 		groupUserString, propertiesDecoded, params, status = store.AccountPropertiesForDomainsDisabledV1(projectID, domainID)
-		accountDetails = FormatAccountDetails(projectID, propertiesDecoded, groupName, accountDetails.DomainName)
 		accountDetails.LeftPaneProps = FilterConfiguredProperties(timelinesConfig.AccountConfig.TableProps, &propertiesDecoded)
 		accountDetails.Milestones = FilterConfiguredProperties(timelinesConfig.AccountConfig.Milestones, &propertiesDecoded)
 	}
 
 	if C.IsDomainEnabled(projectID) && status == http.StatusNotFound {
 		accountDetails, propertiesDecoded, status = store.GetUserDetailsAssociatedToDomain(projectID, domainID)
-		accountDetails = FormatAccountDetails(projectID, propertiesDecoded, groupName, accountDetails.DomainName)
 		accountDetails.LeftPaneProps = make(map[string]interface{})
 		accountDetails.Milestones = make(map[string]interface{})
 
@@ -2168,10 +2166,6 @@ func FetchAccountDetailsFromProps(projectID int64, groupName string, domainName 
 			log.Error("Unable to decode account properties.")
 			return accountDetails, http.StatusInternalServerError
 		}
-		// add name and hostname
-		if accountDetails.Name == "" {
-			accountDetails = FormatAccountDetails(projectID, *props, groupName, accountDetails.DomainName)
-		}
 
 		// allow only source from groups: skip in case of eg source = 1
 		source := *accountGroupDetail.Source
@@ -2346,45 +2340,6 @@ func (store *MemSQL) GetAccountsAssociatedToDomain(projectID int64, id string, d
 		return []model.User{}, http.StatusInternalServerError
 	}
 	return accountGroupDetails, http.StatusFound
-}
-
-func FormatAccountDetails(projectID int64, propertiesDecoded map[string]interface{},
-	groupName string, hostName string) model.AccountDetails {
-	var companyNameProps, hostNameProps []string
-	var accountDetails model.AccountDetails
-
-	if C.IsDomainEnabled(projectID) && groupName != U.GROUP_NAME_DOMAINS {
-		if model.IsAllowedGroupName(groupName) {
-			hostNameProps = []string{model.HostNameGroup[groupName]}
-			companyNameProps = []string{model.AccountNames[groupName], U.UP_COMPANY}
-		}
-	} else {
-		companyNameProps = model.NameProps
-		hostNameProps = model.HostNameProps
-	}
-
-	nameProps := append(companyNameProps, hostNameProps...)
-	for _, prop := range nameProps {
-		if name, exists := (propertiesDecoded)[prop]; exists {
-			accountDetails.Name = fmt.Sprintf("%s", name)
-			break
-		}
-	}
-	if hostName != "" {
-		accountDetails.DomainName = hostName
-	} else {
-		for _, prop := range hostNameProps {
-			if host, exists := (propertiesDecoded)[prop]; exists {
-				accountDetails.DomainName = fmt.Sprintf("%s", host)
-				break
-			}
-		}
-	}
-
-	if accountDetails.Name == "" && accountDetails.DomainName != "" {
-		accountDetails.Name = accountDetails.DomainName
-	}
-	return accountDetails
 }
 
 func FilterConfiguredProperties(propsToFilter []string, propertiesDecoded *map[string]interface{}) map[string]interface{} {
