@@ -63,7 +63,7 @@ func FormFillProcessing() int {
 
 		properties := make(U.PropertiesMap)
 		// Difference between first field entry - last field entry in seconds.
-		properties[U.EP_TIME_SPENT_ON_FORM] = int64(formFills[0].CreatedAt.Sub(formFills[len(formFills)-1].CreatedAt).Seconds())
+		properties[U.EP_TIME_SPENT_ON_FORM] = int64(formFills[len(formFills)-1].CreatedAt.Sub(formFills[0].CreatedAt).Seconds())
 
 		// Selects one row with valid phone or email for each field on a form.
 		for rowIndex := range formFills {
@@ -160,5 +160,5 @@ func (a structSorter) Swap(i, j int) {
 	a[i], a[j] = a[j], a[i]
 }
 func (a structSorter) Less(i, j int) bool {
-	return a[i].CreatedAt.After(a[j].CreatedAt)
+	return a[i].CreatedAt.Before(a[j].CreatedAt)
 }
