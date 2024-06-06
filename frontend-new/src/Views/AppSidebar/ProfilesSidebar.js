@@ -215,7 +215,7 @@ function ProfilesSidebar({
           ))}
         </div>
         <FolderStructure
-          folders={segmentFolders.peoples}
+          folders={segmentFolders?.peoples || []}
           items={userSegmentsList?.sort((a, b) => a.name.localeCompare(b.name))}
           unit='segment'
           handleNewFolder={handleMoveToNewFolder}
