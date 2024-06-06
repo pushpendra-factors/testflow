@@ -994,6 +994,10 @@ type Model interface {
 	UpdateDefaultTablePropertiesConfig(projectID int64, profileType string, updatedConfig []string) (int, error)
 	UpdateSegmentTablePropertiesConfig(projectID int64, segmentID string, updatedConfig []string) (int, error)
 	GetDomainIDFromDomainName(projectID int64, domainName string, domainGroupID int) (string, error)
+	UpdateProfilesConfigForFeatureScoring(projectID int64, isScoringEnabled bool) error
+	UpdateDefaultTimelinesConfigForFeatureScoring(projectID int64, timelinesConfig *model.TimelinesConfig, isScoringEnabled bool) error
+	UpdateAllSegmentsConfigForFeatureScoring(projectID int64, isScoringEnabled bool) error
+	UpdateSegmentConfigForFeatureScoring(projectID int64, segment *model.Segment, isScoringEnabled bool) error
 
 	// Timeline consuming segment_marker
 	GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload, downloadLimitGiven bool) ([]model.Profile, int, string)
@@ -1015,13 +1019,13 @@ type Model interface {
 	CreateDefaultSegment(projectID int64, entity string, isGroup bool) (int, error)
 	GetSegmentByGivenIds(projectId int64, segmentIds []string) (map[string][]model.Segment, int)
 	UpdateMarkerRunSegment(projectID int64, ids []string, updateTime time.Time) int
-	
+
 	// Segment Folder Item ( Segment Itself )
 	MoveSegmentFolderItem(projectID int64, segmentID string, folderID int64, folder_type string) int
 	MoveSegmentToNewFolder(projectID int64, segmentID string, folderName string, folder_type string) int
-	
+
 	// segment folders
-	GetAllSegmentFolders(projectID int64,folder_type string) ([]model.SegmentFolder, int)
+	GetAllSegmentFolders(projectID int64, folder_type string) ([]model.SegmentFolder, int)
 	CreateSegmentFolder(projectID int64, name string, folder_type string) int
 	UpdateSegmentFolderByID(projectID int64, id int64, name string, folder_type string) int
 	DeleteSegmentFolderByID(projectID int64, id int64, folder_type string) int
