@@ -178,12 +178,20 @@ function NoBreakdownTable({
         for (const key in rest) {
           const mapper = arrayMapper.find((elem) => elem.mapper === key);
           if (mapper) {
-            eventsData[
-              `${getEventDisplayName({
-                event: mapper.eventName,
-                eventNames
-              })} - ${mapper.index}`
-            ] = rest[key];
+            const displayName = getEventDisplayName({
+              event: mapper.eventName,
+              eventNames
+            });
+
+            eventsData[`${displayName} - ${mapper.index}`] = rest[key];
+            if (`${key} - compareValue` in rest) {
+              eventsData[`${displayName} - ${mapper.index} compareValue`] =
+                rest[`${key} - compareValue`];
+            }
+            if (`${key} - change` in rest) {
+              eventsData[`${displayName} - ${mapper.index} change`] =
+                rest[`${key} - change`];
+            }
           }
         }
         return {

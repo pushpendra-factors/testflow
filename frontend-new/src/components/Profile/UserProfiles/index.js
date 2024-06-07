@@ -99,6 +99,7 @@ import {
   iconColors
 } from '../constants';
 import { FolderItemOptions } from 'Components/FolderStructure/FolderItem';
+import { selectSegmentsList } from 'Reducers/userProfilesView/selectors';
 
 const userOptions = getUserOptions();
 
@@ -172,6 +173,7 @@ function UserProfiles({
   const [peopleRow, setPeopleRow] = useState(null);
 
   const { contacts, segmentFolders } = useSelector((state) => state.timelines);
+  const userSegmentsList = useSelector((state) => selectSegmentsList(state));
 
   const {
     bingAds,
@@ -205,6 +207,23 @@ function UserProfiles({
   const setTimelinePayload = useCallback((payload) => {
     dispatch(setTimelinePayloadAction(payload));
   }, []);
+
+  useEffect(() => {
+    if (userSegmentsList) {
+      for (const eachSegment of userSegmentsList) {
+        if (eachSegment?.id === timelinePayload?.segment?.id) {
+          setTimelinePayload({
+            ...timelinePayload,
+            segment: {
+              ...timelinePayload?.segment,
+              folder_id: eachSegment?.folder_id
+            }
+          });
+          break;
+        }
+      }
+    }
+  }, [userSegmentsList]);
 
   const displayTableProps = useMemo(() => {
     const tableProps = timelinePayload?.segment?.id

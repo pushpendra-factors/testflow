@@ -49,7 +49,8 @@ import {
   getAttributionQuery,
   isComparisonEnabled,
   getProfileQuery,
-  getStateQueryFromRequestQuery
+  getStateQueryFromRequestQuery,
+  resultantDataTransformation
 } from './utils';
 import {
   getEventsData,
@@ -665,27 +666,16 @@ function CoreQuery({
 
   const updateResultFromSavedQuery = (res) => {
     const data = res.data.result || res.data;
-    if (result_criteria === TOTAL_EVENTS_CRITERIA) {
-      updateResultState({
-        ...initialState,
-        data: formatApiData(data.result_group[0], data.result_group[1]),
-        status: res.status
-      });
-    } else if (result_criteria === TOTAL_USERS_CRITERIA) {
-      if (user_type === EACH_USER_TYPE) {
-        updateResultState({
-          ...initialState,
-          data: formatApiData(data.result_group[0], data.result_group[1]),
-          status: res.status
-        });
-      } else {
-        updateResultState({
-          ...initialState,
-          data: data.result_group[0],
-          status: res.status
-        });
-      }
-    }
+    const resultantData = resultantDataTransformation(
+      data,
+      result_criteria,
+      user_type
+    );
+    updateResultState({
+      ...initialState,
+      data: resultantData,
+      status: res.status
+    });
   };
 
   const runQuery = useCallback(
@@ -739,21 +729,11 @@ function CoreQuery({
         );
         const data = res.data.result || res.data;
         let resultantData = null;
-        if (result_criteria === TOTAL_EVENTS_CRITERIA) {
-          resultantData = formatApiData(
-            data.result_group[0],
-            data.result_group[1]
-          );
-        } else if (result_criteria === TOTAL_USERS_CRITERIA) {
-          if (user_type === EACH_USER_TYPE) {
-            resultantData = formatApiData(
-              data.result_group[0],
-              data.result_group[1]
-            );
-          } else {
-            resultantData = data.result_group[0];
-          }
-        }
+        resultantData = resultantDataTransformation(
+          data,
+          result_criteria,
+          user_type
+        );
         if (isCompareQuery) {
           updateLocalReducer(COMPARISON_DATA_FETCHED, resultantData);
         } else {
