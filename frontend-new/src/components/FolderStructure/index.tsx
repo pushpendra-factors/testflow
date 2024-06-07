@@ -169,12 +169,21 @@ function FolderStructure(props: FolderStructurePropType) {
     ),
     [folderModalState.action]
   );
+  const memoizedFolderName = useMemo(
+    () => folderModalState.unit?.name,
+    [folderModalState.action]
+  );
   const folderModal = (
     <AppModal
       visible={folderModalState.visible}
       onCancel={handleModalCancel}
       onOk={handleModalSubmit}
       okText={folderModalState.action === 'delete' ? 'Confirm' : 'Save'}
+      okButtonProps={{
+        disabled:
+          folderModalState?.action === 'rename' &&
+          memoizedFolderName === folderModalState?.unit?.name
+      }}
       maskClosable
     >
       <div className='flex flex-col gap-y-5'>

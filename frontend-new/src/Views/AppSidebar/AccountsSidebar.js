@@ -76,6 +76,7 @@ function AccountsSidebar({
   };
 
   const handleRenameSegment = async (name) => {
+    const loadingMessageHandle = message.loading('Renaming Segment', 0);
     try {
       await updateSegmentForId(active_project.id, modalState?.unit.id, {
         name
@@ -91,6 +92,7 @@ function AccountsSidebar({
         duration: 3
       });
     } finally {
+      loadingMessageHandle();
       setModalState((prev) => ({
         ...prev,
         rename: false,
@@ -100,86 +102,111 @@ function AccountsSidebar({
   };
 
   const handleDeleteSegment = async () => {
-    await deleteSegment({
-      projectId: active_project.id,
-      segmentId: modalState.unit?.id
-    });
-    await getSavedSegments(active_project.id);
+    const loadingMessageHandle = message.loading('Deleting Segment', 0);
+    try {
+      await deleteSegment({
+        projectId: active_project.id,
+        segmentId: modalState.unit?.id
+      });
+      await getSavedSegments(active_project.id);
 
-    notification.success({
-      message: 'Segment deleted successfully',
-      duration: 5
-    });
+      notification.success({
+        message: 'Segment deleted successfully',
+        duration: 5
+      });
 
-    setModalState((prev) => ({
-      ...prev,
-      delete: false,
-      unit: null
-    }));
-    setAccountPayload(INITIAL_ACCOUNT_PAYLOAD);
-    history.replace(PathUrls.ProfileAccounts);
+      setModalState((prev) => ({
+        ...prev,
+        delete: false,
+        unit: null
+      }));
+      setAccountPayload(INITIAL_ACCOUNT_PAYLOAD);
+      history.replace(PathUrls.ProfileAccounts);
+    } catch (error) {
+      message.error('Failed to Delete Segment');
+    } finally {
+      loadingMessageHandle();
+    }
+  };
+  const moveSegmentToFolder = async (event, folderID, segmentID) => {
+    const loadingMessageHandle = message.loading('Moving Segment to Folder', 0);
+    try {
+      await updateSegmentToFolder(
+        active_project.id,
+        segmentID,
+        {
+          folder_id: folderID
+        },
+        'account'
+      );
+      await getSavedSegments(active_project.id);
+      message.success('Segment Moved');
+    } catch (err) {
+      console.error(err);
+      message.error('Segment failed to move');
+    } finally {
+      loadingMessageHandle();
+    }
   };
 
-  const moveSegmentToFolder = (event, folderID, segmentID) => {
-    updateSegmentToFolder(
-      active_project.id,
-      segmentID,
-      {
-        folder_id: folderID
-      },
-      'account'
-    )
-      .then(async () => {
-        await getSavedSegments(active_project.id);
-        message.success('Segment Moved');
-      })
-      .catch((err) => {
-        console.error(err);
-        message.error('Segment failed to move');
-      });
+  const handleMoveToNewFolder = async (segmentID, folder_name) => {
+    const loadingMessageHandle = message.loading(
+      `Moving Segment to \`${folder_name}\` Folder`,
+      0
+    );
+    try {
+      await moveSegmentToNewFolder(
+        active_project.id,
+        segmentID,
+        {
+          name: folder_name
+        },
+        'account'
+      );
+      getSegmentFolders(active_project.id, 'account');
+      await getSavedSegments(active_project.id);
+      message.success('Segment Moved to New Folder');
+    } catch (err) {
+      console.error(err);
+      getSegmentFolders(active_project.id, 'account');
+      message.error('Failed to move segment');
+    } finally {
+      loadingMessageHandle();
+    }
+  };
+  const handleRenameFolder = async (folderId, name) => {
+    const loadingMessageHandle = message.loading('Renaming Folder', 0);
+    try {
+      await renameSegmentFolders(
+        active_project.id,
+        folderId,
+        { name },
+        'account'
+      );
+      getSegmentFolders(active_project?.id, 'account');
+      message.success('Folder Renamed');
+    } catch (error) {
+      console.error(error);
+      message.error(
+        error?.data?.err?.code || 'Failed to Rename Segment Folders'
+      );
+    } finally {
+      loadingMessageHandle();
+    }
   };
 
-  const handleMoveToNewFolder = (segmentID, folder_name) => {
-    moveSegmentToNewFolder(
-      active_project.id,
-      segmentID,
-      {
-        name: folder_name
-      },
-      'account'
-    )
-      .then(async () => {
-        getSegmentFolders(active_project.id, 'account');
-        await getSavedSegments(active_project.id);
-        message.success('Segment Moved to New Folder');
-      })
-      .catch((err) => {
-        console.error(err);
-        message.error('Failed to move segment');
-      });
-  };
-  const handleRenameFolder = (folderId, name) => {
-    renameSegmentFolders(active_project.id, folderId, { name }, 'account')
-      .then(async () => {
-        getSegmentFolders(active_project.id, 'account');
-        message.success('Folder Renamed');
-      })
-      .catch((err) => {
-        console.error(err);
-      });
-  };
-
-  const handleDeleteFolder = (folderId) => {
-    deleteSegmentFolders(active_project.id, folderId, 'account')
-      .then(async () => {
-        getSegmentFolders(active_project.id, 'account');
-        await getSavedSegments(active_project.id);
-        message.success('Folder Deleted');
-      })
-      .catch((err) => {
-        console.error(err);
-        message.success('Folder to Delete');
-      });
+  const handleDeleteFolder = async (folderId) => {
+    const loadingMessageHandle = message.loading('Deleting Folder', 0);
+    try {
+      await deleteSegmentFolders(active_project.id, folderId, 'account');
+      await getSegmentFolders(active_project.id, 'account');
+      await getSavedSegments(active_project.id);
+      message.success('Folder Deleted');
+    } catch (error) {
+      message.success(error?.data?.err?.code || 'Failed to Delete Folder');
+    } finally {
+      loadingMessageHandle();
+    }
   };
 
   const changeActiveSegment = (segment) => {
