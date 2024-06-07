@@ -496,6 +496,7 @@ function UserProfiles({
   );
 
   const handleDeleteActiveSegment = useCallback(() => {
+    const messageHandler = message.loading('Deleting Segment', 0);
     deleteSegment({
       projectId: activeProject.id,
       segmentId: timelinePayload?.segment?.id
@@ -508,6 +509,7 @@ function UserProfiles({
         });
       })
       .finally(() => {
+        messageHandler();
         dispatch(
           setTimelinePayloadAction({
             source: 'All',
@@ -520,7 +522,7 @@ function UserProfiles({
   const handleRenameSegment = useCallback(
     async (name) => {
       if (!timelinePayload.segment) return;
-
+      const messageHandler = message.loading('Renaming Segment', 0);
       try {
         const segmentId = timelinePayload.segment.id;
 
@@ -540,6 +542,8 @@ function UserProfiles({
         setTimelinePayload(updatedPayload);
       } catch (error) {
         logger.error(error);
+      } finally {
+        messageHandler();
       }
     },
     [activeProject.id, timelinePayload.segment]
@@ -972,42 +976,49 @@ function UserProfiles({
     </Popover>
   );
 
-  const moveSegmentToFolder = (folderID, segmentID) => {
-    updateSegmentToFolder(
-      activeProject.id,
-      segmentID,
-      {
-        folder_id: folderID
-      },
-      'user'
-    )
-      .then(async () => {
-        await getSavedSegments(activeProject.id);
-        message.success('Segment Moved');
-      })
-      .catch((err) => {
-        console.error(err);
-        message.error('Segment failed to move');
-      });
+  const moveSegmentToFolder = async (folderID, segmentID) => {
+    const messageHandler = message.loading('Moving Segment to Folder', 0);
+    try {
+      await updateSegmentToFolder(
+        activeProject.id,
+        segmentID,
+        {
+          folder_id: folderID
+        },
+        'user'
+      );
+      await getSavedSegments(activeProject.id);
+      message.success('Segment Moved');
+    } catch (err) {
+      console.error(err);
+      message.error('Segment failed to move');
+    } finally {
+      messageHandler();
+    }
   };
-  const handleMoveToNewFolder = (segmentID, folder_name) => {
-    moveSegmentToNewFolder(
-      activeProject?.id,
-      segmentID,
-      {
-        name: folder_name
-      },
-      'user'
-    )
-      .then(async () => {
-        getSegmentFolders(activeProject.id, 'user');
-        await getSavedSegments(activeProject.id);
-        message.success('Segment Moved to New Folder');
-      })
-      .catch((err) => {
-        console.error(err);
-        message.error('Failed to move segment');
-      });
+  const handleMoveToNewFolder = async (segmentID, folder_name) => {
+    const messageHandler = message.loading(
+      `Moving Segment to \`${folder_name}\` Folder`,
+      0
+    );
+    try {
+      await moveSegmentToNewFolder(
+        activeProject?.id,
+        segmentID,
+        {
+          name: folder_name
+        },
+        'user'
+      );
+      getSegmentFolders(activeProject.id, 'user');
+      await getSavedSegments(activeProject.id);
+      message.success('Segment Moved to New Folder');
+    } catch (err) {
+      console.error(err);
+      message.error('Failed to move segment');
+    } finally {
+      messageHandler();
+    }
   };
   const renderMoreActions = () => (
     <div className='cursor-pointer'>

@@ -530,6 +530,7 @@ function AccountProfiles({
   }, [accountPayload, newSegmentMode]);
 
   const handleRenameSegment = async (name) => {
+    const messageHandler = message.loading('Renaming Segment', 0);
     try {
       await updateSegmentForId(activeProject.id, accountPayload?.segment?.id, {
         name
@@ -550,6 +551,8 @@ function AccountProfiles({
         message: 'Segment rename failed',
         duration: 3
       });
+    } finally {
+      messageHandler();
     }
   };
 
@@ -582,6 +585,7 @@ function AccountProfiles({
   };
 
   const handleDeleteActiveSegment = () => {
+    const messageHandler = message.loading('Deleting Segment', 0);
     deleteSegment({
       projectId: activeProject.id,
       segmentId: accountPayload.segment.id
@@ -594,6 +598,7 @@ function AccountProfiles({
         });
       })
       .finally(() => {
+        messageHandler();
         setAccountPayload(INITIAL_ACCOUNT_PAYLOAD);
         history.replace(PathUrls.ProfileAccounts);
       });
@@ -866,42 +871,49 @@ function AccountProfiles({
       </Button>
     </Tooltip>
   );
-  const moveSegmentToFolder = (folderID, segment_id) => {
-    updateSegmentToFolder(
-      activeProject.id,
-      segment_id,
-      {
-        folder_id: folderID
-      },
-      'account'
-    )
-      .then(async () => {
-        await getSavedSegments(activeProject.id);
-        message.success('Segment Moved');
-      })
-      .catch((err) => {
-        console.error(err);
-        message.error('Segment failed to move');
-      });
+  const moveSegmentToFolder = async (folderID, segment_id) => {
+    const messageHandler = message.loading('Moving Segment to Folder', 0);
+    try {
+      await updateSegmentToFolder(
+        activeProject.id,
+        segment_id,
+        {
+          folder_id: folderID
+        },
+        'account'
+      );
+      await getSavedSegments(activeProject.id);
+      message.success('Segment Moved');
+    } catch (err) {
+      console.error(err);
+      message.error('Segment failed to move');
+    } finally {
+      messageHandler();
+    }
   };
-  const handleMoveToNewFolder = (segment_id, folder_name) => {
-    moveSegmentToNewFolder(
-      activeProject.id,
-      segment_id,
-      {
-        name: folder_name
-      },
-      'account'
-    )
-      .then(async () => {
-        getSegmentFolders(activeProject.id, 'account');
-        await getSavedSegments(activeProject.id);
-        message.success('Segment Moved to New Folder');
-      })
-      .catch((err) => {
-        console.error(err);
-        message.error('Failed to move segment');
-      });
+  const handleMoveToNewFolder = async (segment_id, folder_name) => {
+    const messageHandler = message.loading(
+      `Moving Segment to \`${folder_name}\` Folder`,
+      0
+    );
+    try {
+      await moveSegmentToNewFolder(
+        activeProject.id,
+        segment_id,
+        {
+          name: folder_name
+        },
+        'account'
+      );
+      getSegmentFolders(activeProject.id, 'account');
+      await getSavedSegments(activeProject.id);
+      message.success('Segment Moved to New Folder');
+    } catch (err) {
+      console.error(err);
+      message.error('Failed to move segment');
+    } finally {
+      messageHandler();
+    }
   };
   const renderMoreActions = () => (
     <div className='cursor-pointer'>
@@ -928,7 +940,10 @@ function AccountProfiles({
             onClick: navigateToAccountsEngagement
           }
         ]}
-        hideDefaultOptions={!!segmentID === !!''}
+        hideDefaultOptions={
+          !!segmentID === !!'' ||
+          defaultSegmentsList.includes(accountPayload?.segment?.name)
+        }
       />
     </div>
   );
