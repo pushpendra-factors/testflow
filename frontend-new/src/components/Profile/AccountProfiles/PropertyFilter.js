@@ -101,7 +101,7 @@ function PropertyFilter({
     );
   }
 
-  if (!selectedAccount.length) return null;
+  if (!selectedAccount?.length) return null;
 
   return (
     <div className='flex flex-col gap-y-4 w-full'>
