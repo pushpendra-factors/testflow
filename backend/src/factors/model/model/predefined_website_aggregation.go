@@ -134,10 +134,10 @@ var predefinedWebsiteAggregationWidgets = []PredefinedWidget{
 			{Name: PredefTotalSessions, DisplayName: PredefDispTotalSessions, InternalEventType: PredefEventTypeSession},
 		},
 		GroupBy: []PredefinedGroupBy{
+			{Name: PredefPropChannel, DisplayName: PredefPropDispChannel},
 			{Name: PredefPropSource, DisplayName: PredefPropDispSource},
 			{Name: PredefPropMedium, DisplayName: PredefPropDispMedium},
 			{Name: PredefPropCampaign, DisplayName: PredefPropDispCampaign},
-			{Name: PredefPropChannel, DisplayName: PredefPropDispChannel},
 		},
 		Setting: ChartSetting{Type: ChartTypeBarChart, Presentation: PresentationTypeChart},
 	},
