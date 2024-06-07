@@ -30,6 +30,8 @@ var SectionBitMapping = map[string]int{
 	EventsBasedDisplayCategory:  15,
 	MarketoLeadsDisplayCategory: 16,
 	PageViewsDisplayCategory:    17,
+
+	LinkedinCompanyEngagementsDisplayCategory: 18,
 }
 
 type Property struct {
