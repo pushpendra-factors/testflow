@@ -82,6 +82,7 @@ func main() {
 	emailUTMParameterAllowedProjects := flag.String("email_utm_parameter_allowed_projects", "", "")
 	enableDomainWebsitePropertiesByProjectID := flag.String("enable_domain_website_properties_by_project_id", "", "")
 	enableEnrichmentDebugLogsByProjectID := flag.String("enable_enrichment_debug_logs_by_project_id", "", "")
+	sixSignalV3ProjectIds := flag.String("six_signal_v3_project_ids", "", "Project Ids for which enrichment will go through 6Signal v3")
 
 	flag.Parse()
 
@@ -146,6 +147,7 @@ func main() {
 		EmailUTMParameterAllowedProjects:                   *emailUTMParameterAllowedProjects,
 		EnableDomainWebsitePropertiesByProjectID:           *enableDomainWebsitePropertiesByProjectID,
 		EnableEnrichmentDebugLogsByProjectID:               *enableEnrichmentDebugLogsByProjectID,
+		SixSignalV3ProjectIds:                              *sixSignalV3ProjectIds,
 	}
 	C.InitConf(config)
 
