@@ -156,6 +156,7 @@ CREATE TABLE IF NOT EXISTS adwords_documents (
     -- Ref (project_id) -> projects(id)
     -- Ref (project_id, customer_account_id) -> project_settings(project_id, int_adwords_customer_account_id)
 );
+ALTER TABLE adwords_documents AUTOSTATS_ENABLED = OFF;
 
 CREATE ROWSTORE TABLE IF NOT EXISTS agents (
     uuid text,
@@ -714,6 +715,7 @@ CREATE TABLE IF NOT EXISTS google_organic_documents (
     -- Unique (project_id, customer_ad_account_id, type, timestamp, id)
     -- Ref (project_id) -> projects(id)
 );
+ALTER TABLE google_organic_documents AUTOSTATS_ENABLED = OFF;
 
 CREATE ROWSTORE TABLE IF NOT EXISTS project_model_metadata
 (
