@@ -79,6 +79,7 @@ import { TemplateIDs } from './../utils';
 import FactorsSalesforceCompany from './Templates/FactorsSalesforceCompany';
 import FactorsApolloSalesforceContacts from './Templates/FactorsApolloSalesforceContacts';
 import logger from 'Utils/logger';
+import FactorsLinkedInCAPI from './Templates/FactorsLinkedInCAPI';
 
 const host = getHostUrl();
 
@@ -187,6 +188,16 @@ const WorkflowBuilder = ({
           selectedTemp?.event || selectedTemp?.workflow_config?.trigger?.event
         );
         setQueries([]);
+      }
+      if (
+        selectedTemp?.workflow_config?.trigger?.event_level === '' ||
+        selectedTemp?.event_level === '' ||
+        selectedTemp?.workflow_config?.trigger?.event_level === 'events' ||
+        selectedTemp?.event_level === 'events'
+      ) {
+        setActiveGrpBtn('events');
+      } else {
+        setActiveGrpBtn('users');
       }
       setWorkflowName(isTemplateWorkflow ? '' : selectedTemp?.title);
       setIsTemplate(isTemplateWorkflow);
@@ -404,6 +415,15 @@ const WorkflowBuilder = ({
       };
     }
 
+    if (
+      selectedTemp?.id == TemplateIDs.FACTORS_LINKEDIN_CAPI ||
+      selectedTemp?.template_id == TemplateIDs.FACTORS_LINKEDIN_CAPI
+    ) {
+      message_propertiesObj = {
+        addtional_configuration: propertyMapMandatory
+      };
+    }
+
     let payload = {
       action_performed: segmentType,
       alert_limit: 5,
@@ -411,7 +431,7 @@ const WorkflowBuilder = ({
       cool_down_time: 1800,
       event:
         segmentType == 'action_event' ? queries[0]?.label : selectedSegment,
-      event_level: 'account',
+      event_level: activeGrpBtn === 'events' ? 'account' : 'user',
       filters: formatFiltersForQuery(queries?.[0]?.filters),
       notifications: false,
       repeat_alerts: true,
@@ -534,6 +554,20 @@ const WorkflowBuilder = ({
           propertyMapAdditional2={propertyMapAdditional2}
           apolloFormDetails={apolloFormDetails}
           setApolloFormDetails={setApolloFormDetails}
+        />
+      );
+    } else if (
+      workflowItem?.template_id == TemplateIDs.FACTORS_LINKEDIN_CAPI ||
+      workflowItem?.id == TemplateIDs.FACTORS_LINKEDIN_CAPI
+    ) {
+      return (
+        <FactorsLinkedInCAPI
+          user={user}
+          propertyMapMandatory={propertyMapMandatory}
+          setPropertyMapMandatory={setPropertyMapMandatory}
+          saveWorkflowFn={saveWorkflowFn}
+          selectedTemp={selectedTemp}
+          isTemplate={isTemplate}
         />
       );
     } else {
