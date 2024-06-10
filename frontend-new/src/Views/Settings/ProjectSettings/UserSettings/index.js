@@ -190,9 +190,10 @@ function UserSettings({
     <div className='fa-container'>
       <Row gutter={[24, 24]} justify='center'>
         <Col span={24}>
-          <div className='mb-10 pl-4'>
+          <div className='mb-10'>
             <CommonSettingsHeader
-              title='Users and Roles'
+              title='Members'
+              description="Manage your project's team by adjusting roles, inviting new members, and overseeing user access."
               actionsNode={
                 <div className='flex justify-end'>
                   <Button

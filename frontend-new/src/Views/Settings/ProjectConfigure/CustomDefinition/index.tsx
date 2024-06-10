@@ -67,8 +67,9 @@ const CustomDefinition = () => {
   return (
     <div>
       <CommonSettingsHeader
-        title='Custom Customisation'
-        description='Unlock productivity with our robust ecosystem of seamless software integrations.'
+        hasNoBottomPadding
+        title='Custom Definitions'
+        description='Define custom metrics, events and groups to analyze all your marketing touchpoints with ease.'
       />
       <div>
         <Tabs activeKey={activeKey} onChange={handleTabChange}>

@@ -18,10 +18,9 @@ const ChannelGroup = () => {
         <Row>
           <Col span={20}>
             <Text type='title' level={7} extraClass='m-0' color='grey'>
-              These rules are checked <b>chronologically</b> from top of bottom
-              to assign the channel from which a user came from. So, the first
-              channel group whose conditions are met will be assigned as the
-              channel.
+              Assign the default channel to all website sessions based on
+              conditions. These rules are checked chronologically from top of
+              bottom to assign the channel from which a user came from.
             </Text>
           </Col>
           <Col span={4}>
