@@ -32,4 +32,22 @@ func TestCacheDBSetBatch(t *testing.T) {
 
 	assert.Equal(t, "value1", v1)
 	assert.Equal(t, "value2", v2)
+
+	// Update same records and it should be updated without duplicate error.
+
+	records[cacheKey1] = "value3"
+	records[cacheKey2] = "value4"
+
+	err = cacheDB.SetBatch(records, 7200)
+	assert.Nil(t, err)
+
+	v1, err = cacheDB.Get(cacheKey1)
+	assert.Nil(t, err)
+
+	v2, err = cacheDB.Get(cacheKey2)
+	assert.Nil(t, err)
+
+	assert.Equal(t, "value3", v1)
+	assert.Equal(t, "value4", v2)
+
 }

@@ -93,7 +93,7 @@ function PropertyFilter({
     );
   }
 
-  if (!selectedFilters.account.length) return null;
+  if (!selectedFilters?.account?.length) return null;
 
   return (
     <div className='flex flex-col gap-y-4 w-full'>

@@ -193,9 +193,9 @@ const (
 
 var ErrorStateToErrorMessageMap = map[string]string{
 	PULL_DELAYED:         "We are encountering a delay in syncing your data from %s. Rest assured, all your data is safe and will be synced shortly.",
-	SYNC_PENDING:         "Delay- “Your data is running slow, don’t worry all your data is secure and you will be able to access it shortly.”",
+	SYNC_PENDING:         "Your data is running slow, don’t worry all your data is secure and you will be able to access it shortly.",
 	SYNCED:               "Unhealthy trigger hasn’t occurred",
-	HEAVY_DELAYED:        "“Data will not be lost, just delayed”",
+	HEAVY_DELAYED:        "Data will not be lost, just delayed",
 	CLIENT_TOKEN_EXPIRED: "client side token expired",
 	LIMIT_EXCEED:         "Factors Deanonymization Limit Exhausted",
 	DISCONNECTED:         "Disconnected",
