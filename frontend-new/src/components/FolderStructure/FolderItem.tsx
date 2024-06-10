@@ -66,12 +66,10 @@ const PopoverOptionWrapper = ({
                         }
                   }
                 >
-                  {false ? <LoadingOutlined /> : <FolderOpenFilled />}
-                  <div>
-                    <Tooltip title={eachSubMenu.title} placement='right'>
-                      {eachSubMenu.title}
-                    </Tooltip>
-                  </div>
+                  <FolderOpenFilled />
+                  <Tooltip title={eachSubMenu.title} placement='right'>
+                    <div>{eachSubMenu.title}</div>
+                  </Tooltip>
                 </div>
               ))}
             </div>
@@ -153,7 +151,8 @@ export function FolderItemOptions(props: FolderItemOptionsType) {
     moveToExistingFolder,
     extraOptions,
     data,
-    folder_id
+    folder_id,
+    placement = 'right'
   } = props;
   const actionsMenu = useMemo(() => {
     let tmpActions: Array<any> = [];
@@ -221,7 +220,7 @@ export function FolderItemOptions(props: FolderItemOptionsType) {
     <div>
       <Popover
         content={popoverContent}
-        placement='right'
+        placement={placement || 'right'}
         trigger='hover'
         arrowContent={<RightOutlined />}
         overlayClassName={styles.popover_list_container}
@@ -267,6 +266,7 @@ function FolderItem(props: FolderItemPropType) {
           unit={contextValue.unit}
           moveToExistingFolder={null}
           handleNewFolder={null}
+          placement='right'
         />
       </div>
     </div>

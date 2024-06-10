@@ -3,7 +3,7 @@ $background-color: #f5f5f5;
 .folder {
   margin: 2px auto;
   padding: 0px 12px;
-  width: 264px;
+  width: 262px;
   color: #000000a6;
 
   :global(.ant-popover-arrow) {
@@ -153,6 +153,7 @@ m .popover_list:has(:global(.ant-popover-open)) {
     gap: 6px;
     padding: 8px 12px;
     border-radius: 0px;
+    overflow-x: hidden;
     cursor: pointer;
     & > div {
       text-overflow: ellipsis;
@@ -166,8 +167,8 @@ m .popover_list:has(:global(.ant-popover-open)) {
   }
 
   & .submenu_list_group {
-    max-height: 200px;
-    overflow: scroll;
+    max-height: 170px;
+    overflow-y: scroll;
   }
 }
 

@@ -60,9 +60,10 @@ function Folder(props: FolderPropType) {
       >
         <div>
           {showItems ? <CaretDownFilled /> : <CaretRightFilled />}
-          <div>
-            <Tooltip title={name}>{name}</Tooltip>
-          </div>
+
+          <Tooltip title={name}>
+            <div>{name} </div>
+          </Tooltip>
         </div>{' '}
         {!isAllBoard && (
           <span className={styles.folder_actions}>

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import cx from 'classnames';
-import { Button, message, notification } from 'antd';
+import { Button, Spin, message, notification } from 'antd';
 import { SVG as Svg, Text } from 'Components/factorsComponents';
 import {
   setAccountPayloadAction,
@@ -31,7 +31,6 @@ import {
   renameSegmentFolders,
   updateSegmentToFolder
 } from 'Reducers/timelines';
-import { LoadingOutlined } from '@ant-design/icons';
 import { bindActionCreators } from 'redux';
 import { defaultSegmentIconsMapping } from './appSidebar.constants';
 import styles from './index.module.scss';
@@ -242,7 +241,7 @@ function AccountsSidebar({
         )}
       >
         {segmentFolders?.isLoading ? (
-          <LoadingOutlined />
+          <Spin />
         ) : (
           <FolderStructure
             folders={segmentFolders?.accounts || []}
