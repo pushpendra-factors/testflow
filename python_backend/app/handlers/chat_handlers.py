@@ -1,16 +1,13 @@
 import sys
-import re
 from tornado import gen
 #sys.path.append('/Users/satyamishra/repos/factors/python_backend/chat_factors/')
 #sys.path.append('/Users/satyamishra/repos/factors/python_backend/')
 
 import os
 import json
-import re
 from .base_handler import BaseHandler
 from tornado.log import logging as log
-from chatgpt_poc.chat import get_answer_from_ir_model
-from chatgpt_poc.chat import get_answer_from_ir_model_local, get_answer_using_ir_model
+from chatgpt_poc.chat import get_answer_from_ir_model_local, get_answer_using_ir_model, prompt_cleanup
 from chatgpt_poc.bert import embed_sentence
 from chat.final_query import get_url_and_query_payload_from_gpt_response, validate_gpt_response, UnexpectedGptResponseError
 from chat.kpi import KPIOrPropertyNotFoundError
@@ -50,6 +47,7 @@ class ChatHandler(BaseHandler):
             prompt = json.loads(cls.request.body)["prompt"]
             pid = json.loads(cls.request.body)["pid"]
             kpi_config = json.loads(cls.request.body)["kpi_config"]
+            prompt = prompt_cleanup(prompt)
             log.info('prompt: %s', prompt)
             prompt_emb = embed_sentence(prompt, normalise=True)
             matching_embeddings_data =  FactorsDataService.get_matching_chat_embeddings(0, prompt_emb)
