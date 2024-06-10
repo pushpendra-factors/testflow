@@ -156,6 +156,9 @@ func syncWorkerForOTP(projectID int64, startTime, endTime int64, backfillEnabled
 	if errCode != http.StatusFound && errCode != http.StatusNotFound {
 		logCtx.WithField("err_code", errCode).Error("Failed to get otp Rules for Project")
 		return
+	} else if len(otpRules) == 0 {
+		logCtx.Error("No otp Rules for Project")
+		return
 	}
 
 	project, errCode := store.GetStore().GetProject(projectID)
