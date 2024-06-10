@@ -1,14 +1,15 @@
-// https://github.com/ucarion/saml // this code is forked from this repo, and modified a little
 package saml
 
 import (
-	// "bytes"
+	"bytes"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/xml"
 	"errors"
 	"net/url"
 	"time"
+
+	"github.com/ucarion/dsig"
 )
 
 // ParamSAMLResponse is the name of the HTTP POST parameter where SAML puts
@@ -80,9 +81,7 @@ var ErrInvalidRecipient = errors.New("saml: invalid recipient")
 // ErrAssertionExpired.
 //
 // Verify does not check if cert is expired.
-func Verify(samlResponse string, cert *x509.Certificate, recipient string, now time.Time) (Response, error) {
-	recipient = "https://staging-api.factors.ai/project/51/saml/acs"
-
+func Verify(samlResponse, issuer string, cert *x509.Certificate, recipient string, now time.Time) (Response, error) {
 	data, err := base64.StdEncoding.DecodeString(samlResponse)
 	if err != nil {
 		return Response{}, err
@@ -97,10 +96,10 @@ func Verify(samlResponse string, cert *x509.Certificate, recipient string, now t
 		return Response{}, ErrResponseNotSigned
 	}
 
-	// decoder := xml.NewDecoder(bytes.NewReader(data))
-	// if err := response.Signature.Verify(cert, decoder); err != nil {
-	// 	return Response{}, err
-	// }
+	decoder := xml.NewDecoder(bytes.NewReader(data))
+	if err := response.Signature.Verify(cert, decoder); err != nil {
+		return Response{}, err
+	}
 
 	// if response.Assertion.Issuer.Name != issuer {
 	// 	return Response{}, ErrInvalidIssuer
@@ -129,9 +128,9 @@ func Verify(samlResponse string, cert *x509.Certificate, recipient string, now t
 //
 // Verify can construct and verify a Response from an HTTP body parameter.
 type Response struct {
-	XMLName   xml.Name  `xml:"urn:oasis:names:tc:SAML:2.0:protocol Response"`
-	Signature Signature `xml:"Signature"`
-	Assertion Assertion `xml:"Assertion"`
+	XMLName   xml.Name       `xml:"urn:oasis:names:tc:SAML:2.0:protocol Response"`
+	Signature dsig.Signature `xml:"Signature"`
+	Assertion Assertion      `xml:"Assertion"`
 }
 
 // Assertion represents a SAML assertion.
@@ -288,47 +287,4 @@ type SingleSignOnService struct {
 	XMLName  xml.Name `xml:"urn:oasis:names:tc:SAML:2.0:metadata SingleSignOnService"`
 	Binding  string   `xml:"Binding,attr"`
 	Location string   `xml:"Location,attr"`
-}
-
-type Signature struct {
-	XMLName        xml.Name `xml:"http://www.w3.org/2000/09/xmldsig# Signature"`
-	SignedInfo     SignedInfo
-	SignatureValue string
-}
-
-// SignedInfo contains information about what is signed by a Signature.
-type SignedInfo struct {
-	XMLName                xml.Name `xml:"http://www.w3.org/2000/09/xmldsig# SignedInfo"`
-	CanonicalizationMethod CanonicalizationMethod
-	SignatureMethod        SignatureMethod
-	Reference              Reference
-}
-
-// CanonicalizationMethod contains information about the c14n algorithm used to
-// compute the bytes that are digested or signed.
-type CanonicalizationMethod struct {
-	XMLName   xml.Name `xml:"http://www.w3.org/2000/09/xmldsig# CanonicalizationMethod"`
-	Algorithm string   `xml:"Algorithm,attr"`
-}
-
-// SignatureMethod contains information about the signature algorithm used to
-// calculate a Signature's SignatureValue.
-type SignatureMethod struct {
-	XMLName   xml.Name `xml:"http://www.w3.org/2000/09/xmldsig# SignatureMethod"`
-	Algorithm string   `xml:"Algorithm,attr"`
-}
-
-// Reference contains details about the data that makes up the DigestValue of a
-// Signature.
-type Reference struct {
-	XMLName      xml.Name `xml:"http://www.w3.org/2000/09/xmldsig# Reference"`
-	DigestMethod DigestMethod
-	DigestValue  string
-}
-
-// DigestMethod contains information about the digest algorithm used to
-// calculate a Signature's DigestValue.
-type DigestMethod struct {
-	XMLName   xml.Name `xml:"http://www.w3.org/2000/09/xmldsig# DigestMethod"`
-	Algorithm string   `xml:"Algorithm,attr"`
 }
