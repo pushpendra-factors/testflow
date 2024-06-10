@@ -105,7 +105,7 @@
   &.active {
     background-color: $fa-color-brand-1;
     :global(.fai-text) {
-      color: $fa-color-character-title;
+      color: $fa-color--brand-color-6;
       font-weight: 500;
     }
   }
@@ -174,4 +174,13 @@
 
 .folder-dashboards-list {
   transition: all 2s linear 1s;
+}
+
+.settings-sidebar{
+  overflow-y: scroll;
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.settings-sidebar::-webkit-scrollbar {
+  display: none;
 }

@@ -152,21 +152,16 @@ function ContentGroups({
               <Col span={20}>
                 <div>
                   <Text type='title' level={7} extraClass='m-0' color='grey'>
-                    Create logical collections of related URLs, such as blog
-                    articles or product pages, to analyze their impact on leads,
-                    revenue, and pipeline stages.
-                  </Text>
-                  <Text type='title' level={7} extraClass='m-0' color='grey'>
-                    Compare the performance of different content groups,
-                    identify optimization opportunities, and enhance your
-                    content marketing efforts to drive better results.{' '}
-                    <a
+                    Organize your URLs into logical collections, such as blog
+                    articles or product pages, to analyze their influence on
+                    leads, revenue, and pipeline stages effectively.{' '}
+                    {/* <a
                       href='https://help.factors.ai/en/articles/7284125-content-groups'
                       target='_blank'
                       rel='noreferrer'
                     >
                       Learn more
-                    </a>
+                    </a> */}
                   </Text>
                 </div>
               </Col>

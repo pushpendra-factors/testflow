@@ -63,7 +63,10 @@ import OnboardingRouting from 'Onboarding/ui/OnboardingRouting';
 import moment from 'moment';
 import useAgentInfo from 'hooks/useAgentInfo';
 import { fetchAlertTemplates } from 'Reducers/alertTemplates';
-import { checkMatchPath } from 'Views/AppSidebar/appSidebar.helpers';
+import {
+  checkMatchPath,
+  isSettingsUrl
+} from 'Views/AppSidebar/appSidebar.helpers';
 import {
   SIGNUP_HS_FORM_ID,
   SIGNUP_HS_PORTAL_ID,
@@ -361,7 +364,8 @@ function AppLayout({
                       pathname,
                       PathUrls.ProfilePeopleDetailsURL
                     ) &&
-                    !show_analytics_result
+                    !show_analytics_result &&
+                    !isSettingsUrl(pathname)
                 },
                 {
                   'py-2':
@@ -370,6 +374,9 @@ function AppLayout({
                       pathname,
                       PathUrls.ProfileAccountsSegmentsURL
                     )
+                },
+                {
+                  'px-8 py-4': isSettingsUrl(pathname)
                 }
               )}
             >

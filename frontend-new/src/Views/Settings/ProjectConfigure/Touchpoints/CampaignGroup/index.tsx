@@ -134,22 +134,16 @@ const CampaignGroup = ({
           <Col span={20}>
             <div>
               <Text type='title' level={7} extraClass='m-0' color='grey'>
-                Harness the full potential of your advertising data with Custom
-                Properties. By associating distinct attributes with your data,
-                you gain precise control over configuring and analyzing your ad
-                campaigns.
-              </Text>
-              <Text type='title' level={7} extraClass='m-0' color='grey'>
-                Customize and tailor your data to align perfectly with your
-                business objectives, ensuring optimal insights and enhanced
-                advertising optimization.
-                <a
+                Organize your campaigns and ad-groups efficiently by grouping
+                them based on relevant criteria for streamlined management and
+                analysis.{' '}
+                {/* <a
                   href='https://help.factors.ai/en/articles/7284109-custom-properties'
                   target='_blank'
                   rel='noreferrer'
                 >
                   Learn more
-                </a>
+                </a> */}
               </Text>
             </div>
           </Col>

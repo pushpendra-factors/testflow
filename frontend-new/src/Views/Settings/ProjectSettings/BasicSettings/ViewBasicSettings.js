@@ -32,9 +32,10 @@ function ViewBasicSettings({
   }, [activeProject, agents, currentAgent, currentProjectSettings]);
 
   return (
-    <div className='mb-10 pl-4'>
+    <div className='mb-10'>
       <CommonSettingsHeader
-        title='Basic Details'
+        title='General'
+        description='Personalize your project by updating its name, timezone, logo, and other key details.'
         actionsNode={
           <div className='flex justify-end'>
             <Tooltip

@@ -49,7 +49,11 @@ function Pricing() {
 
   return (
     <div>
-      <CommonSettingsHeader title='Plans and billing' />
+      <CommonSettingsHeader
+        hasNoBottomPadding
+        title='Plans & Billings'
+        description='Manage your current subscription, upgrade your plan, purchase add-ons, and keep track of billing details in one place.'
+      />
       <div className={`mt-2 ${styles.tab_container}`}>
         <Tabs
           activeKey={activeKey}

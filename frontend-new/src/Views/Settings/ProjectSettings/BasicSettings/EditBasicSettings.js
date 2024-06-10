@@ -110,7 +110,7 @@ function EditBasicSettings({
   };
 
   return (
-    <div className='mb-10 pl-4'>
+    <div className='mb-10'>
       <Form
         form={form}
         onFinish={onFinish}
@@ -126,7 +126,8 @@ function EditBasicSettings({
         }}
       >
         <CommonSettingsHeader
-          title='Basic Details'
+          title='General'
+          description='Personalize your project by updating its name, timezone, logo, and other key details.'
           actionsNode={
             <div className='flex justify-end'>
               <Button

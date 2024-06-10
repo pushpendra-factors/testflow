@@ -70,13 +70,13 @@ const IntegrationSettings = () => {
 
     return IntegrationPageCategories.sort(
       (categoryA, categoryB) => categoryA.sortOrder - categoryB.sortOrder
-    ).map((category) => {
+    ).map((category, index) => {
       const categoryMap = categorizedData[category.id];
       if (!categoryMap || !categoryMap.length) {
         return null;
       }
       return (
-        <div className='mb-10'>
+        <div className={`${index === 0 ? '' : 'mb-10'}`}>
           <Text
             type='title'
             level={6}
@@ -122,9 +122,7 @@ const IntegrationSettings = () => {
         <>
           <CommonSettingsHeader
             title='Integrations'
-            description='Unlock productivity with our robust ecosystem of seamless software
-              integrations.Unlock productivity with our robust ecosystem of
-              seamless software integrations.'
+            description='Seamlessly connect Factors with your existing tools to enhance productivity and enable powerful workflows.'
           />
 
           <div className={styles.integrationHeader}>
@@ -147,7 +145,7 @@ const IntegrationSettings = () => {
               </div>
             </div>
           </div>
-          <div className='mb-6 mt-6'>{renderIntegrationBody()}</div>
+          <div className='mb-6'>{renderIntegrationBody()}</div>
         </>
       )}
     </ErrorBoundary>
