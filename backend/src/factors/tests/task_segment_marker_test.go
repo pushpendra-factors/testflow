@@ -757,13 +757,21 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 	assert.Equal(t, http.StatusFound, status)
 	nameFound4 := false
 
+	var segmentToModify model.Segment
+
 	for _, segment := range getSegement6["$domains"] {
 		if segment7.Name == segment.Name {
+			segmentToModify = segment
 			nameFound4 = true
 			break
 		}
 	}
 	assert.True(t, nameFound4)
+
+	// modifying segment
+	status, err := store.GetStore().ModifySegment(project.ID, segmentToModify)
+	assert.Nil(t, err)
+	assert.Equal(t, http.StatusOK, status)
 
 	// 8. All event different segment
 	segment8 := &model.SegmentPayload{
