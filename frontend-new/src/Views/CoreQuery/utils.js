@@ -2042,7 +2042,11 @@ export const getEventsCSVData = async (
         true
       );
       comparisonData = comparisonRes.data.result || comparisonRes.data;
-      comparisonResultantData = resultantDataTransformation(comparisonData);
+      comparisonResultantData = resultantDataTransformation(
+        comparisonData,
+        result_criteria,
+        user_type
+      );
     }
 
     let d = [];
