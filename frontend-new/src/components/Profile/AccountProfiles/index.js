@@ -839,7 +839,7 @@ function AccountProfiles({
       listEvents={selectedFilters.eventsList}
       setListEvents={setListEvents}
       appliedFilters={appliedFilters}
-      selectedAccount={selectedFilters.account}
+      selectedAccount={selectedFilters.account || INITIAL_FILTERS_STATE.account}
       eventProp={selectedFilters.eventProp}
       eventTimeline={selectedFilters.eventTimeline}
       areFiltersDirty={areFiltersDirty}

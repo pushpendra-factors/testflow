@@ -885,7 +885,9 @@ function UserProfiles({
       filtersExpanded={filtersExpanded}
       filtersList={selectedFilters.filters}
       appliedFilters={appliedFilters}
-      selectedAccount={selectedFilters.account}
+      selectedAccount={
+        selectedFilters.account || INITIAL_USER_PROFILES_FILTERS_STATE.account
+      }
       listEvents={selectedFilters.eventsList}
       availableGroups={availableGroups}
       eventProp={selectedFilters.eventProp}
