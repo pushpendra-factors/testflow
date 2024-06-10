@@ -159,3 +159,7 @@ def get_matching_examples_from_file(query_prompt, df, prompt_vector_data):
     matching_df = df[df['prompt'].isin(matching_prompts)]
     matching_examples = "\n".join(matching_df.apply(lambda x: f"{x['prompt']}-> {x['completion']}", axis=1))
     return matching_examples
+
+
+def prompt_cleanup(text):
+    return text.replace("?", "")
