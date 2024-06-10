@@ -161,7 +161,7 @@ function FiltersBox({
       }
       return {
         ...curr,
-        filters: newFilters
+        secondaryFilters: newFilters
       };
     });
   }, []);
@@ -171,12 +171,12 @@ function FiltersBox({
       const newFilters = curr.secondaryFilters.filter(
         (_, index) => index !== filterIndex
       );
-      if (filterIndex === curr.filters.length - 1) {
+      if (filterIndex === curr.secondaryFilters.length - 1) {
         setFilterDD(false);
       }
       return {
         ...curr,
-        filters: newFilters
+        secondaryFilters: newFilters
       };
     });
   }, []);
@@ -491,11 +491,7 @@ function FiltersBox({
           >
             Apply changes
           </Button>
-          <Button
-            disabled={disableDiscardButton}
-            type='secondary'
-            onClick={onCancel}
-          >
+          <Button disabled={disableDiscardButton} onClick={onCancel}>
             Discard changes
           </Button>
         </div>
@@ -503,7 +499,6 @@ function FiltersBox({
           controller={showClearAllButton === true && newSegmentMode === false}
         >
           <Button
-            type='text'
             className='flex items-center gap-x-1'
             onClick={onClearFilters}
           >

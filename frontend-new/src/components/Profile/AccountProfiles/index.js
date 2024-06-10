@@ -320,7 +320,7 @@ function AccountProfiles({
       return INITIAL_ACCOUNT_PAYLOAD;
     }
 
-    const savedSegmentDefinition = segments[GROUP_NAME_DOMAINS].find(
+    const savedSegmentDefinition = segments?.[GROUP_NAME_DOMAINS]?.find(
       (item) => item.id === segmentID
     );
 
