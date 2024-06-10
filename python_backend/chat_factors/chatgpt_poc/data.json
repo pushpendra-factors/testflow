@@ -13,6 +13,8 @@
             "Engagement rate": "engagement_rate",
             "Total Sessions": "total_sessions",
             "Sessions":  "total_sessions",
+            "Website Sessions": "total_sessions",
+            "Web visits": "total_sessions",
             "Unique Users": "unique_users",
             "visitors":"unique_users",
             "website visitors": "unique_users",

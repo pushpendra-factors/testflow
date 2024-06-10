@@ -1,7 +1,7 @@
 import sys
 from tornado import gen
-#sys.path.append('/Users/satyamishra/repos/factors/python_backend/chat_factors/')
-#sys.path.append('/Users/satyamishra/repos/factors/python_backend/')
+# sys.path.append('/Users/satyamishra/repos/factors/python_backend/chat_factors/')
+# sys.path.append('/Users/satyamishra/repos/factors/python_backend/')
 
 import os
 import json
@@ -9,7 +9,8 @@ from .base_handler import BaseHandler
 from tornado.log import logging as log
 from chatgpt_poc.chat import get_answer_from_ir_model_local, get_answer_using_ir_model, prompt_cleanup
 from chatgpt_poc.bert import embed_sentence
-from chat.final_query import get_url_and_query_payload_from_gpt_response, validate_gpt_response, UnexpectedGptResponseError
+from chat.final_query import get_url_and_query_payload_from_gpt_response, validate_gpt_response, \
+    UnexpectedGptResponseError
 from chat.kpi import KPIOrPropertyNotFoundError
 from google.cloud import storage
 from lib.data_services.factors_data_service import FactorsDataService
@@ -50,7 +51,9 @@ class ChatHandler(BaseHandler):
             prompt = prompt_cleanup(prompt)
             log.info('prompt: %s', prompt)
             prompt_emb = embed_sentence(prompt, normalise=True)
-            matching_embeddings_data =  FactorsDataService.get_matching_chat_embeddings(0, prompt_emb)
+            prompt_emb_1 = prompt_emb
+            log.info(prompt_emb_1.flatten().tolist())
+            matching_embeddings_data = FactorsDataService.get_matching_chat_embeddings(0, prompt_emb)
             result = get_answer_using_ir_model(cls, prompt, matching_embeddings_data['data'])
             # if app.CONFIG.ADWORDS_APP.env == "development":
             #     result = get_answer_from_ir_model_local(cls, prompt)
