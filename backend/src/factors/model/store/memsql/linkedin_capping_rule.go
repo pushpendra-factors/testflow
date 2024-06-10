@@ -18,11 +18,11 @@ func (store *MemSQL) CreateLinkedinCappingRule(projectID int64, linkedinCappingR
 func (store *MemSQL) GetAllLinkedinCappingRules(projectID int64) ([]model.LinkedinCappingRule, int) {
 	linkedinCappingRules := make([]model.LinkedinCappingRule, 0)
 	linkedinCappingRules = append(linkedinCappingRules, model.SampleCappingRule)
-	return linkedinCappingRules, http.StatusOK
+	return linkedinCappingRules, http.StatusFound
 }
 
 func (store *MemSQL) GetLinkedinCappingRule(projectID int64, ruleID string) (model.LinkedinCappingRule, int) {
-	return model.SampleCappingRule, http.StatusOK
+	return model.SampleCappingRule, http.StatusFound
 }
 func (store *MemSQL) UpdateLinkedinCappingRule(projectID int64, ruleID string) int {
 	return http.StatusAccepted
