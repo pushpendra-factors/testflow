@@ -283,14 +283,14 @@ func (store *MemSQL) UpdateSegmentById(projectId int64, id string, segmentPayloa
 
 	db := C.GetServices().Db
 
-	updateFields := make(map[string]interface{}, 0)
+	var segment model.Segment
 
 	if segmentPayload.Name != "" {
-		updateFields["name"] = segmentPayload.Name
+		segment.Name = segmentPayload.Name
 	}
 
 	if segmentPayload.Description != "" {
-		updateFields["description"] = segmentPayload.Description
+		segment.Description = segmentPayload.Description
 	}
 
 	updatedQuery := segmentPayload.Query
@@ -299,7 +299,7 @@ func (store *MemSQL) UpdateSegmentById(projectId int64, id string, segmentPayloa
 			logCtx.Error("Failed to update segment by ID. Query is empty.")
 			return http.StatusBadRequest, fmt.Errorf("failed to update segment. Query is empty")
 		}
-		updateFields["type"] = segmentPayload.Type
+		segment.Type = segmentPayload.Type
 	}
 
 	if len(updatedQuery.EventsWithProperties) > 0 || len(updatedQuery.GlobalUserProperties) > 0 {
@@ -308,11 +308,14 @@ func (store *MemSQL) UpdateSegmentById(projectId int64, id string, segmentPayloa
 			log.WithFields(logFields).WithError(err).Error("Failed to encode segment query while segment updation")
 			return http.StatusInternalServerError, err
 		}
-		updateFields["query"] = querySegment
+
+		segment.Query = querySegment
+		segment.UpdatedAt = U.TimeNowZ()
 	}
 
 	err := db.Model(&model.Segment{}).Where("project_id = ? AND id = ? ",
-		projectId, id).Update(updateFields).Error
+		projectId, id).UpdateColumns(segment).Error
+
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return http.StatusNotFound, err
