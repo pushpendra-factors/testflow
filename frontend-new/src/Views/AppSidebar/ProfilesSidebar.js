@@ -87,44 +87,52 @@ function ProfilesSidebar({
     getSegmentFolders(active_project?.id, 'user');
     // need to add segment folders for people too
   }, []);
-  const handleMoveToNewFolder = (segmentID, folder_name) => {
-    moveSegmentToNewFolder(
-      active_project.id,
-      segmentID,
-      {
-        name: folder_name
-      },
-      'user'
-    )
-      .then(async () => {
-        getSegmentFolders(active_project.id, 'user');
-        await getSavedSegments(active_project.id);
-        message.success('Segment Moved to New Folder');
-      })
-      .catch((err) => {
-        console.error(err);
-        message.error('Failed to move segment');
-      });
+  const handleMoveToNewFolder = async (segmentID, folder_name) => {
+    const loadingMessageHandle = message.loading(
+      `Moving Segment to \`${folder_name}\` Folder`,
+      0
+    );
+    try {
+      await moveSegmentToNewFolder(
+        active_project.id,
+        segmentID,
+        {
+          name: folder_name
+        },
+        'user'
+      );
+      getSegmentFolders(active_project.id, 'user');
+      await getSavedSegments(active_project.id);
+      message.success('Segment Moved to New Folder');
+    } catch (err) {
+      console.error(err);
+      message.error('Failed to move segment');
+    } finally {
+      loadingMessageHandle();
+    }
   };
-  const moveSegmentToFolder = (event, folderID, segmentID) => {
-    updateSegmentToFolder(
-      active_project.id,
-      segmentID,
-      {
-        folder_id: folderID
-      },
-      'user'
-    )
-      .then(async () => {
-        await getSavedSegments(active_project.id);
-        message.success('Segment Moved');
-      })
-      .catch((err) => {
-        console.error(err);
-        message.error('Segment failed to move');
-      });
+  const moveSegmentToFolder = async (event, folderID, segmentID) => {
+    const loadingMessageHandle = message.loading('Moving Segment to Folder', 0);
+    try {
+      await updateSegmentToFolder(
+        active_project.id,
+        segmentID,
+        {
+          folder_id: folderID
+        },
+        'user'
+      );
+      await getSavedSegments(active_project.id);
+      message.success('Segment Moved');
+    } catch (err) {
+      console.error(err);
+      message.error('Segment failed to move');
+    } finally {
+      loadingMessageHandle();
+    }
   };
   const handleRenameFolder = (folderId, name) => {
+    const loadingMessageHandle = message.loading('Renaming Folder', 0);
     renameSegmentFolders(active_project.id, folderId, { name }, 'user')
       .then(async () => {
         getSegmentFolders(active_project.id, 'user');
@@ -132,9 +140,13 @@ function ProfilesSidebar({
       })
       .catch((err) => {
         console.error(err);
+      })
+      .finally(() => {
+        loadingMessageHandle();
       });
   };
   const handleDeleteFolder = (folderId) => {
+    const loadingMessageHandle = message.loading('Deleting Folder', 0);
     deleteSegmentFolders(active_project.id, folderId, 'user')
       .then(async () => {
         getSegmentFolders(active_project.id, 'user');
@@ -144,6 +156,9 @@ function ProfilesSidebar({
       .catch((err) => {
         console.error(err);
         message.error('Folder to Delete');
+      })
+      .finally(() => {
+        loadingMessageHandle();
       });
   };
 
@@ -162,6 +177,7 @@ function ProfilesSidebar({
   };
 
   const handleRenameSegment = async (name) => {
+    const loadingMessageHandle = message.loading('Renaming Segment', 0);
     try {
       const segmentId = modalState.unit?.id;
 
@@ -175,9 +191,12 @@ function ProfilesSidebar({
       });
     } catch (error) {
       logger.error(error);
+    } finally {
+      loadingMessageHandle();
     }
   };
   const handleDeleteSegment = () => {
+    const loadingMessageHandle = message.loading('Deleting Segment', 0);
     deleteSegment({
       projectId: active_project.id,
       segmentId: modalState.unit?.id
@@ -190,6 +209,7 @@ function ProfilesSidebar({
         });
       })
       .finally(() => {
+        loadingMessageHandle();
         dispatch(
           setTimelinePayloadAction({
             source: 'All',

@@ -1987,6 +1987,18 @@ export function jsonToCsv(jsonData) {
   return csv;
 }
 
+export function resultantDataTransformation(data, result_criteria, user_type) {
+  if (result_criteria === TOTAL_EVENTS_CRITERIA) {
+    return formatApiData(data.result_group[0], data.result_group[1]);
+  }
+  if (result_criteria === TOTAL_USERS_CRITERIA) {
+    if (user_type === EACH_USER_TYPE) {
+      return formatApiData(data.result_group[0], data.result_group[1]);
+    }
+    return data.result_group[0];
+  }
+  return null;
+}
 export const getEventsCSVData = async (
   id,
   query, // Query Object
@@ -2001,17 +2013,6 @@ export const getEventsCSVData = async (
   comparisonQuery = null
 ) => {
   try {
-    const resultantDataTransformation = (a) => {
-      if (result_criteria === TOTAL_EVENTS_CRITERIA) {
-        return formatApiData(a.result_group[0], a.result_group[1]);
-      }
-      if (result_criteria === TOTAL_USERS_CRITERIA) {
-        if (user_type === EACH_USER_TYPE) {
-          return formatApiData(a.result_group[0], a.result_group[1]);
-        }
-        return a.result_group[0];
-      }
-    };
     const res = await getEventsData(
       id,
       query,
@@ -2022,7 +2023,11 @@ export const getEventsCSVData = async (
     );
     const data = res.data.result || res.data;
     let resultantData = null;
-    resultantData = resultantDataTransformation(data);
+    resultantData = resultantDataTransformation(
+      data,
+      result_criteria,
+      user_type
+    );
 
     let comparisonRes;
     let comparisonData;

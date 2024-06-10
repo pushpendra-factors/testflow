@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jinzhu/gorm"
+	log "github.com/sirupsen/logrus"
 )
 
 type CacheDBRecord struct {
@@ -172,26 +173,26 @@ func SetBatch(keyValue map[*cache.Key]string, expiryInSecs float64) error {
 	}
 
 	for k, v := range keyValue {
-		valuesStmnt := ""
-		params := make([]interface{}, 0)
-
 		cacheRecord, err := getCacheRecord(k, v, expiryInSecs)
 		// Fail if one failure. Parity with redis implementation.
 		if err != nil {
 			return err
 		}
 
-		if valuesStmnt != "" {
-			valuesStmnt = valuesStmnt + ", "
-		}
-
-		valuesStmnt = valuesStmnt + "(?, ?, ?, ?, ?, ?, ?);"
-		params = append(params, cacheRecord.ProjectID, cacheRecord.Key, cacheRecord.Value,
+		stmnt := "INSERT INTO cache_db (`project_id`, `k`, `v`, `expiry_in_secs`, `expires_at`, `created_at`, `updated_at`) VALUES (?, ?, ?, ?, ?, ?, ?);"
+		_, err = tx.Exec(stmnt, cacheRecord.ProjectID, cacheRecord.Key, cacheRecord.Value,
 			cacheRecord.ExpiryInSecs, cacheRecord.ExpiresAt, util.TimeNowZ(), util.TimeNowZ())
-
-		stmnt := "INSERT INTO cache_db (`project_id`, `k`, `v`, `expiry_in_secs`, `expires_at`, `created_at`, `updated_at`) VALUES " + valuesStmnt
-		_, err = tx.Exec(stmnt, params...)
 		if err != nil {
+			if IsDuplicateRecordError(err) {
+				// Update the record incase of conflict.
+				updateStmnt := "UPDATE cache_db SET v = ? WHERE project_id = ? AND k = ?;"
+				_, err = tx.Exec(updateStmnt, cacheRecord.Value, cacheRecord.ProjectID, cacheRecord.Key)
+				if err != nil {
+					log.WithField("k", k).Info("Updated key on db_cache after conflict during insert.")
+				}
+				continue
+			}
+
 			return err
 		}
 	}

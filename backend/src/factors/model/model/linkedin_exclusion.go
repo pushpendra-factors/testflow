@@ -9,21 +9,25 @@ import (
 
 type LinkedinExclusion struct {
 	ProjectID             int64           `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
-	AdAccountID           string          `gorm:"primary_key:true;auto_increment:false" json:"ad_account_id"`
 	OrgID                 string          `gorm:"primary_key:true;auto_increment:false" json:"org_id"`
 	Timestamp             int64           `gorm:"primary_key:true;auto_increment:false" json:"timestamp"` //format yyyymmdd
-	CampaignID            string          `gorm:"primary_key:true;auto_increment:false" json:"campaign_id"`
+	Campaigns             *postgres.Jsonb `gorm:"primary_key:true;auto_increment:false" json:"campaigns"`
+	CampaignsCount        int             `json:"campaigns_count"`
 	CompanyName           string          `json:"company_name"`
-	CampaignName          string          `json:"campaign_name"`
 	IsPushedToLinkedin    bool            `json:"is_pushed_to_linkedin"`
 	IsRemovedFromLinkedin bool            `json:"is_removed_from_linkedin"`
 	RuleID                string          `json:"rule_id"`
+	RuleObjectType        string          `json:"rule_object_type"`
 	RuleSnapshot          *postgres.Jsonb `json:"rule_snapshot"`
 	PropertiesSnapshot    *postgres.Jsonb `json:"properties_snapshot"`
 	ImpressionsSaved      int64           `json:"impressions_saved"`
 	ClicksSaved           int64           `json:"clicks_saved"`
 	CreatedAt             time.Time       `json:"created_at"`
 	UpdatedAt             time.Time       `json:"updated_at"`
+}
+type CampaignsIDName struct {
+	CampaignID   string
+	CampaignName string
 }
 
 type CampaignNameTargetingCriteria struct {
@@ -34,15 +38,17 @@ type CampaignNameTargetingCriteria struct {
 }
 
 var sampleRule, _ = json.Marshal(SampleCappingRule)
+var sampleCampaigns, _ = json.Marshal(CampaignsIDName{CampaignID: "789", CampaignName: "some campaign"})
 var SampleExclusion = LinkedinExclusion{
 	ProjectID:          2,
 	OrgID:              "123",
 	Timestamp:          202405,
-	CampaignID:         "789",
+	Campaigns:          &postgres.Jsonb{RawMessage: sampleCampaigns},
+	CampaignsCount:     1,
 	CompanyName:        "some company",
-	CampaignName:       "some campaign",
 	RuleID:             "1234abcd",
-	RuleSnapshot:       &postgres.Jsonb{sampleRule},
+	RuleSnapshot:       &postgres.Jsonb{RawMessage: sampleRule},
+	RuleObjectType:     LINKEDIN_CAMPAIGN_GROUP,
 	PropertiesSnapshot: &postgres.Jsonb{RawMessage: json.RawMessage(`{"property1": 100}`)},
 	ImpressionsSaved:   1000,
 	ClicksSaved:        100,

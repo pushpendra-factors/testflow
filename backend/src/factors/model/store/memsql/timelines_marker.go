@@ -568,12 +568,13 @@ func profileValues(projectID int64, users []model.User, domID string, domainGrou
 	// set last_activity
 	var domUser model.User
 	for _, user := range users {
-		if user.LastEventAt != nil && (*user.LastEventAt).After(maxLastEventAt) {
-			maxLastEventAt = *user.LastEventAt
-		}
 		// storing domain details
 		if user.Source != nil && *user.Source == model.UserSourceDomains {
 			domUser = user
+			continue
+		}
+		if user.LastEventAt != nil && (*user.LastEventAt).After(maxLastEventAt) {
+			maxLastEventAt = *user.LastEventAt
 		}
 	}
 
