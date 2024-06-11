@@ -1,6 +1,7 @@
 package memsql
 
 import (
+	"encoding/json"
 	"factors/cache"
 	cacheRedis "factors/cache/redis"
 	C "factors/config"
@@ -139,6 +140,18 @@ func (store *MemSQL) GetWorkflowById(projectID int64, id string) (*model.Workflo
 	return &workflow, http.StatusFound, nil
 }
 
+func (store *MemSQL) GetAlertTemplateById(id int) (model.AlertTemplate, int) {
+
+	db := C.GetServices().Db
+	var alertTemplate model.AlertTemplate
+	err := db.Where("is_deleted = ?", false).Where("is_workflow = ? and id = ?", false, id).Find(&alertTemplate).Error
+	if err != nil {
+		log.WithError(err).Error("Failed to get alert templates.")
+		return alertTemplate, http.StatusInternalServerError
+	}
+	return alertTemplate, http.StatusFound
+}
+
 func (store *MemSQL) CreateWorkflow(projectID int64, agentID, oldIDIfEdit string, alertBody model.WorkflowAlertBody) (*model.Workflow, int, error) {
 	if projectID == 0 || agentID == "" {
 		return nil, http.StatusBadRequest, fmt.Errorf("invalid parameter")
@@ -172,6 +185,24 @@ func (store *MemSQL) CreateWorkflow(projectID int64, agentID, oldIDIfEdit string
 	if errCode != http.StatusOK {
 		logCtx.WithError(err).Error("Failed to assign workflow url.")
 		return nil, http.StatusInternalServerError, fmt.Errorf("no url for template")
+	}
+
+	alertTemplate, errCode := store.GetAlertTemplateById(alertBody.TemplateID)
+	if errCode != http.StatusFound {
+		log.Error("Failed to fetch alert template.")
+	} else {
+
+		templateDetails, err := U.DecodePostgresJsonb(alertTemplate.TemplateConstants)
+		if err != nil {
+			log.WithError(err).Error("Failed to decode alert template template constants.")
+		} else {
+			if isLinkedinCAPI, ok := (*templateDetails)["is_linkedin_capi"]; ok {
+
+				if isLinkedinCAPI.(bool) {
+					store.FillConfigurationValuesForLinkedinCAPIWorkFlow(projectID, &alertBody)
+				}
+			}
+		}
 	}
 
 	workflow = model.Workflow{
@@ -660,10 +691,15 @@ func (store *MemSQL) AddWorkflowToCache(workflow *model.Workflow, msgProps *U.Pr
 		MessageProperty: *msgProps,
 		Message:         workflow.WorkflowUrl,
 	}
+	var wfBody model.WorkflowAlertBody
+	if err := U.DecodePostgresJsonbToStructType(workflow.AlertBody, &wfBody); err != nil {
+		logCtx.WithError(err).Error("Error in decoding jsonb to workflow body type.")
+	}
 
 	cachePackage := model.CachedEventTriggerAlert{
-		Message:    message,
-		IsWorkflow: true,
+		Message:        message,
+		IsWorkflow:     true,
+		IsLinkedInCAPI: model.IsLinkedInCAPICofigByWorkflow(wfBody),
 	}
 
 	err := model.SetCacheForEventTriggerAlert(key, &cachePackage)
@@ -673,6 +709,28 @@ func (store *MemSQL) AddWorkflowToCache(workflow *model.Workflow, msgProps *U.Pr
 	}
 
 	return http.StatusCreated, nil
+}
+
+func (store *MemSQL) FillLinkedInPropertiesInCacheForWorkflow(msgPropMap *map[string]interface{}, properties *map[string]interface{}, workflowAlertBody model.WorkflowAlertBody) {
+
+	var linkedinCAPIConfig model.LinkedinCAPIConfig
+	if workflowAlertBody.MessageProperties != nil {
+		err := U.DecodePostgresJsonbToStructType(workflowAlertBody.AdditonalConfigurations, &linkedinCAPIConfig)
+		if err != nil {
+			log.WithError(err).Error("Jsonb decoding to struct failure")
+			return
+		}
+	}
+
+	batchLinkedCAPIPayload, err := store.NewLinkedCapiRequestPayload(properties, linkedinCAPIConfig)
+	if err != nil {
+		log.WithError(err).Error("failed to get batchLinkedCAPIPayload")
+		return
+	}
+
+	batchLinkedCAPIPayloadBytes, _ := json.Marshal(batchLinkedCAPIPayload)
+	(*msgPropMap)["linkedCAPI_payload"] = string(batchLinkedCAPIPayloadBytes)
+
 }
 
 func (store *MemSQL) GetWorkflowMessageAndBreakdownPropertiesMap(projectID int64, event *model.Event, workflowBody *model.WorkflowAlertBody, updatedUserProps *map[string]interface{}) (U.PropertiesMap, map[string]interface{}, error) {
@@ -710,7 +768,7 @@ func (store *MemSQL) GetWorkflowMessageAndBreakdownPropertiesMap(projectID int64
 		return nil, nil, fmt.Errorf("no properties found")
 	}
 
-	msgPropMap := store.getWorkflowMessageProperties(projectID, messageProperties, allPropertiesCombined)
+	msgPropMap := store.getWorkflowMessageProperties(projectID, messageProperties, allPropertiesCombined, workflowBody)
 	if msgPropMap == nil {
 		logCtx.Error("Nil payload map found for the Workflow")
 		return nil, nil, fmt.Errorf("nil received for payload properties map")
@@ -729,6 +787,7 @@ func (store *MemSQL) GetWorkflowMessageAndBreakdownPropertiesMap(projectID int64
 		if sfUrl, exists := (*updatedUserProps)[U.ENRICHED_SALESFORCE_ACCOUNT_OBJECT_URL]; exists {
 			msgPropMap[model.ETA_ENRICHED_SALESFORCE_ACCOUNT_OBJECT_URL] = sfUrl
 		}
+
 	}
 
 	breakdownPropMap := getWorkflowBreakdownProperties(workflowBody, eventPropMap, updatedUserProps)
@@ -764,7 +823,7 @@ func getWorkflowBreakdownProperties(workflow *model.WorkflowAlertBody, eventProp
 }
 
 func (store *MemSQL) getWorkflowMessageProperties(projectID int64,
-	messagePropertiesQuery model.WorkflowMessageProperties, allProperties *map[string]interface{}) U.PropertiesMap {
+	messagePropertiesQuery model.WorkflowMessageProperties, allProperties *map[string]interface{}, workflowAlertBody *model.WorkflowAlertBody) U.PropertiesMap {
 
 	mandatoryProps := messagePropertiesQuery.MandatoryPropertiesCompany
 	mandatoryPropsPayload := make(model.WorkflowPayloadProperties)
@@ -797,6 +856,12 @@ func (store *MemSQL) getWorkflowMessageProperties(projectID int64,
 	msgPropMap, err := U.EncodeStructTypeToMap(payloadProperties)
 	if err != nil {
 		log.WithError(err).Error("Failed to encode struct to map.")
+	}
+
+	// for  linkedin CAPI
+	if model.IsLinkedInCAPICofigByWorkflow(*workflowAlertBody) {
+
+		store.FillLinkedInPropertiesInCacheForWorkflow(&msgPropMap, allProperties, *workflowAlertBody)
 	}
 
 	// log.WithFields(log.Fields{

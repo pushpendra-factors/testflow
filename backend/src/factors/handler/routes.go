@@ -499,6 +499,9 @@ func InitAppRoutes(r *gin.Engine) {
 	// factors_deanon
 	authRouteGroup.POST("/:project_id/factors_deanon/provider/:name/enable", mid.FeatureMiddleware([]string{M.FEATURE_FACTORS_DEANONYMISATION}), UpdateFactorsDeanonProvider)
 
+	// linkedin_capi
+	authRouteGroup.POST("/:project_id/linkedin_capi/conversions", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}), GetLinkedinCAPIConversionsList)
+
 	// weekly mailmodo mail
 	authRouteGroup.GET("/:project_id/internal/weekly_email_metrics", mid.SetLoggedInAgentInternalOnly(), stringifyWrapper(GetWeeklyMailmodoEmailMetricsHandler))
 
