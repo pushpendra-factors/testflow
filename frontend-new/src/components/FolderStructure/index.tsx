@@ -29,6 +29,7 @@ type FolderStructurePropType = {
 
   onRenameFolder: (unit_id: any, name: string) => void;
   onDeleteFolder: (unit_id: any) => void;
+  hideItemOptionsList?: Array<string>;
 };
 
 type FolderStructureType = {
@@ -54,7 +55,8 @@ function FolderStructure(props: FolderStructurePropType) {
     handleDeleteUnit,
     onUnitClick,
     onRenameFolder,
-    onDeleteFolder
+    onDeleteFolder,
+    hideItemOptionsList
   } = props;
   const [foldersState, setFoldersState] = useState<FolderType[]>([]);
   const [folderStructure, setFolderStructure] = useState<FolderStructureType>(
@@ -118,9 +120,10 @@ function FolderStructure(props: FolderStructurePropType) {
       unit,
       folders,
       active_item,
-      showItemIcons
+      showItemIcons,
+      hideItemOptionsList
     }),
-    [folders, unit, folderModalState, active_item]
+    [folders, unit, folderModalState, active_item, hideItemOptionsList]
   );
   const handleModalCancel = () => {
     setFolderModalState(folderModalInitState);

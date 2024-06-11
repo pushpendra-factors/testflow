@@ -65,8 +65,8 @@ function Folder(props: FolderPropType) {
             <div>{name} </div>
           </Tooltip>
         </div>{' '}
-        {!isAllBoard && (
-          <span className={styles.folder_actions}>
+        <span className={styles.folder_actions}>
+          {!isAllBoard && (
             <Popover
               content={folderOptionsPopover}
               placement='right'
@@ -80,8 +80,8 @@ function Folder(props: FolderPropType) {
                 className={styles.folder_actions_button}
               />
             </Popover>
-          </span>
-        )}
+          )}
+        </span>
       </div>
 
       <div style={{ display: showItems ? 'inherit' : 'none' }}>

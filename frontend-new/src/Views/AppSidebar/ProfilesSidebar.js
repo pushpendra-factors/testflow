@@ -229,7 +229,7 @@ function ProfilesSidebar({
           styles['accounts-list-container']
         )}
       >
-        <div className='px-2'>
+        <div className='px-4'>
           {userOptions.slice(1).map((option) => (
             <GroupItem key={option[0]} group={option} />
           ))}

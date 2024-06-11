@@ -12,7 +12,10 @@ import {
 import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
 import { selectSegments } from 'Reducers/timelines/selectors';
 import { useHistory } from 'react-router-dom';
-import { reorderDefaultDomainSegmentsToTop } from 'Components/Profile/AccountProfiles/accountProfiles.helpers';
+import {
+  defaultSegmentsList,
+  reorderDefaultDomainSegmentsToTop
+} from 'Components/Profile/AccountProfiles/accountProfiles.helpers';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { PathUrls } from 'Routes/pathUrls';
 import FolderStructure from 'Components/FolderStructure';
@@ -256,6 +259,7 @@ function AccountsSidebar({
             handleDeleteUnit={handleDeleteUnit}
             moveToExistingFolder={moveSegmentToFolder}
             showItemIcons
+            hideItemOptionsList={defaultSegmentsList}
           />
         )}
       </div>
