@@ -30,7 +30,7 @@ func (store *MemSQL) GetUniqueUsersCountWithFormSubmissionEvent(projectId int64,
 
 	var count UserCount
 	formSubmittedEventName, errCode := store.GetEventName(U.EVENT_NAME_FORM_SUBMITTED, projectId)
-	if errCode != http.StatusNotFound {
+	if errCode == http.StatusNotFound {
 		logCtx.Warn("Event name id for form submitted event not found")
 		return count, nil
 	} else if errCode != http.StatusFound {
@@ -63,7 +63,7 @@ func (store *MemSQL) GetUniqueUsersCountWithWebsiteSessionEvent(projectId int64,
 
 	var count UserCount
 	sessionEventName, errCode := store.GetEventName(U.EVENT_NAME_SESSION, projectId)
-	if errCode != http.StatusNotFound {
+	if errCode == http.StatusNotFound {
 		logCtx.Warn("Event name id for website session event not found")
 		return count, nil
 	} else if errCode != http.StatusFound {
