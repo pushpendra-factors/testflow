@@ -152,21 +152,23 @@ export function FolderItemOptions(props: FolderItemOptionsType) {
     extraOptions,
     data,
     folder_id,
-    placement = 'right'
+    placement = 'right',
+    hideMoveTo = false
   } = props;
   const actionsMenu = useMemo(() => {
     let tmpActions: Array<any> = [];
-    tmpActions.push({
-      id: '1',
-      title: 'Move to',
-      icon: <SVG name='AddFromDraft' />,
-      // {id: '11', title: }
-      submenu: folders?.map((eachFolder) => ({
-        id: eachFolder.id,
-        title: eachFolder.name,
-        icon: <EditOutlined />
-      }))
-    });
+    if (hideMoveTo === false)
+      tmpActions.push({
+        id: '1',
+        title: 'Move to',
+        icon: <SVG name='AddFromDraft' />,
+        // {id: '11', title: }
+        submenu: folders?.map((eachFolder) => ({
+          id: eachFolder.id,
+          title: eachFolder.name,
+          icon: <EditOutlined />
+        }))
+      });
     if (!hideDefaultOptions) {
       tmpActions = [
         ...tmpActions,
