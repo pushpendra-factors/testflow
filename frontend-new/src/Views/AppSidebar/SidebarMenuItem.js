@@ -47,7 +47,6 @@ const SidebarMenuItem = ({
           {text}
         </Text>
       </div>
-      {isActive && <SVG size={iconSize} color='#595959' name='arrowright' />}
     </div>
   </Tooltip>
 );

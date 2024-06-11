@@ -86,8 +86,8 @@ function FolderStructure(props: FolderStructurePropType) {
       }
     });
     if (unit !== 'dashboard')
-      tmpFolderStructure[0] = {
-        id: 0,
+      tmpFolderStructure[''] = {
+        id: '',
         name: `All ${unit}s`,
         data: [],
         can_be_deleted: true // for dashboard // ideally it should be -ve of it, but it was prev used in DashboardFolders, so kept it like this
@@ -102,7 +102,7 @@ function FolderStructure(props: FolderStructurePropType) {
     setFoldersState(
       unit === 'dashboard'
         ? folders
-        : [{ ...tmpFolderStructure[0], items: [] }, ...folders]
+        : [{ ...tmpFolderStructure[''], items: [] }, ...folders]
     );
   }, [folders, items]);
 
@@ -247,7 +247,7 @@ function FolderStructure(props: FolderStructurePropType) {
             id={eachItem.id}
             folder_id={eachItem.folder_id}
             data={eachItem}
-            folders={folders}
+            folders={foldersState}
           />
         ))}
     </div>

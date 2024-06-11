@@ -2047,18 +2047,22 @@ func (store *MemSQL) GetIntegrationState(projectID int64, integrationName string
 
 	result := model.IntegrationState{}
 
-	if U.TimeNowUnix()-lastSyncedAt < model.IntegrationCheckFrequency[integrationName] {
-		result.State = model.SYNCED
-		result.Message = model.ErrorStateToErrorMessageMap[model.SYNCED]
-	} else if U.TimeNowUnix()-lastPulledAt < 2*model.IntegrationCheckFrequency[integrationName] {
-		result.State = model.SYNC_PENDING
-		result.Message = model.ErrorStateToErrorMessageMap[model.SYNC_PENDING]
-	} else {
+	if U.TimeNowUnix()-lastPulledAt > model.IntegrationCheckFrequency[integrationName] && lastPulledAt > 0 {
+
 		result.State = model.PULL_DELAYED
 		result.Message = fmt.Sprintf(model.ErrorStateToErrorMessageMap[model.PULL_DELAYED], model.FeatureDisplayNameByFeatureName(integrationName))
-		if msg, exists := model.ErrorStateToErrorMessageMap[fmt.Sprintf("%s_%s", integrationName, model.PULL_DELAYED)]; exists {
+
+	} else if U.TimeNowUnix()-lastSyncedAt > 2*model.IntegrationCheckFrequency[integrationName] {
+		result.State = model.SYNC_PENDING
+		result.Message = model.ErrorStateToErrorMessageMap[model.SYNC_PENDING]
+		if msg, exists := model.ErrorStateToErrorMessageMap[fmt.Sprintf("%s_%s", integrationName, model.SYNC_PENDING)]; exists {
 			result.Message = msg
 		}
+
+	} else {
+		result.State = model.SYNCED
+		result.Message = model.ErrorStateToErrorMessageMap[model.SYNCED]
+
 	}
 
 	result.LastSyncedAt = lastSyncedAt

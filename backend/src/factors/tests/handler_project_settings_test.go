@@ -603,7 +603,7 @@ func TestIntegrationState(t *testing.T) {
 		cuid := getRandomEmail()
 		leadguid := U.RandomString(5)
 		lastmodifieddate := time.Now().UTC().Unix() * 1000
-		createdDate := time.Now().AddDate(0, 0, -5).Unix() * 1000
+		createdDate := time.Now().AddDate(0, 0, -1).Unix() * 1000
 
 		jsonContact := fmt.Sprintf(jsonContactModel, secondDocumentID, createdDate, createdDate, lastmodifieddate, "lead", cuid, leadguid)
 		contactPJson := postgres.Jsonb{json.RawMessage(jsonContact)}
@@ -620,7 +620,7 @@ func TestIntegrationState(t *testing.T) {
 			TypeAlias: model.HubspotDocumentTypeNameContact,
 			Action:    model.HubspotDocumentActionCreated,
 			Value:     &contactPJson,
-			CreatedAt: time.Now().AddDate(0, 0, -5),
+			CreatedAt: time.Now().AddDate(0, 0, -1).Add(time.Minute * 5),
 		}
 
 		status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
@@ -631,7 +631,7 @@ func TestIntegrationState(t *testing.T) {
 			Action:    model.HubspotDocumentActionCreated,
 			Value:     &contactPJson1,
 			Synced:    true,
-			CreatedAt: time.Now().AddDate(0, 0, -1),
+			CreatedAt: time.Now().AddDate(0, 0, -2).Add(time.Minute * 5),
 		}
 
 		status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument1)
@@ -654,7 +654,7 @@ func TestIntegrationState(t *testing.T) {
 		cuid := getRandomEmail()
 		leadguid := U.RandomString(5)
 		lastmodifieddate := time.Now().UTC().Unix() * 1000
-		createdDate := time.Now().AddDate(0, 0, -5).Unix() * 1000
+		createdDate := time.Now().AddDate(0, 0, -1).Unix() * 1000
 
 		jsonContact := fmt.Sprintf(jsonContactModel, secondDocumentID, createdDate, createdDate, lastmodifieddate, "lead", cuid, leadguid)
 		contactPJson := postgres.Jsonb{json.RawMessage(jsonContact)}
@@ -663,7 +663,7 @@ func TestIntegrationState(t *testing.T) {
 		cuid = getRandomEmail()
 		leadguid = U.RandomString(5)
 		lastmodifieddate = time.Now().UTC().Unix() * 1000
-		createdDate = time.Now().AddDate(0, 0, -2).Unix() * 1000
+		createdDate = time.Now().AddDate(0, 0, -5).Unix() * 1000
 		jsonContact1 := fmt.Sprintf(jsonContactModel, secondDocumentID, createdDate, createdDate, lastmodifieddate, "lead", cuid, leadguid)
 		contactPJson1 := postgres.Jsonb{json.RawMessage(jsonContact1)}
 
@@ -671,7 +671,7 @@ func TestIntegrationState(t *testing.T) {
 			TypeAlias: model.HubspotDocumentTypeNameContact,
 			Action:    model.HubspotDocumentActionCreated,
 			Value:     &contactPJson,
-			CreatedAt: time.Now().AddDate(0, 0, -1),
+			CreatedAt: time.Now().AddDate(0, 0, -1).Add(time.Minute * 5),
 		}
 
 		status = store.GetStore().CreateHubspotDocument(project1.ID, &hubspotDocument)
@@ -682,7 +682,7 @@ func TestIntegrationState(t *testing.T) {
 			Action:    model.HubspotDocumentActionCreated,
 			Value:     &contactPJson1,
 			Synced:    true,
-			CreatedAt: time.Now().AddDate(0, 0, -2),
+			CreatedAt: time.Now().AddDate(0, 0, -5),
 		}
 
 		status = store.GetStore().CreateHubspotDocument(project1.ID, &hubspotDocument1)

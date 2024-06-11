@@ -726,7 +726,7 @@ function AccountProfiles({
 
   const navigateToAccountsEngagement = useCallback(() => {
     history.push(
-      `${PathUrls.SettingsCustomDefinition}?activeTab=engagementScoring`
+      `${PathUrls.SettingsAccountScoring}?activeTab=engagementScoring`
     );
   }, []);
 
@@ -925,7 +925,7 @@ function AccountProfiles({
         id={accountPayload?.segment?.id}
         unit='segment'
         folder_id={accountPayload?.segment?.folder_id}
-        folders={[{ id: 0, name: 'All Segments' }, ...segmentFolders.accounts]}
+        folders={[{ id: '', name: 'All Segments' }, ...segmentFolders.accounts]}
         handleEditUnit={() => {
           setShowSegmentActions(false);
           setMoreActionsModalMode(moreActionsMode.RENAME);

@@ -218,4 +218,4 @@ export const getIntegrationActionText = (
   return actionText;
 };
 
-export const showIntegrationStatus = (email: string) => AdminLock(email);
+export const showIntegrationStatus = (email: string) => true;

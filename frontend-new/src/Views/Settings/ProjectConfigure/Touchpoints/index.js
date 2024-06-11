@@ -105,11 +105,11 @@ const Touchpoints = () => {
   return (
     <div>
       <CommonSettingsHeader
-        CommonSettingsHeader
+        hasNoBottomPadding
         title='Touchpoint Definitions'
         description='Effortlessly map and standardize all your digital touchpoints and use them for powerful analytics'
       />
-      <div className='-mt-4'>
+      <div>
         <Tabs activeKey={activeKey} onChange={handleTabChange}>
           <TabPane tab='UTM Parameters' key={TabTypes.utmParameters}>
             <FeatureLockedMarketingInteraction />

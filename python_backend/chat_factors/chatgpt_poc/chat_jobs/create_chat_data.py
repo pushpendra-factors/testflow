@@ -104,7 +104,7 @@ def delete_and_add_chat_data(project_id):
     # Prepare the data
     dataframe = prepare_data(os.path.join('chat_factors/chatgpt_poc', 'data.json'), abbreviate=True)
 
-    batch_size = 100
+    batch_size = 1000
 
     # Add new chat embeddings in batches
     for i in range(0, len(dataframe), batch_size):

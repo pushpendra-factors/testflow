@@ -205,7 +205,7 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
       items: [
         {
           id: 'item-1',
-          text: 'Plans and Billing',
+          text: 'Plans & Billing',
           props: {
             to: '/settings/pricing?activeTab=billing',
             onClick: handleClosePopover
