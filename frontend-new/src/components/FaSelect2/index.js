@@ -398,7 +398,7 @@ function FaSelect2({
       >
         {allowSearch && renderSearchInput()}
         <div
-          className={`fa-select-dropdown ${styles.dropdown__select__content} capitalize`}
+          className={`fa-select-dropdown ${styles.dropdown__select__content}`}
         >
           {children || renderOptions()}
         </div>

@@ -54,5 +54,6 @@ export type FolderItemOptionsType = {
       ) => undefined);
   extraOptions?: Array<any>;
   hideDefaultOptions?: boolean;
+  hideMoveTo?: boolean;
   placement?: TooltipPlacement;
 };

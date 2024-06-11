@@ -949,6 +949,7 @@ function AccountProfiles({
           defaultSegmentsList.includes(accountPayload?.segment?.name)
         }
         placement='bottom'
+        hideMoveTo={!!segmentID === !!''}
       />
     </div>
   );

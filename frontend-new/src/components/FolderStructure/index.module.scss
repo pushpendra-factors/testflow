@@ -54,12 +54,13 @@ $background-color: #f5f5f5;
   }
   & .active_item,
   & .active_item:hover {
+    color: #1890ff;
     background-color: #e6f7ff !important;
   }
   // This is Each Folder ITem
   & .folder_item {
     width: 95%;
-    margin-left: auto;
+    margin-left: 8px;
     display: flex;
     justify-content: space-between;
     user-select: none;
