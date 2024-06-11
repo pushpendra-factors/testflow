@@ -54,7 +54,7 @@ function Pricing() {
         title='Plans & Billings'
         description='Manage your current subscription, upgrade your plan, purchase add-ons, and keep track of billing details in one place.'
       />
-      <div className={`mt-2 ${styles.tab_container}`}>
+      <div className={` ${styles.tab_container}`}>
         <Tabs
           activeKey={activeKey}
           onChange={handleTabChange}

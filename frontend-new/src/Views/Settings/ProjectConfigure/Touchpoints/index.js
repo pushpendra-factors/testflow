@@ -109,12 +109,8 @@ const Touchpoints = () => {
         title='Touchpoint Definitions'
         description='Effortlessly map and standardize all your digital touchpoints and use them for powerful analytics'
       />
-      <div>
-        <Tabs
-          activeKey={activeKey}
-          onChange={handleTabChange}
-          className='fa-tab'
-        >
+      <div className='-mt-4'>
+        <Tabs activeKey={activeKey} onChange={handleTabChange}>
           <TabPane tab='UTM Parameters' key={TabTypes.utmParameters}>
             <FeatureLockedMarketingInteraction />
           </TabPane>
