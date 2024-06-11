@@ -32,16 +32,15 @@ function AppSidebar() {
     selectAccountPayload(state)
   );
   const timelinePayload = useSelector((state) => selectTimelinePayload(state));
-
+  const profileActiveSegment = timelinePayload?.segment;
   const { newSegmentMode } = useSelector((state) => state.accountProfilesView);
   const activeSegment = activeAccountPayload?.segment;
 
   const isAllAccountsSelected = Boolean(activeSegment?.id) === false;
 
-  const {
-    newSegmentMode: profileNewSegmentMode,
-    activeSegment: profileActiveSegment
-  } = useSelector((state) => state.userProfilesView);
+  const { newSegmentMode: profileNewSegmentMode } = useSelector(
+    (state) => state.userProfilesView
+  );
 
   const isAllUsersSelected =
     timelinePayload.source === 'All' &&

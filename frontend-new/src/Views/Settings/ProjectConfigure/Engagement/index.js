@@ -199,7 +199,8 @@ function EngagementConfig({
       .catch((err) => {
         console.log(err);
         showErrorMessage({
-          description: `Error ${editMode ? 'updating' : 'adding'} score.`
+          title: `Error ${editMode ? 'updating' : 'adding'} score.`,
+          description: err?.data?.err?.code
         });
       });
     setShowModal(false);

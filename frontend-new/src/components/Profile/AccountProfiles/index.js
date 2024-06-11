@@ -243,7 +243,11 @@ function AccountProfiles({
       : getFilteredTableProps(projectTableProps);
 
     return tableProps;
-  }, [currentProjectSettings, accountPayload?.segment]);
+  }, [
+    currentProjectSettings,
+    accountPayload?.segment,
+    accountPayload?.segment?.query?.table_props
+  ]);
 
   const activeID = useMemo(() => segmentID || 'default', [segmentID]);
 
@@ -944,6 +948,7 @@ function AccountProfiles({
           !!segmentID === !!'' ||
           defaultSegmentsList.includes(accountPayload?.segment?.name)
         }
+        placement='bottom'
       />
     </div>
   );
