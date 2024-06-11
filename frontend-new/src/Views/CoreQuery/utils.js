@@ -132,7 +132,7 @@ const getNewSegmentKeys = (ev) => ({
   range: ev.range,
   iep: ev.isEventPerformed,
   freqOp: ev.frequencyOperator,
-  freq: ev.frequency
+  freq: ev.frequency.toString()
 });
 
 export const getEventsWithProperties = (queries) =>
@@ -1204,7 +1204,7 @@ const getNewSegmentKeysFromQuery = (e) => ({
   isEventPerformed: e.iep,
   frequencyOperator:
     e.freqOp || INITIAL_EVENT_WITH_PROPERTIES_STATE.frequencyOperator,
-  frequency: e.freq || INITIAL_EVENT_WITH_PROPERTIES_STATE.frequency
+  frequency: parseInt(e.freq || INITIAL_EVENT_WITH_PROPERTIES_STATE.frequency)
 });
 
 export const getStateQueryFromRequestQuery = (requestQuery) => {

@@ -1418,3 +1418,11 @@
 .border-neutral-100 {
   border-color: #f5f5f5;
 }
+
+.accounts-loader-div {
+  height: 300px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

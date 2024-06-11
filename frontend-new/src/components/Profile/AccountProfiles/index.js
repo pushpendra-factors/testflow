@@ -1277,7 +1277,9 @@ function AccountProfiles({
           </div>
         </div>
         <ControlledComponent controller={accounts.isLoading}>
-          <Spin size='large' className='fa-page-loader' />
+          <div className='accounts-loader-div'>
+            <Spin size='large' />
+          </div>
         </ControlledComponent>
         <ControlledComponent
           controller={
