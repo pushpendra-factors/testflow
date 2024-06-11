@@ -20,6 +20,8 @@ type LinkedinExclusion struct {
 	RuleObjectType        string          `json:"rule_object_type"`
 	RuleSnapshot          *postgres.Jsonb `json:"rule_snapshot"`
 	PropertiesSnapshot    *postgres.Jsonb `json:"properties_snapshot"`
+	ExactSubruleMatched   *postgres.Jsonb `json:"exact_subrule_matched"`
+	LinkedinData          *postgres.Jsonb `json:"linkedin_data"`
 	ImpressionsSaved      int64           `json:"impressions_saved"`
 	ClicksSaved           int64           `json:"clicks_saved"`
 	CreatedAt             time.Time       `json:"created_at"`

@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS linkedin_exclusions (
+    project_id bigint NOT NULL,
+    org_id text NOT NULL,
+    timestamp int NOT NULL,
+    company_name text,
+    campaigns json,
+    is_pushed_to_linkedin boolean DEFAULT false,
+    is_removed_from_linkedin boolean DEFAULT false,
+    rule_id text NOT NULL,
+    rule_object_type text NOT NULL,
+    rule_snapshot json,
+    properties_snapshot json,
+    exact_subrule_matched json,
+    linkedin_data json,
+    impressions_saved bigint,
+    clicks_saved bigint,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    SHARD KEY (project_id)
+);

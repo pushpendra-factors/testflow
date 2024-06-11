@@ -1002,6 +1002,7 @@ type Model interface {
 	// Timeline consuming segment_marker
 	GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload, downloadLimitGiven bool) ([]model.Profile, int, string)
 	GetAllPropertiesForDomain(projectID int64, domainGroupId int, domainID string, userCount *int64) ([]model.User, int)
+	GetAllGroupPropertiesForDomain(projectID int64, domainGroupId int, domainID string) ([]model.User, int)
 	GetDomainsListFromMarker(projectID int64, payload model.TimelinePayload,
 		domainGroupID int, downloadLimitGiven bool) ([]model.Profile, int, string)
 	GetPreviewDomainsListByProjectId(projectID int64, payload model.TimelinePayload,
@@ -1205,15 +1206,27 @@ type Model interface {
 	FillLinkedInPropertiesInCacheForWorkflow(msgPropMap *map[string]interface{}, properties *map[string]interface{}, workflowAlertBody model.WorkflowAlertBody)
 	NewLinkedCapiRequestPayload(properties *map[string]interface{}, linkedinCAPIConfig model.LinkedinCAPIConfig) (model.BatchLinkedinCAPIRequestPayload, error)
 
-	//Weekly Mailmodo Emails
-	GetWeeklyMailmodoEmailsMetrics(projectId, startTimeStamp, endTimeStamp int64) (model.WeeklyMailmodoEmailMetrics, error)
 	// linkedin frequency capping
-	GetLinkedinCappingConfig(projectID int64) ([]model.LinkedinCappingConfig, int)
-	CreateLinkedinCappingRule(projectID int64, linkedinCappingRule *model.LinkedinCappingRule) int
+	GetLinkedinFreqCappingConfig(projectID int64) ([]model.LinkedinCappingConfig, int)
+	CreateLinkedinCappingRule(projectID int64, linkedinCappingRule *model.LinkedinCappingRule) (model.LinkedinCappingRule, string, int)
 	GetAllLinkedinCappingRules(projectID int64) ([]model.LinkedinCappingRule, int)
+	GetAllActiveLinkedinCappingRules(projectID int64) ([]model.LinkedinCappingRule, int)
+	GetAllActiveLinkedinCappingRulesByObjectType(projectID int64, objectType string) ([]model.LinkedinCappingRule, int)
 	GetLinkedinCappingRule(projectID int64, ruleID string) (model.LinkedinCappingRule, int)
-	UpdateLinkedinCappingRule(projectID int64, ruleID string) int
+	UpdateLinkedinCappingRule(projectID int64, linkedinCappingRule *model.LinkedinCappingRule) (string, int)
 	DeleteLinkedinCappingRule(projectID int64, ruleID string) int
 	GetLinkedinCappingExclusionsForRule(projectID int64, ruleID string) ([]model.LinkedinExclusion, int)
-	GetAllLinkedinCappingExclusionsForTimerange(projectID int64, startTimestamp int64, endTimestamp int64) ([]model.LinkedinExclusion, int)
+	GetAllLinkedinCappingExclusionsForTimerange(projectID int64, monthStart int64, monthEnd int64) ([]model.LinkedinExclusion, int)
+	CreateLinkedinExclusion(projectID int64, linkedinExclusionDoc model.LinkedinExclusion) int
+	GetNonPushedExclusionsForMonth(projectID int64, startOfMonthDate int64) ([]model.LinkedinExclusion, int)
+	GetNonRemovedExclusionsForMonth(projectID int64, startOfMonthDate int64, endOfMonthDate int64) ([]model.LinkedinExclusion, int)
+	UpdateLinkedinPushSyncStatusForOrgAndRule(projectID int64, startOfMonthDate int64, orgID string, ruleID string) int
+	UpdateLinkedinRemoveSyncStatusForOrgAndRule(projectID int64, startOfMonthDate int64, endOfMonthDate int64, orgID string, ruleID string) int
+	GetDataSetForFrequencyCappingForMonthForObjectType(projectID int64, timestamp int64, objectType string) ([]model.LinkedinCappingDataSet, int)
+	ApplyRuleOnLinkedinCappingData(projectID int64, linkedinCappingDataSet model.LinkedinCappingDataSet,
+		rule model.LinkedinCappingRuleWithDecodedValues, groupData model.GroupRelatedData) (bool, model.RuleMatchedDataSet, error)
+	GetGroupRelatedData(projectID int64, groupID int, domain string, existingGroupData map[string]model.GroupRelatedData) (model.GroupRelatedData, error)
+
+	//Weekly Mailmodo Emails
+	GetWeeklyMailmodoEmailsMetrics(projectId, startTimeStamp, endTimeStamp int64) (model.WeeklyMailmodoEmailMetrics, error)
 }

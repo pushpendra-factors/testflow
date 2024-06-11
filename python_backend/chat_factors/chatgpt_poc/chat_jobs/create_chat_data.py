@@ -66,7 +66,7 @@ def get_chat_data(exclude_prompts=None):
 def create_and_add_missing_chat_data(project_id):
     dataframe = prepare_data(os.path.join('chat_factors/chatgpt_poc', 'data.json'), abbreviate=True)
 
-    batch_size = 100
+    batch_size = 1000
 
     # Extract prompts from the dataframe
     all_prompts = dataframe['prompt'].tolist()
