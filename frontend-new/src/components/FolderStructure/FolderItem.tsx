@@ -156,19 +156,20 @@ export function FolderItemOptions(props: FolderItemOptionsType) {
   } = props;
   const actionsMenu = useMemo(() => {
     let tmpActions: Array<any> = [];
+    tmpActions.push({
+      id: '1',
+      title: 'Move to',
+      icon: <SVG name='AddFromDraft' />,
+      // {id: '11', title: }
+      submenu: folders?.map((eachFolder) => ({
+        id: eachFolder.id,
+        title: eachFolder.name,
+        icon: <EditOutlined />
+      }))
+    });
     if (!hideDefaultOptions) {
       tmpActions = [
-        {
-          id: '1',
-          title: 'Move to',
-          icon: <SVG name='AddFromDraft' />,
-          // {id: '11', title: }
-          submenu: folders?.map((eachFolder) => ({
-            id: eachFolder.id,
-            title: eachFolder.name,
-            icon: <EditOutlined />
-          }))
-        },
+        ...tmpActions,
         {
           id: '2',
           title: `Edit ${unit} Details`,
@@ -267,6 +268,9 @@ function FolderItem(props: FolderItemPropType) {
           moveToExistingFolder={null}
           handleNewFolder={null}
           placement='right'
+          hideDefaultOptions={contextValue?.hideItemOptionsList?.includes(
+            data.name
+          )}
         />
       </div>
     </div>

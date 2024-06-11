@@ -37,6 +37,7 @@ type folderContextType = {
   folders: Array<FolderType>;
   active_item: string | number | null;
   showItemIcons: boolean;
+  hideItemOptionsList: Array<string>;
 };
 export const FolderContext = createContext<folderContextType>({
   handleNewFolder: (e: any, id: number | string) => undefined,
@@ -55,5 +56,6 @@ export const FolderContext = createContext<folderContextType>({
   unit: 'segment',
   folders: Array(0),
   active_item: null,
-  showItemIcons: false
+  showItemIcons: false,
+  hideItemOptionsList: []
 });

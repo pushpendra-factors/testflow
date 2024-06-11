@@ -14,15 +14,16 @@ $background-color: #f5f5f5;
   & .folder_header {
     width: 100%;
     display: flex;
+    margin: 4px 0;
     padding: 4px 8px 4px 10px;
     justify-content: space-between;
     user-select: none;
     border-radius: 8px;
     transition-duration: 0.3s;
     cursor: pointer;
-    // &:hover {
-    //   background-color: $background-color;
-    // }
+    &:hover {
+      background-color: $background-color;
+    }
     & > div {
       align-items: center;
       display: flex;
@@ -33,6 +34,10 @@ $background-color: #f5f5f5;
         text-overflow: ellipsis;
         max-width: 160px;
       }
+    }
+    & .folder_actions {
+      width: 32px;
+      height: 32px;
     }
     & .folder_actions_button {
       // border: 1px solid #dedede;
@@ -53,7 +58,8 @@ $background-color: #f5f5f5;
   }
   // This is Each Folder ITem
   & .folder_item {
-    width: 100%;
+    width: 95%;
+    margin-left: auto;
     display: flex;
     justify-content: space-between;
     user-select: none;

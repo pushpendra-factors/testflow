@@ -20,7 +20,7 @@ import { changeActivePreDashboard } from 'Views/PreBuildDashboard/state/services
 import { ADD_DASHBOARD_MODAL_OPEN } from 'Reducers/types';
 import { INITIATE_EDIT_DASHBOARD_DETAILS } from 'Reducers/dashboard/types';
 import FolderStructure from 'Components/FolderStructure';
-import { LoadingOutlined } from '@ant-design/icons';
+import { Spin } from 'antd';
 
 function DashboardFoldersLayout({ onDeleteDashboardClick }) {
   const dispatch = useDispatch();
@@ -153,7 +153,7 @@ function DashboardFoldersLayout({ onDeleteDashboardClick }) {
   return foldersList.loading ||
     dashboardsState.loading ||
     !foldersList.completed ? (
-    <LoadingOutlined style={{ fontSize: '24px', margin: '24px 0' }} />
+    <Spin className='my-2' />
   ) : (
     <FolderStructure
       folders={[
@@ -180,6 +180,7 @@ function DashboardFoldersLayout({ onDeleteDashboardClick }) {
       }}
       onRenameFolder={handleRenameFolderSubmit}
       onDeleteFolder={handleFolderDeleteSubmit}
+      hideItemOptionsList={['Traffic Dashboard']}
     />
   );
 }
