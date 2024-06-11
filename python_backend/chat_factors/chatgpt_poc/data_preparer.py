@@ -34,7 +34,7 @@ def get_query_templates():
                                "Count of %s filter by %s equals %s"],
 
             'timeful_equal': [
-                '%s having %s as %s in %s'
+                '%s having %s as %s in %s',
                 'Number of %s having %s as %s in %s',
                 'How many %s with %s equals %s we had %s',
                 'Count of %s filter by %s equals %s %s'
