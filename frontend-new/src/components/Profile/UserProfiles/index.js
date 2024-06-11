@@ -1055,7 +1055,7 @@ function UserProfiles({
         id={timelinePayload?.segment?.id}
         unit='segment'
         folder_id={timelinePayload?.segment?.folder_id}
-        folders={[{ id: 0, name: 'All Segments' }, ...segmentFolders.peoples]}
+        folders={[{ id: '', name: 'All Segments' }, ...segmentFolders.peoples]}
         handleEditUnit={() => {
           setMoreActionsModalMode(moreActionsMode.RENAME);
         }}
