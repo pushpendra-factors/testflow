@@ -726,7 +726,7 @@ function AccountProfiles({
 
   const navigateToAccountsEngagement = useCallback(() => {
     history.push(
-      `${PathUrls.SettingsCustomDefinition}?activeTab=engagementScoring`
+      `${PathUrls.SettingsAccountScoring}?activeTab=engagementScoring`
     );
   }, []);
 

@@ -120,11 +120,9 @@ function Events({
                 <Row>
                   <Col span={18}>
                     <Text type='title' level={7} color='grey' extraClass='m-0'>
-                      Establish unique touchpoints on your website to track user
-                      interactions beyond what's automatically recorded by
-                      Factors. Monitor actions such as signups, form
-                      submissions, lifecycle stage changes, and other specific
-                      events crucial to your business goals.{' '}
+                      Set up unique touchpoints to track user interactions
+                      beyond automatic tracking, including signups, form
+                      submissions, and lifecycle stage changes.{' '}
                       {/* <a
                         href='https://help.factors.ai/en/articles/7284092-custom-events'
                         target='_blank'

@@ -222,6 +222,13 @@ const CustomDefinition = lazyWithRetry(
     )
 );
 
+const AccountScoring = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "settings-account-scoring" */ '../Views/Settings/ProjectConfigure/AccountScoring'
+    )
+);
+
 // Shared-Components
 const componentsLib = lazyWithRetry(
   () =>
@@ -537,7 +544,12 @@ export const APP_LAYOUT_ROUTES = {
     Component: CustomDefinition,
     Private: true
   },
-
+  SettingsAccountScoring: {
+    exact: true,
+    path: PathUrls.SettingsAccountScoring,
+    Component: AccountScoring,
+    Private: true
+  },
   Alerts: {
     exact: true,
     path: PathUrls.Alerts,

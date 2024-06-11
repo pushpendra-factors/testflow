@@ -321,14 +321,14 @@ const AttributionSettings = ({
     <div className='fa-container'>
       <CommonSettingsHeader
         title='Attribution'
-        description='Attribute revenue and conversions to the right marketing channels, campaigns, and touchpoints to gain a clear understanding of what drives success. Identify the most effective marketing strategies, optimize your budget allocation, and make data-driven decisions to maximize ROI and achieve your business goals.'
+        description='Attribute revenue and conversions to the right channels, campaigns, and touchpoints using different models to identify effective strategies and maximize ROI.'
         actionsNode={renderEditActions()}
       />
       <Row gutter={[24, 24]} justify='center'>
         <Col span={24}>
           <Row className='flex items-center' />
           <Row>
-            <div className='fa-warning'>
+            <div className='fa-warning' style={{ marginTop: -16 }}>
               This is configured at the time of initial setup. We don't support
               to change it at the moment. Please contact customer support for
               more details.

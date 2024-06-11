@@ -33,10 +33,13 @@ export const getConfigureMenuItems = (email) => {
       label: 'Custom Definitions',
       url: PathUrls.SettingsCustomDefinition
     },
-
     {
       label: 'Attribution',
       url: PathUrls.SettingsAttribution
+    },
+    {
+      label: 'Account Scoring',
+      url: PathUrls.SettingsAccountScoring
     }
   ];
   if (email === SolutionsAccountId) {
