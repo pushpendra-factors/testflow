@@ -247,7 +247,7 @@ function FolderStructure(props: FolderStructurePropType) {
             id={eachItem.id}
             folder_id={eachItem.folder_id}
             data={eachItem}
-            folders={folders}
+            folders={foldersState}
           />
         ))}
     </div>
