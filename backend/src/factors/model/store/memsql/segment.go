@@ -358,3 +358,50 @@ func (store *MemSQL) DeleteSegmentById(projectId int64, segmentId string) (int, 
 
 	return http.StatusOK, nil
 }
+
+func (store *MemSQL) ModifySegment(projectID int64, segment model.Segment) (int, error) {
+	segmentQuery := model.Query{}
+	err := U.DecodePostgresJsonbToStructType(segment.Query, &segmentQuery)
+	if err != nil {
+		log.WithFields(log.Fields{"project_id": projectID, "segment_id": segment.Id}).
+			Error("Unable to decode segment query")
+		return http.StatusInternalServerError, err
+	}
+
+	// nothing to update
+	if len(segmentQuery.EventsWithProperties) == 0 {
+		return http.StatusOK, nil
+	}
+
+	for index := range segmentQuery.EventsWithProperties {
+		segmentQuery.EventsWithProperties[index].IsEventPerformed = true
+		segmentQuery.EventsWithProperties[index].Range = 180
+		segmentQuery.EventsWithProperties[index].Frequency = "0"
+		segmentQuery.EventsWithProperties[index].FrequencyOperator = model.GreaterThanOpStr
+	}
+
+	encodedQuery, err := U.EncodeStructTypeToPostgresJsonb(segmentQuery)
+	if err != nil {
+		log.WithFields(log.Fields{"project_id": projectID, "segment_id": segment.Id}).
+			Error("Unable to encode segment query")
+		return http.StatusInternalServerError, err
+	}
+
+	segment.Query = encodedQuery
+
+	db := C.GetServices().Db
+
+	query := `UPDATE segments
+	SET query = ?
+	WHERE project_id = ? AND id = ?;`
+
+	params := []interface{}{encodedQuery, projectID, segment.Id}
+
+	err = db.Exec(query, params...).Error
+
+	if err != nil {
+		return http.StatusInternalServerError, err
+	}
+
+	return http.StatusOK, nil
+}
