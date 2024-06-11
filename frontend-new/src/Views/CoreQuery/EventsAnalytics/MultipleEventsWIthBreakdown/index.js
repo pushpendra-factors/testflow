@@ -141,6 +141,7 @@ const MultipleEventsWithBreakdown = forwardRef(
           visibleSeriesData={visibleSeriesData}
           setVisibleSeriesData={setVisibleSeriesData}
           eventGroup={resultState?.data?.meta?.query?.grpa}
+          resultState={resultState}
         />
       </div>
     );

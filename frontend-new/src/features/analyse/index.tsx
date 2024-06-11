@@ -59,7 +59,8 @@ import {
   getKPIStateFromRequestQuery,
   getQuery,
   getStateQueryFromRequestQuery,
-  isComparisonEnabled
+  isComparisonEnabled,
+  resultantDataTransformation
 } from 'Views/CoreQuery/utils';
 import { QUERY_UPDATED, SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import CoreQueryReducer from 'Views/CoreQuery/CoreQueryReducer';
@@ -297,28 +298,17 @@ const CoreQuery = () => {
 
   const updateResultFromSavedQuery = (res: any, qState: CoreQueryState) => {
     const data = res.data.result || res.data;
-    let resultSt;
-    if (result_criteria === TOTAL_EVENTS_CRITERIA) {
-      resultSt = {
-        ...INITIAL_RESULT_STATE,
-        data: formatApiData(data.result_group[0], data.result_group[1]),
-        apiCallStatus: res.status
-      };
-    } else if (result_criteria === TOTAL_USERS_CRITERIA) {
-      if (user_type === EACH_USER_TYPE) {
-        resultSt = {
-          ...INITIAL_RESULT_STATE,
-          data: formatApiData(data.result_group[0], data.result_group[1]),
-          apiCallStatus: res.status
-        };
-      } else {
-        resultSt = {
-          ...INITIAL_RESULT_STATE,
-          data: data.result_group[0],
-          apiCallStatus: res.status
-        };
-      }
-    }
+
+    const resultantData = resultantDataTransformation(
+      data,
+      result_criteria,
+      user_type
+    );
+    const resultSt = {
+      ...INITIAL_RESULT_STATE,
+      data: resultantData,
+      apiCallStatus: res.status
+    };
     qState.setItem('resultState', resultSt);
   };
 
@@ -911,22 +901,11 @@ const CoreQuery = () => {
 
       const data = res.data.result || res.data;
       let resultantData = null;
-
-      if (result_criteria === TOTAL_EVENTS_CRITERIA) {
-        resultantData = formatApiData(
-          data.result_group[0],
-          data.result_group[1]
-        );
-      } else if (result_criteria === TOTAL_USERS_CRITERIA) {
-        if (user_type === EACH_USER_TYPE) {
-          resultantData = formatApiData(
-            data.result_group[0],
-            data.result_group[1]
-          );
-        } else {
-          resultantData = data.result_group[0];
-        }
-      }
+      resultantData = resultantDataTransformation(
+        data,
+        result_criteria,
+        user_type
+      );
 
       if (dateRange && !isCompareQuery) {
         qState.queryOptions.date_range = dateRange;
@@ -1320,9 +1299,11 @@ const CoreQuery = () => {
       runFunnelQuery,
       setQueries,
       updateCoreQueryReducer,
-      resetComparisonData
+      resetComparisonData,
+      resultState: coreQueryState.resultState
     }),
     [
+      coreQueryState.resultState,
       coreQueryState,
       runQuery,
       queryChange,

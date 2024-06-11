@@ -1,17 +1,15 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
-import {
-  settingsMenuItems,
-  getConfigureMenuItems,
-  settingsCategorisedMap
-} from 'Components/FaHeader/FaHeader';
+import { settingsCategorisedMap } from 'Components/FaHeader/FaHeader';
 import { WhiteListedAccounts } from 'Routes/constants';
 import { useSelector } from 'react-redux';
 import { PathUrls } from 'Routes/pathUrls';
+import { SVG, Text } from 'Components/factorsComponents';
 import SidebarMenuItem from './SidebarMenuItem';
-import { checkMatchPath, isConfigurationUrl } from './appSidebar.helpers';
+import { checkMatchPath } from './appSidebar.helpers';
+import styles from './index.module.scss';
 
-const SettingItem = ({ item }) => {
+const SettingItem = ({ item, isMainCategory }) => {
   const location = useLocation();
   const history = useHistory();
   const { pathname } = location;
@@ -25,6 +23,22 @@ const SettingItem = ({ item }) => {
         checkMatchPath(pathname, PathUrls.SettingsIntegrationURLID)
       : pathname === item.url;
 
+  if (isMainCategory) {
+    return (
+      <div className='flex items-center gap-1 rounded-md p-2 mt-1'>
+        <SVG name={item.icon} size={16} color='#8C8C8C' />
+        <Text
+          type='title'
+          level={7}
+          extraClass='mb-0 text-with-ellipsis w-40'
+          weight='bold'
+          color={`${isActive ? 'brand-color-6' : 'character-primary'}`}
+        >
+          {item.label}
+        </Text>
+      </div>
+    );
+  }
   return (
     <SidebarMenuItem
       text={item.label}
@@ -38,32 +52,21 @@ const SettingItem = ({ item }) => {
 };
 
 const SettingsSidebar = () => {
-  const location = useLocation();
-  const { pathname } = location;
-
   const agentState = useSelector((state) => state.agent);
   const activeAgent = agentState?.agent_details?.email;
 
-  const menuList = useMemo(() => {
-    if (isConfigurationUrl(pathname)) {
-      return getConfigureMenuItems(activeAgent);
-    }
-    return settingsMenuItems;
-  }, [pathname, activeAgent]);
-
   return (
-    <div className='flex flex-col gap-y-1 px-2'>
+    <div className={`flex flex-col gap-1 px-2 ${styles['settings-sidebar']}`}>
       {settingsCategorisedMap(activeAgent).map((item) => {
         if (item?.whitelisted && !WhiteListedAccounts.includes(activeAgent)) {
           return null;
         }
         return (
           <>
-            <SettingItem item={item} />
-            <div className={`border-bottom--thin-2`}></div>
-            {item.items.map((subItem) => {
-              return <SettingItem item={subItem} />;
-            })}
+            <SettingItem item={item} isMainCategory />
+            {item.items.map((subItem) => (
+              <SettingItem item={subItem} />
+            ))}
           </>
         );
       })}

@@ -4,13 +4,13 @@ import {
   getTableData,
   getDateBasedColumns,
   getDateBasedTableData,
-  getDefaultSorterState,
+  getDefaultSorterState
 } from './utils';
 import DataTable from '../../../../components/DataTable';
 import {
   CHART_TYPE_BARCHART,
   MAX_ALLOWED_VISIBLE_PROPERTIES,
-  DASHBOARD_WIDGET_SECTION,
+  DASHBOARD_WIDGET_SECTION
 } from '../../../../utils/constants';
 import { getNewSorterState } from '../../../../utils/dataFormatter';
 
@@ -26,7 +26,7 @@ function BreakdownTable({
   visibleProperties,
   setVisibleProperties,
   section,
-  reportTitle = 'CampaignAnalytics',
+  reportTitle = 'CampaignAnalytics'
 }) {
   const [sorter, setSorter] = useState(
     getDefaultSorterState(arrayMapper, currentEventIndex)
@@ -44,15 +44,15 @@ function BreakdownTable({
         return [
           {
             ...currentSorter[0],
-            order: currentSorter[0].order === 'ascend' ? 'descend' : 'ascend',
-          },
+            order: currentSorter[0].order === 'ascend' ? 'descend' : 'ascend'
+          }
         ];
       }
       return [
         {
           ...prop,
-          order: 'ascend',
-        },
+          order: 'ascend'
+        }
       ];
     });
   }, []);
@@ -63,15 +63,15 @@ function BreakdownTable({
         return [
           {
             ...currentSorter[0],
-            order: currentSorter[0].order === 'ascend' ? 'descend' : 'ascend',
-          },
+            order: currentSorter[0].order === 'ascend' ? 'descend' : 'ascend'
+          }
         ];
       }
       return [
         {
           ...prop,
-          order: 'ascend',
-        },
+          order: 'ascend'
+        }
       ];
     });
   }, []);
@@ -88,7 +88,7 @@ function BreakdownTable({
     arrayMapper,
     currentEventIndex,
     searchText,
-    sorter,
+    sorter
   ]);
 
   useEffect(() => {
@@ -116,17 +116,17 @@ function BreakdownTable({
     searchText,
     dateSorter,
     arrayMapper,
-    currentEventIndex,
+    currentEventIndex
   ]);
 
   const getCSVData = () => {
     const activeTableData =
       chartType === CHART_TYPE_BARCHART ? tableData : dateBasedTableData;
     return {
-      fileName: `${reportTitle}.csv`,
+      fileName: reportTitle,
       data: activeTableData.map(({ index, ...rest }) => {
         return rest;
-      }),
+      })
     };
   };
 
@@ -153,7 +153,7 @@ function BreakdownTable({
 
   const rowSelection = {
     selectedRowKeys,
-    onChange: onSelectionChange,
+    onChange: onSelectionChange
   };
 
   return (

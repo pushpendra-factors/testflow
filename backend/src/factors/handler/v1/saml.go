@@ -9,7 +9,7 @@ import (
 	"factors/handler/helpers"
 	"factors/model/model"
 	"factors/model/store"
-	saml "factors/saml"
+	"github.com/ucarion/saml"
 	U "factors/util"
 	"fmt"
 	"net/http"
@@ -151,7 +151,7 @@ func SamlCallbackHandler(c *gin.Context) {
 	// get the saml config of the original person done?
 	// get the user from relay state ?
 
-	samlResponse, err := saml.Verify(rawSAMLResponse, cert, expectedDestinationID, time.Now())
+	samlResponse, err := saml.Verify(rawSAMLResponse,"", cert, expectedDestinationID, time.Now())
 	if err != nil {
 		log.WithField("projectID ", projectIdString).WithError(err).Error("failed to verify SAML Response")
 		c.AbortWithStatus(http.StatusInternalServerError)

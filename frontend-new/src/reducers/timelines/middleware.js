@@ -11,40 +11,47 @@ import {
   fetchAccountOverview,
   fetchTop100Events,
   fetchConfiguredUserProperties,
-  fetchConfiguredEventProperties
+  fetchConfiguredEventProperties,
+  fetchSegmentFolders
 } from '.';
 import { formatAccountTimeline, formatUsersTimeline } from './utils';
-import { deleteSegmentAction } from './actions';
+import {
+  deleteSegmentAction,
+  setLoadingSegmentFolders,
+  setSegmentFolders
+} from './actions';
+import {
+  SET_ACCOUNTS_SEGMENT_FOLDERS_FAILED,
+  SET_PEOPLES_SEGMENT_FOLDERS_FAILED
+} from './types';
 
-export const getProfileAccounts =
-  (projectId, payload, download) => (dispatch) => {
-    dispatch({ type: 'FETCH_PROFILE_ACCOUNTS_LOADING' });
-    return new Promise((resolve, reject) => {
-      fetchProfileAccounts(projectId, payload, download)
-        .then((response) => {
-          const data = response.data?.map((account) => ({
-            ...account,
-            domain: { id: account.identity, name: account?.domain_name }
-          }));
-          resolve(
-            dispatch({
-              type: 'FETCH_PROFILE_ACCOUNTS_FULFILLED',
-              payload: data,
-              segmentID: payload.segment_id,
-              status: response.status
-            })
-          );
-        })
-        .catch((err) => {
+export const getProfileAccounts = (projectId, payload) => (dispatch) => {
+  dispatch({ type: 'FETCH_PROFILE_ACCOUNTS_LOADING' });
+  return new Promise((resolve, reject) => {
+    fetchProfileAccounts(projectId, payload)
+      .then((response) => {
+        const data = response.data?.map((account) => ({
+          ...account,
+          domain: { id: account.identity, name: account?.domain_name }
+        }));
+        resolve(
           dispatch({
-            type: 'FETCH_PROFILE_ACCOUNTS_FAILED',
-            payload: [],
-            error: err
-          });
-          reject(err);
+            type: 'FETCH_PROFILE_ACCOUNTS_FULFILLED',
+            payload: data,
+            segmentID: payload.segment_id || 'default',
+            status: response.status
+          })
+        );
+      })
+      .catch((err) => {
+        dispatch({
+          type: 'FETCH_PROFILE_ACCOUNTS_FAILED',
+          segmentID: payload.segment_id || 'default'
         });
-    });
-  };
+        reject(err);
+      });
+  });
+};
 
 export const getProfileAccountDetails =
   (projectId, id, source) => (dispatch) => {
@@ -240,20 +247,25 @@ export const getTop100Events = (projectID, domainName) => async (dispatch) => {
   dispatch({ type: 'FETCH_TOP100_EVENTS_LOADING', domainName });
   try {
     const response = await fetchTop100Events(projectID, domainName);
-    const events = response.data.map((event) => ({
-      ...event,
-      username: event.username || event.user_id,
-      enabled: true
-    }));
+    const events = response.data
+      ? response.data.map((event) => ({
+          ...event,
+          username: event.username || event.user_id,
+          enabled: true
+        }))
+      : [];
+
     const eventPropertiesMap = {};
     events.forEach((event) => {
       eventPropertiesMap[event.id] = event.properties;
     });
+
     dispatch({
       type: 'FETCH_TOP100_EVENTS_FULFILLED',
-      payload: events || [],
+      payload: events,
       domainName
     });
+
     dispatch({
       type: 'FETCH_EVENT_CONFIG_PROPERTIES_MAP_FULFILLED',
       payload: eventPropertiesMap
@@ -299,3 +311,19 @@ export const getConfiguredEventProperties =
           reject(err);
         });
     });
+
+export const getSegmentFolders =
+  (projectId, folder_type = 'account') =>
+  async (dispatch) => {
+    setLoadingSegmentFolders();
+
+    fetchSegmentFolders(projectId, folder_type)
+      .then((response) => {
+        dispatch(setSegmentFolders({ folder_type, data: response.data }));
+      })
+      .catch(() => {
+        if (folder_type === 'account')
+          dispatch({ type: SET_ACCOUNTS_SEGMENT_FOLDERS_FAILED });
+        else dispatch({ type: SET_PEOPLES_SEGMENT_FOLDERS_FAILED });
+      });
+  };

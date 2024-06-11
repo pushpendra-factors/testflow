@@ -1,9 +1,15 @@
-import React, { useState, useCallback } from 'react';
-import { getTableColumns, getTableData } from './utils';
+import React, { useState, useCallback, useContext } from 'react';
+import { formatData, getTableColumns, getTableData } from './utils';
 import DataTable from '../../../../components/DataTable';
 import { useSelector } from 'react-redux';
 import { getNewSorterState } from '../../../../utils/dataFormatter';
 import { MAX_ALLOWED_VISIBLE_PROPERTIES } from '../../../../utils/constants';
+import { CoreQueryContext } from 'Context/CoreQueryContext';
+import {
+  fetchDataCSVDownload,
+  getEventsCSVData,
+  getQuery
+} from 'Views/CoreQuery/utils';
 
 function EventBreakdownTable({
   breakdown,
@@ -12,7 +18,9 @@ function EventBreakdownTable({
   setVisibleProperties,
   reportTitle = 'Events Analytics',
   sorter,
-  setSorter
+  setSorter,
+  durationObj,
+  resultState
 }) {
   const {
     userPropNames,
@@ -20,6 +28,10 @@ function EventBreakdownTable({
   } = useSelector((state) => state.coreQuery);
   const { data: eventPropertiesDisplayNames } =
     eventPropertiesDisplayNamesState;
+  const coreQueryContext = useContext(CoreQueryContext);
+  const { show_criteria: result_criteria, performance_criteria: user_type } =
+    useSelector((state) => state.analyticsQuery);
+  const { active_project } = useSelector((state) => state.global);
 
   const [searchText, setSearchText] = useState('');
 
@@ -39,16 +51,36 @@ function EventBreakdownTable({
     userPropNames,
     eventPropertiesDisplayNames
   );
+  const tableDataSelector = (data) =>
+    getTableData(data, breakdown, searchText, sorter);
+  const getCSVDataCallback = (d) =>
+    d.map(({ index, ...rest }) => ({ ...rest }));
+  const fetchData = async () => {
+    const results = await fetchDataCSVDownload(coreQueryContext, {
+      projectID: active_project?.id,
+      step2Properties: {
+        result_criteria,
+        user_type,
+        shouldStack: true,
+        durationObj,
+        resultState
+      },
+      formatData,
+      formatDataBasedOnChart: (a) => a,
+      tableDataSelector,
+      getCSVDataCallback,
+      EventBreakDownType: 'eb',
+      formatDataParams: {},
+      formatDataBasedOnChartParams: {}
+    });
+    return results;
+  };
   const tableData = getTableData(data, breakdown, searchText, sorter);
 
-  const getCSVData = () => {
-    return {
-      fileName: `${reportTitle}.csv`,
-      data: tableData.map(({ index, ...rest }) => {
-        return { ...rest };
-      })
-    };
-  };
+  const getCSVData = async () => ({
+    fileName: reportTitle,
+    data: await fetchData()
+  });
 
   const onSelectionChange = (selectedIncices) => {
     if (selectedIncices.length > MAX_ALLOWED_VISIBLE_PROPERTIES) {

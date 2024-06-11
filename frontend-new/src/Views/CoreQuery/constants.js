@@ -81,3 +81,21 @@ export const FILTER_TYPES = {
 export const BREAKDOWN_TYPES = {
   DATETIME: 'datetime'
 };
+
+export const EVENT_FREQ_OPERATORS = {
+  equals: 'equals',
+  'lesser than': 'lesserThan',
+  'lesser than or equals': 'lesserThanOrEqual',
+  'greater than': 'greaterThan',
+  'greater than or equals': 'greaterThanOrEqual'
+};
+
+export const INITIAL_EVENT_WITH_PROPERTIES_STATE = {
+  label: '',
+  filters: [],
+  group: '',
+  isEventPerformed: true,
+  frequencyOperator: EVENT_FREQ_OPERATORS['greater than'],
+  frequency: 0,
+  range: 7
+};

@@ -697,6 +697,19 @@ github.com/twitchyliquid64/golang-asm/objabi
 github.com/twitchyliquid64/golang-asm/src
 github.com/twitchyliquid64/golang-asm/sys
 github.com/twitchyliquid64/golang-asm/unsafeheader
+# github.com/ucarion/c14n v0.1.0
+## explicit; go 1.14
+github.com/ucarion/c14n
+github.com/ucarion/c14n/internal/sortattr
+github.com/ucarion/c14n/internal/stack
+# github.com/ucarion/dsig v0.1.0
+## explicit; go 1.14
+github.com/ucarion/dsig
+github.com/ucarion/dsig/internal/sigsplit
+github.com/ucarion/dsig/internal/stack
+# github.com/ucarion/saml v0.1.2
+## explicit; go 1.14
+github.com/ucarion/saml
 # github.com/ugorji/go/codec v1.2.11
 ## explicit; go 1.11
 github.com/ugorji/go/codec

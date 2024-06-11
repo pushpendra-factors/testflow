@@ -404,7 +404,7 @@ function SiderMenu({
           </Menu.Item>
           <Menu.Item
             className={styles.menuitems_sub}
-            key={PathUrls.ConfigureAttribution}
+            key={PathUrls.SettingsAttribution}
           >
             {MenuItems.Attribution}
           </Menu.Item>

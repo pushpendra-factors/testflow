@@ -1,11 +1,13 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useContext } from 'react';
 import { useSelector } from 'react-redux';
 import find from 'lodash/find';
 import {
   getTableColumns,
   getDataInTableFormat,
   getDateBasedColumns,
-  getDateBasedTableData
+  getDateBasedTableData,
+  formatData,
+  formatDataInStackedAreaFormat
 } from './utils';
 import DataTable from '../../../../components/DataTable';
 import {
@@ -19,6 +21,12 @@ import {
   getEventDisplayName,
   getBreakdownDisplayName
 } from '../eventsAnalytics.helpers';
+import { CoreQueryContext } from 'Context/CoreQueryContext';
+import {
+  fetchDataCSVDownload,
+  getEventsCSVData,
+  getQuery
+} from 'Views/CoreQuery/utils';
 
 function SingleEventMultipleBreakdownTable({
   data,
@@ -39,7 +47,8 @@ function SingleEventMultipleBreakdownTable({
   handleDateSorting,
   visibleSeriesData,
   setVisibleSeriesData,
-  eventGroup
+  eventGroup,
+  resultState
 }) {
   const [searchText, setSearchText] = useState('');
   const {
@@ -55,7 +64,79 @@ function SingleEventMultipleBreakdownTable({
   const [dateBasedColumns, setDateBasedColumns] = useState([]);
   const [tableData, setTableData] = useState([]);
   const [dateBasedTableData, setDateBasedTableData] = useState([]);
-
+  const coreQueryContext = useContext(CoreQueryContext);
+  const { show_criteria: result_criteria, performance_criteria: user_type } =
+    useSelector((state) => state.analyticsQuery);
+  const { active_project } = useSelector((state) => state.global);
+  const tableDataSelector = useCallback(
+    (data) =>
+      isSeriesChart(chartType)
+        ? getDateBasedTableData(data, searchText, dateSorter)
+        : getDataInTableFormat(data, searchText, sorter),
+    []
+  );
+  const getCSVDataCallback = useCallback(
+    (data) =>
+      data.map(({ index, label, value, name, data, marker, ...rest }) => {
+        const result = {};
+        for (const key in rest) {
+          if (key === EVENT_COUNT_KEY) {
+            result[getEventDisplayName({ eventNames, event: events[0] })] =
+              rest[EVENT_COUNT_KEY];
+            continue;
+          }
+          if (key === events[0]) {
+            result[getEventDisplayName({ eventNames, event: events[0] })] =
+              rest[events[0]];
+            continue;
+          }
+          const isCurrentKeyForBreakdown = find(
+            breakdown,
+            (b, index) => `${b.property} - ${index}` === key
+          );
+          if (isCurrentKeyForBreakdown) {
+            result[
+              `${getBreakdownDisplayName({
+                breakdown: isCurrentKeyForBreakdown,
+                userPropNames,
+                eventPropertiesDisplayNames
+              })} - ${key.split(' - ')[1]}`
+            ] = rest[key];
+            continue;
+          }
+          result[key] = rest[key];
+        }
+        return result;
+      }),
+    [eventNames, events, chartType]
+  );
+  const fetchData = async () => {
+    const results = await fetchDataCSVDownload(coreQueryContext, {
+      projectID: active_project?.id,
+      step2Properties: {
+        result_criteria,
+        user_type,
+        shouldStack: !isSeriesChart(chartType),
+        durationObj,
+        resultState
+      },
+      formatData,
+      formatDataBasedOnChart: formatDataInStackedAreaFormat,
+      tableDataSelector,
+      getCSVDataCallback,
+      EventBreakDownType: 'semb',
+      formatDataParams: {},
+      formatDataBasedOnChartParams: {}
+    });
+    return results;
+  };
+  const getCSVData = async () => {
+    const results = await fetchData();
+    return {
+      fileName: reportTitle,
+      data: results
+    };
+  };
   useEffect(() => {
     setColumns(
       getTableColumns(
@@ -116,61 +197,7 @@ function SingleEventMultipleBreakdownTable({
     );
   }, [seriesData, searchText, dateSorter]);
 
-  const getCSVData = useCallback(() => {
-    const activeTableData = isSeriesChart(chartType)
-      ? dateBasedTableData
-      : tableData;
-    return {
-      fileName: `${reportTitle}.csv`,
-      data: activeTableData.map(
-        ({ index, label, value, name, data, marker, ...rest }) => {
-          const result = {};
-          for (const key in rest) {
-            if (key === EVENT_COUNT_KEY) {
-              result[getEventDisplayName({ eventNames, event: events[0] })] =
-                rest[EVENT_COUNT_KEY];
-              continue;
-            }
-            if (key === events[0]) {
-              result[getEventDisplayName({ eventNames, event: events[0] })] =
-                rest[events[0]];
-              continue;
-            }
-            const isCurrentKeyForBreakdown = find(
-              breakdown,
-              (b, index) => b.property + ' - ' + index === key
-            );
-            if (isCurrentKeyForBreakdown) {
-              result[
-                `${getBreakdownDisplayName({
-                  breakdown: isCurrentKeyForBreakdown,
-                  userPropNames,
-                  eventPropertiesDisplayNames
-                })} - ${key.split(' - ')[1]}`
-              ] = rest[key];
-              continue;
-            }
-            result[key] = rest[key];
-          }
-          return result;
-        }
-      )
-    };
-  }, [
-    dateBasedTableData,
-    tableData,
-    reportTitle,
-    eventNames,
-    events,
-    breakdown,
-    chartType,
-    userPropNames,
-    eventPropertiesDisplayNames
-  ]);
-
-  const selectedRowKeys = useCallback((rows) => {
-    return rows.map((vp) => vp.index);
-  }, []);
+  const selectedRowKeys = useCallback((rows) => rows.map((vp) => vp.index), []);
 
   const onSelectionChange = useCallback(
     (_, selectedRows) => {

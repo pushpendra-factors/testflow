@@ -1,4 +1,4 @@
-import { formatDurationIntoString, PropTextFormat } from 'Utils/dataFormatter';
+import { formatDurationIntoString } from 'Utils/dataFormatter';
 import {
   ANY_USER_TYPE,
   EVENT_QUERY_USER_TYPE,

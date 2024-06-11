@@ -16,10 +16,10 @@ import {
 import { Text, SVG } from 'factorsComponents';
 import { connect } from 'react-redux';
 import { MoreOutlined } from '@ant-design/icons';
-import ContentGroupForm from './ContentGroupForm';
 import { fetchContentGroup, deleteContentGroup } from 'Reducers/global';
-import ConfirmationModal from '../../../../components/ConfirmationModal';
 import EmptyScreen from 'Components/EmptyScreen';
+import ContentGroupForm from './ContentGroupForm';
+import ConfirmationModal from '../../../../components/ConfirmationModal';
 
 function ContentGroups({
   fetchContentGroup,
@@ -46,7 +46,7 @@ function ContentGroups({
   useEffect(() => {
     const dataColumn = [];
     contentGroup.forEach((prop) => {
-      //harcoded type
+      // harcoded type
       dataColumn.push({
         content_group_name: prop.content_group_name,
         content_group_description: prop.content_group_description,
@@ -57,37 +57,35 @@ function ContentGroups({
     setTableData(dataColumn);
   }, [contentGroup]);
 
-  const menu = (obj) => {
-    return (
-      <Menu>
-        <Menu.Item key='0' onClick={() => showDeleteWidgetModal(obj.id)}>
-          <a>Remove</a>
-        </Menu.Item>
-        <Menu.Item key='1' onClick={() => editProp(obj)}>
-          <a>Edit</a>
-        </Menu.Item>
-      </Menu>
-    );
-  };
+  const menu = (obj) => (
+    <Menu>
+      <Menu.Item key='0' onClick={() => showDeleteWidgetModal(obj.id)}>
+        <a>Remove</a>
+      </Menu.Item>
+      <Menu.Item key='1' onClick={() => editProp(obj)}>
+        <a>Edit</a>
+      </Menu.Item>
+    </Menu>
+  );
 
   const columns = [
     {
       title: 'Title',
       dataIndex: 'content_group_name',
       key: 'content_group_name',
-      render: (text) => <span className={'font-medium'}>{text}</span>
+      render: (text) => <span className='font-medium'>{text}</span>
     },
     {
       title: 'Description',
       dataIndex: 'content_group_description',
       key: 'content_group_description',
-      render: (text) => <span className={'text-gray-700'}>{text}</span>
+      render: (text) => <span className='text-gray-700'>{text}</span>
     },
     {
       title: 'Values',
       dataIndex: 'rule',
       key: 'rule',
-      render: (text) => <span className={'ml-3 text-gray-700'}>{text}</span>
+      render: (text) => <span className='ml-3 text-gray-700'>{text}</span>
     },
     {
       title: '',
@@ -95,15 +93,14 @@ function ContentGroups({
       key: 'actions',
       align: 'right',
       render: (obj) => (
-        <Dropdown overlay={() => menu(obj)} trigger={['click']}>
+        <Dropdown
+          overlay={() => menu(obj)}
+          trigger={['click']}
+          placement='bottomRight'
+        >
           <Button
             type='text'
-            icon={
-              <MoreOutlined
-                rotate={90}
-                style={{ color: 'gray', fontSize: '18px' }}
-              />
-            }
+            icon={<MoreOutlined style={{ color: 'gray', fontSize: '18px' }} />}
           />
         </Dropdown>
       )
@@ -115,8 +112,8 @@ function ContentGroups({
     setShowSmartForm(true);
   };
 
-  const confirmRemove = (id) => {
-    return deleteContentGroup(activeProject.id, id).then(
+  const confirmRemove = (id) =>
+    deleteContentGroup(activeProject.id, id).then(
       (res) => {
         fetchContentGroup(activeProject.id);
         notification.success({
@@ -133,7 +130,6 @@ function ContentGroups({
         });
       }
     );
-  };
 
   const confirmDelete = useCallback(async () => {
     try {
@@ -148,115 +144,80 @@ function ContentGroups({
   }, [deleteWidgetModal]);
 
   return (
-    <div className={'fa-container'}>
-      <Row gutter={[24, 24]} justify='center'>
-        <Col span={22}>
-          <div className={'mb-10'}>
-            {!showSmartForm && (
-              <>
-                <Row>
-                  <Col span={12}>
-                    <Text
-                      type={'title'}
-                      level={3}
-                      weight={'bold'}
-                      extraClass={'m-0'}
-                      id={'fa-at-text--page-title'}
+    <div>
+      <div className='mb-10'>
+        {!showSmartForm && (
+          <div>
+            <Row>
+              <Col span={20}>
+                <div>
+                  <Text type='title' level={7} extraClass='m-0' color='grey'>
+                    Organize your URLs into logical collections, such as blog
+                    articles or product pages, to analyze their influence on
+                    leads, revenue, and pipeline stages effectively.{' '}
+                    {/* <a
+                      href='https://help.factors.ai/en/articles/7284125-content-groups'
+                      target='_blank'
+                      rel='noreferrer'
                     >
-                      Content Groups
-                    </Text>
-                  </Col>
-                  <Col span={12}>
-                    <div className={'flex justify-end'}>
-                      <Button
-                        type='primary'
-                        onClick={() => {
-                          setShowSmartForm(true);
-                        }}
-                        icon={<SVG name={'plus'} color={'white'} size={16} />}
-                      >
-                        Add New
-                      </Button>
-                    </div>
-                  </Col>
-                </Row>
-                <Row className={'mt-4'}>
-                  <Col span={24}>
-                    <div className={'mt-6'}>
-                      <Text
-                        type={'title'}
-                        level={7}
-                        color={'grey-2'}
-                        extraClass={'m-0'}
-                      >
-                        Create logical collections of related URLs, such as blog
-                        articles or product pages, to analyze their impact on
-                        leads, revenue, and pipeline stages.
-                      </Text>
-                      <Text
-                        type={'title'}
-                        level={7}
-                        color={'grey-2'}
-                        extraClass={'m-0 mt-4'}
-                      >
-                        Compare the performance of different content groups,
-                        identify optimization opportunities, and enhance your
-                        content marketing efforts to drive better results.{' '}
-                        <a
-                          href='https://help.factors.ai/en/articles/7284125-content-groups'
-                          target='_blank'
-                        >
-                          Learn more
-                        </a>
-                      </Text>
+                      Learn more
+                    </a> */}
+                  </Text>
+                </div>
+              </Col>
+              <Col span={4}>
+                <div className='flex justify-end'>
+                  <Button
+                    type='primary'
+                    onClick={() => {
+                      setShowSmartForm(true);
+                    }}
+                    icon={<SVG name='plus' color='white' size={16} />}
+                  >
+                    Add New
+                  </Button>
+                </div>
+              </Col>
+            </Row>
 
-                      {tableData.length > 0 ? (
-                        <Table
-                          className='fa-table--basic mt-8'
-                          columns={columns}
-                          dataSource={tableData}
-                          pagination={false}
-                          loading={tableLoading}
-                        />
-                      ) : (
-                        <EmptyScreen
-                          title={`Create logical collections of related URLs, such as blog articles or product pages, to analyze their impact on leads, revenue, and pipeline stages.`}
-                          learnMore={
-                            'https://help.factors.ai/en/articles/7284125-content-groups'
-                          }
-                          loading={tableLoading}
-                        />
-                      )}
-                    </div>
-                  </Col>
-                </Row>
-              </>
+            {tableData.length > 0 ? (
+              <Table
+                className='fa-table--basic mt-8'
+                columns={columns}
+                dataSource={tableData}
+                pagination={false}
+                loading={tableLoading}
+              />
+            ) : (
+              <EmptyScreen
+                title='Create logical collections of related URLs, such as blog articles or product pages, to analyze their impact on leads, revenue, and pipeline stages.'
+                learnMore='https://help.factors.ai/en/articles/7284125-content-groups'
+                loading={tableLoading}
+              />
             )}
-            {showSmartForm && (
-              <>
-                <ContentGroupForm
-                  selectedGroup={selectedGroup}
-                  setShowSmartProperty={(showVal) => {
-                    setShowSmartForm(showVal);
-                    setSelectedGroup(null);
-                    fetchContentGroup(activeProject.id);
-                  }}
-                />
-              </>
-            )}
-            <ConfirmationModal
-              visible={deleteWidgetModal ? true : false}
-              confirmationText='Do you really want to remove this content group?'
-              onOk={confirmDelete}
-              onCancel={showDeleteWidgetModal.bind(this, false)}
-              title='Remove Content Group'
-              okText='Confirm'
-              cancelText='Cancel'
-              confirmLoading={deleteApiCalled}
-            />
           </div>
-        </Col>
-      </Row>
+        )}
+        {showSmartForm && (
+          <ContentGroupForm
+            selectedGroup={selectedGroup}
+            setShowSmartProperty={(showVal) => {
+              setShowSmartForm(showVal);
+              setSelectedGroup(null);
+              fetchContentGroup(activeProject.id);
+            }}
+          />
+        )}
+        <ConfirmationModal
+          visible={!!deleteWidgetModal}
+          confirmationText='Do you really want to remove this content group?'
+          onOk={confirmDelete}
+          onCancel={showDeleteWidgetModal.bind(this, false)}
+          title='Remove Content Group'
+          okText='Confirm'
+          cancelText='Cancel'
+          confirmLoading={deleteApiCalled}
+        />
+      </div>
     </div>
   );
 }

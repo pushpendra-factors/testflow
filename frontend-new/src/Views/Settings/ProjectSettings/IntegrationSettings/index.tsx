@@ -4,11 +4,12 @@ import {
   SVG,
   Text
 } from 'Components/factorsComponents';
-import { Button, Divider, Input, Select, Skeleton } from 'antd';
+import { Input, Select, Skeleton } from 'antd';
 import React, { useContext, useState } from 'react';
 
 import { ErrorBoundary } from 'react-error-boundary';
 import useIntegrationCheck from 'hooks/useIntegrationCheck';
+import CommonSettingsHeader from 'Components/GenericComponents/CommonSettingsHeader';
 import styles from './index.module.scss';
 import {
   IntegrationPageCategories,
@@ -69,13 +70,13 @@ const IntegrationSettings = () => {
 
     return IntegrationPageCategories.sort(
       (categoryA, categoryB) => categoryA.sortOrder - categoryB.sortOrder
-    ).map((category) => {
+    ).map((category, index) => {
       const categoryMap = categorizedData[category.id];
       if (!categoryMap || !categoryMap.length) {
         return null;
       }
       return (
-        <div className='mb-10'>
+        <div className={`${index === 0 ? '' : 'mb-10'}`}>
           <Text
             type='title'
             level={6}
@@ -119,28 +120,11 @@ const IntegrationSettings = () => {
       )}
       {!integrationStatusLoading && (
         <>
-          <div>
-            <Text
-              type='title'
-              level={4}
-              color='character-primary'
-              weight='bold'
-              extraClass='m-0 mt-2'
-            >
-              Integrations
-            </Text>
-            <Text
-              type='title'
-              level={7}
-              color='character-secondary'
-              extraClass='w-3/4'
-            >
-              Unlock productivity with our robust ecosystem of seamless software
-              integrations.Unlock productivity with our robust ecosystem of
-              seamless software integrations.
-            </Text>
-          </div>
-          <Divider style={{ marginBottom: 0 }} />
+          <CommonSettingsHeader
+            title='Integrations'
+            description='Seamlessly connect Factors with your existing tools to enhance productivity and enable powerful workflows.'
+          />
+
           <div className={styles.integrationHeader}>
             <div className=' flex items-center justify-between w-full'>
               <div>

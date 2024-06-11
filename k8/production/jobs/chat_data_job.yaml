@@ -28,10 +28,16 @@ spec:
             - $(ENV)
             - --chat_bucket
             - factors-staging-misc
+            - --mode
+            - ""
+            - --project_id
+            - '0'
             - --oauth_secret
             - $(GOOGLE_OAUTH_SECRET)
             - --developer_token
             - $(GOOGLE_ADWORDS_DEVELOPER_TOKEN)
+            - --data_service_host
+            - $(DATA_SERVICE_MEMSQL_HOST_URL)
             envFrom:
               - configMapRef:
                   name: config-env

@@ -1,11 +1,13 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useContext } from 'react';
 import MomentTz from 'Components/MomentTz';
 import DataTable from '../../../../components/DataTable';
 import {
   getTableData,
   getColumns,
   getDateBasedColumns,
-  getDateBasedTableData
+  getDateBasedTableData,
+  formatData,
+  getDataInLineChartFormat
 } from './utils';
 import {
   CHART_TYPE_SPARKLINES,
@@ -17,6 +19,12 @@ import {
   getNewSorterState
 } from '../../../../utils/dataFormatter';
 import { getEventDisplayName } from '../eventsAnalytics.helpers';
+import {
+  fetchDataCSVDownload,
+  getEventsCSVData,
+  getQuery
+} from 'Views/CoreQuery/utils';
+import { CoreQueryContext } from 'Context/CoreQueryContext';
 
 function NoBreakdownTable({
   data,
@@ -34,11 +42,15 @@ function NoBreakdownTable({
   setDateSorter,
   responseData,
   section,
-  comparisonApplied = false
+  comparisonApplied = false,
+  resultState
 }) {
   const [searchText, setSearchText] = useState('');
   const { eventNames } = useSelector((state) => state.coreQuery);
-
+  const coreQueryContext = useContext(CoreQueryContext);
+  const { show_criteria: result_criteria, performance_criteria: user_type } =
+    useSelector((state) => state.analyticsQuery);
+  const { active_project } = useSelector((state) => state.global);
   const handleSorting = useCallback(
     (prop) => {
       setSorter((currentSorter) => {
@@ -120,43 +132,89 @@ function NoBreakdownTable({
     };
   }
 
-  const getCSVData = useCallback(() => {
-    return {
-      fileName: `${reportTitle}.csv`,
-      data: tableData.map(({ index, date, event, ...rest }) => {
-        if (chartType === CHART_TYPE_SPARKLINES) {
-          let format = 'MMM D, YYYY';
-          if (durationObj.frequency === 'hour') {
-            format = 'h A, MMM D';
-          }
-          const eventsData = {};
-          for (const key in rest) {
-            const mapper = arrayMapper.find((elem) => elem.mapper === key);
-            if (mapper) {
-              eventsData[
-                `${getEventDisplayName({
-                  event: mapper.eventName,
-                  eventNames
-                })} - ${mapper.index}`
-              ] = rest[key];
+  const tableDataSelector = (data) =>
+    chartType === CHART_TYPE_SPARKLINES
+      ? getTableData({ data, currentSorter: sorter })
+      : getDateBasedTableData(
+          data,
+          dateSorter,
+          searchText,
+          arrayMapper,
+          durationObj.frequency,
+          responseData.metrics,
+          comparisonApplied
+        );
+  const fetchData = async () => {
+    const results = await fetchDataCSVDownload(coreQueryContext, {
+      projectID: active_project?.id,
+      step2Properties: {
+        result_criteria,
+        user_type,
+        shouldStack:
+          chartType === CHART_TYPE_SPARKLINES ||
+          section === DASHBOARD_WIDGET_SECTION,
+        durationObj,
+        resultState
+      },
+      formatData,
+      formatDataBasedOnChart: (a) => ({ data: a }),
+      tableDataSelector,
+      getCSVDataCallback,
+      EventBreakDownType: 'nob',
+      formatDataParams: { arrayMapper, eventNames },
+      formatDataBasedOnChartParams: { sorter }
+    });
+    return results;
+  };
+
+  const getCSVDataCallback = (d) =>
+    d.map(({ index, date, event, ...rest }) => {
+      if (chartType === CHART_TYPE_SPARKLINES) {
+        let format = 'MMM D, YYYY';
+        if (durationObj.frequency === 'hour') {
+          format = 'h A, MMM D';
+        }
+        const eventsData = {};
+        for (const key in rest) {
+          const mapper = arrayMapper.find((elem) => elem.mapper === key);
+          if (mapper) {
+            const displayName = getEventDisplayName({
+              event: mapper.eventName,
+              eventNames
+            });
+
+            eventsData[`${displayName} - ${mapper.index}`] = rest[key];
+            if (`${key} - compareValue` in rest) {
+              eventsData[`${displayName} - ${mapper.index} compareValue`] =
+                rest[`${key} - compareValue`];
+            }
+            if (`${key} - change` in rest) {
+              eventsData[`${displayName} - ${mapper.index} change`] =
+                rest[`${key} - change`];
             }
           }
-          return {
-            date:
-              addQforQuarter(durationObj.frequency) +
-              MomentTz(date).format(format),
-            ...eventsData
-          };
-        } else {
-          return {
-            Event: getEventDisplayName({ eventNames, event }),
-            ...rest
-          };
         }
-      })
+        return {
+          date:
+            addQforQuarter(durationObj.frequency) +
+            MomentTz(date).format(format),
+          ...eventsData
+        };
+      } else {
+        return {
+          Event: getEventDisplayName({ eventNames, event }),
+          ...rest
+        };
+      }
+    });
+  const getCSVData = async () => {
+    let csvData = [];
+    csvData = await fetchData();
+    return {
+      fileName: reportTitle,
+      data: csvData
     };
-  }, [tableData, chartType, arrayMapper, eventNames, durationObj, reportTitle]);
-
+  };
   return (
     <DataTable
       isWidgetModal={isWidgetModal}

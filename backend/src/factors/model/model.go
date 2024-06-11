@@ -820,6 +820,11 @@ type Model interface {
 	DeleteTaskEndRecord(taskId uint64, projectId int64, delta uint64) (int, string)
 	GetAllProcessedIntervalsFromStartDate(taskID uint64, projectId int64, startDate *time.Time) ([]uint64, int, string)
 
+	DeleteEmbeddingsByProject(int64) (int, string)
+	AddAllEmbeddings(int64, []string, []string, [][]float32) (int, string)
+	GetMatchingEmbeddings(int64, []float32) (int, string, model.PromptEmbeddingsPayload)
+	GetMissingPromptsByProjectID(int64, []string) (int, string, []string)
+
 	// project model metadata
 	CreateProjectModelMetadata(pmm *model.ProjectModelMetadata) (int, string)
 	GetProjectModelMetadata(projectId int64) ([]model.ProjectModelMetadata, int, string)
@@ -989,6 +994,10 @@ type Model interface {
 	UpdateDefaultTablePropertiesConfig(projectID int64, profileType string, updatedConfig []string) (int, error)
 	UpdateSegmentTablePropertiesConfig(projectID int64, segmentID string, updatedConfig []string) (int, error)
 	GetDomainIDFromDomainName(projectID int64, domainName string, domainGroupID int) (string, error)
+	UpdateProfilesConfigForFeatureScoring(projectID int64, isScoringEnabled bool) error
+	UpdateDefaultTimelinesConfigForFeatureScoring(projectID int64, timelinesConfig *model.TimelinesConfig, isScoringEnabled bool) error
+	UpdateAllSegmentsConfigForFeatureScoring(projectID int64, isScoringEnabled bool) error
+	UpdateSegmentConfigForFeatureScoring(projectID int64, segment *model.Segment, isScoringEnabled bool) error
 
 	// Timeline consuming segment_marker
 	GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload, downloadLimitGiven bool) ([]model.Profile, int, string)
@@ -1011,6 +1020,16 @@ type Model interface {
 	GetSegmentByGivenIds(projectId int64, segmentIds []string) (map[string][]model.Segment, int)
 	UpdateMarkerRunSegment(projectID int64, ids []string, updateTime time.Time) int
 	ModifySegment(projectID int64, segment model.Segment) (int, error)
+
+	// Segment Folder Item ( Segment Itself )
+	MoveSegmentFolderItem(projectID int64, segmentID string, folderID int64, folder_type string) int
+	MoveSegmentToNewFolder(projectID int64, segmentID string, folderName string, folder_type string) int
+
+	// segment folders
+	GetAllSegmentFolders(projectID int64, folder_type string) ([]model.SegmentFolder, int)
+	CreateSegmentFolder(projectID int64, name string, folder_type string) int
+	UpdateSegmentFolderByID(projectID int64, id int64, name string, folder_type string) int
+	DeleteSegmentFolderByID(projectID int64, id int64, folder_type string) int
 
 	// segment analytics
 	GetWidgetGroupAndWidgetsForConfig(projectID int64) ([]model.WidgetGroup, string, int)
@@ -1182,4 +1201,13 @@ type Model interface {
 
 	//Weekly Mailmodo Emails
 	GetWeeklyMailmodoEmailsMetrics(projectId, startTimeStamp, endTimeStamp int64) (model.WeeklyMailmodoEmailMetrics, error)
+	// linkedin frequency capping
+	GetLinkedinCappingConfig(projectID int64) ([]model.LinkedinCappingConfig, int)
+	CreateLinkedinCappingRule(projectID int64, linkedinCappingRule *model.LinkedinCappingRule) int
+	GetAllLinkedinCappingRules(projectID int64) ([]model.LinkedinCappingRule, int)
+	GetLinkedinCappingRule(projectID int64, ruleID string) (model.LinkedinCappingRule, int)
+	UpdateLinkedinCappingRule(projectID int64, ruleID string) int
+	DeleteLinkedinCappingRule(projectID int64, ruleID string) int
+	GetLinkedinCappingExclusionsForRule(projectID int64, ruleID string) ([]model.LinkedinExclusion, int)
+	GetAllLinkedinCappingExclusionsForTimerange(projectID int64, startTimestamp int64, endTimestamp int64) ([]model.LinkedinExclusion, int)
 }

@@ -6,12 +6,7 @@ import AccountsSidebar from './AccountsSidebar';
 import ProfilesSidebar from './ProfilesSidebar';
 import SettingsSidebar from './SettingsSidebar';
 import AlertsSidebar from './AlertsSidebar';
-import {
-  checkMatchPath,
-  isAlertsUrl,
-  isConfigurationUrl,
-  isSettingsUrl
-} from './appSidebar.helpers';
+import { checkMatchPath, isSettingsUrl } from './appSidebar.helpers';
 
 function SidebarContent() {
   const location = useLocation();
@@ -33,7 +28,7 @@ function SidebarContent() {
   if (pathname === PathUrls.ProfilePeople) {
     return <ProfilesSidebar />;
   }
-  if (isSettingsUrl(pathname) || isConfigurationUrl(pathname)) {
+  if (isSettingsUrl(pathname)) {
     return <SettingsSidebar />;
   }
   if (

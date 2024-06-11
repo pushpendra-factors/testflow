@@ -1,14 +1,11 @@
-import { SVG } from 'Components/factorsComponents';
-import { Breadcrumb, Tabs, notification } from 'antd';
-import React, { useEffect, useState } from 'react';
-import { useHistory } from 'react-router-dom';
-import { PathUrls } from 'Routes/pathUrls';
-import useQuery from 'hooks/useQuery';
+import { Tabs, notification } from 'antd';
+import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
-import { startCase } from 'lodash';
 import { upgradePlan } from 'Reducers/plansConfig/services';
 import { ADDITIONAL_ACCOUNTS_ADDON_ID } from 'Constants/plans.constants';
 import logger from 'Utils/logger';
+import CommonSettingsHeader from 'Components/GenericComponents/CommonSettingsHeader';
+import useTabs from 'hooks/useTabs';
 import InvoiceTab from './InvoiceTab';
 import UpgradeTab from './UpgradeTab';
 import { PRICING_PAGE_TABS, showV2PricingVersion } from './utils';
@@ -16,17 +13,9 @@ import BillingTab from './BillingTab';
 import styles from './index.module.scss';
 
 function Pricing() {
-  const [activeKey, setActiveKey] = useState(PRICING_PAGE_TABS.BILLING);
   const [loading, setIsLoading] = useState<boolean>(false);
-  const history = useHistory();
-  const routerQuery = useQuery();
+  const { activeKey, handleTabChange } = useTabs(PRICING_PAGE_TABS.BILLING);
   const { active_project } = useSelector((state) => state.global);
-  const paramActiveTab = routerQuery.get('activeTab');
-
-  const handleTabChange = (activeKey: string) => {
-    setActiveKey(activeKey);
-    history.replace(`${PathUrls.SettingsPricing}?activeTab=${activeKey}`);
-  };
 
   const handleBuyAddonClick = async () => {
     try {
@@ -58,34 +47,18 @@ function Pricing() {
     }
   };
 
-  useEffect(() => {
-    if (!paramActiveTab) {
-      history.replace(`${PathUrls.SettingsPricing}?activeTab=${activeKey}`);
-    }
-    if (paramActiveTab && activeKey !== paramActiveTab) {
-      setActiveKey(paramActiveTab);
-    }
-  }, [paramActiveTab, activeKey]);
-
   return (
     <div>
-      <div className='flex gap-3 items-center'>
-        <div className='cursor-pointer' onClick={() => history.goBack()}>
-          <SVG name='ArrowLeft' size='16' />
-        </div>
-        <div>
-          <Breadcrumb>
-            <Breadcrumb.Item>Settings</Breadcrumb.Item>
-            <Breadcrumb.Item>Pricing</Breadcrumb.Item>
-            <Breadcrumb.Item>{startCase(activeKey)}</Breadcrumb.Item>
-          </Breadcrumb>
-        </div>
-      </div>
-      <div className={`mt-6 ${styles.tab_container}`}>
+      <CommonSettingsHeader
+        hasNoBottomPadding
+        title='Plans & Billings'
+        description='Manage your current subscription, upgrade your plan, purchase add-ons, and keep track of billing details in one place.'
+      />
+      <div className={` ${styles.tab_container}`}>
         <Tabs
           activeKey={activeKey}
           onChange={handleTabChange}
-          style={{overflow: 'none'}}
+          style={{ overflow: 'none' }}
         >
           <Tabs.TabPane tab='Billing' key={PRICING_PAGE_TABS.BILLING}>
             <BillingTab

@@ -1265,6 +1265,7 @@ CREATE TABLE IF NOT EXISTS segments(
     type text,
     updated_at timestamp(6) DEFAULT '2024-01-01 00:00:00',
     marker_run_segment timestamp(6) DEFAULT '1971-01-01 00:00:00',
+    folder_id bigint DEFAULT 0, 
     PRIMARY KEY (project_id, id),
     SHARD KEY (project_id, id)
 );
@@ -1559,4 +1560,33 @@ CREATE TABLE IF NOT EXISTS workflows (
     is_deleted BOOLEAN DEFAULT FALSE,
     SHARD KEY (project_id),
     KEY (project_id, id) USING HASH
+);
+
+
+CREATE TABLE IF NOT EXISTS prompt_embeddings (
+    project_id bigint NOT NULL DEFAULT 0,
+    prompt TEXT,
+    query TEXT,
+    embedding VECTOR(768, F32) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (project_id, prompt)
+    );
+
+ALTER TABLE prompt_embeddings ADD VECTOR INDEX idx_hnsw(embedding)
+INDEX_OPTIONS '{
+  "index_type": "HNSW_FLAT",
+  "M": 30,
+  "efConstruction": 40,
+  "ef": 16,
+  "metric_type":"DOT_PRODUCT"
+}';
+CREATE TABLE IF NOT EXISTS segment_folders (
+    id  bigint NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    name text NOT NULL,
+    project_id bigint(20),
+    folder_type text,
+    created_at timestamp not null,
+    updated_at timestamp not null,
+    KEY (project_id) USING CLUSTERED COLUMNSTORE
 );

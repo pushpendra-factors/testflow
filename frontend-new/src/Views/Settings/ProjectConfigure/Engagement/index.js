@@ -199,7 +199,8 @@ function EngagementConfig({
       .catch((err) => {
         console.log(err);
         showErrorMessage({
-          description: `Error ${editMode ? 'updating' : 'adding'} score.`
+          title: `Error ${editMode ? 'updating' : 'adding'} score.`,
+          description: err?.data?.err?.code
         });
       });
     setShowModal(false);
@@ -343,22 +344,10 @@ function EngagementConfig({
   return (
     <div className='fa-container'>
       <Row gutter={[24, 24]} justify='center'>
-        <Col span={22}>
-          <Row>
-            <Col span={18}>
-              <Text
-                type='title'
-                level={4}
-                weight='bold'
-                id='fa-at-text--page-title'
-              >
-                Engagement Scoring
-              </Text>
-            </Col>
-          </Row>
+        <Col span={24}>
           <Row>
             <Col span={12}>
-              <Text type='title' level={7}>
+              <Text type='title' level={7} color='grey'>
                 Define signals of engagement that matter to your organisation
                 and assign them weights to accurately score the engagement level
                 of your accounts.

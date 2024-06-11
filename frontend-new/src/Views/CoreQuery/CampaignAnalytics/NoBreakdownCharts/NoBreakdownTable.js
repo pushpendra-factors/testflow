@@ -2,13 +2,13 @@ import React, { useState, useCallback, useEffect } from 'react';
 import moment from 'moment';
 import {
   CHART_TYPE_SPARKLINES,
-  CHART_TYPE_LINECHART,
+  CHART_TYPE_LINECHART
 } from '../../../../utils/constants';
 import {
   getTableColumns,
   getTableData,
   getDateBaseTableColumns,
-  getDateBasedTableData,
+  getDateBasedTableData
 } from './utils';
 import DataTable from '../../../../components/DataTable';
 import { getNewSorterState } from '../../../../utils/dataFormatter';
@@ -18,7 +18,7 @@ function NoBreakdownTable({
   chartType,
   isWidgetModal,
   frequency,
-  reportTitle = 'CampaignAnalytics',
+  reportTitle = 'CampaignAnalytics'
 }) {
   const [columns, setColumns] = useState([]);
   const [tableData, setTableData] = useState([]);
@@ -30,8 +30,8 @@ function NoBreakdownTable({
       key: chartsData[0].name,
       type: 'numerical',
       subtype: null,
-      order: 'descend',
-    },
+      order: 'descend'
+    }
   ]);
   const [dateSorter, setDateSorter] = useState([]);
 
@@ -41,15 +41,15 @@ function NoBreakdownTable({
         return [
           {
             ...currentSorter[0],
-            order: currentSorter[0].order === 'ascend' ? 'descend' : 'ascend',
-          },
+            order: currentSorter[0].order === 'ascend' ? 'descend' : 'ascend'
+          }
         ];
       }
       return [
         {
           ...prop,
-          order: 'ascend',
-        },
+          order: 'ascend'
+        }
       ];
     });
   }, []);
@@ -60,15 +60,15 @@ function NoBreakdownTable({
         return [
           {
             ...currentSorter[0],
-            order: currentSorter[0].order === 'ascend' ? 'descend' : 'ascend',
-          },
+            order: currentSorter[0].order === 'ascend' ? 'descend' : 'ascend'
+          }
         ];
       }
       return [
         {
           ...prop,
-          order: 'ascend',
-        },
+          order: 'ascend'
+        }
       ];
     });
   }, []);
@@ -102,17 +102,17 @@ function NoBreakdownTable({
     const result =
       chartType === CHART_TYPE_LINECHART ? dateBasedTableData : tableData;
     return {
-      fileName: `${reportTitle}.csv`,
+      fileName: reportTitle,
       data: result.map(({ index, date, ...rest }) => {
         if (chartType === CHART_TYPE_SPARKLINES) {
           let format = 'MMM D, YYYY';
           return {
             date: moment(date).format(format),
-            ...rest,
+            ...rest
           };
         }
         return rest;
-      }),
+      })
     };
   };
 

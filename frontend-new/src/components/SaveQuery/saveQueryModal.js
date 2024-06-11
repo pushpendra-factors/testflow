@@ -1,9 +1,11 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { Input, Checkbox } from 'antd';
 import { noop } from 'lodash';
 import { Text } from 'factorsComponents';
 import { EMPTY_STRING, isStringLengthValid, EMPTY_ARRAY } from 'Utils/global';
+import { useLocation } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import styles from './index.module.scss';
 import AppModal from '../AppModal';
 import {
@@ -12,7 +14,6 @@ import {
 } from './saveQuery.constants';
 import AddToDashboardForm from './CommonAddToDashboardForm';
 import { QUERY_TYPE_PROFILE } from '../../utils/constants';
-import { useSelector } from 'react-redux';
 
 function SaveQueryModal({
   visible,
@@ -34,11 +35,24 @@ function SaveQueryModal({
     DEFAULT_DASHBOARD_PRESENTATION
   );
 
+  const location = useLocation();
   useEffect(() => {
     if (activeDashboard && activeDashboard?.id) {
       setShowAddToDashboard(true);
     }
   }, [activeDashboard]);
+  const shouldShowAddToDashboardByDefault = useMemo(() => {
+    if (location.state?.showDefaultDashboard === true) {
+      if (activeDashboard?.id) {
+        setShowAddToDashboard(activeDashboard?.id);
+        return true;
+      }
+      return false;
+    }
+    setShowAddToDashboard(false);
+    setSelectedDashboards([]);
+    return false;
+  }, [visible, activeAction]);
   useEffect(() => {
     if (visible && queryTitle) {
       if (activeAction === ACTION_TYPES.EDIT) {
@@ -136,7 +150,7 @@ function SaveQueryModal({
             <div>
               <Checkbox
                 onChange={handleAddToDashboardChange}
-                defaultChecked={activeDashboard?.id}
+                defaultChecked={shouldShowAddToDashboardByDefault}
               >
                 Add to Dashboard
               </Checkbox>
@@ -147,6 +161,9 @@ function SaveQueryModal({
                 setSelectedDashboards={setSelectedDashboards}
                 dashboardPresentation={dashboardPresentation}
                 setDashboardPresentation={setDashboardPresentation}
+                shouldShowAddToDashboardByDefault={
+                  shouldShowAddToDashboardByDefault
+                }
               />
             )}
           </>

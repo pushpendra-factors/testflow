@@ -5,6 +5,7 @@ import { connect } from 'react-redux';
 import { getTimeZoneNameFromCity } from 'Utils/constants';
 import { Currency } from 'Utils/currency';
 import _ from 'lodash';
+import CommonSettingsHeader from 'Components/GenericComponents/CommonSettingsHeader';
 
 function ViewBasicSettings({
   activeProject,
@@ -31,103 +32,85 @@ function ViewBasicSettings({
   }, [activeProject, agents, currentAgent, currentProjectSettings]);
 
   return (
-    <>
-      <div className={'mb-10 pl-4'}>
-        <Row>
-          <Col span={12}>
-            <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'} id={'fa-at-text--page-title'}>
-              Basic Details
-            </Text>
-          </Col>
-          <Col span={12}>
-            <div className={'flex justify-end'}>
-              {
-                <Tooltip
-                  placement='top'
-                  trigger={'hover'}
-                  title={enableEdit ? 'Only Admin can edit' : null}
-                >
-                  <Button
-                    size={'large'}
-                    disabled={dataLoading || enableEdit}
-                    onClick={() => setEditMode(true)}
-                  >
-                    Edit Details
-                  </Button>
-                </Tooltip>
-              }
-            </div>
-          </Col>
-        </Row>
-        <Row className={'mt-2'}>
-          <Col>
-            {dataLoading ? (
-              <Skeleton.Avatar active={true} size={104} shape={'square'} />
-            ) : activeProject?.profile_picture ? (
-              <img
-                src={activeProject?.profile_picture}
-                alt='avatar'
-                style={{ width: '105px', borderRadius: '4px' }}
-              />
-            ) : (
-              <Avatar
-                size={104}
-                shape={'square'}
-                style={{
-                  color: '#fff',
-                  backgroundColor: '#52BE95',
-                  fontSize: '42px',
-                  textTransform: 'uppercase',
-                  fontWeight: '400',
-                  borderRadius: '4px'
-                }}
-              >{`${activeProject?.name?.charAt(0)}`}</Avatar>
-            )}
-            <Text
-              type={'paragraph'}
-              mini
-              extraClass={'m-0 mt-1'}
-              color={'grey'}
+    <div className='mb-10'>
+      <CommonSettingsHeader
+        title='General'
+        description='Personalize your project by updating its name, timezone, logo, and other key details.'
+        actionsNode={
+          <div className='flex justify-end'>
+            <Tooltip
+              placement='top'
+              trigger='hover'
+              title={enableEdit ? 'Only Admin can edit' : null}
             >
-              A logo helps personalise your Project
+              <Button
+                size='large'
+                disabled={dataLoading || enableEdit}
+                onClick={() => setEditMode(true)}
+              >
+                Edit Details
+              </Button>
+            </Tooltip>
+          </div>
+        }
+      />
+
+      <Row className='mt-2'>
+        <Col>
+          {dataLoading ? (
+            <Skeleton.Avatar active size={104} shape='square' />
+          ) : activeProject?.profile_picture ? (
+            <img
+              src={activeProject?.profile_picture}
+              alt='avatar'
+              style={{ width: '105px', borderRadius: '4px' }}
+            />
+          ) : (
+            <Avatar
+              size={104}
+              shape='square'
+              style={{
+                color: '#fff',
+                backgroundColor: '#52BE95',
+                fontSize: '42px',
+                textTransform: 'uppercase',
+                fontWeight: '400',
+                borderRadius: '4px'
+              }}
+            >{`${activeProject?.name?.charAt(0)}`}</Avatar>
+          )}
+          <Text type='paragraph' mini extraClass='m-0 mt-1' color='grey'>
+            A logo helps personalise your Project
+          </Text>
+        </Col>
+      </Row>
+      <Row className='mt-6'>
+        <Col span={12}>
+          <Text type='title' level={7} extraClass='m-0'>
+            Project Name
+          </Text>
+          {dataLoading ? (
+            <Skeleton.Input style={{ width: 200 }} active size='small' />
+          ) : (
+            <Text type='title' level={6} extraClass='m-0' weight='bold'>
+              {activeProject.name ? activeProject.name : '---'}
             </Text>
-          </Col>
-        </Row>
-        <Row className={'mt-6'}>
-          <Col span={12}>
-            <Text type={'title'} level={7} extraClass={'m-0'}>
-              Project Name
+          )}
+        </Col>
+        <Col span={12}>
+          <Text type='title' level={7} extraClass='m-0'>
+            Project URL
+          </Text>
+          {dataLoading ? (
+            <Skeleton.Input style={{ width: 200 }} active size='small' />
+          ) : (
+            <Text type='title' level={6} extraClass='m-0' weight='bold'>
+              {activeProject.project_uri ? activeProject.project_uri : '---'}
             </Text>
-            {dataLoading ? (
-              <Skeleton.Input
-                style={{ width: 200 }}
-                active={true}
-                size={'small'}
-              />
-            ) : (
-              <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>
-                {activeProject.name ? activeProject.name : '---'}
-              </Text>
-            )}
-          </Col>
-          <Col span={12}>
-            <Text type={'title'} level={7} extraClass={'m-0'}>
-              Project URL
-            </Text>
-            {dataLoading ? (
-              <Skeleton.Input
-                style={{ width: 200 }}
-                active={true}
-                size={'small'}
-              />
-            ) : (
-              <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>
-                {activeProject.project_uri ? activeProject.project_uri : '---'}
-              </Text>
-            )}
-          </Col>
-        </Row>
-        {/* <Row className={'mt-6'}>
+          )}
+        </Col>
+      </Row>
+      {/* <Row className={'mt-6'}>
           <Col span={12}>
             <Text type={'title'} level={7} extraClass={'m-0'}>
               Date Format
@@ -161,48 +144,39 @@ function ViewBasicSettings({
             )}
           </Col>
         </Row> */}
-        <Row className={'mt-6 mb-10'}>
-          <Col span={12}>
-            <Text type={'title'} level={7} extraClass={'m-0'}>
-              Time Zone
+      <Row className='mt-6 mb-10'>
+        <Col span={12}>
+          <Text type='title' level={7} extraClass='m-0'>
+            Time Zone
+          </Text>
+          {dataLoading ? (
+            <Skeleton.Input style={{ width: 200 }} active size='small' />
+          ) : (
+            <Text type='title' level={6} extraClass='m-0' weight='bold'>
+              {!_.isEmpty(activeProject?.time_zone)
+                ? `${getTimeZoneNameFromCity(activeProject?.time_zone)?.text}`
+                : '---'}
             </Text>
-            {dataLoading ? (
-              <Skeleton.Input
-                style={{ width: 200 }}
-                active={true}
-                size={'small'}
-              />
-            ) : (
-              <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>
-                {!_.isEmpty(activeProject?.time_zone)
-                  ? `${ getTimeZoneNameFromCity(activeProject?.time_zone)?.text }`
-                  : '---'}
-              </Text>
-            )}
-          </Col>
-          <Col span={12}>
-            <Text type={'title'} level={7} extraClass={'m-0'}>
-              Currency
+          )}
+        </Col>
+        <Col span={12}>
+          <Text type='title' level={7} extraClass='m-0'>
+            Currency
+          </Text>
+          {dataLoading ? (
+            <Skeleton.Input style={{ width: 200 }} active size='small' />
+          ) : (
+            <Text type='title' level={6} extraClass='m-0' weight='bold'>
+              {currentProjectSettings?.currency
+                ? `${Currency[currentProjectSettings?.currency]} (${
+                    currentProjectSettings?.currency
+                  })`
+                : '---'}
             </Text>
-            {dataLoading ? (
-              <Skeleton.Input
-                style={{ width: 200 }}
-                active={true}
-                size={'small'}
-              />
-            ) : (
-              <Text type={'title'} level={6} extraClass={'m-0'} weight={'bold'}>
-                {currentProjectSettings?.currency
-                  ? `${Currency[currentProjectSettings?.currency]} (${
-                      currentProjectSettings?.currency
-                    })`
-                  : '---'}
-              </Text>
-            )}
-          </Col>
-        </Row>
-      </div>
-    </>
+          )}
+        </Col>
+      </Row>
+    </div>
   );
 }
 

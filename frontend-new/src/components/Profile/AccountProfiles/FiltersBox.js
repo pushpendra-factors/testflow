@@ -7,7 +7,6 @@ import map from 'lodash/map';
 import { SVG, Text } from 'Components/factorsComponents';
 import FilterWrapper from 'Components/GlobalFilter/FilterWrapper';
 import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
-import { selectGroupsList } from 'Reducers/groups/selectors';
 import { generateRandomKey } from 'Utils/global';
 import {
   eventMenuList,
@@ -21,26 +20,17 @@ import EventsBlock from '../MyComponents/EventsBlock';
 import styles from './index.module.scss';
 
 function FiltersBox({
-  filtersList,
-  secondaryFiltersList,
-  setSecondaryFiltersList,
-  profileType = 'account',
-  source,
-  appliedFilters,
-  setFiltersList,
-  applyFilters,
-  onCancel,
-  setSaveSegmentModal,
-  listEvents,
-  areFiltersDirty,
-  setListEvents,
-  eventProp,
-  setEventProp,
-  onClearFilters,
-  disableDiscardButton,
+  profileType,
   isActiveSegment,
-  eventTimeline,
-  setEventTimeline
+  selectedFilters,
+  setSelectedFilters,
+  appliedFilters,
+  applyFilters,
+  setSaveSegmentModal,
+  areFiltersDirty,
+  onCancel,
+  onClearFilters,
+  disableDiscardButton
 }) {
   const { newSegmentMode: accountsNewSegmentMode } = useSelector(
     (state) => state.accountProfilesView
@@ -49,12 +39,11 @@ function FiltersBox({
     (state) => state.userProfilesView
   );
 
-  const newSegmentMode = profileType === 'account' ? accountsNewSegmentMode : profilesNewSegmentMode;
-  const groupsList = useSelector((state) => selectGroupsList(state));
+  const newSegmentMode =
+    profileType === 'account' ? accountsNewSegmentMode : profilesNewSegmentMode;
   const activeProject = useSelector((state) => state.global.active_project);
   const [filterDD, setFilterDD] = useState(false);
   const [secondaryFilterDD, setSecondaryFilterDD] = useState(false);
-  const [isEventsVisible, setEventsVisible] = useState(false);
   const userProperties = useSelector(
     (state) => state.coreQuery.userPropertiesV2
   );
@@ -64,19 +53,19 @@ function FiltersBox({
 
   const availableGroups = useSelector((state) => state.coreQuery.groups);
 
-  const handleEventChange = useCallback(
-    (eventItem) => {
-      setEventProp(eventItem.key);
-    },
-    [setEventProp]
-  );
+  const handleEventChange = useCallback((eventItem) => {
+    setSelectedFilters((curr) => ({
+      ...curr,
+      eventProp: eventItem.key
+    }));
+  }, []);
 
-  const handleEventTimelineChange = useCallback(
-    (item) => {
-      setEventTimeline(item.key);
-    },
-    [setEventTimeline]
-  );
+  const handleEventTimelineChange = useCallback((item) => {
+    setSelectedFilters((curr) => ({
+      ...curr,
+      eventTimeline: item.key
+    }));
+  }, []);
 
   const eventMenuItems = (
     <Menu className={styles['dropdown-menu']}>
@@ -127,64 +116,70 @@ function FiltersBox({
         userProperties,
         groupProperties,
         availableGroups: availableGroups?.all_groups,
-        profileType: 'user',
+        profileType: 'user'
       }),
     [userProperties, groupProperties, availableGroups]
   );
 
-  const handleInsertFilter = useCallback(
-    (filter, index) => {
-      if (filtersList.length === index) {
-        setFiltersList([...filtersList, filter]);
+  const handleInsertFilter = useCallback((filter, index) => {
+    setSelectedFilters((curr) => {
+      const newFilters = [...curr.filters];
+      if (newFilters.length === index) {
+        newFilters.push(filter);
       } else {
-        setFiltersList([
-          ...filtersList.slice(0, index),
-          filter,
-          ...filtersList.slice(index + 1)
-        ]);
+        newFilters[index] = filter;
       }
-    },
-    [filtersList, setFiltersList]
-  );
+      return {
+        ...curr,
+        filters: newFilters
+      };
+    });
+  }, []);
 
-  const handleDeleteFilter = useCallback(
-    (filterIndex) => {
-      if (filterIndex === filtersList.length) {
-        setFilterDD(false);
-        return;
-      }
-      setFiltersList(filtersList.filter((_, index) => index !== filterIndex));
-    },
-    [setFiltersList, filtersList]
-  );
-
-  const handleInsertSecondaryFilter = useCallback(
-    (filter, index) => {
-      if (secondaryFiltersList.length === index) {
-        setSecondaryFiltersList([...secondaryFiltersList, filter]);
-      } else {
-        setSecondaryFiltersList([
-          ...secondaryFiltersList.slice(0, index),
-          filter,
-          ...secondaryFiltersList.slice(index + 1)
-        ]);
-      }
-    },
-    [secondaryFiltersList, setSecondaryFiltersList]
-  );
-
-  const handleDeleteSecondaryFilter = useCallback(
-    (filterIndex) => {
-      if (filterIndex === secondaryFiltersList.length) {
-        setSecondaryFilterDD(false);
-        return;
-      }
-      setSecondaryFiltersList(
-        secondaryFiltersList.filter((_, index) => index !== filterIndex)
+  const handleDeleteFilter = useCallback((filterIndex) => {
+    setSelectedFilters((curr) => {
+      const newFilters = curr.filters.filter(
+        (_, index) => index !== filterIndex
       );
-    },
-    [setSecondaryFiltersList, secondaryFiltersList]
-  );
+      if (filterIndex === curr.filters.length) {
+        setFilterDD(false);
+      }
+      return {
+        ...curr,
+        filters: newFilters
+      };
+    });
+  }, []);
+
+  const handleInsertSecondaryFilter = useCallback((filter, index) => {
+    setSelectedFilters((curr) => {
+      const newFilters = [...curr.secondaryFilters];
+      if (newFilters.length === index) {
+        newFilters.push(filter);
+      } else {
+        newFilters[index] = filter;
+      }
+      return {
+        ...curr,
+        secondaryFilters: newFilters
+      };
+    });
+  }, []);
+
+  const handleDeleteSecondaryFilter = useCallback((filterIndex) => {
+    setSelectedFilters((curr) => {
+      const newFilters = curr.secondaryFilters.filter(
+        (_, index) => index !== filterIndex
+      );
+      if (filterIndex === curr.secondaryFilters.length - 1) {
+        setFilterDD(false);
+      }
+      return {
+        ...curr,
+        secondaryFilters: newFilters
+      };
+    });
+  }, []);
 
   const showFilterDropdown = useCallback(() => {
     setFilterDD(true);
@@ -202,57 +197,46 @@ function FiltersBox({
     setSecondaryFilterDD(false);
   }, []);
 
-  const showEventsDropdown = useCallback(() => {
-    setEventsVisible(true);
-  }, []);
-
-  const closeEvent = useCallback(() => {
-    setEventsVisible(false);
-  }, []);
-
   const handleQueryChange = useCallback(
     (newEvent, index, changeType = 'add') => {
-      const updatedQuery = cloneDeep(listEvents);
-      if (updatedQuery[index]) {
-        if (changeType === 'add' || changeType === 'filters_updated') {
-          updatedQuery[index] = newEvent;
-        } else if (changeType === 'delete') {
-          updatedQuery.splice(index, 1);
+      setSelectedFilters((curr) => {
+        const eventsList = cloneDeep(curr.eventsList);
+
+        if (changeType === 'delete') {
+          eventsList.splice(index, 1);
+        } else if (eventsList[index]) {
+          eventsList[index] = newEvent;
+        } else {
+          eventsList.push(newEvent);
         }
-      } else {
-        updatedQuery.push(newEvent);
-      }
-      setListEvents(
-        updatedQuery.map((q) => ({
-          ...q,
-          key: q.key || generateRandomKey()
-        }))
-      );
+
+        return {
+          ...curr,
+          eventsList: eventsList.map((q) => ({
+            ...q,
+            key: q.key || generateRandomKey()
+          }))
+        };
+      });
     },
-    [listEvents, setListEvents]
+    []
   );
 
   const { applyButtonDisabled, saveButtonDisabled } = useMemo(
     () =>
       checkFiltersEquality({
         appliedFilters,
-        filtersList,
+        selectedFilters,
         newSegmentMode,
-        eventsList: listEvents,
-        eventProp,
         isActiveSegment,
-        areFiltersDirty,
-        secondaryFiltersList
+        areFiltersDirty
       }),
     [
       appliedFilters,
-      filtersList,
+      selectedFilters,
       newSegmentMode,
-      listEvents,
-      eventProp,
       isActiveSegment,
-      areFiltersDirty,
-      secondaryFiltersList
+      areFiltersDirty
     ]
   );
 
@@ -267,7 +251,7 @@ function FiltersBox({
       className={cx(styles['filters-box-container'], 'flex flex-col gap-y-5')}
     >
       <div className='pt-4 gap-x-5 flex flex-col gap-y-2'>
-        <div className={cx('px-6 pb-1', styles['section-title-container'])}>
+        <div className='px-6 pb-1 border-b border-neutral-100'>
           <Text
             type='title'
             color='character-secondary'
@@ -280,8 +264,8 @@ function FiltersBox({
           </Text>
         </div>
         <div className='px-6'>
-          <ControlledComponent controller={filtersList.length > 0}>
-            {filtersList.map((filter, index) => (
+          <ControlledComponent controller={selectedFilters.filters.length > 0}>
+            {selectedFilters.filters.map((filter, index) => (
               <FilterWrapper
                 key={index}
                 viewMode={false}
@@ -302,7 +286,7 @@ function FiltersBox({
             <FilterWrapper
               viewMode={false}
               projectID={activeProject?.id}
-              index={filtersList.length}
+              index={selectedFilters.filters.length}
               filterProps={mainFilterProps}
               minEntriesPerGroup={3}
               insertFilter={handleInsertFilter}
@@ -333,68 +317,42 @@ function FiltersBox({
         </div>
       </div>
       <div className='flex flex-col gap-y-2'>
-        <div className={cx('px-6 pb-1', styles['section-title-container'])}>
+        <div className='px-6 pb-1 border-b border-neutral-100'>
           <Text
             type='title'
             color='character-secondary'
             extraClass='mb-0'
             weight='medium'
           >
-            Who Performed
+            That matches these events
           </Text>
         </div>
         <div className='px-6 flex flex-col gap-y-2'>
-          {listEvents.map((event, index) => (
+          {selectedFilters.eventsList.map((event, index) => (
             <div key={index}>
               <EventsBlock
                 isEngagementConfig={false}
-                availableGroups={groupsList}
                 index={index + 1}
                 event={event}
-                queries={listEvents}
-                groupAnalysis={source}
+                queries={selectedFilters.eventsList}
+                groupAnalysis={selectedFilters.account?.[1]}
                 eventChange={handleQueryChange}
-                closeEvent={closeEvent}
                 initialDDState={false}
                 showInList
               />
             </div>
           ))}
           <ControlledComponent
-            controller={isEventsVisible === true && listEvents.length < 10}
+            controller={selectedFilters.eventsList.length < 10}
           >
-            <div key={listEvents.length}>
-              <EventsBlock
-                isEngagementConfig={false}
-                availableGroups={groupsList}
-                index={listEvents.length + 1}
-                queries={listEvents}
-                groupAnalysis={source}
-                eventChange={handleQueryChange}
-                closeEvent={closeEvent}
-                showInList
-              />
-            </div>
-          </ControlledComponent>
-          <ControlledComponent controller={listEvents.length < 10}>
-            <Button
-              className={cx(
-                'flex items-center gap-x-2',
-                styles['add-filter-button']
-              )}
-              type='text'
-              onClick={showEventsDropdown}
-            >
-              <SVG name='plus' color='#00000073' />
-              <Text
-                type='title'
-                color='character-title'
-                extraClass='mb-0'
-                weight='medium'
-              >
-                Add event
-              </Text>
-            </Button>
+            <EventsBlock
+              initialDDState={false}
+              index={selectedFilters.eventsList.length + 1}
+              queries={selectedFilters.eventsList}
+              groupAnalysis={selectedFilters.account?.[1]}
+              eventChange={handleQueryChange}
+              showInList
+            />
           </ControlledComponent>
           <ControlledComponent controller={false}>
             <div className='flex gap-x-1 items-center'>
@@ -419,13 +377,15 @@ function FiltersBox({
                     extraClass='mb-0'
                     weight='medium'
                   >
-                    {eventTimelineMenuList[eventTimeline].label}
+                    {eventTimelineMenuList[selectedFilters.eventTimeline].label}
                   </Text>
                 </div>
               </Dropdown>
             </div>
           </ControlledComponent>
-          <ControlledComponent controller={listEvents.length > 1}>
+          <ControlledComponent
+            controller={selectedFilters.eventsList.length > 1}
+          >
             <div className='flex gap-x-1 items-center'>
               <Text
                 type='title'
@@ -434,13 +394,13 @@ function FiltersBox({
                 weight='medium'
               >
                 {profileType === 'account'
-                  ? 'Accounts that performed'
+                  ? 'Accounts that match conditions for'
                   : 'People who performed'}
               </Text>
               <Dropdown overlay={eventMenuItems}>
                 <div className='flex gap-x-1 cursor-pointer items-center'>
                   <Text type='title' color='brand-color-6' extraClass='mb-0'>
-                    {eventMenuList[eventProp].label}
+                    {eventMenuList[selectedFilters.eventProp].label}
                   </Text>
                   <SVG name='caretDown' color='#1890ff' size={20} />
                 </div>
@@ -451,7 +411,7 @@ function FiltersBox({
       </div>
       <ControlledComponent controller={profileType === 'account'}>
         <div className='flex flex-col gap-y-2 gap-x-5'>
-          <div className={cx('px-6 pb-1', styles['section-title-container'])}>
+          <div className='px-6 pb-1 border-b border-neutral-100'>
             <Text
               type='title'
               color='character-secondary'
@@ -462,8 +422,10 @@ function FiltersBox({
             </Text>
           </div>
           <div className='px-6'>
-            <ControlledComponent controller={secondaryFiltersList.length > 0}>
-              {secondaryFiltersList.map((filter, index) => (
+            <ControlledComponent
+              controller={selectedFilters.secondaryFilters.length > 0}
+            >
+              {selectedFilters.secondaryFilters.map((filter, index) => (
                 <FilterWrapper
                   key={index}
                   viewMode={false}
@@ -484,7 +446,7 @@ function FiltersBox({
               <FilterWrapper
                 viewMode={false}
                 projectID={activeProject?.id}
-                index={secondaryFiltersList.length}
+                index={selectedFilters.secondaryFilters.length}
                 filterProps={userFilterProps}
                 minEntriesPerGroup={3}
                 insertFilter={handleInsertSecondaryFilter}
@@ -517,7 +479,7 @@ function FiltersBox({
       </ControlledComponent>
       <div
         className={cx(
-          'py-4 px-6 flex items-center justify-between',
+          'py-2 px-6 flex items-center justify-between',
           styles['buttons-container']
         )}
       >
@@ -529,11 +491,7 @@ function FiltersBox({
           >
             Apply changes
           </Button>
-          <Button
-            disabled={disableDiscardButton}
-            type='secondary'
-            onClick={onCancel}
-          >
+          <Button disabled={disableDiscardButton} onClick={onCancel}>
             Discard changes
           </Button>
         </div>
@@ -541,7 +499,6 @@ function FiltersBox({
           controller={showClearAllButton === true && newSegmentMode === false}
         >
           <Button
-            type='text'
             className='flex items-center gap-x-1'
             onClick={onClearFilters}
           >

@@ -9,6 +9,7 @@ import time
 from requests import Response
 from lib.utils.sync_util import SyncUtil
 
+
 # Note: This class currently holds 2 functionalities - 1. Fetching data 2. Provide data with proper transformation(sometimes).
 # TODO Add Ability to test.
 class FactorsDataService:
@@ -34,7 +35,7 @@ class FactorsDataService:
             return
 
         return response
-    
+
     @classmethod
     def add_gsc_refresh_token(cls, session, payload):
         if session is None or session == "":
@@ -105,9 +106,9 @@ class FactorsDataService:
     def add_all_adwords_documents(cls, project_id, customer_acc_id, docs, doc_type, timestamp):
 
         for i in range(0, len(docs), cls.BATCH_SIZE):
-            batch = docs[i:i+cls.BATCH_SIZE]
+            batch = docs[i:i + cls.BATCH_SIZE]
             response = cls.add_multiple_adwords_document(project_id, customer_acc_id,
-                                     batch, doc_type, timestamp)
+                                                         batch, doc_type, timestamp)
             if not response.ok:
                 return response
 
@@ -132,7 +133,7 @@ class FactorsDataService:
     def add_multiple_adwords_document(cls, project_id, customer_acc_id, docs, doc_type, timestamp):
         url = cls.data_service_path + "/adwords/documents/add_multiple"
         batch_of_payloads = [cls.get_payload_for_adwords(project_id, customer_acc_id,
-                                    doc, doc_type, timestamp) for doc in docs]
+                                                         doc, doc_type, timestamp) for doc in docs]
 
         response, errMsg = SyncUtil.post_request_with_retries(url, batch_of_payloads)
         if response is None or errMsg != '':
@@ -179,9 +180,9 @@ class FactorsDataService:
     def add_all_gsc_documents(cls, project_id, url, doc_type, docs, timestamp):
 
         for i in range(0, len(docs), cls.BATCH_SIZE):
-            batch = docs[i:i+cls.BATCH_SIZE]
+            batch = docs[i:i + cls.BATCH_SIZE]
             response = cls.add_multiple_gsc_document(project_id, url, doc_type,
-                                     batch, timestamp)
+                                                     batch, timestamp)
             if not response.ok:
                 return response
 
@@ -207,7 +208,7 @@ class FactorsDataService:
     def add_multiple_gsc_document(cls, project_id, url_prefix, doc_type, docs, timestamp):
         url = cls.data_service_path + "/google_organic/documents/add_multiple"
         batch_of_payloads = [cls.get_payload_for_gsc(project_id, url_prefix, doc_type,
-                                    doc, timestamp) for doc in docs]
+                                                     doc, timestamp) for doc in docs]
 
         # response = requests.post(url, json=batch_of_payloads)
         response, errMsg = SyncUtil.post_request_with_retries(url, batch_of_payloads)
@@ -227,6 +228,7 @@ class FactorsDataService:
             "timestamp": timestamp,
             "id": doc["id"]
         }
+
     # facebook related processing.
     @classmethod
     def get_facebook_settings(cls):
@@ -261,5 +263,25 @@ class FactorsDataService:
         for info in all_info:
             sync_info_with_type[info['type_alias']] = info
         return sync_info_with_type
+
+    @classmethod
+    def get_matching_chat_embeddings(cls, project_id, query_embedding):
+        url = cls.data_service_path + "/chat/app/matching"
+        payload = {
+            "query_embedding": query_embedding.flatten().tolist(),
+            "project_id": project_id
+        }
+        response = requests.get(url, json=payload)
+
+        if not response.ok:
+            log.error("Failed to get chat embeddings")
+            return None
+
+        try:
+            embeddings = response.json()  # Assuming the response is JSON
+            return embeddings
+        except ValueError:
+            log.error("Failed to decode chat embeddings response")
+            return None
 
     

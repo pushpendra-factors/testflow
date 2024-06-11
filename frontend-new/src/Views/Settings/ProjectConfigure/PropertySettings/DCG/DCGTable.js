@@ -1,17 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { connect } from 'react-redux';
 import { Text, SVG } from 'factorsComponents';
-import { Modal, Col, Button, Tag, Table, Dropdown, Menu, message } from 'antd';
+import { Modal, Button, Table, Dropdown, Menu, message } from 'antd';
 import { udpateProjectDetails } from 'Reducers/global';
 import { MoreOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
-import defaultRules from './defaultRules';
 import _, { isEqual } from 'lodash';
 import { DISPLAY_PROP } from 'Utils/constants';
 import { reverseOperatorMap } from 'Utils/operatorMapping';
-import styles from './index.module.scss';
 import { ReactSortable } from 'react-sortablejs';
 import cx from 'classnames';
 import RouterPrompt from 'Components/GenericComponents/RouterPrompt';
+import styles from './index.module.scss';
 
 const { confirm } = Modal;
 
@@ -28,6 +27,7 @@ const DCGTable = ({
   const [initialDCGData, setInitialDCGData] = useState([]);
   const [showBottomButtons, setShowBottomButtons] = useState(false);
   const [tableLoading, setTableLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setTableLoading(true);
@@ -49,7 +49,7 @@ const DCGTable = ({
     }
 
     setTableLoading(false);
-  }, [activeProject]);
+  }, [activeProject, activeProject?.channel_group_rules]);
 
   const getBaseQueryFromResponse = (el) => {
     const filters = [];
@@ -90,7 +90,7 @@ const DCGTable = ({
   };
   const mapQueryByRefs = (queryMap) => {
     // TmpType <Key, Array<EachQueryFilter>>
-    let tmp = {};
+    const tmp = {};
 
     queryMap.forEach((eachQueryFilter) => {
       if (eachQueryFilter.ref in tmp) {
@@ -104,8 +104,8 @@ const DCGTable = ({
     return tmp;
   };
   const matchEventName = (item) => {
-    let findItem = eventPropNames?.[item] || userPropNames?.[item];
-    return findItem ? findItem : item;
+    const findItem = eventPropNames?.[item] || userPropNames?.[item];
+    return findItem || item;
   };
 
   const renderRow = (data) => {
@@ -119,67 +119,65 @@ const DCGTable = ({
       <div className='w-full' style={{ maxWidth: '550px' }}>
         {Object.keys(queryMap).map((eachKey, index) => (
           <>
-            {queryMap[eachKey].map((eachFilter, eachIndex) => {
-              return (
-                <div className='inline-flex items-center mb-2' key={eachIndex}>
-                  {eachFilter.props.length > 0 ? (
-                    <Button type='default'>
-                      <Text
-                        type='title'
-                        weight='thin'
-                        color='grey'
-                        level={8}
-                        truncate
-                      >
-                        {`${matchEventName(eachFilter.props[1])} ${
-                          eachFilter.operator
-                        } ${_.join(
-                          eachFilter.values.map((vl) =>
-                            DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl
-                          ),
-                          ', '
-                        )}`}
-                      </Text>
-                    </Button>
-                  ) : (
-                    <div className={styles.internal}>
-                      <Text type='title' weight='thin' color='grey' level={8}>
-                        {`${eachFilter.operator} ${_.join(
-                          eachFilter.values.map((vl) =>
-                            DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl
-                          ),
-                          ', '
-                        )}`}
-                      </Text>
-                    </div>
+            {queryMap[eachKey].map((eachFilter, eachIndex) => (
+              <div className='inline-flex items-center mb-2' key={eachIndex}>
+                {eachFilter.props.length > 0 ? (
+                  <Button type='default'>
+                    <Text
+                      type='title'
+                      weight='thin'
+                      color='grey'
+                      level={8}
+                      truncate
+                    >
+                      {`${matchEventName(eachFilter.props[1])} ${
+                        eachFilter.operator
+                      } ${_.join(
+                        eachFilter.values.map((vl) =>
+                          DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl
+                        ),
+                        ', '
+                      )}`}
+                    </Text>
+                  </Button>
+                ) : (
+                  <div className={styles.internal}>
+                    <Text type='title' weight='thin' color='grey' level={8}>
+                      {`${eachFilter.operator} ${_.join(
+                        eachFilter.values.map((vl) =>
+                          DISPLAY_PROP[vl] ? DISPLAY_PROP[vl] : vl
+                        ),
+                        ', '
+                      )}`}
+                    </Text>
+                  </div>
+                )}
+                {queryMap[eachKey].length > 1 &&
+                  eachIndex < queryMap[eachKey].length - 1 && (
+                    <Text
+                      type='title'
+                      weight='thin'
+                      color='grey'
+                      level={8}
+                      extraClass='m-0 mr-1 ml-1'
+                    >
+                      OR
+                    </Text>
+                  )}{' '}
+                {index < Object.keys(queryMap).length - 1 &&
+                  eachIndex == queryMap[eachKey].length - 1 && (
+                    <Text
+                      type='title'
+                      weight='thin'
+                      color='grey'
+                      level={8}
+                      extraClass='m-0 mr-1 ml-1'
+                    >
+                      AND
+                    </Text>
                   )}
-                  {queryMap[eachKey].length > 1 &&
-                    eachIndex < queryMap[eachKey].length - 1 && (
-                      <Text
-                        type='title'
-                        weight='thin'
-                        color='grey'
-                        level={8}
-                        extraClass='m-0 mr-1 ml-1'
-                      >
-                        OR
-                      </Text>
-                    )}{' '}
-                  {index < Object.keys(queryMap).length - 1 &&
-                    eachIndex == queryMap[eachKey].length - 1 && (
-                      <Text
-                        type='title'
-                        weight='thin'
-                        color='grey'
-                        level={8}
-                        extraClass='m-0 mr-1 ml-1'
-                      >
-                        AND
-                      </Text>
-                    )}
-                </div>
-              );
-            })}
+              </div>
+            ))}
           </>
         ))}
       </div>
@@ -219,7 +217,11 @@ const DCGTable = ({
 
         return (
           <div className='flex justify-end'>
-            <Dropdown overlay={() => menu(obj)} trigger={['click']}>
+            <Dropdown
+              overlay={() => menu(obj)}
+              trigger={['click']}
+              placement='bottomRight'
+            >
               <Button size='large' type='text' icon={<MoreOutlined />} />
             </Dropdown>
           </div>
@@ -253,8 +255,8 @@ const DCGTable = ({
   };
 
   const EditProperty = (obj) => {
-    let queryMap = getBaseQueryFromResponse(obj?.item?.conditions);
-    let finalData = {
+    const queryMap = getBaseQueryFromResponse(obj?.item?.conditions);
+    const finalData = {
       index: obj?.index,
       channel: obj?.item?.channel,
       conditions: queryMap
@@ -263,18 +265,16 @@ const DCGTable = ({
     setShowModalVisible(true);
   };
 
-  const menu = (obj) => {
-    return (
-      <Menu>
-        <Menu.Item key='0' onClick={() => EditProperty(obj)}>
-          <a>Edit Property</a>
-        </Menu.Item>
-        <Menu.Item key='0' onClick={() => confirmRemove(obj)}>
-          <a>Remove Property</a>
-        </Menu.Item>
-      </Menu>
-    );
-  };
+  const menu = (obj) => (
+    <Menu>
+      <Menu.Item key='0' onClick={() => EditProperty(obj)}>
+        <a>Edit Property</a>
+      </Menu.Item>
+      <Menu.Item key='0' onClick={() => confirmRemove(obj)}>
+        <a>Remove Property</a>
+      </Menu.Item>
+    </Menu>
+  );
 
   const handleMoveRow = (modifiedData) => {
     if (!isEqual(DCGData, modifiedData)) {
@@ -288,7 +288,8 @@ const DCGTable = ({
     setShowBottomButtons(false);
   };
   const handleSave = () => {
-    let updatedArr = DCGData.filter((item) => {
+    setLoading(true);
+    const updatedArr = DCGData.filter((item) => {
       if (item.channel !== 'Internal') {
         return item;
       }
@@ -298,54 +299,45 @@ const DCGTable = ({
       channel_group_rules: updatedArr
     })
       .then(() => {
+        setLoading(false);
+        setShowBottomButtons(false);
         message.success('Channel Groups Orders Changed!');
       })
       .catch((err) => {
+        setLoading(false);
         console.log('err->', err);
       });
   };
 
-  const SortableTable = ({ dataSource, columns, ...otherProps }) => {
-    return (
-      <ReactSortable
-        list={dataSource || []}
-        setList={handleMoveRow}
-        animation={150}
-        tag={'tbody'}
-        className='ant-table-tbody'
-      >
-        {dataSource?.map((item, index) => (
-          <tr
-            key={item.key}
-            className={cx(
-              styles.dcgTable__table_row,
-              'ant-table-row ant-table-row-level-0'
-            )}
-          >
-            {columns?.map((column) => (
-              <td key={column.key} className='ant-table-cell'>
-                {column.render
-                  ? column.render(item[column.dataIndex])
-                  : item[column.dataIndex]}
-              </td>
-            ))}
-          </tr>
-        ))}
-      </ReactSortable>
-    );
-  };
+  const SortableTable = ({ dataSource, columns, ...otherProps }) => (
+    <ReactSortable
+      list={dataSource || []}
+      setList={handleMoveRow}
+      animation={150}
+      tag='tbody'
+      className='ant-table-tbody'
+    >
+      {dataSource?.map((item, index) => (
+        <tr
+          key={item.key}
+          className={cx(
+            styles.dcgTable__table_row,
+            'ant-table-row ant-table-row-level-0'
+          )}
+        >
+          {columns?.map((column) => (
+            <td key={column.key} className='ant-table-cell'>
+              {column.render
+                ? column.render(item[column.dataIndex])
+                : item[column.dataIndex]}
+            </td>
+          ))}
+        </tr>
+      ))}
+    </ReactSortable>
+  );
   return (
     <div>
-      <Text
-        type='paragraph'
-        mini={6}
-        weight={'thin'}
-        color={'#3E516C'}
-        extraClass={'mt-2'}
-      >
-        These rules are checked sequentially from top to bottom to assign
-        channel.
-      </Text>
       <Table
         className='fa-table--basic mt-6'
         columns={columns}
@@ -366,13 +358,18 @@ const DCGTable = ({
       />
       {showBottomButtons && (
         <div className={`flex justify-between ${styles.dcgTable__changesCard}`}>
-          <Text type={'title'} level={7} extraClass={'m-0'}>
+          <Text type='title' level={7} extraClass='m-0'>
             Order of checking for conditions changed. Do you wish to save this
             new order?
           </Text>
           <div className='flex flex-row gap-4'>
             <Button onClick={handleCancel}>Discard Changes</Button>
-            <Button className={'ml-2'} type={'primary'} onClick={handleSave}>
+            <Button
+              className='ml-2'
+              type='primary'
+              onClick={handleSave}
+              loading={loading}
+            >
               Save Changes
             </Button>
           </div>
