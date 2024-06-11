@@ -394,7 +394,7 @@ function FiltersBox({
                 weight='medium'
               >
                 {profileType === 'account'
-                  ? 'Accounts that performed'
+                  ? 'Accounts that match conditions for'
                   : 'People who performed'}
               </Text>
               <Dropdown overlay={eventMenuItems}>
