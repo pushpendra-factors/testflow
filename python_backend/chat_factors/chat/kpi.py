@@ -9,7 +9,7 @@ DEFAULT_TIMEZONE = "Asia/Kolkata"
 DEFAULT_CATEGORY = "events"
 DEFAULT_DISPLAY_CATEGORY = "website_session"
 
-
+# todo : Add error handling for matching not found
 def get_transformed_kpi_query(gpt_response, kpi_config,
                               raw_data_path=os.path.join('chat_factors/chatgpt_poc', 'data.json')):
     query_payload = {}

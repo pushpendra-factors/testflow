@@ -784,30 +784,40 @@ function UserProfiles({
     }
   };
 
-  const applyTableProps = () => {
-    const newTableProps =
-      checkListUserProps
-        ?.filter((item) => item.enabled === true)
-        ?.map((item) => item?.prop_name)
-        ?.filter(
-          (entry) => entry !== '' && entry !== undefined && entry !== null
-        ) || [];
-    if (timelinePayload?.segment?.id?.length) {
-      updateTablePropertiesForSegment(
-        activeProject.id,
-        timelinePayload.segment.id,
-        newTableProps
-      )
-        .then(() => getSavedSegments(activeProject.id))
-        .finally(() => getUsers(timelinePayload));
-    } else {
-      updateTableProperties(
-        activeProject.id,
-        PROFILE_TYPE_USER,
-        newTableProps
-      ).then(() => getUsers(timelinePayload));
+  const applyTableProps = async () => {
+    try {
+      const newTableProps =
+        checkListUserProps
+          ?.filter((item) => item.enabled === true)
+          ?.map((item) => item?.prop_name)
+          ?.filter(
+            (entry) => entry !== '' && entry !== undefined && entry !== null
+          ) || [];
+      if (timelinePayload?.segment?.id?.length) {
+        await updateTablePropertiesForSegment(
+          activeProject.id,
+          timelinePayload.segment.id,
+          newTableProps
+        );
+        const updatedPayload = { ...timelinePayload };
+        updatedPayload.segment.query.table_props = newTableProps;
+        setTimelinePayload(updatedPayload);
+
+        // getSavedSegments(activeProject.id);
+      } else {
+        await updateTableProperties(
+          activeProject.id,
+          PROFILE_TYPE_USER,
+          newTableProps
+        );
+        await fetchProjectSettings(activeProject.id);
+        getUsers(timelinePayload);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setShowPopOver(false);
     }
-    setShowPopOver(false);
   };
 
   const handleDisableOptionClick = () => {
@@ -1054,6 +1064,7 @@ function UserProfiles({
         }}
         moveToExistingFolder={moveSegmentToFolder}
         handleNewFolder={handleMoveToNewFolder}
+        placement='bottom'
       />
     </div>
   );

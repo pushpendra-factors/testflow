@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import cx from 'classnames';
-import { Button, message, notification } from 'antd';
+import { Button, Spin, message, notification } from 'antd';
 import { SVG as Svg, Text } from 'Components/factorsComponents';
 import {
   setAccountPayloadAction,
@@ -12,7 +12,10 @@ import {
 import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
 import { selectSegments } from 'Reducers/timelines/selectors';
 import { useHistory } from 'react-router-dom';
-import { reorderDefaultDomainSegmentsToTop } from 'Components/Profile/AccountProfiles/accountProfiles.helpers';
+import {
+  defaultSegmentsList,
+  reorderDefaultDomainSegmentsToTop
+} from 'Components/Profile/AccountProfiles/accountProfiles.helpers';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { PathUrls } from 'Routes/pathUrls';
 import FolderStructure from 'Components/FolderStructure';
@@ -31,7 +34,6 @@ import {
   renameSegmentFolders,
   updateSegmentToFolder
 } from 'Reducers/timelines';
-import { LoadingOutlined } from '@ant-design/icons';
 import { bindActionCreators } from 'redux';
 import { defaultSegmentIconsMapping } from './appSidebar.constants';
 import styles from './index.module.scss';
@@ -242,7 +244,7 @@ function AccountsSidebar({
         )}
       >
         {segmentFolders?.isLoading ? (
-          <LoadingOutlined />
+          <Spin />
         ) : (
           <FolderStructure
             folders={segmentFolders?.accounts || []}
@@ -257,6 +259,7 @@ function AccountsSidebar({
             handleDeleteUnit={handleDeleteUnit}
             moveToExistingFolder={moveSegmentToFolder}
             showItemIcons
+            hideItemOptionsList={defaultSegmentsList}
           />
         )}
       </div>

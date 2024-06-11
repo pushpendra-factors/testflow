@@ -29,6 +29,7 @@ type FolderStructurePropType = {
 
   onRenameFolder: (unit_id: any, name: string) => void;
   onDeleteFolder: (unit_id: any) => void;
+  hideItemOptionsList?: Array<string>;
 };
 
 type FolderStructureType = {
@@ -54,7 +55,8 @@ function FolderStructure(props: FolderStructurePropType) {
     handleDeleteUnit,
     onUnitClick,
     onRenameFolder,
-    onDeleteFolder
+    onDeleteFolder,
+    hideItemOptionsList
   } = props;
   const [foldersState, setFoldersState] = useState<FolderType[]>([]);
   const [folderStructure, setFolderStructure] = useState<FolderStructureType>(
@@ -118,9 +120,10 @@ function FolderStructure(props: FolderStructurePropType) {
       unit,
       folders,
       active_item,
-      showItemIcons
+      showItemIcons,
+      hideItemOptionsList
     }),
-    [folders, unit, folderModalState, active_item]
+    [folders, unit, folderModalState, active_item, hideItemOptionsList]
   );
   const handleModalCancel = () => {
     setFolderModalState(folderModalInitState);
@@ -129,13 +132,16 @@ function FolderStructure(props: FolderStructurePropType) {
     if (folderModalState.action === 'rename') {
       // rename handle
       if (onRenameFolder)
-        onRenameFolder(folderModalState.unit?.id, folderModalState.unit.name);
+        onRenameFolder(
+          folderModalState.unit?.id,
+          folderModalState.unit.name?.trim()
+        );
     } else if (folderModalState.action === 'create') {
       // move to new folder handle
       if (handleNewFolder)
         handleNewFolder(
           folderModalState.segmentId,
-          folderModalState.unit?.name
+          folderModalState.unit?.name?.trim()
         );
     } else if (folderModalState.action === 'delete') {
       // delete handle
@@ -159,11 +165,11 @@ function FolderStructure(props: FolderStructurePropType) {
         weight='bold'
       >
         {folderModalState.action === 'rename'
-          ? `Rename folder - ${folderModalState.unit?.name}`
+          ? `Rename folder`
           : folderModalState.action === 'create'
             ? 'Create new folder'
             : folderModalState.action === 'delete'
-              ? `Are you sure you want to delete "${folderModalState.unit?.name}" Folder?`
+              ? `Are you sure?`
               : ''}
       </Text>
     ),
@@ -179,16 +185,26 @@ function FolderStructure(props: FolderStructurePropType) {
       onCancel={handleModalCancel}
       onOk={handleModalSubmit}
       okText={folderModalState.action === 'delete' ? 'Confirm' : 'Save'}
+      okType={folderModalState.action === 'delete' ? 'danger' : 'primary'}
       okButtonProps={{
         disabled:
           folderModalState?.action === 'rename' &&
-          memoizedFolderName === folderModalState?.unit?.name
+          memoizedFolderName.trim() === folderModalState?.unit?.name?.trim(),
+        type: 'primary'
       }}
       maskClosable
+      closable={false}
     >
       <div className='flex flex-col gap-y-5'>
         {RenderModalTitle}
-        <div className='flex flex-col gap-y-2'>
+        <div className='flex flex-col'>
+          {folderModalState.action === 'delete' && (
+            <Text type='title' color='character-primary'>
+              This will not delete the {unit}s inside this folder. All the{' '}
+              {unit}s inside this folder will be moved to &apos;All {unit}
+              s&apos;.
+            </Text>
+          )}
           {folderModalState.action !== 'delete' && (
             <>
               <Text type='title' color='character-primary' extraClass='mb-0'>

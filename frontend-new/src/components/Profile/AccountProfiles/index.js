@@ -243,7 +243,11 @@ function AccountProfiles({
       : getFilteredTableProps(projectTableProps);
 
     return tableProps;
-  }, [currentProjectSettings, accountPayload?.segment]);
+  }, [
+    currentProjectSettings,
+    accountPayload?.segment,
+    accountPayload?.segment?.query?.table_props
+  ]);
 
   const activeID = useMemo(() => segmentID || 'default', [segmentID]);
 
@@ -320,7 +324,7 @@ function AccountProfiles({
       return INITIAL_ACCOUNT_PAYLOAD;
     }
 
-    const savedSegmentDefinition = segments[GROUP_NAME_DOMAINS].find(
+    const savedSegmentDefinition = segments?.[GROUP_NAME_DOMAINS]?.find(
       (item) => item.id === segmentID
     );
 
@@ -944,6 +948,8 @@ function AccountProfiles({
           !!segmentID === !!'' ||
           defaultSegmentsList.includes(accountPayload?.segment?.name)
         }
+        placement='bottom'
+        hideMoveTo={!!segmentID === !!''}
       />
     </div>
   );
@@ -1272,7 +1278,9 @@ function AccountProfiles({
           </div>
         </div>
         <ControlledComponent controller={accounts.isLoading}>
-          <Spin size='large' className='fa-page-loader' />
+          <div className='accounts-loader-div'>
+            <Spin size='large' />
+          </div>
         </ControlledComponent>
         <ControlledComponent
           controller={

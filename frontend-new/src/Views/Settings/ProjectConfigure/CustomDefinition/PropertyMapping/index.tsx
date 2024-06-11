@@ -13,22 +13,17 @@ const PropertyMapping = () => {
         <Row>
           <Col span={20}>
             <Text type='title' level={7} color='grey' extraClass='m-0'>
-              Harness the full potential of your advertising data with Custom
-              Properties. By associating distinct attributes with your data, you
-              gain precise control over configuring and analyzing your ad
-              campaigns.
-            </Text>
-            <Text type='title' level={7} color='grey' extraClass='m-0 mt-2'>
-              Customize and tailor your data to align perfectly with your
-              business objectives, ensuring optimal insights and enhanced
-              advertising optimization.
-              <a
+              Align metrics from various platforms, like LinkedIn ads and Google
+              ads, using a common property such as 'Campaigns.' Seamlessly
+              analyze data across platforms to gain comprehensive insights into
+              your marketing efforts.{' '}
+              {/* <a
                 href='https://help.factors.ai/en/articles/7284109-custom-properties'
                 target='_blank'
                 rel='noreferrer'
               >
                 Learn more
-              </a>
+              </a> */}
             </Text>
           </Col>
           <Col span={4}>

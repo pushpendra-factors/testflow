@@ -43,6 +43,9 @@ func WorkerForSfOtp(projectID, startTime, endTime int64, backfillEnabled bool, w
 		statusByProjectAndType = append(statusByProjectAndType, Status{ProjectID: projectID,
 			Status: "Failed to get OTP rules"})
 		return
+	} else if len(otpRules) == 0 {
+		logCtx.Error("No otp Rules for Project")
+		return
 	}
 
 	project, errCode := store.GetStore().GetProject(projectID)

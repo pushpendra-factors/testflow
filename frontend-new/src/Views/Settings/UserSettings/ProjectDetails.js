@@ -54,7 +54,10 @@ function ProjectDetails({
   }, [fetchProjectsList]);
   return (
     <div className='mb-10 '>
-      <CommonSettingsHeader title='Your Projects' />
+      <CommonSettingsHeader
+        title='Your Projects'
+        description='Easily manage the list of projects that you are part of. '
+      />
 
       <Row className='mt-2'>
         <Col span={24}>

@@ -63,7 +63,10 @@ function ViewUserDetails({ fetchAgentInfo, agent, activeProject }) {
 
   return (
     <div className='mb-10'>
-      <CommonSettingsHeader title='Profile' />
+      <CommonSettingsHeader
+        title='User Settings'
+        description='Manage user details and adjust your name, profile picture, email, and password.'
+      />
 
       <Row className='mt-2'>
         <Col>

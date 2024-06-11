@@ -66,12 +66,10 @@ const PopoverOptionWrapper = ({
                         }
                   }
                 >
-                  {false ? <LoadingOutlined /> : <FolderOpenFilled />}
-                  <div>
-                    <Tooltip title={eachSubMenu.title} placement='right'>
-                      {eachSubMenu.title}
-                    </Tooltip>
-                  </div>
+                  <FolderOpenFilled />
+                  <Tooltip title={eachSubMenu.title} placement='right'>
+                    <div>{eachSubMenu.title}</div>
+                  </Tooltip>
                 </div>
               ))}
             </div>
@@ -153,23 +151,27 @@ export function FolderItemOptions(props: FolderItemOptionsType) {
     moveToExistingFolder,
     extraOptions,
     data,
-    folder_id
+    folder_id,
+    placement = 'right',
+    hideMoveTo = false
   } = props;
   const actionsMenu = useMemo(() => {
     let tmpActions: Array<any> = [];
+    if (hideMoveTo === false)
+      tmpActions.push({
+        id: '1',
+        title: 'Move to',
+        icon: <SVG name='AddFromDraft' />,
+        // {id: '11', title: }
+        submenu: folders?.map((eachFolder) => ({
+          id: eachFolder.id,
+          title: eachFolder.name,
+          icon: <EditOutlined />
+        }))
+      });
     if (!hideDefaultOptions) {
       tmpActions = [
-        {
-          id: '1',
-          title: 'Move to',
-          icon: <SVG name='AddFromDraft' />,
-          // {id: '11', title: }
-          submenu: folders?.map((eachFolder) => ({
-            id: eachFolder.id,
-            title: eachFolder.name,
-            icon: <EditOutlined />
-          }))
-        },
+        ...tmpActions,
         {
           id: '2',
           title: `Edit ${unit} Details`,
@@ -221,7 +223,7 @@ export function FolderItemOptions(props: FolderItemOptionsType) {
     <div>
       <Popover
         content={popoverContent}
-        placement='right'
+        placement={placement || 'right'}
         trigger='hover'
         arrowContent={<RightOutlined />}
         overlayClassName={styles.popover_list_container}
@@ -267,6 +269,10 @@ function FolderItem(props: FolderItemPropType) {
           unit={contextValue.unit}
           moveToExistingFolder={null}
           handleNewFolder={null}
+          placement='right'
+          hideDefaultOptions={contextValue?.hideItemOptionsList?.includes(
+            data.name
+          )}
         />
       </div>
     </div>

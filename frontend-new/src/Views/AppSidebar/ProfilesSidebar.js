@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import cx from 'classnames';
 import { connect, useDispatch, useSelector } from 'react-redux';
-import { Button, message, notification } from 'antd';
+import { Button, Spin, message, notification } from 'antd';
 import { getUserOptionsForDropdown } from 'Components/Profile/UserProfiles/userProfiles.helpers';
 import { SVG, Text } from 'Components/factorsComponents';
 import {
@@ -229,29 +229,35 @@ function ProfilesSidebar({
           styles['accounts-list-container']
         )}
       >
-        <div className='px-2'>
+        <div className='px-4'>
           {userOptions.slice(1).map((option) => (
             <GroupItem key={option[0]} group={option} />
           ))}
         </div>
-        <FolderStructure
-          folders={segmentFolders?.peoples || []}
-          items={userSegmentsList?.sort((a, b) => a.name.localeCompare(b.name))}
-          unit='segment'
-          active_item={activeSegment?.id}
-          handleNewFolder={handleMoveToNewFolder}
-          moveToExistingFolder={moveSegmentToFolder}
-          onRenameFolder={handleRenameFolder}
-          onDeleteFolder={handleDeleteFolder}
-          onUnitClick={setActiveSegment}
-          handleEditUnit={(unit) => {
-            setModalState({ rename: true, unit, delete: false });
-          }}
-          handleDeleteUnit={(unit) => {
-            setModalState({ rename: false, unit, delete: true });
-          }}
-          showItemIcons
-        />
+        {segmentFolders?.isLoading ? (
+          <Spin />
+        ) : (
+          <FolderStructure
+            folders={segmentFolders?.peoples || []}
+            items={userSegmentsList?.sort((a, b) =>
+              a.name.localeCompare(b.name)
+            )}
+            unit='segment'
+            active_item={activeSegment?.id}
+            handleNewFolder={handleMoveToNewFolder}
+            moveToExistingFolder={moveSegmentToFolder}
+            onRenameFolder={handleRenameFolder}
+            onDeleteFolder={handleDeleteFolder}
+            onUnitClick={setActiveSegment}
+            handleEditUnit={(unit) => {
+              setModalState({ rename: true, unit, delete: false });
+            }}
+            handleDeleteUnit={(unit) => {
+              setModalState({ rename: false, unit, delete: true });
+            }}
+            showItemIcons
+          />
+        )}
       </div>{' '}
       <div className='px-4'>
         <Button

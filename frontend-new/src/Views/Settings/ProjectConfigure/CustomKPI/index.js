@@ -1179,26 +1179,16 @@ function CustomKPI({
                 <Row>
                   <Col span={18}>
                     <Text type='title' level={7} color='grey' extraClass='m-0'>
-                      Create personalized metrics tailored to your specific
-                      objectives, whether it's conversion rates, engagement
-                      metrics, or revenue targets.
-                    </Text>
-                    <Text
-                      type='title'
-                      level={7}
-                      color='grey'
-                      extraClass='m-0 mt-2'
-                    >
-                      Monitor progress, measure success, and gain actionable
-                      insights to drive continuous improvement and achieve your
-                      business milestones.{' '}
-                      <a
+                      Create bespoke metrics to monitor conversion rates, track
+                      engagement, and measure revenue targets aligned with your
+                      organization’s unique definitions.{' '}
+                      {/* <a
                         href='https://help.factors.ai/en/articles/7284181-custom-kpis'
                         target='_blank'
                         rel='noreferrer'
                       >
                         Learn more
-                      </a>
+                      </a> */}
                     </Text>
                   </Col>
                   <Col span={6}>

@@ -25,7 +25,8 @@ import TouchpointView from '../TouchPointView';
 const HubspotSalesforceTouchpoint = ({
   activeProject,
   getEventPropertiesV2,
-  type
+  type,
+  descriptionText
 }) => {
   const otpService = useService(activeProject.id, OTPService);
   const { eventPropNames } = useSelector((state) => state.coreQuery);
@@ -238,9 +239,7 @@ const HubspotSalesforceTouchpoint = ({
     if (touchPointState.state === 'list') {
       title = (
         <Text type='title' level={7} extraClass='m-0' color='grey'>
-          {tabNo === '3'
-            ? 'Hubspot Offline Touchpoint'
-            : 'Salesforce Offline Touchpoint'}
+          {descriptionText}
         </Text>
       );
     }
