@@ -897,6 +897,30 @@ func (store *MemSQL) GetAllPropertiesForDomain(projectID int64, domainGroupId in
 	return users, http.StatusFound
 }
 
+func (store *MemSQL) GetAllGroupPropertiesForDomain(projectID int64, domainGroupId int,
+	domainID string) ([]model.User, int) {
+
+	grpUserStmnt := "AND is_group_user=1 ORDER BY properties_updated_timestamp DESC LIMIT 50"
+	// fetching top 50 group users
+	users, status := store.GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID, grpUserStmnt)
+
+	if status == http.StatusInternalServerError || len(users) == 0 {
+		log.WithField("project_id", projectID).Error("Unable to find users for domain ", domainID)
+		return []model.User{}, status
+	}
+
+	// appending domain details to process domain based filters
+	domDetails, status := store.GetDomainDetailsByID(projectID, domainID, domainGroupId)
+
+	if status != http.StatusFound {
+		log.WithField("project_id", projectID).Errorf("Unable to find details for domain %s", domainID)
+	} else {
+		users = append(users, domDetails)
+	}
+
+	return users, http.StatusFound
+}
+
 func GetFileValues(projectID int64, globalUserProperties []model.QueryProperty,
 	fileValues map[string]map[string]bool) map[string]map[string]bool {
 	allFilesValuesMap := fileValues

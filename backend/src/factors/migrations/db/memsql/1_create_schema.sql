@@ -1565,6 +1565,48 @@ CREATE TABLE IF NOT EXISTS workflows (
 );
 
 
+CREATE TABLE IF NOT EXISTS linkedin_capping_rules (
+    id text,
+    project_id bigint NOT NULL,
+    object_type text NOT NULL,
+    name text NOT NULL,
+    display_name text NOT NULL,
+    description text NOT NULL,
+    status text NOT NULL,
+    granularity text NOT NULL,
+    object_ids json,
+    impression_threshold bigint NOT NULL,
+    click_threshold bigint NOT NULL,
+    is_advance_rule_enabled bool DEFAULT FALSE,
+    adv_rule_type text,
+    adv_rules json,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    KEY (id, project_id, type, name),
+    SHARD KEY (project_id),
+    PRIMARY KEY (id, project_id, type, name)
+);
+
+CREATE TABLE IF NOT EXISTS linkedin_exclusions (
+    project_id bigint NOT NULL,
+    org_id text NOT NULL,
+    timestamp int NOT NULL,
+    company_name text,
+    campaigns json,
+    is_pushed_to_linkedin boolean DEFAULT false,
+    is_removed_from_linkedin boolean DEFAULT false,
+    rule_id text NOT NULL,
+    rule_object_type text NOT NULL,
+    rule_snapshot json,
+    properties_snapshot json,
+    exact_subrule_matched json,
+    linkedin_data json,
+    impressions_saved bigint,
+    clicks_saved bigint,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    SHARD KEY (project_id)
+);
 CREATE TABLE IF NOT EXISTS prompt_embeddings (
     project_id bigint NOT NULL DEFAULT 0,
     prompt TEXT,
