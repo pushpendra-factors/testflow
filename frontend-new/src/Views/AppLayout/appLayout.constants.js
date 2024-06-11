@@ -20,7 +20,8 @@ export const routesWithSidebar = [
   PathUrls.SettingsAttribution,
   PathUrls.SettingsPersonalProjects,
   PathUrls.SettingsPersonalUser,
-  PathUrls.SettingsCustomDefinition
+  PathUrls.SettingsCustomDefinition,
+  PathUrls.SettingsAccountScoring
 ];
 
 export const SIGNUP_HS_FORM_ID = 'f36f9253-ece9-46e4-9d56-8f873c65b731';
