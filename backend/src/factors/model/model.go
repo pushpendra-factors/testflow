@@ -1199,6 +1199,12 @@ type Model interface {
 	UpdateWorkflow(projectID int64, id, agentID string, fieldsToUpdate map[string]interface{}) (int, error)
 	DeleteWorkflow(projectID int64, id, agentID string) (int, error)
 
+	//linkedin capi
+	GetLinkedInCAPICofigByWorkflowId(projectID int64, workflowID string) (model.LinkedinCAPIConfig, error)
+	FillConfigurationValuesForLinkedinCAPIWorkFlow(projectId int64, workflowAlertBody *model.WorkflowAlertBody)
+	FillLinkedInPropertiesInCacheForWorkflow(msgPropMap *map[string]interface{}, properties *map[string]interface{}, workflowAlertBody model.WorkflowAlertBody)
+	NewLinkedCapiRequestPayload(properties *map[string]interface{}, linkedinCAPIConfig model.LinkedinCAPIConfig) (model.BatchLinkedinCAPIRequestPayload, error)
+
 	//Weekly Mailmodo Emails
 	GetWeeklyMailmodoEmailsMetrics(projectId, startTimeStamp, endTimeStamp int64) (model.WeeklyMailmodoEmailMetrics, error)
 	// linkedin frequency capping

@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"factors/filestore"
@@ -2057,4 +2058,14 @@ func GetMergedAndAddedMap(a map[string]int, b map[string]int) map[string]int {
 	}
 
 	return newMap
+}
+
+// GetSHA256Hash returns the SHA-256 hash of a string address as a hexadecimal string.
+func GetSHA256Hash(str string) (string, error) {
+	hasher := sha256.New()
+	_, err := hasher.Write([]byte(str))
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
