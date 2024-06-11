@@ -3,7 +3,7 @@ package model
 import "time"
 
 type SegmentFolder struct {
-	Id	int64 	`json:"id"`
+	Id	string 	`json:"id"`
 	Name string	`json:"name"`
 	ProjectId       int64     `json:"project_id"`
 	FolderType		string	  `json:"folder_type"`
@@ -16,5 +16,5 @@ type SegmentFolderPayload struct {
 }
 
 type MoveSegmentFolderItemPayload struct {
-	FolderID	int64	`json:"folder_id"`
+	FolderID	string	`json:"folder_id"`
 }

@@ -63,7 +63,7 @@ const ProjectSettingsSubItems = [
     lineBreak: false
   },
   {
-    label: 'Plans & Billings',
+    label: 'Plans & Billing',
     url: PathUrls.SettingsPricing,
     lineBreak: false
   },

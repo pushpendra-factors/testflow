@@ -1022,14 +1022,14 @@ type Model interface {
 	ModifySegment(projectID int64, segment model.Segment) (int, error)
 
 	// Segment Folder Item ( Segment Itself )
-	MoveSegmentFolderItem(projectID int64, segmentID string, folderID int64, folder_type string) int
+	MoveSegmentFolderItem(projectID int64, segmentID string, folderID string, folder_type string) int
 	MoveSegmentToNewFolder(projectID int64, segmentID string, folderName string, folder_type string) int
 
 	// segment folders
 	GetAllSegmentFolders(projectID int64, folder_type string) ([]model.SegmentFolder, int)
 	CreateSegmentFolder(projectID int64, name string, folder_type string) int
-	UpdateSegmentFolderByID(projectID int64, id int64, name string, folder_type string) int
-	DeleteSegmentFolderByID(projectID int64, id int64, folder_type string) int
+	UpdateSegmentFolderByID(projectID int64, id string, name string, folder_type string) int
+	DeleteSegmentFolderByID(projectID int64, id string, folder_type string) int
 
 	// segment analytics
 	GetWidgetGroupAndWidgetsForConfig(projectID int64) ([]model.WidgetGroup, string, int)

@@ -51,7 +51,7 @@ function Pricing() {
     <div>
       <CommonSettingsHeader
         hasNoBottomPadding
-        title='Plans & Billings'
+        title='Plans & Billing'
         description='Manage your current subscription, upgrade your plan, purchase add-ons, and keep track of billing details in one place.'
       />
       <div className={` ${styles.tab_container}`}>
