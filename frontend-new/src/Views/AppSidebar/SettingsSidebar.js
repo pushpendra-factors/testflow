@@ -25,7 +25,7 @@ const SettingItem = ({ item, isMainCategory }) => {
 
   if (isMainCategory) {
     return (
-      <div className='flex items-center gap-1'>
+      <div className='flex items-center gap-1 rounded-md p-2 mt-1'>
         <SVG name={item.icon} size={16} color='#8C8C8C' />
         <Text
           type='title'
@@ -56,18 +56,18 @@ const SettingsSidebar = () => {
   const activeAgent = agentState?.agent_details?.email;
 
   return (
-    <div className={`flex flex-col gap-2 px-2 ${styles['settings-sidebar']}`}>
+    <div className={`flex flex-col gap-1 px-2 ${styles['settings-sidebar']}`}>
       {settingsCategorisedMap(activeAgent).map((item) => {
         if (item?.whitelisted && !WhiteListedAccounts.includes(activeAgent)) {
           return null;
         }
         return (
-          <div>
+          <>
             <SettingItem item={item} isMainCategory />
             {item.items.map((subItem) => (
               <SettingItem item={subItem} />
             ))}
-          </div>
+          </>
         );
       })}
     </div>
