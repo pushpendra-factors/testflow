@@ -1105,7 +1105,7 @@ type Model interface {
 	UpdateInternalStatusAndGetAlertIDs(projectID int64) ([]string, int, error)
 	GetInternalStatusForEventTriggerAlert(projectID int64, id string) (string, int, error)
 	GetParagonMetadataForEventTriggerAlert(projectID int64, alertID string) (map[string]interface{}, int, error)
-	FindAndCacheAlertForCurrentSegment(projectID int64, segmentID, domainID, actionPerformed string) (int, error)
+	FindAndCacheAlertForCurrentSegment(projectID int64, segmentID, domainID, actionPerformed string, timeOfActionPerformed time.Time) (int, error)
 
 	//ExplainV2
 	GetAllExplainV2EntityByProject(projectID int64) ([]model.ExplainV2EntityInfo, int)

@@ -474,6 +474,7 @@ func domainUsersProcessingWithErrcode(projectID int64, domId string, usersArray 
 		decodedPropsArr = append(decodedPropsArr, *decodedProps)
 	}
 
+	var timezone U.TimeZoneString
 	for index, segmentRule := range segmentsRulesArr {
 		// apply segment rule on the user
 		matched := memsql.IsRuleMatchedAllAccounts(projectID, segmentRule, decodedPropsArr, usersArray, segments[index].Id,
@@ -482,6 +483,11 @@ func domainUsersProcessingWithErrcode(projectID int64, domId string, usersArray 
 		// update associated_segments map on the basis of segment rule applied
 		associatedSegments = updateAllAccountsSegmentMap(matched, usersArray,
 			associatedSegments, segments[index].Id)
+
+		// setting timezone
+		if timezone == "" {
+			timezone = U.TimeZoneString(segmentRule.Timezone)
+		}
 	}
 
 	// check whether associated_segments need to be updated
@@ -497,9 +503,9 @@ func domainUsersProcessingWithErrcode(projectID int64, domId string, usersArray 
 
 	if len(segmentIds) > 0 {
 		updateAssociatedSegment, associatedSegments = compareGivenSegments(projectID, domId, associatedSegments, existingAssociatedSegment,
-			segmentIds)
+			segmentIds, timezone)
 	} else {
-		updateAssociatedSegment = IsMapsNotMatching(projectID, domId, associatedSegments, existingAssociatedSegment)
+		updateAssociatedSegment = IsMapsNotMatching(projectID, domId, associatedSegments, existingAssociatedSegment, timezone)
 	}
 
 	if !updateAssociatedSegment {
@@ -518,7 +524,8 @@ func domainUsersProcessingWithErrcode(projectID int64, domId string, usersArray 
 	return http.StatusOK, nil
 }
 
-func IsMapsNotMatching(projectID int64, domId string, associatedSegments map[string]model.AssociatedSegments, oldAssociatedSegments map[string]interface{}) bool {
+func IsMapsNotMatching(projectID int64, domId string, associatedSegments map[string]model.AssociatedSegments,
+	oldAssociatedSegments map[string]interface{}, timezone U.TimeZoneString) bool {
 	isDifferent := false
 
 	// length check
@@ -534,7 +541,8 @@ func IsMapsNotMatching(projectID int64, domId string, associatedSegments map[str
 			isDifferent = true
 
 			// alert for entering segment
-			store.GetStore().FindAndCacheAlertForCurrentSegment(projectID, segID, domId, model.ACTION_SEGMENT_ENTRY)
+			timeOfActionPerformed := U.TimeNowIn(timezone)
+			store.GetStore().FindAndCacheAlertForCurrentSegment(projectID, segID, domId, model.ACTION_SEGMENT_ENTRY, timeOfActionPerformed)
 		}
 	}
 
@@ -547,7 +555,8 @@ func IsMapsNotMatching(projectID int64, domId string, associatedSegments map[str
 			isDifferent = true
 
 			// alert for exiting segment
-			store.GetStore().FindAndCacheAlertForCurrentSegment(projectID, segID, domId, model.ACTION_SEGMENT_EXIT)
+			timeOfActionPerformed := U.TimeNowIn(timezone)
+			store.GetStore().FindAndCacheAlertForCurrentSegment(projectID, segID, domId, model.ACTION_SEGMENT_EXIT, timeOfActionPerformed)
 		}
 	}
 
@@ -555,7 +564,7 @@ func IsMapsNotMatching(projectID int64, domId string, associatedSegments map[str
 }
 
 func compareGivenSegments(projectID int64, domId string, associatedSegments map[string]model.AssociatedSegments, oldAssociatedSegments map[string]interface{},
-	segmentIds []string) (bool, map[string]model.AssociatedSegments) {
+	segmentIds []string, timezone U.TimeZoneString) (bool, map[string]model.AssociatedSegments) {
 
 	segmentIdsMap := make(map[string]bool)
 
@@ -602,7 +611,8 @@ func compareGivenSegments(projectID int64, domId string, associatedSegments map[
 		updatedAssociatedSegments[segID] = updatedFields
 
 		// alert for entering segment
-		store.GetStore().FindAndCacheAlertForCurrentSegment(projectID, segID, domId, model.ACTION_SEGMENT_ENTRY)
+		timeOfActionPerformed := U.TimeNowIn(timezone)
+		store.GetStore().FindAndCacheAlertForCurrentSegment(projectID, segID, domId, model.ACTION_SEGMENT_ENTRY, timeOfActionPerformed)
 
 	}
 
@@ -625,7 +635,8 @@ func compareGivenSegments(projectID int64, domId string, associatedSegments map[
 		isDifferent = true
 
 		// alert for exiting segment
-		store.GetStore().FindAndCacheAlertForCurrentSegment(projectID, segID, domId, model.ACTION_SEGMENT_EXIT)
+		timeOfActionPerformed := U.TimeNowIn(timezone)
+		store.GetStore().FindAndCacheAlertForCurrentSegment(projectID, segID, domId, model.ACTION_SEGMENT_EXIT, timeOfActionPerformed)
 	}
 
 	return isDifferent, updatedAssociatedSegments

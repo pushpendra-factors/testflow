@@ -1695,7 +1695,7 @@ func TestMatchEventTriggerAlert(t *testing.T) {
 		assert.NotNil(t, alert)
 
 		event := &model.Event{EventNameId: eventName.ID, ProjectId: project.ID,
-			UserId:userSixSignal, Timestamp: start.Unix(),
+			UserId: userSixSignal, Timestamp: start.Unix(),
 			UserProperties: &postgres.Jsonb{RawMessage: []byte(`{"$country":"US","$hubspot_company_hs_object_id":0}`)},
 			Properties:     postgres.Jsonb{RawMessage: []byte(`{"$time_spent": "3500"}`)}}
 
@@ -2746,11 +2746,11 @@ func TestCacheAlertForCurrentSegment(t *testing.T) {
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
 
-		errCode, err := store.GetStore().FindAndCacheAlertForCurrentSegment(project.ID, segmentID, domainID, model.ACTION_SEGMENT_ENTRY)
+		errCode, err := store.GetStore().FindAndCacheAlertForCurrentSegment(project.ID, segmentID, domainID, model.ACTION_SEGMENT_ENTRY, time.Now())
 		assert.Equal(t, http.StatusAccepted, errCode)
 		assert.Empty(t, err)
 
-		errCode, err = store.GetStore().FindAndCacheAlertForCurrentSegment(project.ID, segmentID, domainID, model.ACTION_SEGMENT_EXIT)
+		errCode, err = store.GetStore().FindAndCacheAlertForCurrentSegment(project.ID, segmentID, domainID, model.ACTION_SEGMENT_EXIT, time.Now())
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.NotEmpty(t, err)
 
@@ -2770,11 +2770,11 @@ func TestCacheAlertForCurrentSegment(t *testing.T) {
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
 
-		errCode, err := store.GetStore().FindAndCacheAlertForCurrentSegment(project.ID, segmentID, domainID, model.ACTION_SEGMENT_EXIT)
+		errCode, err := store.GetStore().FindAndCacheAlertForCurrentSegment(project.ID, segmentID, domainID, model.ACTION_SEGMENT_EXIT, time.Now())
 		assert.Equal(t, http.StatusAccepted, errCode)
 		assert.Empty(t, err)
 
-		errCode, err = store.GetStore().FindAndCacheAlertForCurrentSegment(project.ID, segmentID, domainID, model.ACTION_SEGMENT_ENTRY)
+		errCode, err = store.GetStore().FindAndCacheAlertForCurrentSegment(project.ID, segmentID, domainID, model.ACTION_SEGMENT_ENTRY, time.Now())
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.NotEmpty(t, err)
 
@@ -2794,11 +2794,11 @@ func TestCacheAlertForCurrentSegment(t *testing.T) {
 		assert.Empty(t, errMsg)
 		assert.NotNil(t, alert)
 
-		errCode, err := store.GetStore().FindAndCacheAlertForCurrentSegment(project.ID, segmentID, domainID, model.ACTION_SEGMENT_EXIT)
+		errCode, err := store.GetStore().FindAndCacheAlertForCurrentSegment(project.ID, segmentID, domainID, model.ACTION_SEGMENT_EXIT, time.Now())
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.NotEmpty(t, err)
 
-		errCode, err = store.GetStore().FindAndCacheAlertForCurrentSegment(project.ID, segmentID, domainID, model.ACTION_SEGMENT_ENTRY)
+		errCode, err = store.GetStore().FindAndCacheAlertForCurrentSegment(project.ID, segmentID, domainID, model.ACTION_SEGMENT_ENTRY, time.Now())
 		assert.Equal(t, http.StatusNotFound, errCode)
 		assert.NotEmpty(t, err)
 
