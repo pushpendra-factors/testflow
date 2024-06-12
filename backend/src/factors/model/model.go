@@ -713,7 +713,7 @@ type Model interface {
 	GetCustomerUserIdFromUserId(projectID int64, id string) (string, int)
 	AssociateUserDomainsGroup(projectID int64, requestUserID string, requestGroupName, requestGroupUserID string) int
 	GetAssociatedDomainForUser(projectID int64, userID string, isAnonymous bool) (string, error)
-	GetUsersAssociatedToDomainList(projectID int64, domainGroupID int, domainID string, userStmnt string) ([]model.User, int)
+	GetUsersAssociatedToDomainList(projectID int64, domainGroupID int, domainID string, userStmnt string, limit int) ([]model.User, int)
 	GetDomainDetailsByID(projectID int64, id string, domGroupID int) (model.User, int)
 	GetAllDomainsByProjectID(projectID int64, domainGroupID int, limitVal int) ([]string, int)
 	GetAllDomainsForPreviewByProjectID(projectID int64, domainGroupID int, limitVal int, filters []model.QueryProperty, searchFilter []string) ([]string, int)
