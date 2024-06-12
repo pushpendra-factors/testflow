@@ -8,7 +8,7 @@ def get_tokenizer():
     return AutoTokenizer.from_pretrained('sentence-transformers/bert-base-nli-mean-tokens')
 
 def mean_pooling(model_output, attention_mask):
-    token_embeddings = model_output[0]  # First element of model_output contains all token embeddings
+    token_embeddings = model_output # First element of model_output contains all token embeddings
     input_mask_expanded = np.expand_dims(attention_mask, axis=-1).astype(float)
     sum_embeddings = np.sum(token_embeddings * input_mask_expanded, axis=1)
     sum_mask = np.clip(input_mask_expanded.sum(axis=1), a_min=1e-9, a_max=None)
@@ -26,7 +26,7 @@ def embed_sentence(sentence, normalise=True):
     outputs = model(inputs)
 
     # Extract embeddings from BERT model output
-    cls_embedding = outputs.last_hidden_state.numpy()[:, 0]
+    cls_embedding = outputs.last_hidden_state.numpy()
 
     attention_mask = inputs['attention_mask'].numpy()
 
@@ -39,7 +39,7 @@ def embed_sentence(sentence, normalise=True):
     return mean_embeddings
 
 
-def embed_sentences(sents, tokenizer=None, model=None, normalise=False):
+def embed_sentences(sents, tokenizer=None, model=None, normalise=True):
     # Load pre-trained BERT tokenizer and model
     tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
     model = TFAutoModel.from_pretrained("bert-base-uncased")
@@ -50,8 +50,8 @@ def embed_sentences(sents, tokenizer=None, model=None, normalise=False):
     # Get BERT model output
     outputs = model(inputs)
 
-    # Extract embeddings from BERT model output (CLS token)
-    cls_embeddings = outputs.last_hidden_state.numpy()[:, 0]
+    # Extract all token embeddings from BERT model output and convert to NumPy
+    cls_embeddings = outputs.last_hidden_state.numpy()
 
     attention_mask = inputs['attention_mask'].numpy()
 
