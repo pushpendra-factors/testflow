@@ -454,7 +454,8 @@ func (store *MemSQL) GetUsers(projectId int64, offset uint64, limit uint64) ([]m
 }
 
 // get all users assocuated to given domains
-func (store *MemSQL) GetUsersAssociatedToDomainList(projectID int64, domainGroupID int, domID string, userStmnt string) ([]model.User, int) {
+func (store *MemSQL) GetUsersAssociatedToDomainList(projectID int64, domainGroupID int, domID string, userStmnt string,
+	limit int) ([]model.User, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"dom_id":     domID,
@@ -463,23 +464,30 @@ func (store *MemSQL) GetUsersAssociatedToDomainList(projectID int64, domainGroup
 
 	var users []model.User
 
-	query := fmt.Sprintf(`SELECT 
-	id, 
-	properties, 
-	is_group_user, 
-	source, 
-	last_event_at
-  FROM 
-	users 
-  WHERE 
-	project_id = ? 
-	AND source != ? 
-	AND is_deleted = false
-	AND group_%d_user_id = ?
-	%s;`, domainGroupID, userStmnt)
+	query := fmt.Sprintf(`WITH required_users AS (
+		SELECT id FROM 
+			users 
+		  WHERE 
+			project_id = ? 
+			AND source != ? 
+			AND is_deleted = false
+			AND group_%d_user_id = ?
+			%s
+		)
+		SELECT 
+			id, 
+			properties, 
+			is_group_user, 
+			source, 
+			last_event_at
+		  FROM 
+			users 
+		  WHERE 
+			project_id = ? 
+			AND id IN (SELECT id FROM required_users LIMIT %d);`, domainGroupID, userStmnt, limit)
 
 	db := C.GetServices().Db
-	err := db.Raw(query, projectID, model.UserSourceDomains, domID).Scan(&users).Error
+	err := db.Raw(query, projectID, model.UserSourceDomains, domID, projectID).Scan(&users).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return []model.User{}, http.StatusNotFound
