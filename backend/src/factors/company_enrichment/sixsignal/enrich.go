@@ -3,6 +3,7 @@ package sixsignal
 import (
 	"factors/config"
 	"factors/integration/six_signal"
+	v3 "factors/integration/six_signal/v3"
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
@@ -73,7 +74,12 @@ func FillSixSignalUserProperties(projectId int64, apiKey string, userProperties 
 	sixSignalExists, _ := model.GetSixSignalCacheResult(projectId, UserId, clientIP)
 	if !sixSignalExists {
 
-		go six_signal.ExecuteSixSignalEnrichV1(projectId, apiKey, userProperties, clientIP, resultChannel, logCtx)
+		if config.IsSixSignalV3Enabled(projectId) {
+			logCtx.Info("Enrichment by 6Signal v3.")
+			go v3.ExecuteSixSignalEnrichV3(projectId, apiKey, userProperties, clientIP, resultChannel, logCtx)
+		} else {
+			go six_signal.ExecuteSixSignalEnrichV1(projectId, apiKey, userProperties, clientIP, resultChannel, logCtx)
+		}
 		select {
 		case res = <-resultChannel:
 			if res.ExecuteStatus == 1 {

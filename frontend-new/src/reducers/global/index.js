@@ -139,7 +139,7 @@ export default function (state = defaultState, action) {
     case 'FETCH_PROJECT_DOMAINS_LIST_FULLFILLED': {
       return {
         ...state,
-        projectDomainsList:action.payload.domains
+        projectDomainsList: action.payload.domains
       };
     }
     case 'FETCH_PROJECT_DOMAINS_LIST_REJECTED': {
@@ -548,6 +548,28 @@ export function addLinkedinAccessToken(data) {
           }
         })
         .catch((err) => {
+          reject(err);
+        });
+    });
+  };
+}
+
+export function fetchConversionAPIData(projectID) {
+  return function (dispatch) {
+    dispatch({
+      type: 'FETCH_CONVERSION_DATA_LOADING'
+    });
+    return new Promise((resolve, reject) => {
+      get(dispatch, `${host}projects/${projectID}/linkedin_capi/conversions`)
+        .then((response) => {
+          dispatch({
+            type: FETCH_CONVERSION_DATA_FULFILLED,
+            payload: response.data
+          });
+          resolve(response);
+        })
+        .catch((err) => {
+          dispatch({ type: 'FETCH_CONVERSION_DATA_REJECTED', payload: err });
           reject(err);
         });
     });
@@ -1230,10 +1252,7 @@ export function fetchTeamsChannels(projectId, teamId) {
 export function fetchSlackUsers(projectId) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
-      get(
-        dispatch,
-        host + 'projects/' + projectId + '/slack/users'
-      )
+      get(dispatch, host + 'projects/' + projectId + '/slack/users')
         .then((r) => {
           if (r.ok) {
             dispatch({ type: 'SLACK_USERS_FULFILLED', payload: r.data });

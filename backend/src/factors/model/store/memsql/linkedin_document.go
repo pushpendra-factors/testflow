@@ -1968,3 +1968,62 @@ func (store *MemSQL) PullLinkedInRowsV2(projectID int64, startTime, endTime int6
 	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
 	return rows, tx, err
 }
+
+const (
+	LinkedinCappingDataSetAdAccountQuery = "select id as org_id, JSON_EXTRACT_STRING(value, 'localizedWebsite') as company_domain, " +
+		"JSON_EXTRACT_STRING(value, 'localizedName') as company_name, sum(JSON_EXTRACT_STRING(value, 'impressions')) as impressions, " +
+		"sum(JSON_EXTRACT_STRING(value, 'clicks')) as clicks from linkedin_documents where project_id = ? and type = ? and  timestamp >= ? " +
+		"group by id order by impressions desc, clicks desc"
+	LinkedinCappingDataSetCampaignGroupQuery = "select id as org_id, JSON_EXTRACT_STRING(value, 'localizedWebsite') as company_domain, " +
+		"campaign_group_id, JSON_EXTRACT_STRING(value, 'localizedName') as company_name, sum(JSON_EXTRACT_STRING(value, 'impressions')) as impressions, " +
+		"sum(JSON_EXTRACT_STRING(value, 'clicks')) as clicks from linkedin_documents where project_id = ? and type = ? and  timestamp >= ? " +
+		"group by id, campaign_group_id order by impressions desc, clicks desc"
+	LinkedinCappingDataSetCampaignQuery = "select id as org_id, JSON_EXTRACT_STRING(value, 'localizedWebsite') as company_domain, " +
+		"campaign_group_id, campaign_id, JSON_EXTRACT_STRING(value, 'campaign_name') as campaign_name, " +
+		"JSON_EXTRACT_STRING(value, 'localizedName') as company_name, sum(JSON_EXTRACT_STRING(value, 'impressions')) as impressions, " +
+		"sum(JSON_EXTRACT_STRING(value, 'clicks')) as clicks from linkedin_documents where project_id = ? and type = ? and  timestamp >= ? " +
+		"group by id, campaign_group_id, campaign_id order by impressions desc, clicks desc"
+)
+
+func (store *MemSQL) GetDataSetForFrequencyCappingForMonthForObjectType(projectID int64, timestamp int64, objectType string) ([]model.LinkedinCappingDataSet, int) {
+	logFields := log.Fields{
+		"project_id":  projectID,
+		"timestamp":   timestamp,
+		"object_type": objectType,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+	linkedinCappingDataSet := make([]model.LinkedinCappingDataSet, 0)
+
+	db := C.GetServices().Db
+	query := ""
+
+	if objectType == model.LINKEDIN_ACCOUNT {
+		query = LinkedinCappingDataSetAdAccountQuery
+	} else if objectType == model.LINKEDIN_CAMPAIGN_GROUP {
+		query = LinkedinCappingDataSetCampaignGroupQuery
+	} else if objectType == model.LINKEDIN_CAMPAIGN {
+		query = LinkedinCappingDataSetCampaignQuery
+	} else {
+		logCtx.Error("Failed to get frequency capping data set: invalid object type")
+		return make([]model.LinkedinCappingDataSet, 0), http.StatusInternalServerError
+	}
+	err := db.Raw(query, projectID, LinkedinDocumentTypeAlias["member_company_insights"], timestamp).Find(&linkedinCappingDataSet).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get frequency capping data set for account")
+		return make([]model.LinkedinCappingDataSet, 0), http.StatusInternalServerError
+	}
+	sanitizedlinkedinCappingDataSet := make([]model.LinkedinCappingDataSet, 0)
+
+	rawDomainToSanitizedDomainMap := make(map[string]string)
+	for _, linkedinCappingData := range linkedinCappingDataSet {
+		if linkedinCappingData.CompanyDomain != "$none" {
+			if _, exists := rawDomainToSanitizedDomainMap[linkedinCappingData.CompanyDomain]; !exists {
+				rawDomainToSanitizedDomainMap[linkedinCappingData.CompanyDomain] = U.GetDomainGroupDomainName(projectID, linkedinCappingData.CompanyDomain)
+			}
+			linkedinCappingData.CompanyDomain = rawDomainToSanitizedDomainMap[linkedinCappingData.CompanyDomain]
+		}
+		sanitizedlinkedinCappingDataSet = append(sanitizedlinkedinCappingDataSet, linkedinCappingData)
+	}
+	return sanitizedlinkedinCappingDataSet, http.StatusOK
+}

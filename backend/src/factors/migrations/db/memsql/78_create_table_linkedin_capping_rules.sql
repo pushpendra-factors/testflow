@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS linkedin_capping_rules (
+    id text,
+    project_id bigint NOT NULL,
+    object_type text NOT NULL,
+    name text NOT NULL,
+    display_name text NOT NULL,
+    description text NOT NULL,
+    status text NOT NULL,
+    granularity text NOT NULL,
+    object_ids json,
+    impression_threshold bigint NOT NULL,
+    click_threshold bigint NOT NULL,
+    is_advance_rule_enabled bool DEFAULT FALSE,
+    adv_rule_type text,
+    adv_rules json,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    KEY (id, project_id, type, name),
+    SHARD KEY (project_id),
+    PRIMARY KEY (id, project_id, type, name)
+);

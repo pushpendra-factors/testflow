@@ -298,7 +298,6 @@ func TestPropertyMappingHandler(t *testing.T) {
 		if err := decoder.Decode(&result); err != nil {
 			assert.NotNil(t, nil, err)
 		}
-		log.WithField("result", result).Warn("kark23")
 		assert.NotNil(t, result)
 		assert.Equal(t, len(result), 1)
 	})

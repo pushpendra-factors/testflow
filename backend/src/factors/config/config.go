@@ -373,6 +373,7 @@ type Configuration struct {
 	EnableCacheDBReadProjects                            string
 	SkipSalesforceLeadEnrichmentByProjectID              string
 	SalesforceEnrichOnlyObjects                          string
+	SixSignalV3ProjectIds                                string
 }
 
 type Services struct {
@@ -3369,5 +3370,26 @@ func IsSalesforceEnabledEnrichObject(docTypeAlias string) bool {
 	if strings.Contains(GetConfig().SalesforceEnrichOnlyObjects, docTypeAlias) {
 		return true
 	}
+	return false
+}
+
+func IsSixSignalV3Enabled(projectId int64) bool {
+
+	if configuration.SixSignalV3ProjectIds == "" {
+		return false
+	}
+
+	if configuration.SixSignalV3ProjectIds == "*" {
+		return true
+	}
+
+	projectIDstr := fmt.Sprintf("%d", projectId)
+	projectIDs := strings.Split(configuration.SixSignalV3ProjectIds, ",")
+	for i := range projectIDs {
+		if projectIDs[i] == projectIDstr {
+			return true
+		}
+	}
+
 	return false
 }
