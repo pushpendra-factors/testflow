@@ -3,13 +3,14 @@ package memsql
 import (
 	C "factors/config"
 	"factors/model/model"
+	U "factors/util"
 	"net/http"
 
 	log "github.com/sirupsen/logrus"
 )
 
 // Checking If Folder by name or id Already Exists or NOT
-func (store *MemSQL) isFolderExists(projectID int64, name string, folderType string, id int64 ) bool {
+func (store *MemSQL) isFolderExists(projectID int64, name string, folderType string, id string ) bool {
 
 
 	var tmpCount int64
@@ -25,9 +26,9 @@ func (store *MemSQL) isFolderExists(projectID int64, name string, folderType str
 	}
 
 	db := C.GetServices().Db
-	if(id != 0){
+	if(id != ""){
 		db.Model(&model.SegmentFolder{}).Where("project_id = ? and id = ? and folder_type = ?", projectID, id, folderType).Count(&tmpCount)
-	}else{
+	}else if(name != ""){
 		db.Model(&model.SegmentFolder{}).Where("project_id = ? and name = ? and folder_type = ?", projectID, name, folderType).Count(&tmpCount)
 	}
 	if tmpCount > 0{
@@ -55,7 +56,7 @@ func (store *MemSQL) CreateSegmentFolder(projectID int64, name string, folderTyp
 		return http.StatusBadRequest
 	}
 
-	if store.isFolderExists(projectID, name, folderType, 0){
+	if store.isFolderExists(projectID, name, folderType, ""){
 		return http.StatusConflict
 	}
 
@@ -63,6 +64,7 @@ func (store *MemSQL) CreateSegmentFolder(projectID int64, name string, folderTyp
 		Name: name,
 		ProjectId: projectID,
 		FolderType: folderType,
+		Id: U.GetUUID(),
 	}
 	db := C.GetServices().Db
 	// Creating New Segment Folder
@@ -99,7 +101,7 @@ func (store *MemSQL) GetAllSegmentFolders(projectID int64, folderType string) ([
 	return segmentFolders, http.StatusFound
 }
 
-func (store *MemSQL) UpdateSegmentFolderByID(projectID int64, id int64, name string, folderType string) int {
+func (store *MemSQL) UpdateSegmentFolderByID(projectID int64, id string, name string, folderType string) int {
 	if(name == ""){
 		return http.StatusBadRequest
 	}
@@ -116,7 +118,7 @@ func (store *MemSQL) UpdateSegmentFolderByID(projectID int64, id int64, name str
 		return http.StatusBadRequest
 	}
 
-	if store.isFolderExists(projectID, name, folderType, 0) {
+	if store.isFolderExists(projectID, name, folderType, "") {
 		return http.StatusConflict
 	}
 	// Updating SegmentFolder
@@ -129,7 +131,7 @@ func (store *MemSQL) UpdateSegmentFolderByID(projectID int64, id int64, name str
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) DeleteSegmentFolderByID(projectID int64, id int64, folderType string) int {
+func (store *MemSQL) DeleteSegmentFolderByID(projectID int64, id string, folderType string) int {
 	
 	
 	var err error
@@ -144,8 +146,8 @@ func (store *MemSQL) DeleteSegmentFolderByID(projectID int64, id int64, folderTy
 		return http.StatusBadRequest
 	}
 	db := C.GetServices().Db
-	// Update segment.folder_id = 0
-	err =  db.Exec("UPDATE segments SET folder_id = 0 WHERE project_id = ? and folder_id = ?", projectID, id).Error
+	// Update segment.folder_id = ''
+	err =  db.Exec("UPDATE segments SET folder_id = '' WHERE project_id = ? and folder_id = ?", projectID, id).Error
 	if err != nil {
 		log.WithFields(logFields).WithError(err).Error("Failed to update segments")
 		return http.StatusInternalServerError
@@ -162,7 +164,7 @@ func (store *MemSQL) DeleteSegmentFolderByID(projectID int64, id int64, folderTy
 	return http.StatusAccepted
 }
 
-func (store *MemSQL) MoveSegmentFolderItem(projectID int64, segmentID string, folderID int64, folderType string) int {
+func (store *MemSQL) MoveSegmentFolderItem(projectID int64, segmentID string, folderID string, folderType string) int {
 	
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -174,14 +176,11 @@ func (store *MemSQL) MoveSegmentFolderItem(projectID int64, segmentID string, fo
 		log.WithFields(logFields).Error("Invalid Profile Type")
 		return http.StatusBadRequest
 	}
-	if folderID > 0 {
+	if folderID != "" {
 		// Checking If Folder exists or not.
 		if store.isFolderExists(projectID, "", folderType, folderID) == false {
 			return http.StatusNotFound
 		}
-	}
-	if(folderID<=0){
-		folderID=0
 	}
 	
 	db := C.GetServices().Db

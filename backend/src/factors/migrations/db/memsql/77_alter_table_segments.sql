@@ -1,2 +1,2 @@
 ALTER TABLE segments
-    ADD COLUMN folder_id bigint DEFAULT 0;
+    ADD COLUMN folder_id text DEFAULT "";

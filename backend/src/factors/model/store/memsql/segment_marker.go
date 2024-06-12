@@ -20,14 +20,6 @@ import (
 func EventsPerformedCheck(projectID int64, segmentId string, eventNameIDsMap map[string]string,
 	segmentQuery *model.Query, userID string, isAllAccounts bool, userArray []model.User) bool {
 
-	// default value to be set true
-	for index := range segmentQuery.EventsWithProperties {
-		if segmentQuery.EventsWithProperties[index].FrequencyOperator != "" {
-			continue
-		}
-		segmentQuery.EventsWithProperties[index].IsEventPerformed = true
-	}
-
 	isMatched := false
 
 	var didEventPresent, didNotDoEventPresent bool

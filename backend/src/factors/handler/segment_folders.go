@@ -7,7 +7,6 @@ import (
 	"factors/model/store"
 	U "factors/util"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -82,11 +81,7 @@ func UpdateSegmentFolderByIDHandler(c *gin.Context) (interface{}, int, string,st
 	}
 	r := c.Request
 
-	id,err := strconv.ParseInt(c.Params.ByName("id"), 10, 64)	
-	if err != nil {
-		return nil, http.StatusBadRequest, "Folder ID not found", "", true
-	}
-	
+	id := c.Params.ByName("id")
 
 	if r.Body == nil {
 		return nil, http.StatusBadRequest, "Body Not Found.", "", true
@@ -126,10 +121,7 @@ func DeleteSegmentFolderByIDHandler(c *gin.Context) (interface{}, int, string,st
 		return nil, http.StatusBadRequest, "Type Not Found.", "", true
 	}
 
-	id,err := strconv.ParseInt(c.Params.ByName("id"), 10, 64)	
-	if err != nil {
-		return nil, http.StatusBadRequest, "Folder ID not found", "Folder ID is not in path parameter or INVALID", true
-	}
+	id := c.Params.ByName("id")
 	
 	errCode := store.GetStore().DeleteSegmentFolderByID(projectId, id, folderType)
 	if errCode != http.StatusAccepted {

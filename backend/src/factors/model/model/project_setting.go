@@ -200,9 +200,9 @@ var ErrorStateToErrorMessageMap = map[string]string{
 	LIMIT_EXCEED:         "Factors Deanonymization Limit Exhausted",
 	DISCONNECTED:         "Disconnected",
 	CONNECTED:            "Connected",
-	fmt.Sprintf("%s_%s", FEATURE_RUDDERSTACK, PULL_DELAYED): "We are encountering a delay in syncing your data from RudderStack. Please check the destination settings inside your RudderStack account.",
-	fmt.Sprintf("%s_%s", FEATURE_SEGMENT, PULL_DELAYED):     "We are encountering a delay in syncing your data from Segment. Please check the destination settings inside your Segment account.",
-	fmt.Sprintf("%s_%s", SDK, PULL_DELAYED):                 "The SDK is not receiving events from your website. Please check if the SDK is placed correctly on your website pages or reach out to us for assistance.",
+	fmt.Sprintf("%s_%s", FEATURE_RUDDERSTACK, SYNC_PENDING): "We are encountering a delay in syncing your data from RudderStack. Please check the destination settings inside your RudderStack account.",
+	fmt.Sprintf("%s_%s", FEATURE_SEGMENT, SYNC_PENDING):     "We are encountering a delay in syncing your data from Segment. Please check the destination settings inside your Segment account.",
+	fmt.Sprintf("%s_%s", SDK, SYNC_PENDING):                 "The SDK is not receiving events from your website. Please check if the SDK is placed correctly on your website pages or reach out to us for assistance.",
 }
 
 /* Sample Attribution Setting

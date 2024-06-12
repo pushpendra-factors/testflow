@@ -37,6 +37,7 @@ export const PathUrls = {
   SettingsTouchpointDefinition: '/settings/touchpoint_definition',
   SettingsCustomDefinition: '/settings/custom_definition',
   SettingsAttribution: '/settings/attribution',
+  SettingsAccountScoring: '/settings/account_scoring',
   ConfigurePlans: '/settings/plans',
   ConfigurePlansAdmin: '/settings/plans/admin',
 

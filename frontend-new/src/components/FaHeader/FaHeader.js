@@ -33,10 +33,13 @@ export const getConfigureMenuItems = (email) => {
       label: 'Custom Definitions',
       url: PathUrls.SettingsCustomDefinition
     },
-
     {
       label: 'Attribution',
       url: PathUrls.SettingsAttribution
+    },
+    {
+      label: 'Account Scoring',
+      url: PathUrls.SettingsAccountScoring
     }
   ];
   if (email === SolutionsAccountId) {
@@ -60,7 +63,7 @@ const ProjectSettingsSubItems = [
     lineBreak: false
   },
   {
-    label: 'Plans & Billings',
+    label: 'Plans & Billing',
     url: PathUrls.SettingsPricing,
     lineBreak: false
   },

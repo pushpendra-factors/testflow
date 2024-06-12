@@ -19,7 +19,7 @@ import (
 
 
 
-func segmentFolderReq(t *testing.T, r *gin.Engine, method string, request interface{}, projectId int64, agent *model.Agent, folder_type string, folderID int64, segmentID string) *httptest.ResponseRecorder {
+func segmentFolderReq(t *testing.T, r *gin.Engine, method string, request interface{}, projectId int64, agent *model.Agent, folder_type string, folderID string, segmentID string) *httptest.ResponseRecorder {
 
 	cookieData, err := helpers.GetAuthData(agent.Email, agent.UUID, agent.Salt, 100*time.Second)
 	if err != nil {
@@ -29,8 +29,8 @@ func segmentFolderReq(t *testing.T, r *gin.Engine, method string, request interf
 
 	if(segmentID != ""){
 		path = fmt.Sprintf("%s_item/%s", path, segmentID)
-	}else if(folderID != 0) {
-		path = fmt.Sprintf("%s/%d", path, folderID)
+	}else if(folderID != "") {
+		path = fmt.Sprintf("%s/%s", path, folderID)
 	}
 
 	path = fmt.Sprintf("%s?type=%s", path, folder_type)
@@ -57,17 +57,17 @@ func segmentFolderReq(t *testing.T, r *gin.Engine, method string, request interf
 	return w
 }
 
-func CreateTestSegmentFolder(t *testing.T, r *gin.Engine, method string, request interface{}, projectId int64, agent *model.Agent, folder_type string, folderID int64, segmentID string){
+func CreateTestSegmentFolder(t *testing.T, r *gin.Engine, method string, request interface{}, projectId int64, agent *model.Agent, folder_type string, folderID string, segmentID string){
 	// Create SegmentFolder
-	w := segmentFolderReq(t, r, method, request, projectId, agent, folder_type,0, "")
+	w := segmentFolderReq(t, r, method, request, projectId, agent, folder_type,"", "")
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	// Creating SegmentFolder with name, this must throw an error
-	w = segmentFolderReq(t, r, method, request, projectId, agent, folder_type,0, "")
+	w = segmentFolderReq(t, r, method, request, projectId, agent, folder_type,"", "")
 	assert.NotEqual(t, http.StatusCreated, w.Code)
 }
 func handlerGetAllTestSegmentsFolder(t *testing.T, r *gin.Engine, method string, projectId int64, agent *model.Agent, folder_type string) ([]model.SegmentFolder, int) {
-	w  := segmentFolderReq(t, r, method, nil, projectId, agent, folder_type, 0, "")
+	w  := segmentFolderReq(t, r, method, nil, projectId, agent, folder_type, "", "")
 
 	if w.Code != http.StatusFound {
 		return nil, w.Code
@@ -94,7 +94,7 @@ func TestGetSegmentFolders(t *testing.T){
 	createSegmentPayload := model.SegmentFolderPayload{Name: "Accounts Demo Folder"}
 
 	// 1. Create SegmentFolder
-	CreateTestSegmentFolder(t, r, http.MethodPost, createSegmentPayload, project.ID, agent, "account",0, "")
+	CreateTestSegmentFolder(t, r, http.MethodPost, createSegmentPayload, project.ID, agent, "account","", "")
 	
 	// 2. Get All SegmentsFolder
 	jsonData, errCode := handlerGetAllTestSegmentsFolder(t, r, http.MethodGet, project.ID, agent, "account")
@@ -160,19 +160,19 @@ func TestGetSegmentFolders(t *testing.T){
 	w = segmentFolderReq(t, r, http.MethodPut, moveFolderPayload, project.ID, agent, "account", jsonData[0].Id, segmentsData["$domains"][0].Id)
 	assert.Equal(t, http.StatusAccepted, w.Code)
 	// Adding Segment to Some Random Segment Folder
-	moveFolderPayload = model.MoveSegmentFolderItemPayload{FolderID: 9999999}
-	w = segmentFolderReq(t, r, http.MethodPut, moveFolderPayload, project.ID, agent, "account", 9999999, segmentsData["$domains"][0].Id)
+	moveFolderPayload = model.MoveSegmentFolderItemPayload{FolderID: "random-id"}
+	w = segmentFolderReq(t, r, http.MethodPut, moveFolderPayload, project.ID, agent, "account", "random-id", segmentsData["$domains"][0].Id)
 	assert.NotEqual(t, http.StatusAccepted, w.Code)
 
 
 	// 6. MoveSegment To New Folder
 	createSegmentPayload = model.SegmentFolderPayload{Name: "NewFolder"}
-	w = segmentFolderReq(t, r, http.MethodPost, createSegmentPayload, project.ID, agent, "account", 0, segmentsData["$domains"][0].Id)
+	w = segmentFolderReq(t, r, http.MethodPost, createSegmentPayload, project.ID, agent, "account", "", segmentsData["$domains"][0].Id)
 	assert.Equal(t, http.StatusAccepted, w.Code)
 
 	// MoveSegment to Folder with ""
 	createSegmentPayload = model.SegmentFolderPayload{Name: ""}
-	w = segmentFolderReq(t, r, http.MethodPost, createSegmentPayload, project.ID, agent, "account", 0, segmentsData["$domains"][0].Id)
+	w = segmentFolderReq(t, r, http.MethodPost, createSegmentPayload, project.ID, agent, "account", "", segmentsData["$domains"][0].Id)
 	assert.NotEqual(t, http.StatusAccepted, w.Code)
 
 
