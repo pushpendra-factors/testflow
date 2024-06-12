@@ -140,11 +140,11 @@ func (store *MemSQL) GetWorkflowById(projectID int64, id string) (*model.Workflo
 	return &workflow, http.StatusFound, nil
 }
 
-func (store *MemSQL) GetAlertTemplateById(id int) (model.AlertTemplate, int) {
+func (store *MemSQL) GetAlertTemplateById(id int, isWorkflow bool) (model.AlertTemplate, int) {
 
 	db := C.GetServices().Db
 	var alertTemplate model.AlertTemplate
-	err := db.Where("is_deleted = ?", false).Where("is_workflow = ? and id = ?", false, id).Find(&alertTemplate).Error
+	err := db.Where("is_deleted = ?", false).Where("is_workflow = ? and id = ?", isWorkflow, id).Find(&alertTemplate).Error
 	if err != nil {
 		log.WithError(err).Error("Failed to get alert templates.")
 		return alertTemplate, http.StatusInternalServerError
@@ -187,7 +187,7 @@ func (store *MemSQL) CreateWorkflow(projectID int64, agentID, oldIDIfEdit string
 		return nil, http.StatusInternalServerError, fmt.Errorf("no url for template")
 	}
 
-	alertTemplate, errCode := store.GetAlertTemplateById(alertBody.TemplateID)
+	alertTemplate, errCode := store.GetAlertTemplateById(alertBody.TemplateID, true)
 	if errCode != http.StatusFound {
 		log.Error("Failed to fetch alert template.")
 	} else {

@@ -85,6 +85,10 @@ func GetConversionFromLinkedCAPI(config model.LinkedinCAPIConfig) (model.BatchLi
 
 	for _, adAccount := range config.LinkedInAdAccounts {
 
+		logCtx := log.WithFields(
+			log.Fields{"adAccount": adAccount},
+		)
+
 		isEndReached := false
 		start, count := 0, 1000
 		for !isEndReached {
@@ -105,6 +109,12 @@ func GetConversionFromLinkedCAPI(config model.LinkedinCAPIConfig) (model.BatchLi
 
 			}
 
+			if resp.StatusCode != http.StatusOK {
+				_, err = handleErrorForBatchCreateResponse(resp, logCtx)
+
+				log.WithError(err).Error("failed to get list from linkedin capi")
+				break
+			}
 			var jsonResponse model.BatchLinkedInCAPIConversionsResponse
 			err = json.NewDecoder(resp.Body).Decode(&jsonResponse)
 			if err != nil {
