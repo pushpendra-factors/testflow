@@ -1577,17 +1577,17 @@ CREATE TABLE IF NOT EXISTS linkedin_capping_rules (
     object_ids json,
     impression_threshold bigint NOT NULL,
     click_threshold bigint NOT NULL,
-    is_advance_rule_enabled bool DEFAULT FALSE,
-    adv_rule_type text,
-    adv_rules json,
+    is_advanced_rule_enabled bool DEFAULT FALSE,
+    advanced_rule_type text,
+    advanced_rules json,
     created_at timestamp(6) NOT NULL,
     updated_at timestamp(6) NOT NULL,
-    KEY (id, project_id, type, name),
     SHARD KEY (project_id),
-    PRIMARY KEY (id, project_id, type, name)
+    PRIMARY KEY (id, project_id, object_type, name)
 );
 
 CREATE TABLE IF NOT EXISTS linkedin_exclusions (
+    id text,
     project_id bigint NOT NULL,
     org_id text NOT NULL,
     timestamp int NOT NULL,

@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS linkedin_exclusions (
+    id text,
     project_id bigint NOT NULL,
     org_id text NOT NULL,
     timestamp int NOT NULL,

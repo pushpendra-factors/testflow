@@ -3,6 +3,7 @@ package memsql
 import (
 	C "factors/config"
 	"factors/model/model"
+	U "factors/util"
 	"net/http"
 	"time"
 
@@ -62,6 +63,7 @@ func (store *MemSQL) CreateLinkedinExclusion(projectID int64, linkedinExclusionD
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
 
+	linkedinExclusionDoc.ID = U.GetUUID()
 	linkedinExclusionDoc.CreatedAt = time.Now()
 	linkedinExclusionDoc.UpdatedAt = time.Now()
 
