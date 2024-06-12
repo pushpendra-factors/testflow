@@ -3,20 +3,22 @@ package v1
 import (
 	// "errors"
 	// mid "factors/middleware"
-	"crypto/x509"
-	"encoding/pem"
+	// "crypto/x509"
+	// "encoding/pem"
 	C "factors/config"
 	"factors/handler/helpers"
 	"factors/model/model"
 	"factors/model/store"
-	"github.com/ucarion/saml"
 	U "factors/util"
 	"fmt"
+	// saml2 "github.com/russellhaering/gosaml2"
+	// "github.com/russellhaering/gosaml2/types"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
-
+	// dsig "github.com/russellhaering/goxmldsig"
+	saml "factors/saml"
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
 	log "github.com/sirupsen/logrus"
@@ -132,18 +134,18 @@ func SamlCallbackHandler(c *gin.Context) {
 		return
 	}
 
-	certBlock, _ := pem.Decode([]byte(samlConfig.Certificate))
-	cert, err := x509.ParseCertificate(certBlock.Bytes)
-	if err != nil {
-		log.WithField("projectID ", projectIdString).WithError(err).Error("failed to parse x509 certificate from existing configuration")
-		c.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
+	// certBlock, _ := pem.Decode([]byte(samlConfig.Certificate))
+	// cert, err := x509.ParseCertificate(certBlock.Bytes)
+	// if err != nil {
+	// 	log.WithField("projectID ", projectIdString).WithError(err).Error("failed to parse x509 certificate from existing configuration")
+	// 	c.AbortWithStatus(http.StatusInternalServerError)
+	// 	return
+	// }
 
 	// This is the destination ID we expect to see in the SAML assertion. We
 	// verify this to make sure that this SAML assertion is meant for us, and
 	// not some other SAML application in the identity provider
-	expectedDestinationID := fmt.Sprintf(C.GetProtocol()+C.GetAPIDomain()+"/%s/saml/acs", projectIdString)
+	expectedDestinationID := fmt.Sprintf(C.GetProtocol()+C.GetAPIDomain()+"/project/%s/saml/acs", projectIdString)
 
 	// Get the raw SAML response, and verify it.
 	rawSAMLResponse := c.Request.FormValue("SAMLResponse")
@@ -151,18 +153,32 @@ func SamlCallbackHandler(c *gin.Context) {
 	// get the saml config of the original person done?
 	// get the user from relay state ?
 
-	samlResponse, err := saml.Verify(rawSAMLResponse,"", cert, expectedDestinationID, time.Now())
+	sp := saml.GetSamlServiceProvider(samlConfig, expectedDestinationID)
+
+	_, err = sp.ValidateEncodedResponse(rawSAMLResponse)
 	if err != nil {
-		log.WithField("projectID ", projectIdString).WithError(err).Error("failed to verify SAML Response")
-		c.AbortWithStatus(http.StatusInternalServerError)
+		fmt.Println(err)
 		return
 	}
+
+	assertion, err := sp.RetrieveAssertionInfo(rawSAMLResponse)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// samlResponse, err := saml2.Verify(rawSAMLResponse, "", cert, expectedDestinationID, time.Now())
+	// if err != nil {
+	// 	log.WithField("projectID ", projectIdString).WithError(err).Error("failed to verify SAML Response")
+	// 	c.AbortWithStatus(http.StatusInternalServerError)
+	// 	return
+	// }
 
 	// samlUserID will contain the user ID from the identity provider.
 	//
 	// If a user with that saml_id already exists in our database, we'll log the
 	// user in as them. If no such user already exists, we'll create one first.
-	samlUserEmailID := samlResponse.Assertion.Subject.NameID.Value
+	samlUserEmailID := assertion.NameID
 
 	agent, status := store.GetStore().GetAgentByEmail(samlUserEmailID)
 	if status != http.StatusFound {
