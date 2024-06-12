@@ -6,6 +6,7 @@ import (
 	"factors/config"
 	"factors/util"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -32,6 +33,11 @@ const (
 	// Error 1062: Leaf Error (127.0.0.1:3307): Duplicate entry '6000762-f6e8c235-7aa0-42fe-b987-137866bcdd8f' for key 'PRIMARY'
 	MEMSQL_ERROR_CODE_DUPLICATE_ENTRY = "Error 1062"
 )
+
+// Runs each batch of queries with same transaction and wait for all batches to complete.
+// Routines are used for concurrency per batch.
+// Lower the size higher the concurrency as no.of queries per transaction is lower.
+const setBatchBatchSize = 5
 
 func IsDuplicateRecordError(err error) bool {
 	return strings.HasPrefix(err.Error(), MEMSQL_ERROR_CODE_DUPLICATE_ENTRY)
@@ -165,6 +171,46 @@ func Set(key *cache.Key, value string, expiryInSecs float64) error {
 }
 
 func SetBatch(keyValue map[*cache.Key]string, expiryInSecs float64) error {
+	lenM := len(keyValue)
+
+	if lenM <= setBatchBatchSize {
+		return setBatch(keyValue, expiryInSecs)
+	}
+
+	// Create batches before routines for simplicity.
+	i := 0
+	totalI := 0
+	kvMap := map[*cache.Key]string{}
+	batchMap := make([]map[*cache.Key]string, 0)
+	for k, v := range keyValue {
+		kvMap[k] = v
+		i++
+		totalI++
+
+		if i == setBatchBatchSize || totalI == lenM {
+			batchMap = append(batchMap, kvMap)
+			kvMap = map[*cache.Key]string{}
+			i = 0
+		}
+	}
+
+	var wg sync.WaitGroup
+	for i := range batchMap {
+		wg.Add(1)
+		go setBatchWithWg(batchMap[i], expiryInSecs, &wg)
+	}
+	wg.Wait()
+
+	return nil
+
+}
+
+func setBatchWithWg(keyValue map[*cache.Key]string, expiryInSecs float64, wg *sync.WaitGroup) error {
+	defer wg.Done()
+	return setBatch(keyValue, expiryInSecs)
+}
+
+func setBatch(keyValue map[*cache.Key]string, expiryInSecs float64) error {
 	db := config.GetServices().Db
 	tx, err := db.DB().Begin()
 	defer util.CloseTx(tx)
