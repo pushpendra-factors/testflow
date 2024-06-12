@@ -859,9 +859,9 @@ upload-factors-deanon-monitoring: notify-deployment
 pack-linkedin-frequency-capping:
 	docker build -t us.gcr.io/factors-$(ENV)/linkedin-frequency-capping:$(TAG) -f Dockerfile.linkedin_frequency_capping_job .
 
-upload-linkedin_frequency_capping: export IMAGE_NAME=linkedin_frequency_capping
-upload-linkedin_frequency_capping: notify-deployment
-	docker push us.gcr.io/factors-$(ENV)/linkedin_frequency_capping:$(TAG)
+upload-linkedin-frequency-capping: export IMAGE_NAME=linkedin-frequency-capping
+upload-linkedin-frequency-capping: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/linkedin-frequency-capping:$(TAG)
 
 
 
