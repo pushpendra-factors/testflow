@@ -95,7 +95,7 @@ func GetConversionFromLinkedCAPI(config model.LinkedinCAPIConfig) (model.BatchLi
 
 			q := request.URL.Query()
 			q.Add("q", "account")
-			q.Add("account", "urn%3Ali%3AsponsoredAccount%3A"+adAccount)
+			q.Add("account", "urn:li:sponsoredAccount:"+adAccount)
 			q.Add("start", U.GetPropertyValueAsString(start))
 			q.Add("count", U.GetPropertyValueAsString(count))
 
@@ -128,7 +128,11 @@ func GetConversionFromLinkedCAPI(config model.LinkedinCAPIConfig) (model.BatchLi
 				break
 			}
 
-			finalJsonResponse.LinkedInCAPIConversionsResponseList = append(finalJsonResponse.LinkedInCAPIConversionsResponseList, jsonResponse.LinkedInCAPIConversionsResponseList...)
+			for _, singleResponse := range jsonResponse.LinkedInCAPIConversionsResponseList {
+				if singleResponse.IsEnabled {
+					finalJsonResponse.LinkedInCAPIConversionsResponseList = append(finalJsonResponse.LinkedInCAPIConversionsResponseList, singleResponse)
+				}
+			}
 
 			start += count
 

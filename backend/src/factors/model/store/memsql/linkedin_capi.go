@@ -73,7 +73,7 @@ func (store *MemSQL) NewLinkedCapiRequestPayload(properties *map[string]interfac
 	for _, conversion := range linkedinCAPIConfig.Conversions.LinkedInCAPIConversionsResponseList {
 
 		linkedinCAPIRequestPayload := _linkedinCAPIRequestPayload
-		linkedinCAPIRequestPayload.Conversion = fmt.Sprintf("urn:lla:llaPartnerConversion:%s", conversion.ConversionsId)
+		linkedinCAPIRequestPayload.Conversion = fmt.Sprintf("urn:lla:llaPartnerConversion:%d", conversion.ConversionsId)
 		linkedinCAPIRequestPayloadBatch = append(linkedinCAPIRequestPayloadBatch, linkedinCAPIRequestPayload)
 
 	}
