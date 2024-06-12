@@ -224,20 +224,20 @@ func (sp *SAMLServiceProvider) Validate(response *types.Response) error {
 			return ErrMissingElement{Tag: SubjectConfirmationDataTag, Attribute: NotOnOrAfterAttr}
 		}
 
-		// notOnOrAfter, err := time.Parse(time.RFC3339, subjectConfirmationData.NotOnOrAfter)
-		// if err != nil {
-		// 	return ErrParsing{Tag: NotOnOrAfterAttr, Value: subjectConfirmationData.NotOnOrAfter, Type: "time.RFC3339"}
-		// }
+		notOnOrAfter, err := time.Parse(time.RFC3339, subjectConfirmationData.NotOnOrAfter)
+		if err != nil {
+			return ErrParsing{Tag: NotOnOrAfterAttr, Value: subjectConfirmationData.NotOnOrAfter, Type: "time.RFC3339"}
+		}
 
-		// now := sp.Clock.Now()
-		// if now.After(notOnOrAfter) {
-		// 	return ErrInvalidValue{
-		// 		Reason:   ReasonExpired,
-		// 		Key:      NotOnOrAfterAttr,
-		// 		Expected: now.Format(time.RFC3339),
-		// 		Actual:   subjectConfirmationData.NotOnOrAfter,
-		// 	}
-		// }
+		now := sp.Clock.Now()
+		if now.After(notOnOrAfter) {
+			return ErrInvalidValue{
+				Reason:   ReasonExpired,
+				Key:      NotOnOrAfterAttr,
+				Expected: now.Format(time.RFC3339),
+				Actual:   subjectConfirmationData.NotOnOrAfter,
+			}
+		}
 
 	}
 
