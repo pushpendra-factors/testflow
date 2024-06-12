@@ -134,9 +134,14 @@ func Del(keys []*cache.Key, useDB bool) error {
 		return nil
 	}
 
+	// Disabling delete temporarily for db cache.
+	if useDB {
+		return nil
+	}
+
 	useCacheDB := config.IsCacheDBWriteEnabled(keys[0].ProjectID) && useDB
 	if !useCacheDB {
-		return redis.Del(keys...)
+		return redis.DelPersistent(keys...)
 	}
 
 	// TODO: Writing to both. Remove redis once migration is completed.
