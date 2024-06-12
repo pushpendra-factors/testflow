@@ -127,7 +127,10 @@ export const fetchDashboardFolders = (projectId) =>
 
 export const addDashboardToNewFolder = (projectId, dashboardId, folderName) =>
   async function (dispatch) {
-    const loadingMessageHandle = message.loading('Renaming Folder', 0);
+    const loadingMessageHandle = message.loading(
+      `Moving Dashboard to '${folderName}' Folder`,
+      0
+    );
     try {
       dispatch({ type: INITIATED_DASHBOARD_NEW_FOLDER_CREATION });
       const url = `${host}projects/${projectId}/dashboard_folder`;
@@ -165,7 +168,10 @@ export const addDashboardToExistingFolder = (
   dashboardId
 ) =>
   async function (dispatch) {
-    const loadingMessageHandle = message.loading('Renaming Folder', 0);
+    const loadingMessageHandle = message.loading(
+      'Moving Dashboard to Folder',
+      0
+    );
     try {
       dispatch({ type: INITIATED_DASHBOARD_MOVE_TO_EXISTING_FOLDER });
       const url = `${host}projects/${projectId}/dashboards/${dashboardId}`;
@@ -234,7 +240,7 @@ export const renameDashboardFolder = (projectId, folderId, newName) =>
 
 export const deleteDashboardFolder = (projectId, folderId) =>
   async function (dispatch) {
-    const loadingMessageHandle = message.loading('Renaming Folder', 0);
+    const loadingMessageHandle = message.loading('Deleting Folder', 0);
     try {
       dispatch({ type: INITIATED_DELETE_DASHBOARD_FOLDER });
       const url = `${host}projects/${projectId}/dashboards/folder/${folderId}`;
