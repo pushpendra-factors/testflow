@@ -669,6 +669,8 @@ def sync_engagements_v3(project_id, refresh_token, api_key, last_sync_timestamp=
     engagement_latest_timestamp = 0
     call_disposition = get_call_disposition(project_id, hubspot_request_handler)
     
+    any_failure = False
+    start_time = int(time.time()) * 1000
     for type in engagement_types:
         url = engagement_url + type + "/search"
         has_more = True
@@ -688,6 +690,7 @@ def sync_engagements_v3(project_id, refresh_token, api_key, last_sync_timestamp=
             if not r.ok:
                 log.error("Failure response %d from hubspot on sync_engagements_v3", r.status_code)
                 latest_timestamp  = last_sync_timestamp
+                any_failure = True
                 break
             
             engagement_api_calls += 1
@@ -732,6 +735,12 @@ def sync_engagements_v3(project_id, refresh_token, api_key, last_sync_timestamp=
             engagement_latest_timestamp = latest_timestamp
     
     create_all_engagement_documents_with_buffer([],False) ## flush any remaining docs in memory
+
+    if any_failure:
+        engagement_latest_timestamp = last_sync_timestamp
+    else:
+        engagement_latest_timestamp = start_time - 3600 * 1000 ## set to 1hr before to allow objects appearing late in api.
+    
     return engagement_api_calls, engagements_contacts_api_calls, engagement_latest_timestamp
 
 def is_marketing_contact(doc):
