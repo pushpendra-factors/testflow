@@ -22,7 +22,7 @@ import (
 
 const MAX_LIMIT = 10000
 const NORM_CONFIG = 10000
-const NUM_ROUTINES = 25
+const NUM_ROUTINES = 10
 
 func makeUserUpdateString(user map[string]model.LatestScore, score float64) (string, error) {
 
