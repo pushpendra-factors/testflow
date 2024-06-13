@@ -62,17 +62,9 @@ const WorkflowTrigger = ({
               }
               value={segmentType}
             >
-              {segmentType === 'action_event' ? (
-                <Option value='action_event'>Performs an event</Option>
-              ) : (
-                <>
-                  <Option value='action_event'>Performs an event</Option>
-                  <Option value='action_segment_entry'>
-                    Enter the segment
-                  </Option>
-                  <Option value='action_segment_exit'>Exit the segment</Option>
-                </>
-              )}
+              <Option value='action_event'>Performs an event</Option>
+              <Option value='action_segment_entry'>Enter the segment</Option>
+              <Option value='action_segment_exit'>Exit the segment</Option>
             </Select>
           </Col>
         </Row>
