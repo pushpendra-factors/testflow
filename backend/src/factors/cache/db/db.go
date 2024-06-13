@@ -170,7 +170,7 @@ func Set(key *cache.Key, value string, expiryInSecs float64) error {
 	return nil
 }
 
-func SetBatch(keyValue map[*cache.Key]string, expiryInSecs float64) error {
+func setBatchWithBatchRoutines(keyValue map[*cache.Key]string, expiryInSecs float64) error {
 	lenM := len(keyValue)
 
 	if lenM <= setBatchBatchSize {
@@ -205,9 +205,28 @@ func SetBatch(keyValue map[*cache.Key]string, expiryInSecs float64) error {
 
 }
 
+func SetBatch(keyValue map[*cache.Key]string, expiryInSecs float64) error {
+	var wg sync.WaitGroup
+
+	// Using as many go routines as length of the map for simplicity.
+	// Temporarily controlling db concurrency.
+	for k, v := range keyValue {
+		wg.Add(1)
+		go setWithWg(k, v, expiryInSecs, &wg)
+	}
+	wg.Wait()
+
+	return nil
+}
+
 func setBatchWithWg(keyValue map[*cache.Key]string, expiryInSecs float64, wg *sync.WaitGroup) error {
 	defer wg.Done()
 	return setBatch(keyValue, expiryInSecs)
+}
+
+func setWithWg(key *cache.Key, value string, expiryInSecs float64, wg *sync.WaitGroup) error {
+	defer wg.Done()
+	return Set(key, value, expiryInSecs)
 }
 
 func setBatch(keyValue map[*cache.Key]string, expiryInSecs float64) error {
