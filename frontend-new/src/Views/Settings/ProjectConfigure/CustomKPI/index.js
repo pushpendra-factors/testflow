@@ -1170,7 +1170,7 @@ function CustomKPI({
   }
 
   return (
-    <div className='fa-container'>
+    <div className='px-1 fa-container'>
       <Row gutter={[24, 24]} justify='center'>
         <Col span={24}>
           <div className=''>

@@ -7,7 +7,9 @@
     padding-top: 8px;
     padding-left: 8px;
     padding-right: 8px;
-    box-shadow: 0px 0px 4px 0px #00000040, 0px -18px 8px 0px #ffffff inset;
+    box-shadow:
+      0px 0px 4px 0px #00000040,
+      0px -18px 8px 0px #ffffff inset;
 
     &_placement_bottom {
       top: 0;
@@ -15,6 +17,7 @@
 
     &_placement_top {
       bottom: 32px;
+      top: auto;
     }
 
     &_right_0 {
