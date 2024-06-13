@@ -1,12 +1,32 @@
 import { SVG, Text } from 'Components/factorsComponents';
-import { Button, Col, Row } from 'antd';
-import React, { useState } from 'react';
+import { Button, Col, Row, Spin } from 'antd';
+import React, { useEffect, useState } from 'react';
 
-import SavedProperties from '../../PropertySettings/PropertyMappingKPI/savedProperties';
+import { bindActionCreators } from 'redux';
+import { fetchPropertyMappings } from 'Reducers/settings/middleware';
+import { ConnectedProps, connect } from 'react-redux';
 import PropertyMappingKPI from '../../PropertySettings/PropertyMappingKPI';
+import SavedProperties from '../../PropertySettings/PropertyMappingKPI/savedProperties';
 
-const PropertyMapping = () => {
+const PropertyMapping = ({
+  fetchPropertyMappings,
+  activeProject
+}: PropertyMappingProps) => {
   const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchPropertyMappings(activeProject?.id).then(() => {
+      setLoading(false);
+    });
+  }, []);
+  if (loading) {
+    return (
+      <div className='w-full h-full flex items-center justify-center'>
+        <Spin />
+      </div>
+    );
+  }
   return (
     <div className='mb-4'>
       {!showForm && (
@@ -47,4 +67,20 @@ const PropertyMapping = () => {
   );
 };
 
-export default PropertyMapping;
+const mapDispatchToProps = (dispatch) =>
+  bindActionCreators(
+    {
+      fetchPropertyMappings
+    },
+    dispatch
+  );
+
+const mapStateToProps = (state) => ({
+  activeProject: state.global.active_project
+});
+const connector = connect(mapStateToProps, mapDispatchToProps);
+type ReduxProps = ConnectedProps<typeof connector>;
+
+type PropertyMappingProps = ReduxProps;
+
+export default connector(PropertyMapping);

@@ -56,8 +56,6 @@ func SetBatch(keyValue map[*cache.Key]string, expiryInSecs float64, useDB bool) 
 
 	// TODO: Writing to both. Remove redis once migration is completed.
 	redisErr := redis.SetPersistentBatch(keyValue, expiryInSecs)
-	logCtx.Info("Writing to cache db.")
-
 	dbErr := db.SetBatch(keyValue, expiryInSecs)
 	if dbErr != nil {
 		logCtx.WithError(dbErr).Warn("Failed to write to db cache.")
@@ -79,7 +77,6 @@ func Get(key *cache.Key, useDB bool) (string, error) {
 		return redis.GetPersistent(key)
 	}
 
-	logCtx.Info("Getting from cache db.")
 	v, err := db.Get(key)
 	if err != nil {
 		logCtx.WithError(err).Warn("Failed to get from cache.")
@@ -106,13 +103,13 @@ func GetIfExists(key *cache.Key, useDB bool) (string, bool, error) {
 		return redis.GetIfExistsPersistent(key)
 	}
 
-	logCtx.Info("Getting from cache db.")
 	v, b, err := db.GetIfExists(key)
 	if err != nil {
 		logCtx.WithError(err).Warn("Failed to get from cache.")
 	}
 
-	if !b {
+	hitRedis := !b || err != nil
+	if hitRedis {
 		vR, bR, errR := redis.GetIfExistsPersistent(key)
 		if bR {
 			// Log and Return from redis when available on redis but not on DB.
@@ -135,13 +132,12 @@ func Del(keys []*cache.Key, useDB bool) error {
 
 	useCacheDB := config.IsCacheDBWriteEnabled(keys[0].ProjectID) && useDB
 	if !useCacheDB {
-		return redis.Del(keys...)
+		return redis.DelPersistent(keys...)
 	}
 
 	// TODO: Writing to both. Remove redis once migration is completed.
 	redis.DelPersistent(keys...)
 
-	logCtx.Info("Writing to cache db.")
 	err := db.Del(keys...)
 	if err != nil {
 		logCtx.WithError(err).Warn("Failed to delete from db cache.")
