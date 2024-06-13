@@ -57,6 +57,10 @@ const SixSignalReportRedirection = lazyWithRetry(
     )
 );
 
+const CampaignsFreqCap = lazyWithRetry(
+  () => import('../features/freq-capping')
+);
+
 // Dashboard
 const Dashboard = lazyWithRetry(
   () => import(/* webpackChunkName: "dashboard" */ '../Views/Dashboard')
@@ -610,6 +614,18 @@ export const APP_LAYOUT_ROUTES = {
     path: PathUrls.ConfigurePlansAdmin,
     Private: true,
     Component: ConfigurePlanAdmin
+  },
+  FreqCap: {
+    exact: true,
+    path: PathUrls.FreqCap,
+    Private: true,
+    Component: CampaignsFreqCap
+  },
+  FreqCapView: {
+    exact: true,
+    path: PathUrls.FreqCapView,
+    Private: true,
+    Component: CampaignsFreqCap
   },
   // For backward compatibility for old url sent over mail
   SixSignalReportRedirection: {

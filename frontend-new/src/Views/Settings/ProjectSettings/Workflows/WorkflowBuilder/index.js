@@ -27,7 +27,6 @@ import {
   message
 } from 'antd';
 import { Text, SVG } from 'factorsComponents';
-import QueryBlock from '../../../ProjectSettings/Alerts/EventBasedAlert/QueryBlock';
 import {
   QUERY_TYPE_EVENT,
   INITIAL_SESSION_ANALYTICS_SEQ,
@@ -53,7 +52,6 @@ import {
   getGroups,
   fetchEventNames
 } from 'Reducers/coreQuery/middleware';
-import WorkflowHubspotThumbnail from '../../../../../../src/assets/images/workflow-hubspot-thumbnail.png';
 import { reorderDefaultDomainSegmentsToTop } from 'Components/Profile/AccountProfiles/accountProfiles.helpers';
 import { selectSegments } from 'Reducers/timelines/selectors';
 import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
@@ -62,23 +60,25 @@ import { getSegmentColorCode } from 'Views/AppSidebar/appSidebar.helpers';
 import { defaultSegmentIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
 import cx from 'classnames';
 import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
-import WorkflowTrigger from './trigger';
-import { filterOptions } from '../Stub';
-import MapComponent from './MapComponent';
 import { paragon } from '@useparagon/connect/dist/src/index';
 import useParagon from 'hooks/useParagon';
 import { get, getHostUrl } from 'Utils/request';
-import FactorsHubspotCompany from './Templates/FactorsHubspotCompany';
-import FactorsApolloHubspotContacts from './Templates/FactorsApolloHubspotContacts';
 import {
   fetchSavedWorkflows,
   saveWorkflow,
   updateWorkflow
 } from 'Reducers/workflows';
-import { TemplateIDs } from './../utils';
+import logger from 'Utils/logger';
+import WorkflowTrigger from './trigger';
+import { filterOptions } from '../Stub';
+import MapComponent from './MapComponent';
+import FactorsHubspotCompany from './Templates/FactorsHubspotCompany';
+import FactorsApolloHubspotContacts from './Templates/FactorsApolloHubspotContacts';
+import { TemplateIDs } from '../utils';
 import FactorsSalesforceCompany from './Templates/FactorsSalesforceCompany';
 import FactorsApolloSalesforceContacts from './Templates/FactorsApolloSalesforceContacts';
-import logger from 'Utils/logger';
+import WorkflowHubspotThumbnail from '../../../../../assets/images/workflow-hubspot-thumbnail.png';
+import QueryBlock from '../../Alerts/EventBasedAlert/QueryBlock';
 
 const host = getHostUrl();
 
@@ -126,7 +126,7 @@ const WorkflowBuilder = ({
   const [apolloFormDetails, setApolloFormDetails] = useState(false);
   const [showConfigureOptions, setShowConfigureOptions] = useState(false);
 
-  //paragon hook and states
+  // paragon hook and states
   const [state, setState] = useState({
     token: ''
   });
@@ -139,12 +139,10 @@ const WorkflowBuilder = ({
           logger.error('JWT Token not found');
           return;
         }
-        setState((prev) => {
-          return {
-            ...prev,
-            token: res?.data
-          };
-        });
+        setState((prev) => ({
+          ...prev,
+          token: res?.data
+        }));
       })
       .catch((err) => {
         logger.error(err);
@@ -159,7 +157,7 @@ const WorkflowBuilder = ({
   useEffect(() => {
     if (selectedTemp) {
       const queryData = [];
-      let isTemplateWorkflow = selectedTemp?.is_workflow ? true : false;
+      const isTemplateWorkflow = !!selectedTemp?.is_workflow;
       if (
         (selectedTemp?.action_performed == 'action_event' ||
           isTemplateWorkflow) &&
@@ -245,7 +243,7 @@ const WorkflowBuilder = ({
   }, [activeProject]);
 
   const groupsList = useMemo(() => {
-    let listGroups = [];
+    const listGroups = [];
     Object.entries(groups?.all_groups || {}).forEach(
       ([group_name, display_name]) => {
         listGroups.push([display_name, group_name]);
@@ -342,22 +340,18 @@ const WorkflowBuilder = ({
     setSelectedSegment(segment?.value);
   };
 
-  const dropdownOptions = filterOptions?.map((item) => {
-    return {
-      label: item.label,
-      options: item.values
-    };
-  });
+  const dropdownOptions = filterOptions?.map((item) => ({
+    label: item.label,
+    options: item.values
+  }));
 
-  const VerticalDivider = () => {
-    return (
-      <>
-        <div className='fa-workflow_section--dot top' />
-        <div className={'fa-workflow_section--line'} />
-        <div className='fa-workflow_section--dot bottom' />
-      </>
-    );
-  };
+  const VerticalDivider = () => (
+    <>
+      <div className='fa-workflow_section--dot top' />
+      <div className='fa-workflow_section--line' />
+      <div className='fa-workflow_section--dot bottom' />
+    </>
+  );
 
   const isArrayAndObjectsNotEmpty = (arr) => {
     // Check if the array itself is not empty
@@ -404,7 +398,7 @@ const WorkflowBuilder = ({
       };
     }
 
-    let payload = {
+    const payload = {
       action_performed: segmentType,
       alert_limit: 5,
       breakdown_properties: [],
@@ -417,8 +411,8 @@ const WorkflowBuilder = ({
       repeat_alerts: true,
       template_title: selectedTemp?.template_title,
       template_description: selectedTemp?.template_description,
-      title: workflowName ? workflowName : '',
-      description: workflowName ? workflowName : '',
+      title: workflowName || '',
+      description: workflowName || '',
       template_id: selectedTemp?.template_id || selectedTemp?.id,
       message_properties: message_propertiesObj
     };
@@ -473,7 +467,8 @@ const WorkflowBuilder = ({
           isTemplate={isTemplate}
         />
       );
-    } else if (
+    }
+    if (
       workflowItem?.id == TemplateIDs.FACTORS_APOLLO_HUBSPOT_CONTACTS ||
       workflowItem?.template_id == TemplateIDs.FACTORS_APOLLO_HUBSPOT_CONTACTS
     ) {
@@ -495,7 +490,8 @@ const WorkflowBuilder = ({
           setApolloFormDetails={setApolloFormDetails}
         />
       );
-    } else if (
+    }
+    if (
       workflowItem?.id == TemplateIDs.FACTORS_SALESFORCE_COMPANY ||
       workflowItem?.template_id == TemplateIDs.FACTORS_SALESFORCE_COMPANY
     ) {
@@ -513,7 +509,8 @@ const WorkflowBuilder = ({
           isTemplate={isTemplate}
         />
       );
-    } else if (
+    }
+    if (
       workflowItem?.id == TemplateIDs.FACTORS_APOLLO_SALESFORCE_CONTACTS ||
       workflowItem?.template_id ==
         TemplateIDs.FACTORS_APOLLO_SALESFORCE_CONTACTS
@@ -536,9 +533,8 @@ const WorkflowBuilder = ({
           setApolloFormDetails={setApolloFormDetails}
         />
       );
-    } else {
-      return null;
     }
+    return null;
   };
 
   const handleConfigure = () => {
@@ -550,28 +546,28 @@ const WorkflowBuilder = ({
 
   return (
     <>
-      <Row className={'border-bottom--thin-2 pt-4 pb-4'}>
+      <Row className='border-bottom--thin-2 pt-4 pb-4'>
         <Col span={12}>
-          <div className={'flex justify-start items-center'}>
+          <div className='flex justify-start items-center'>
             <Button
               disabled={loading}
-              type={'text'}
+              type='text'
               size='large'
               onClick={() => setBuilderMode(false)}
               icon={<SVG name='arrowLeft' size={24} />}
-            ></Button>
+            />
             <Input
               size='large'
               style={{ width: '300px' }}
-              placeholder={'Untitled Workflow '}
+              placeholder='Untitled Workflow '
               value={workflowName}
               onChange={(e) => setWorkflowName(e.target.value)}
-              className={'fa-input ml-4'}
+              className='fa-input ml-4'
             />
           </div>
         </Col>
         <Col span={12}>
-          <div className={'flex justify-end'}>
+          <div className='flex justify-end'>
             {/* <div className={'flex items-center justify-end mr-4'}>
               <Text
                 type={'title'}
@@ -598,11 +594,11 @@ const WorkflowBuilder = ({
               Cancel
             </Button> */}
             <Button
-              size={'large'}
+              size='large'
               disabled={loading}
               loading={loading}
-              className={'ml-2'}
-              type={'primary'}
+              className='ml-2'
+              type='primary'
               onClick={() => saveWorkflowFn()}
             >
               Save and Publish
@@ -611,7 +607,7 @@ const WorkflowBuilder = ({
         </Col>
       </Row>
 
-      <Row className={'my-6 background-color--mono-color-1 border-radius--sm'}>
+      <Row className='my-6 background-color--mono-color-1 border-radius--sm'>
         <Col span={24}>
           <div
             className='flex flex-col justify-center items-center'
@@ -619,7 +615,7 @@ const WorkflowBuilder = ({
           >
             {/* trigger div */}
             <div
-              className={`relative border--thin-2 w-full border-radius--lg background-color--white flex flex-col fa-workflow_section`}
+              className='relative border--thin-2 w-full border-radius--lg background-color--white flex flex-col fa-workflow_section'
               style={{ 'margin-top': '0%', padding: '3% 3%' }}
             >
               <Tag
@@ -647,9 +643,7 @@ const WorkflowBuilder = ({
                 <VerticalDivider />
 
                 <div
-                  className={
-                    'w-full relative border--thin-2 border-radius--lg background-color--white'
-                  }
+                  className='w-full relative border--thin-2 border-radius--lg background-color--white'
                   style={{ 'margin-top': '0%', 'min-height': '250px' }}
                 >
                   <div
@@ -664,21 +658,21 @@ const WorkflowBuilder = ({
                     </Tag>
                     <div className='pr-6'>
                       <Text
-                        type={'title'}
+                        type='title'
                         level={7}
-                        color={'black'}
-                        weight={'bold'}
-                        extraClass={'m-0'}
+                        color='black'
+                        weight='bold'
+                        extraClass='m-0'
                       >
                         {isTemplate
                           ? selectedTemp?.title
                           : selectedTemp?.template_title}
                       </Text>
                       <Text
-                        type={'title'}
+                        type='title'
                         level={7}
-                        color={'grey'}
-                        extraClass={'mt-2'}
+                        color='grey'
+                        extraClass='mt-2'
                       >
                         {isTemplate
                           ? selectedTemp?.description
@@ -686,7 +680,7 @@ const WorkflowBuilder = ({
                       </Text>
                       <Button
                         type='primary'
-                        extraClass={'mt-2'}
+                        extraClass='mt-2'
                         onClick={() => handleConfigure()}
                       >
                         Configure Action
