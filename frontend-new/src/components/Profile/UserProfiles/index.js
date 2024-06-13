@@ -441,8 +441,11 @@ function UserProfiles({
       );
       return title;
     }
-    return timelinePayload?.segment?.name;
-  }, [timelinePayload, userOptions, newSegmentMode]);
+    return (
+      userSegmentsList.find((e) => e.id === timelinePayload?.segment?.id)
+        ?.name || timelinePayload?.segment?.name
+    );
+  }, [timelinePayload, userOptions, newSegmentMode, userSegmentsList]);
 
   const restoreFiltersDefaultState = useCallback(
     (
