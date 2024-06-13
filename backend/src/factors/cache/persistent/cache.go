@@ -130,11 +130,6 @@ func Del(keys []*cache.Key, useDB bool) error {
 		return nil
 	}
 
-	// Disabling delete temporarily for db cache.
-	if useDB {
-		return nil
-	}
-
 	useCacheDB := config.IsCacheDBWriteEnabled(keys[0].ProjectID) && useDB
 	if !useCacheDB {
 		return redis.DelPersistent(keys...)
