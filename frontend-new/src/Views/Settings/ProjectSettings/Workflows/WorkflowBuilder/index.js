@@ -124,7 +124,12 @@ const WorkflowBuilder = ({
   const [propertyMapAdditional, setPropertyMapAdditional] = useState([]);
   const [propertyMapAdditional2, setPropertyMapAdditional2] = useState([]);
 
-  const [apolloFormDetails, setApolloFormDetails] = useState(false);
+  const [apolloFormDetails, setApolloFormDetails] = useState({
+    ApiKey: '',
+    PersonTitles: '',
+    PersonSeniorities: '',
+    MaxContacts: ''
+  });
   const [showConfigureOptions, setShowConfigureOptions] = useState(false);
 
   //paragon hook and states
@@ -188,12 +193,15 @@ const WorkflowBuilder = ({
           selectedTemp?.event || selectedTemp?.workflow_config?.trigger?.event
         );
         setQueries([]);
+        setSegmentType('action_event');
       }
       if (
         selectedTemp?.workflow_config?.trigger?.event_level === '' ||
         selectedTemp?.event_level === '' ||
         selectedTemp?.workflow_config?.trigger?.event_level === 'events' ||
-        selectedTemp?.event_level === 'events'
+        selectedTemp?.event_level === 'events' ||
+        selectedTemp?.workflow_config?.trigger?.event_level === 'account' ||
+        selectedTemp?.event_level === 'account'
       ) {
         setActiveGrpBtn('events');
       } else {
@@ -202,6 +210,7 @@ const WorkflowBuilder = ({
       setWorkflowName(isTemplateWorkflow ? '' : selectedTemp?.title);
       setIsTemplate(isTemplateWorkflow);
       setShowConfigureOptions(!isTemplateWorkflow);
+      setApolloFormDetails(selectedTemp?.addtional_configuration?.[0]);
     }
     return () => {
       setIsTemplate(false);
@@ -388,6 +397,7 @@ const WorkflowBuilder = ({
 
   const saveWorkflowFn = (value) => {
     let message_propertiesObj = {};
+    let additional_config;
     if (
       selectedTemp?.id == TemplateIDs.FACTORS_HUBSPOT_COMPANY ||
       selectedTemp?.template_id == TemplateIDs.FACTORS_HUBSPOT_COMPANY ||
@@ -410,22 +420,21 @@ const WorkflowBuilder = ({
       message_propertiesObj = {
         mandatory_properties: propertyMapMandatory,
         additional_properties_company: propertyMapAdditional,
-        additional_properties_contact: propertyMapAdditional2,
-        addtional_configuration: value
+        additional_properties_contact: propertyMapAdditional2
       };
+      additional_config = [apolloFormDetails];
     }
 
     if (
       selectedTemp?.id == TemplateIDs.FACTORS_LINKEDIN_CAPI ||
       selectedTemp?.template_id == TemplateIDs.FACTORS_LINKEDIN_CAPI
     ) {
-      message_propertiesObj = {
-        addtional_configuration: propertyMapMandatory
-      };
+      additional_config = propertyMapMandatory;
     }
 
     let payload = {
       action_performed: segmentType,
+      addtional_configuration: additional_config,
       alert_limit: 5,
       breakdown_properties: [],
       cool_down_time: 1800,

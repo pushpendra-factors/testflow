@@ -26,6 +26,7 @@ const FactorsLinkedInCAPI = ({
   const { Panel } = Collapse;
 
   const [DropdownProps, SetDropdownProps] = useState([]);
+  const [conversionData, SetConversionData] = useState([]);
   const [selectedProps, SetSelectedProps] = useState('');
 
   const { active_project: activeProject, currentProjectSettings } = useSelector(
@@ -41,19 +42,21 @@ const FactorsLinkedInCAPI = ({
   useEffect(() => {
     if (selectedTemp && !isTemplate) {
       setPropertyMapMandatory(selectedTemp?.addtional_configuration);
+      SetSelectedProps(selectedTemp?.addtional_configuration[0]?.id);
     }
-  }, selectedTemp);
+  }, [selectedTemp]);
 
   const fetchDropdownData = () => {
     fetchConversionAPIData(activeProject?.id)
       .then((res) => {
-        const dropdownOptions = res?.data?.map((item) => {
+        const dropdownOptions = res?.data?.elements?.map((item) => {
           return {
             value: item.id,
             label: item.name
           };
         });
         SetDropdownProps(dropdownOptions);
+        SetConversionData(res?.data?.elements);
       })
       .catch((err) => logger.log('fetch conversion API data error=>', err));
   };
@@ -66,7 +69,7 @@ const FactorsLinkedInCAPI = ({
 
   const handleChange = (id) => {
     SetSelectedProps(id);
-    const data = DropdownProps.filter((val) => val?.id === id);
+    const data = conversionData.filter((val) => val?.id === id);
     setPropertyMapMandatory(data);
   };
 

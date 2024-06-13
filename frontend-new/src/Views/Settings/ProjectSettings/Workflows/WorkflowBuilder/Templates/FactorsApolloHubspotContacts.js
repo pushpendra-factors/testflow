@@ -105,8 +105,9 @@ const FactorsApolloHubspotContacts = ({
       setPropertyMapAdditional2(
         selectedTemp?.message_properties?.additional_properties_contact
       );
+      setApolloFormDetails(selectedTemp?.addtional_configuration?.[0]);
     }
-  }, selectedTemp);
+  }, [selectedTemp]);
 
   const saveFormValidateApollo = () => {
     form.validateFields().then((value) => {
@@ -228,7 +229,8 @@ const FactorsApolloHubspotContacts = ({
                     form={form}
                     name='apollo'
                     className='w-full'
-                    onFinish={saveFormValidateApollo}
+                    initialValues={apolloFormDetails}
+                    onFinish={(val) => saveFormValidateApollo(val)}
                   >
                     <div className='mt-4'>
                       <Text
@@ -249,6 +251,13 @@ const FactorsApolloHubspotContacts = ({
                         ]}
                       >
                         <Input
+                          onChange={(e) =>
+                            setApolloFormDetails({
+                              ...apolloFormDetails,
+                              ApiKey: e.target.value
+                            })
+                          }
+                          value={apolloFormDetails?.ApiKey}
                           className='fa-input w-full'
                           placeholder='API key'
                         />
@@ -267,6 +276,13 @@ const FactorsApolloHubspotContacts = ({
                         className='w-full'
                       >
                         <Input
+                          onChange={(e) =>
+                            setApolloFormDetails({
+                              ...apolloFormDetails,
+                              PersonTitles: e.target.value
+                            })
+                          }
+                          value={apolloFormDetails?.PersonTitles}
                           className='fa-input w-full'
                           placeholder={`Marketing,CEO,Founder`}
                         />
@@ -285,6 +301,13 @@ const FactorsApolloHubspotContacts = ({
                         className='w-full'
                       >
                         <Input
+                          onChange={(e) =>
+                            setApolloFormDetails({
+                              ...apolloFormDetails,
+                              PersonSeniorities: e.target.value
+                            })
+                          }
+                          value={apolloFormDetails?.PersonSeniorities}
                           className='fa-input w-full'
                           placeholder={`manager,vp,c_suite,director`}
                         />
@@ -302,7 +325,17 @@ const FactorsApolloHubspotContacts = ({
                         name='MaxContacts'
                         className='w-full'
                       >
-                        <Input className='fa-input w-full' placeholder={`10`} />
+                        <Input
+                          onChange={(e) =>
+                            setApolloFormDetails({
+                              ...apolloFormDetails,
+                              MaxContacts: e.target.value
+                            })
+                          }
+                          value={apolloFormDetails?.MaxContacts}
+                          className='fa-input w-full'
+                          placeholder={`10`}
+                        />
                       </Form.Item>
                     </div>
                   </Form>
