@@ -353,6 +353,17 @@ func (store *MemSQL) GetPreviewDomainsListByProjectId(projectID int64, payload m
 	// making all filter's operator as "OR" and skip domain level filters
 	filtersForAllAccounts := modifyFiltersForAllAccounts(payload.Query.GlobalUserProperties)
 
+	totalUserCount, status := store.GetAccountAssociatedUserCountByProjectID(projectID, domainGroupID)
+
+	if status != http.StatusFound {
+		return []model.Profile{}, status, "Users Not Found"
+	}
+
+	if totalUserCount >= 1000000 {
+		// not pruning query by filters if total user count more than 1M
+		filtersForAllAccounts = make([]model.QueryProperty, 0)
+	}
+
 	// increase limit if no relevant filter to apply
 	if len(filtersForAllAccounts) == 0 &&
 		(len(payload.Query.GlobalUserProperties) > 0 || len(payload.Query.EventsWithProperties) > 0) {
@@ -598,12 +609,22 @@ func profileValues(projectID int64, users []model.User, domID string, domainGrou
 func modifyFiltersForAllAccounts(globalFilters []model.QueryProperty) []model.QueryProperty {
 	modifiedFilters := make([]model.QueryProperty, 0)
 
+	// Limiting number of filters used for initial pruning
+	limitFilters := 5
+
+	filterCount := 0
 	for _, filter := range globalFilters {
+		// using only given initial number of filters for pruning
+		if filterCount == limitFilters {
+			break
+		}
+
 		if filter.GroupName == model.GROUP_NAME_DOMAINS {
 			continue
 		}
 		filter.LogicalOp = "OR"
 		modifiedFilters = append(modifiedFilters, filter)
+		filterCount += 1
 	}
 
 	return modifiedFilters
