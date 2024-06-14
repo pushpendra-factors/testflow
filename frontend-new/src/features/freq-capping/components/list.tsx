@@ -43,9 +43,9 @@ const FrequencyCappingList = ({
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (item: FrequencyCap) => (
+      render: (item: string) => (
         <div className='flex items-center'>
-          {item?.status === 'paused' ? (
+          {item === 'paused' ? (
             <Badge
               className='fa-custom-badge fa-custom-badge--orange'
               status='default'

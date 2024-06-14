@@ -23,7 +23,7 @@
 }
 
 .advance-rules-cap {
-  &.ant-collapse-content {
+  :global(.ant-collapse-content) {
     overflow: visible;
   }
 }

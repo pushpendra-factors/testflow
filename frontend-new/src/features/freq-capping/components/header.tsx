@@ -6,16 +6,30 @@ import React, {
   useReducer,
   useState
 } from 'react';
-import { Button, Input, Row, Space, Spin } from 'antd';
+import {
+  Button,
+  Input,
+  Modal,
+  Row,
+  Space,
+  Spin,
+  Switch,
+  notification
+} from 'antd';
 import { useDispatch, useSelector } from 'react-redux';
 import { useHistory, useParams } from 'react-router-dom';
 import { AppContentHeader } from 'Views/AppContentHeader';
 import SVG from 'Components/factorsComponents/SVG';
 import { Text } from 'Components/factorsComponents';
-import { ArrowLeftOutlined, PlusOutlined } from '@ant-design/icons';
+import {
+  ArrowLeftOutlined,
+  ExclamationCircleOutlined,
+  PlusOutlined
+} from '@ant-design/icons';
 import { PathUrls } from 'Routes/pathUrls';
 import { cloneDeep } from 'lodash';
 import { ComponentStates, FrequencyCap } from '../types';
+import { updateLinkedinFreqCapRules } from '../state/service';
 
 interface FreqCapHeaderType {
   state: ComponentStates;
@@ -23,13 +37,15 @@ interface FreqCapHeaderType {
   isRuleEdited: boolean;
   setRuleToEdit: Dispatch<SetStateAction<FrequencyCap | undefined>> | undefined;
   publishChanges: () => any;
+  fetchFreqCapRules: () => any;
 }
 export const FreqCapHeader = ({
   state,
   ruleToView,
   isRuleEdited,
   setRuleToEdit,
-  publishChanges
+  publishChanges,
+  fetchFreqCapRules
 }: FreqCapHeaderType) => {
   const history = useHistory();
   const { rule_id } = useParams();
@@ -39,6 +55,8 @@ export const FreqCapHeader = ({
     editedRule?.display_name = textValue;
     setRuleToEdit(editedRule);
   };
+
+  const { confirm } = Modal;
 
   const headerContent = () => {
     if (state === ComponentStates.LIST || state === ComponentStates.EMPTY) {
@@ -81,6 +99,52 @@ export const FreqCapHeader = ({
     }
   };
 
+  const updateChanges = async (rule: FrequencyCap) => {
+    const response = await updateLinkedinFreqCapRules(rule.project_id, rule);
+    if (response?.status === 200) {
+      notification.success({
+        message: 'Success',
+        description: 'Rule Successfully Updated!',
+        duration: 3
+      });
+      fetchFreqCapRules();
+    } else {
+      notification.error({
+        message: 'Failed!',
+        description: response?.status,
+        duration: 3
+      });
+    }
+  };
+
+  const toggleStatus = () => {
+    const title =
+      ruleToView?.status === 'active'
+        ? 'Pause this feature?'
+        : 'Are you sure you want to publish';
+
+    const content =
+      ruleToView?.status === 'active'
+        ? 'It will be temporarilyIt will be temporarily unavailable until you resume it.'
+        : 'Once published, it will be active and running.';
+    const okText =
+      ruleToView?.status === 'active' ? 'Pause' : 'Confirm Publish';
+    confirm({
+      title,
+      icon: <ExclamationCircleOutlined />,
+      content,
+      okText,
+      onOk: () => {
+        const editedRule = cloneDeep(ruleToView);
+        editedRule?.status =
+          ruleToView?.status === 'active' ? 'paused' : 'active';
+
+        updateChanges(editedRule);
+        // setRuleToEdit(editedRule);
+      }
+    });
+  };
+
   const actions = () => {
     if (state === ComponentStates.LIST || state === ComponentStates.EMPTY) {
       return (
@@ -97,16 +161,51 @@ export const FreqCapHeader = ({
       );
     }
     if (state === ComponentStates.VIEW) {
-      return (
-        <Button
-          type='primary'
-          id='fa-at-btn--new-report'
-          onClick={() => publishChanges()}
-          disabled={!isRuleEdited && rule_id !== 'new'}
-        >
-          <Space>Publish</Space>
-        </Button>
-      );
+      if (rule_id === 'new') {
+        return (
+          <Button
+            type='primary'
+            id='fa-at-btn--new-report'
+            onClick={() => publishChanges()}
+            disabled={
+              !ruleToView?.display_name ||
+              (ruleToView?.object_type !== 'account' &&
+                ruleToView.object_ids.length === 0)
+            }
+          >
+            <Space>Publish</Space>
+          </Button>
+        );
+      }
+      if (rule_id !== 'new' && !isRuleEdited) {
+        return (
+          <Switch
+            checkedChildren='Active'
+            unCheckedChildren='Paused'
+            onChange={toggleStatus}
+            checked={ruleToView?.status === 'active'}
+          />
+        );
+      }
+      if (rule_id !== 'new' && isRuleEdited) {
+        return (
+          <div>
+            <Button
+              id='fa-at-btn--new-report mr-1'
+              onClick={() => publishChanges()}
+            >
+              <Space>Discard Changes</Space>
+            </Button>
+            <Button
+              type='primary'
+              id='fa-at-btn--new-report ml-1'
+              onClick={() => publishChanges()}
+            >
+              <Space>Publish</Space>
+            </Button>
+          </div>
+        );
+      }
     }
   };
   return <AppContentHeader heading={headerContent()} actions={actions()} />;

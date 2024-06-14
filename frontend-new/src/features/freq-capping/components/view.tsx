@@ -391,7 +391,7 @@ const FrequencyCappingView = ({
     [userProperties, groupProperties, availableGroups]
   );
 
-  const handleInsertFilter = () => {};
+  const handleInsertFilter = (filterState, index) => {};
 
   const handleCloseFilter = () => {};
 
@@ -440,7 +440,7 @@ const FrequencyCappingView = ({
             insertFilter={handleInsertFilter}
             closeFilter={handleCloseFilter}
             deleteFilter={handleDeleteFilter}
-            showInList
+            showInList={false}
           />
         )
       },
