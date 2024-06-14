@@ -463,6 +463,7 @@ func GetEventPropertiesHandler(c *gin.Context) {
 
 	if eventName == U.EVENT_NAME_PAGE_VIEW || eventName == U.SEN_ALL_EVENTS {
 		properties["categorical"] = U.PAGE_VIEWS_STANDARD_PROPERTIES_CATEGORICAL
+		properties["categorical"] = append(properties["categorical"], U.EP_TIMESTAMP)
 		properties["numerical"] = U.PAGE_VIEWS_STANDARD_PROPERTIES_NUMERICAL
 	} else if isExplain != "true" {
 		var statusCode int
