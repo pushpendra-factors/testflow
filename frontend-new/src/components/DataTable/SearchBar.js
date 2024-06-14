@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Input, Button, Popover, Tooltip } from 'antd';
 import { CSVLink } from 'react-csv';
+import useAutoFocus from 'hooks/useAutoFocus';
+import { jsonToCsv } from 'Views/CoreQuery/utils';
+import { LoadingOutlined } from '@ant-design/icons';
 import { SVG } from '../factorsComponents';
 import DataTableFilters from '../DataTableFilters/DataTableFilters';
 import ControlledComponent from '../ControlledComponent/ControlledComponent';
 import styles from './index.module.scss';
 import { TOOLTIP_CONSTANTS } from '../../constants/tooltips.constans';
-import useAutoFocus from 'hooks/useAutoFocus';
-import { jsonToCsv } from 'Views/CoreQuery/utils';
+import logger from 'Utils/logger';
 
 function SearchBar({
   searchText,
@@ -24,16 +26,25 @@ function SearchBar({
   breakupHeading = 'Break-up'
 }) {
   const inputComponentRef = useAutoFocus(searchBar);
-
+  const [loadingReport, setLoadingReport] = useState(false);
   const handleDownloadBtnClick = async () => {
-    const { data, fileName } = await getCSVData();
-    const csvDataArr = jsonToCsv(data);
-    const csvData = new Blob([csvDataArr], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(csvData);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = `${fileName}.csv`;
-    anchor.click();
+    try {
+      setLoadingReport(true);
+      const { data, fileName } = await getCSVData();
+      const csvDataArr = jsonToCsv(data);
+      const csvData = new Blob([csvDataArr], {
+        type: 'text/csv;charset=utf-8;'
+      });
+      const url = URL.createObjectURL(csvData);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `${fileName}.csv`;
+      anchor.click();
+    } catch (err) {
+      logger.error(err);
+    } finally {
+      setLoadingReport(false);
+    }
   };
 
   const handleSearchBarClose = () => {
@@ -49,9 +60,15 @@ function SearchBar({
     <Tooltip title='Export to CSV' color={TOOLTIP_CONSTANTS.DARK}>
       <Button
         size='large'
-        icon={<SVG name='download' size={20} color='grey' />}
+        icon={
+          loadingReport ? (
+            <LoadingOutlined />
+          ) : (
+            <SVG name='download' size={20} color='grey' />
+          )
+        }
         type='text'
-        onClick={handleDownloadBtnClick}
+        onClick={loadingReport === false ? handleDownloadBtnClick : () => {}}
       >
         {/* <CSVLink
           id='csvLink'
