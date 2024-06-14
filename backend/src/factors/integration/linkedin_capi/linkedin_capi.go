@@ -67,6 +67,8 @@ func SendEventsToLinkedCAPI(config model.LinkedinCAPIConfig, body model.BatchLin
 
 	jsonResponse["stat"] = "success"
 
+	logCtx.WithField("jsonResponse", jsonResponse).Info("Linkedin CAPI TEST - 25")
+
 	return jsonResponse, nil
 }
 

@@ -43,6 +43,11 @@ func (store *MemSQL) NewLinkedCapiRequestPayload(properties *map[string]interfac
 
 	}
 
+	if len(_linkedinCAPIRequestPayload.User.UserIds) == 0 {
+		log.Error("no user identifier found for linked capi")
+		return model.BatchLinkedinCAPIRequestPayload{}, errors.New("no user identifier found for linked capi")
+	}
+
 	if timestamp, exists := (*properties)[U.EP_TIMESTAMP]; exists {
 
 		intTimestamp, err := U.GetPropertyValueAsInt64(timestamp)
