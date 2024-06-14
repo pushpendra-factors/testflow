@@ -22,10 +22,7 @@ const AlertsSidebar = () => {
 
   const featureLocked =
     featureFlag.isLoading === false && featureFlag.isFeatureLocked === true;
-
-
-  console.log("isWorkflowsFeatureLocked===>>",featureLocked)
-  
+    
   useEffect(() => {
     const type = routeQuery.get('type');
     if (type && ['realtime', 'weekly'].includes(type)) {
