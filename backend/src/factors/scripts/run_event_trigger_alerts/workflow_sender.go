@@ -152,6 +152,7 @@ func ParagonWorkflowFailureExecution(key *cache.Key, workflowID string,
 func SendHelperForLinkedInCAPI(key *cache.Key, cachedWorkflow *model.CachedEventTriggerAlert,
 	workflowID string, retry bool, sendTo string, logCtx log.Entry) (totalSuccess bool, partialSuccess bool, sendReport SendReportLogCount) {
 
+	logCtx.WithField("func", "SendHelperForLinkedInCAPI").Info("intiate SendHelperForLinkedInCAPI")
 	errMessage := make([]string, 0)
 	deliveryFailures := make([]string, 0)
 	rejectedQueue := false

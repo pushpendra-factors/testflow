@@ -408,6 +408,8 @@ func (store *MemSQL) FindAndCacheWorkflowsWithFiltersMatchingProperties(projectI
 
 		criteria := E.MapFilterProperties(modifiedFilters)
 		if E.EventMatchesFilterCriterionList(projectId, *userPropMap, *eventPropMap, criteria) {
+
+			log.WithField("workflow", workflow).Info("Linkedin CAPI TEST - 865")
 			store.CacheWorkflowToBeSent(&workflow, event, userPropMap)
 		}
 	}
@@ -862,6 +864,7 @@ func (store *MemSQL) getWorkflowMessageProperties(projectID int64,
 	if model.IsLinkedInCAPICofigByWorkflow(*workflowAlertBody) {
 
 		store.FillLinkedInPropertiesInCacheForWorkflow(&msgPropMap, allProperties, *workflowAlertBody)
+		log.WithField("msgPropMap", msgPropMap).Info("Linkedin CAPI TEST - 865")
 	}
 
 	// log.WithFields(log.Fields{
