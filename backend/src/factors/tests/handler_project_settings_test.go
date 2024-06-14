@@ -320,6 +320,26 @@ func sendIntegrationsStatusReq(r *gin.Engine, projectId int64, agent *model.Agen
 	return w
 }
 
+func enableFeaturesByProjectID(projectID int64) int {
+	status, _, _ := store.GetStore().UpdateProjectPlanMappingField(projectID, model.PLAN_CUSTOM)
+
+	if status != http.StatusAccepted {
+		return status
+	}
+
+	status, _ = store.GetStore().UpdateFeaturesForCustomPlan(projectID, 10000, 100000, []string{model.FEATURE_HUBSPOT})
+	if status != http.StatusAccepted {
+		return status
+	}
+	intHubspot := true
+	_, status = store.GetStore().UpdateProjectSettings(projectID, &model.ProjectSetting{
+		IntHubspot: &intHubspot, IntHubspotApiKey: "1234",
+		IntFacebookAdAccount: "12345",
+	})
+
+	return status
+}
+
 func TestIntegrationsStatusHandler(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
@@ -328,11 +348,14 @@ func TestIntegrationsStatusHandler(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, project)
 
+	status := enableFeaturesByProjectID(project.ID)
+	assert.Equal(t, http.StatusAccepted, status)
+
 	secondDocumentID := rand.Intn(100) + 200
 	cuid := getRandomEmail()
 	leadguid := U.RandomString(5)
 	lastmodifieddate := time.Now().UTC().Unix() * 1000
-	createdDate := time.Now().AddDate(0, 0, -1).Unix() * 1000
+	createdDate := time.Now().AddDate(0, 0, -5).Unix() * 1000
 	// Hubspot Campaign performance report
 	jsonContactModel := `{
 		"vid": %d,
@@ -362,13 +385,33 @@ func TestIntegrationsStatusHandler(t *testing.T) {
 	jsonContact := fmt.Sprintf(jsonContactModel, secondDocumentID, createdDate, createdDate, lastmodifieddate, "lead", cuid, leadguid)
 	contactPJson := postgres.Jsonb{json.RawMessage(jsonContact)}
 
+	secondDocumentID = rand.Intn(100) + 200
+	cuid = getRandomEmail()
+	leadguid = U.RandomString(5)
+	lastmodifieddate = time.Now().UTC().Unix() * 1000
+	createdDate = time.Now().AddDate(0, 0, -2).Unix() * 1000
+	jsonContact1 := fmt.Sprintf(jsonContactModel, secondDocumentID, createdDate, createdDate, lastmodifieddate, "lead", cuid, leadguid)
+	contactPJson1 := postgres.Jsonb{json.RawMessage(jsonContact1)}
+
 	hubspotDocument := model.HubspotDocument{
 		TypeAlias: model.HubspotDocumentTypeNameContact,
 		Action:    model.HubspotDocumentActionCreated,
 		Value:     &contactPJson,
+		CreatedAt: time.Now().AddDate(0, 0, -5),
 	}
 
-	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	assert.Equal(t, http.StatusCreated, status)
+
+	hubspotDocument1 := model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Action:    model.HubspotDocumentActionCreated,
+		Value:     &contactPJson1,
+		Synced:    true,
+		CreatedAt: time.Now().AddDate(0, 0, -1),
+	}
+
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument1)
 	assert.Equal(t, http.StatusCreated, status)
 
 	adwordsCustomerAccountId := U.RandomLowerAphaNumString(5)
@@ -387,6 +430,7 @@ func TestIntegrationsStatusHandler(t *testing.T) {
 		Value:               &postgres.Jsonb{RawMessage: value},
 		CampaignID:          "1000",
 		Platform:            "facebook",
+		CreatedAt:           time.Now().AddDate(0, 0, -1),
 	}
 	status = store.GetStore().CreateFacebookDocument(project.ID, documentFB)
 	assert.Equal(t, http.StatusCreated, status)
@@ -467,37 +511,303 @@ func TestIntegrationsStatusHandler(t *testing.T) {
 	jsonResponse, _ := ioutil.ReadAll(w.Body)
 	json.Unmarshal(jsonResponse, &jsonResponseMap)
 
-	assert.Equal(t, jsonResponseMap["adwords"].State, model.PULL_DELAYED)
-	assert.NotEqual(t, jsonResponseMap["adwords"].LastSyncedAt, int64(0))
+	assert.Equal(t, jsonResponseMap["adwords"].State, model.DISCONNECTED)
+	assert.Equal(t, jsonResponseMap["adwords"].LastSyncedAt, int64(0))
 
-	assert.Equal(t, jsonResponseMap["google_organic"].State, model.SYNCED)
+	assert.Equal(t, jsonResponseMap["google_organic"].State, model.DISCONNECTED)
 	assert.Equal(t, jsonResponseMap["google_organic"].LastSyncedAt, int64(0))
 
 	assert.Equal(t, jsonResponseMap["facebook"].State, model.PULL_DELAYED)
 	assert.NotEqual(t, jsonResponseMap["facebook"].LastSyncedAt, int64(0))
 
-	assert.Equal(t, jsonResponseMap["linkedin"].State, model.SYNCED)
-	assert.NotEqual(t, jsonResponseMap["linkedin"].LastSyncedAt, int64(0))
+	assert.Equal(t, jsonResponseMap["linkedin"].State, model.PULL_DELAYED)
+	assert.Equal(t, jsonResponseMap["linkedin"].LastSyncedAt, int64(0))
 
-	assert.Equal(t, jsonResponseMap["salesforce"].State, model.SYNCED)
+	assert.Equal(t, jsonResponseMap["salesforce"].State, model.DISCONNECTED)
 	assert.Equal(t, jsonResponseMap["salesforce"].LastSyncedAt, int64(0))
 
 	assert.Equal(t, jsonResponseMap["hubspot"].State, model.SYNC_PENDING)
 	assert.NotEqual(t, jsonResponseMap["hubspot"].LastSyncedAt, int64(0))
 
-	assert.Equal(t, jsonResponseMap["leadsquared"].State, model.SYNC_PENDING)
-	assert.NotEqual(t, jsonResponseMap["leadsquared"].LastSyncedAt, int64(0))
+	assert.Equal(t, jsonResponseMap["leadsquared"].State, model.DISCONNECTED)
+	assert.Equal(t, jsonResponseMap["leadsquared"].LastSyncedAt, int64(0))
 
-	assert.Equal(t, jsonResponseMap["marketo"].State, model.SYNCED)
-	assert.NotEqual(t, jsonResponseMap["marketo"].LastSyncedAt, int64(0))
+	assert.Equal(t, jsonResponseMap["marketo"].State, model.DISCONNECTED)
+	assert.Equal(t, jsonResponseMap["marketo"].LastSyncedAt, int64(0))
 
 	assert.Equal(t, jsonResponseMap["sdk"].State, model.SYNCED)
 	assert.NotEqual(t, jsonResponseMap["sdk"].LastSyncedAt, int64(0))
 
-	assert.Equal(t, jsonResponseMap["segment"].State, model.SYNCED)
-	assert.NotEqual(t, jsonResponseMap["segment"].LastSyncedAt, int64(0))
+	assert.Equal(t, jsonResponseMap["segment"].State, model.DISCONNECTED)
+	assert.Equal(t, jsonResponseMap["segment"].LastSyncedAt, int64(0))
 
-	assert.Equal(t, jsonResponseMap["rudderstack"].State, model.SYNCED)
-	assert.NotEqual(t, jsonResponseMap["rudderstack"].LastSyncedAt, int64(0))
+	assert.Equal(t, jsonResponseMap["rudderstack"].State, model.DISCONNECTED)
+	assert.Equal(t, jsonResponseMap["rudderstack"].LastSyncedAt, int64(0))
+
+}
+
+func TestIntegrationState(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	project1, agent1, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	project2, agent2, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	status := enableFeaturesByProjectID(project.ID)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	status = enableFeaturesByProjectID(project1.ID)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	status = enableFeaturesByProjectID(project2.ID)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	// Hubspot Campaign performance report
+	jsonContactModel := `{
+		"vid": %d,
+		"addedAt": %d,
+		"properties": {
+		  "createdate": { "value": "%d" },
+		  "lastmodifieddate": { "value": "%d" },
+		  "lifecyclestage": { "value": "%s" }
+		},
+		"identity-profiles": [
+		  {
+			"vid": 1,
+			"identities": [
+			  {
+				"type": "EMAIL",
+				"value": "%s"
+			  },
+			  {
+				"type": "LEAD_GUID",
+				"value": "%s"
+			  }
+			]
+		  }
+		]
+	  }`
+
+	t.Run("TestHubspotSynced", func(t *testing.T) {
+
+		secondDocumentID := rand.Intn(100) + 200
+		cuid := getRandomEmail()
+		leadguid := U.RandomString(5)
+		lastmodifieddate := time.Now().UTC().Unix() * 1000
+		createdDate := time.Now().AddDate(0, 0, -1).Unix() * 1000
+
+		jsonContact := fmt.Sprintf(jsonContactModel, secondDocumentID, createdDate, createdDate, lastmodifieddate, "lead", cuid, leadguid)
+		contactPJson := postgres.Jsonb{json.RawMessage(jsonContact)}
+
+		secondDocumentID = rand.Intn(100) + 200
+		cuid = getRandomEmail()
+		leadguid = U.RandomString(5)
+		lastmodifieddate = time.Now().UTC().Unix() * 1000
+		createdDate = time.Now().AddDate(0, 0, -2).Unix() * 1000
+		jsonContact1 := fmt.Sprintf(jsonContactModel, secondDocumentID, createdDate, createdDate, lastmodifieddate, "lead", cuid, leadguid)
+		contactPJson1 := postgres.Jsonb{json.RawMessage(jsonContact1)}
+
+		hubspotDocument := model.HubspotDocument{
+			TypeAlias: model.HubspotDocumentTypeNameContact,
+			Action:    model.HubspotDocumentActionCreated,
+			Value:     &contactPJson,
+			CreatedAt: time.Now().AddDate(0, 0, -1).Add(time.Minute * 5),
+		}
+
+		status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+		assert.Equal(t, http.StatusCreated, status)
+
+		hubspotDocument1 := model.HubspotDocument{
+			TypeAlias: model.HubspotDocumentTypeNameContact,
+			Action:    model.HubspotDocumentActionCreated,
+			Value:     &contactPJson1,
+			Synced:    true,
+			CreatedAt: time.Now().AddDate(0, 0, -2).Add(time.Minute * 5),
+		}
+
+		status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument1)
+		assert.Equal(t, http.StatusCreated, status)
+
+		w := sendIntegrationsStatusReq(r, project.ID, agent)
+		assert.Equal(t, http.StatusOK, w.Code)
+		var jsonResponseMap map[string]model.IntegrationState
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		json.Unmarshal(jsonResponse, &jsonResponseMap)
+
+		assert.Equal(t, jsonResponseMap["hubspot"].State, model.SYNCED)
+		assert.NotEqual(t, jsonResponseMap["hubspot"].LastSyncedAt, int64(0))
+
+	})
+
+	t.Run("TestHubspotSyncedPending", func(t *testing.T) {
+
+		secondDocumentID := rand.Intn(100) + 200
+		cuid := getRandomEmail()
+		leadguid := U.RandomString(5)
+		lastmodifieddate := time.Now().UTC().Unix() * 1000
+		createdDate := time.Now().AddDate(0, 0, -1).Unix() * 1000
+
+		jsonContact := fmt.Sprintf(jsonContactModel, secondDocumentID, createdDate, createdDate, lastmodifieddate, "lead", cuid, leadguid)
+		contactPJson := postgres.Jsonb{json.RawMessage(jsonContact)}
+
+		secondDocumentID = rand.Intn(100) + 200
+		cuid = getRandomEmail()
+		leadguid = U.RandomString(5)
+		lastmodifieddate = time.Now().UTC().Unix() * 1000
+		createdDate = time.Now().AddDate(0, 0, -5).Unix() * 1000
+		jsonContact1 := fmt.Sprintf(jsonContactModel, secondDocumentID, createdDate, createdDate, lastmodifieddate, "lead", cuid, leadguid)
+		contactPJson1 := postgres.Jsonb{json.RawMessage(jsonContact1)}
+
+		hubspotDocument := model.HubspotDocument{
+			TypeAlias: model.HubspotDocumentTypeNameContact,
+			Action:    model.HubspotDocumentActionCreated,
+			Value:     &contactPJson,
+			CreatedAt: time.Now().AddDate(0, 0, -1).Add(time.Minute * 5),
+		}
+
+		status = store.GetStore().CreateHubspotDocument(project1.ID, &hubspotDocument)
+		assert.Equal(t, http.StatusCreated, status)
+
+		hubspotDocument1 := model.HubspotDocument{
+			TypeAlias: model.HubspotDocumentTypeNameContact,
+			Action:    model.HubspotDocumentActionCreated,
+			Value:     &contactPJson1,
+			Synced:    true,
+			CreatedAt: time.Now().AddDate(0, 0, -5),
+		}
+
+		status = store.GetStore().CreateHubspotDocument(project1.ID, &hubspotDocument1)
+		assert.Equal(t, http.StatusCreated, status)
+
+		w := sendIntegrationsStatusReq(r, project1.ID, agent1)
+		assert.Equal(t, http.StatusOK, w.Code)
+		var jsonResponseMap map[string]model.IntegrationState
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		json.Unmarshal(jsonResponse, &jsonResponseMap)
+
+		assert.Equal(t, jsonResponseMap["hubspot"].State, model.SYNC_PENDING)
+		assert.NotEqual(t, jsonResponseMap["hubspot"].LastSyncedAt, int64(0))
+
+	})
+
+	t.Run("TestHubspotDelayed", func(t *testing.T) {
+
+		secondDocumentID := rand.Intn(100) + 200
+		cuid := getRandomEmail()
+		leadguid := U.RandomString(5)
+		lastmodifieddate := time.Now().UTC().Unix() * 1000
+		createdDate := time.Now().AddDate(0, 0, -5).Unix() * 1000
+
+		jsonContact := fmt.Sprintf(jsonContactModel, secondDocumentID, createdDate, createdDate, lastmodifieddate, "lead", cuid, leadguid)
+		contactPJson := postgres.Jsonb{json.RawMessage(jsonContact)}
+
+		secondDocumentID = rand.Intn(100) + 200
+		cuid = getRandomEmail()
+		leadguid = U.RandomString(5)
+		lastmodifieddate = time.Now().UTC().Unix() * 1000
+		createdDate = time.Now().AddDate(0, 0, -2).Unix() * 1000
+		jsonContact1 := fmt.Sprintf(jsonContactModel, secondDocumentID, createdDate, createdDate, lastmodifieddate, "lead", cuid, leadguid)
+		contactPJson1 := postgres.Jsonb{json.RawMessage(jsonContact1)}
+
+		hubspotDocument := model.HubspotDocument{
+			TypeAlias: model.HubspotDocumentTypeNameContact,
+			Action:    model.HubspotDocumentActionCreated,
+			Value:     &contactPJson,
+			CreatedAt: time.Now().AddDate(0, 0, -5),
+		}
+
+		status = store.GetStore().CreateHubspotDocument(project2.ID, &hubspotDocument)
+		assert.Equal(t, http.StatusCreated, status)
+
+		hubspotDocument1 := model.HubspotDocument{
+			TypeAlias: model.HubspotDocumentTypeNameContact,
+			Action:    model.HubspotDocumentActionCreated,
+			Value:     &contactPJson1,
+			Synced:    true,
+			CreatedAt: time.Now().AddDate(0, 0, -3),
+		}
+
+		status = store.GetStore().CreateHubspotDocument(project2.ID, &hubspotDocument1)
+		assert.Equal(t, http.StatusCreated, status)
+
+		w := sendIntegrationsStatusReq(r, project2.ID, agent2)
+		assert.Equal(t, http.StatusOK, w.Code)
+		var jsonResponseMap map[string]model.IntegrationState
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		json.Unmarshal(jsonResponse, &jsonResponseMap)
+
+		assert.Equal(t, jsonResponseMap["hubspot"].State, model.PULL_DELAYED)
+		assert.NotEqual(t, jsonResponseMap["hubspot"].LastSyncedAt, int64(0))
+
+	})
+
+	t.Run("TestFacebookSynced", func(t *testing.T) {
+		fbCustomerAccountId := U.RandomLowerAphaNumString(5)
+
+		// Facebook Campaign performance report
+		value := []byte(`{"spend": "1","clicks": "1","campaign_id":"1000","impressions": "1", "campaign_name": "Campaign_Facebook_1000", "platform":"facebook"}`)
+		documentFB := &model.FacebookDocument{
+			ProjectID:           project.ID,
+			ID:                  "1000",
+			CustomerAdAccountID: fbCustomerAccountId,
+			TypeAlias:           "campaign_insights",
+			Timestamp:           20200510,
+			Value:               &postgres.Jsonb{RawMessage: value},
+			CampaignID:          "1000",
+			Platform:            "facebook",
+			CreatedAt:           time.Now().Add(-11 * time.Hour),
+		}
+		status = store.GetStore().CreateFacebookDocument(project.ID, documentFB)
+		assert.Equal(t, http.StatusCreated, status)
+
+		w := sendIntegrationsStatusReq(r, project.ID, agent)
+		assert.Equal(t, http.StatusOK, w.Code)
+		var jsonResponseMap map[string]model.IntegrationState
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		json.Unmarshal(jsonResponse, &jsonResponseMap)
+
+		assert.Equal(t, jsonResponseMap["facebook"].State, model.SYNCED)
+		assert.NotEqual(t, jsonResponseMap["facebook"].LastSyncedAt, int64(0))
+
+	})
+
+	t.Run("TestFacebookDelayed", func(t *testing.T) {
+		fbCustomerAccountId := U.RandomLowerAphaNumString(5)
+
+		// Facebook Campaign performance report
+		value := []byte(`{"spend": "1","clicks": "1","campaign_id":"1000","impressions": "1", "campaign_name": "Campaign_Facebook_1000", "platform":"facebook"}`)
+		documentFB := &model.FacebookDocument{
+			ProjectID:           project1.ID,
+			ID:                  "1000",
+			CustomerAdAccountID: fbCustomerAccountId,
+			TypeAlias:           "campaign_insights",
+			Timestamp:           20200510,
+			Value:               &postgres.Jsonb{RawMessage: value},
+			CampaignID:          "1000",
+			Platform:            "facebook",
+			CreatedAt:           time.Now().AddDate(0, 0, -5),
+		}
+		status = store.GetStore().CreateFacebookDocument(project1.ID, documentFB)
+		assert.Equal(t, http.StatusCreated, status)
+
+		w := sendIntegrationsStatusReq(r, project1.ID, agent1)
+		assert.Equal(t, http.StatusOK, w.Code)
+		var jsonResponseMap map[string]model.IntegrationState
+		jsonResponse, _ := ioutil.ReadAll(w.Body)
+		json.Unmarshal(jsonResponse, &jsonResponseMap)
+
+		assert.Equal(t, jsonResponseMap["facebook"].State, model.PULL_DELAYED)
+		assert.NotEqual(t, jsonResponseMap["facebook"].LastSyncedAt, int64(0))
+
+	})
 
 }

@@ -11,10 +11,19 @@ import {
   fetchAccountOverview,
   fetchTop100Events,
   fetchConfiguredUserProperties,
-  fetchConfiguredEventProperties
+  fetchConfiguredEventProperties,
+  fetchSegmentFolders
 } from '.';
 import { formatAccountTimeline, formatUsersTimeline } from './utils';
-import { deleteSegmentAction } from './actions';
+import {
+  deleteSegmentAction,
+  setLoadingSegmentFolders,
+  setSegmentFolders
+} from './actions';
+import {
+  SET_ACCOUNTS_SEGMENT_FOLDERS_FAILED,
+  SET_PEOPLES_SEGMENT_FOLDERS_FAILED
+} from './types';
 
 export const getProfileAccounts = (projectId, payload) => (dispatch) => {
   dispatch({ type: 'FETCH_PROFILE_ACCOUNTS_LOADING' });
@@ -302,3 +311,19 @@ export const getConfiguredEventProperties =
           reject(err);
         });
     });
+
+export const getSegmentFolders =
+  (projectId, folder_type = 'account') =>
+  async (dispatch) => {
+    setLoadingSegmentFolders();
+
+    fetchSegmentFolders(projectId, folder_type)
+      .then((response) => {
+        dispatch(setSegmentFolders({ folder_type, data: response.data }));
+      })
+      .catch(() => {
+        if (folder_type === 'account')
+          dispatch({ type: SET_ACCOUNTS_SEGMENT_FOLDERS_FAILED });
+        else dispatch({ type: SET_PEOPLES_SEGMENT_FOLDERS_FAILED });
+      });
+  };

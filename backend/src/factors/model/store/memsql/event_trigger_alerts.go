@@ -1435,7 +1435,8 @@ func (store *MemSQL) GetParagonMetadataForEventTriggerAlert(projectID int64, ale
 	return *metadata, http.StatusFound, nil
 }
 
-func (store *MemSQL) FindAndCacheAlertForCurrentSegment(projectID int64, segmentID, domainID, actionPerformed string) (int, error) {
+func (store *MemSQL) FindAndCacheAlertForCurrentSegment(projectID int64, segmentID, domainID, actionPerformed string,
+	timeOfActionPerformed time.Time) (int, error) {
 	logFields := log.Fields{
 		"project_id":       projectID,
 		"segment_id":       segmentID,

@@ -466,7 +466,7 @@ func (store *MemSQL) OnFeatureEnableOrDisableHook(projectID int64, updatedFeatur
 	for _, featureName := range enabledFeatures {
 		switch featureName {
 		case model.FEATURE_ACCOUNT_SCORING:
-			err := store.UpdateTimelineConfigForEngagementScoring(projectID, true)
+			err := store.UpdateProfilesConfigForFeatureScoring(projectID, true)
 			if err != nil {
 				return err
 			}
@@ -478,7 +478,7 @@ func (store *MemSQL) OnFeatureEnableOrDisableHook(projectID int64, updatedFeatur
 	for _, featureName := range disabledFeatures {
 		switch featureName {
 		case model.FEATURE_ACCOUNT_SCORING:
-			err := store.UpdateTimelineConfigForEngagementScoring(projectID, false)
+			err := store.UpdateProfilesConfigForFeatureScoring(projectID, false)
 			if err != nil {
 				return err
 			}

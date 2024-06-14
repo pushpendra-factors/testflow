@@ -17,7 +17,7 @@ type MaxTimestampStruct struct{ MaxTimestamp []uint8 }
 
 const maxTimestampFromWebsiteAggregationSql = "select CASE WHEN max(timestamp_at_day) IS NULL THEN " +
 	"UNIX_TIMESTAMP(date_trunc('day', NOW() - INTERVAL 32 day) ) ELSE " +
-	"max(timestamp_at_day) END AS max_timestamp from website_aggregation " +
+	"max(timestamp_at_day) END AS max_timestamp from %s " +
 	"WHERE timestamp_at_day >= UNIX_TIMESTAMP(date_trunc('day', NOW() - INTERVAL 32 day) ) AND project_id = %v;"
 
 // Dbt uses this for computing min timestamp from which it has to pull data.
@@ -27,7 +27,15 @@ func (store *MemSQL) GetMaxTimestampOfDataPresenceFromWebsiteAggregation(project
 	var maxTimestampStruct MaxTimestampStruct
 	db := C.GetServices().Db
 
-	sql := fmt.Sprintf(maxTimestampFromWebsiteAggregationSql, projectID)
+	tableName := ""
+	isTestEnabled := C.IsWebsiteAggregationTestEnabled(projectID)
+	if isTestEnabled {
+		tableName = "website_aggregation_test"
+	} else {
+		tableName = "website_aggregation"
+	}
+
+	sql := fmt.Sprintf(maxTimestampFromWebsiteAggregationSql, tableName, projectID)
 	if err := db.Raw(sql).Scan(&maxTimestampStruct).Error; err != nil {
 		log.WithField("projectID", projectID).WithField("err", err).Error("Failed to execute min timestamp website aggregation")
 		return time.Date(2000, 01, 01, 01, 01, 01, 0, time.UTC), http.StatusInternalServerError

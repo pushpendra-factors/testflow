@@ -79,6 +79,8 @@ import FactorsSalesforceCompany from './Templates/FactorsSalesforceCompany';
 import FactorsApolloSalesforceContacts from './Templates/FactorsApolloSalesforceContacts';
 import WorkflowHubspotThumbnail from '../../../../../assets/images/workflow-hubspot-thumbnail.png';
 import QueryBlock from '../../Alerts/EventBasedAlert/QueryBlock';
+import logger from 'Utils/logger';
+import FactorsLinkedInCAPI from './Templates/FactorsLinkedInCAPI';
 
 const host = getHostUrl();
 
@@ -123,7 +125,12 @@ const WorkflowBuilder = ({
   const [propertyMapAdditional, setPropertyMapAdditional] = useState([]);
   const [propertyMapAdditional2, setPropertyMapAdditional2] = useState([]);
 
-  const [apolloFormDetails, setApolloFormDetails] = useState(false);
+  const [apolloFormDetails, setApolloFormDetails] = useState({
+    ApiKey: '',
+    PersonTitles: '',
+    PersonSeniorities: '',
+    MaxContacts: ''
+  });
   const [showConfigureOptions, setShowConfigureOptions] = useState(false);
 
   // paragon hook and states
@@ -185,10 +192,24 @@ const WorkflowBuilder = ({
           selectedTemp?.event || selectedTemp?.workflow_config?.trigger?.event
         );
         setQueries([]);
+        setSegmentType('action_event');
+      }
+      if (
+        selectedTemp?.workflow_config?.trigger?.event_level === '' ||
+        selectedTemp?.event_level === '' ||
+        selectedTemp?.workflow_config?.trigger?.event_level === 'events' ||
+        selectedTemp?.event_level === 'events' ||
+        selectedTemp?.workflow_config?.trigger?.event_level === 'account' ||
+        selectedTemp?.event_level === 'account'
+      ) {
+        setActiveGrpBtn('events');
+      } else {
+        setActiveGrpBtn('users');
       }
       setWorkflowName(isTemplateWorkflow ? '' : selectedTemp?.title);
       setIsTemplate(isTemplateWorkflow);
       setShowConfigureOptions(!isTemplateWorkflow);
+      setApolloFormDetails(selectedTemp?.addtional_configuration?.[0]);
     }
     return () => {
       setIsTemplate(false);
@@ -371,6 +392,7 @@ const WorkflowBuilder = ({
 
   const saveWorkflowFn = (value) => {
     let message_propertiesObj = {};
+    let additional_config;
     if (
       selectedTemp?.id == TemplateIDs.FACTORS_HUBSPOT_COMPANY ||
       selectedTemp?.template_id == TemplateIDs.FACTORS_HUBSPOT_COMPANY ||
@@ -393,19 +415,27 @@ const WorkflowBuilder = ({
       message_propertiesObj = {
         mandatory_properties: propertyMapMandatory,
         additional_properties_company: propertyMapAdditional,
-        additional_properties_contact: propertyMapAdditional2,
-        addtional_configuration: value
+        additional_properties_contact: propertyMapAdditional2
       };
+      additional_config = [apolloFormDetails];
+    }
+
+    if (
+      selectedTemp?.id == TemplateIDs.FACTORS_LINKEDIN_CAPI ||
+      selectedTemp?.template_id == TemplateIDs.FACTORS_LINKEDIN_CAPI
+    ) {
+      additional_config = propertyMapMandatory;
     }
 
     const payload = {
       action_performed: segmentType,
+      addtional_configuration: additional_config,
       alert_limit: 5,
       breakdown_properties: [],
       cool_down_time: 1800,
       event:
         segmentType == 'action_event' ? queries[0]?.label : selectedSegment,
-      event_level: 'account',
+      event_level: activeGrpBtn === 'events' ? 'account' : 'user',
       filters: formatFiltersForQuery(queries?.[0]?.filters),
       notifications: false,
       repeat_alerts: true,
@@ -533,6 +563,22 @@ const WorkflowBuilder = ({
           setApolloFormDetails={setApolloFormDetails}
         />
       );
+    } else if (
+      workflowItem?.template_id == TemplateIDs.FACTORS_LINKEDIN_CAPI ||
+      workflowItem?.id == TemplateIDs.FACTORS_LINKEDIN_CAPI
+    ) {
+      return (
+        <FactorsLinkedInCAPI
+          user={user}
+          propertyMapMandatory={propertyMapMandatory}
+          setPropertyMapMandatory={setPropertyMapMandatory}
+          saveWorkflowFn={saveWorkflowFn}
+          selectedTemp={selectedTemp}
+          isTemplate={isTemplate}
+        />
+      );
+    } else {
+      return null;
     }
     return null;
   };

@@ -28,12 +28,18 @@ def get_query_templates():
             'timeful': ['What\'s the breakdown of %s by %s in %s']
         },
         'filter': {
-            'timeless_equal': ['%s having %s as %s'],
+            'timeless_equal': ['%s having %s as %s',
+                               '%s with %s equals %s',
+                               "Number of %s having %s as %s",
+                               "How many %s with %s equals %s",
+                               "Count of %s filter by %s equals %s"],
+
             'timeful_equal': [
+                '%s having %s as %s in %s',
+                '%s with %s equals %s in %s',
                 'Number of %s having %s as %s in %s',
                 'How many %s with %s equals %s we had %s',
                 'Count of %s filter by %s equals %s %s'
-
             ],
             'timeless_not_equal' :['%s with %s not equal %s'],
             'timeful_not_equal': ['Number of %s having %s not equal %s in %s']

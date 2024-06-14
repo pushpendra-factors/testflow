@@ -75,7 +75,6 @@ type TimelinePayload struct {
 }
 
 type AccountDetails struct {
-	Name            string                 `json:"name"`
 	DomainName      string                 `json:"domain_name"`
 	Properties      *postgres.Jsonb        `json:"-"`
 	LeftPaneProps   map[string]interface{} `json:"leftpane_props"`
@@ -184,9 +183,9 @@ var HostNameProps = []string{
 var TIMELINE_EVENT_PROPERTIES_CONFIG = map[string][]string{
 	U.EVENT_NAME_SESSION: {
 		U.EP_CHANNEL,
-		U.EP_PAGE_URL,
-		U.EP_REFERRER_URL,
-		U.EP_PAGE_COUNT,
+		U.SP_INITIAL_PAGE_URL,
+		U.SP_INITIAL_REFERRER_URL,
+		U.SP_PAGE_COUNT,
 		U.SP_SPENT_TIME,
 	},
 	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL: {

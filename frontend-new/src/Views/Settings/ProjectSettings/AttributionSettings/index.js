@@ -320,27 +320,15 @@ const AttributionSettings = ({
   return (
     <div className='fa-container'>
       <CommonSettingsHeader
-        title='Attribution Configuration'
+        title='Attribution'
+        description='Attribute revenue and conversions to the right channels, campaigns, and touchpoints using different models to identify effective strategies and maximize ROI.'
         actionsNode={renderEditActions()}
       />
       <Row gutter={[24, 24]} justify='center'>
         <Col span={24}>
-          <Row className='flex items-center'>
-            {/* <Col span={12}>
-              <Text
-                type='title'
-                level={3}
-                weight='bold'
-                extraClass='m-0 m-1'
-                id='fa-at-text--page-title'
-              >
-                Attribution Configuration
-              </Text>
-            </Col>
-            <Col span={12}>{renderEditActions()}</Col> */}
-          </Row>
+          <Row className='flex items-center' />
           <Row>
-            <div className='fa-warning'>
+            <div className='fa-warning' style={{ marginTop: -16 }}>
               This is configured at the time of initial setup. We don't support
               to change it at the moment. Please contact customer support for
               more details.

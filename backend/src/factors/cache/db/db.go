@@ -6,9 +6,11 @@ import (
 	"factors/config"
 	"factors/util"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jinzhu/gorm"
+	log "github.com/sirupsen/logrus"
 )
 
 type CacheDBRecord struct {
@@ -31,6 +33,11 @@ const (
 	// Error 1062: Leaf Error (127.0.0.1:3307): Duplicate entry '6000762-f6e8c235-7aa0-42fe-b987-137866bcdd8f' for key 'PRIMARY'
 	MEMSQL_ERROR_CODE_DUPLICATE_ENTRY = "Error 1062"
 )
+
+// Runs each batch of queries with same transaction and wait for all batches to complete.
+// Routines are used for concurrency per batch.
+// Lower the size higher the concurrency as no.of queries per transaction is lower.
+const setBatchBatchSize = 5
 
 func IsDuplicateRecordError(err error) bool {
 	return strings.HasPrefix(err.Error(), MEMSQL_ERROR_CODE_DUPLICATE_ENTRY)
@@ -106,13 +113,14 @@ func getCacheRecord(key *cache.Key, value string, expiryInSecs float64) (*CacheD
 		return nil, errors.New("invalid value")
 	}
 
-	if expiryInSecs <= 0 {
-		return nil, errors.New("invalid expiry")
-	}
-
 	k, err := key.Key()
 	if err != nil {
 		return nil, err
+	}
+
+	// Any expiry set less than equal to 0 is set to 1 year.
+	if expiryInSecs <= 0 {
+		expiryInSecs = 31560000
 	}
 
 	cacheRecord := &CacheDBRecord{
@@ -152,6 +160,9 @@ func Set(key *cache.Key, value string, expiryInSecs float64) error {
 			if err != nil {
 				return err
 			}
+
+			// return nil after update on duplicate.
+			return nil
 		}
 		return err
 	}
@@ -159,9 +170,73 @@ func Set(key *cache.Key, value string, expiryInSecs float64) error {
 	return nil
 }
 
+func setBatchWithBatchRoutines(keyValue map[*cache.Key]string, expiryInSecs float64) error {
+	lenM := len(keyValue)
+
+	if lenM <= setBatchBatchSize {
+		return setBatch(keyValue, expiryInSecs)
+	}
+
+	// Create batches before routines for simplicity.
+	i := 0
+	totalI := 0
+	kvMap := map[*cache.Key]string{}
+	batchMap := make([]map[*cache.Key]string, 0)
+	for k, v := range keyValue {
+		kvMap[k] = v
+		i++
+		totalI++
+
+		if i == setBatchBatchSize || totalI == lenM {
+			batchMap = append(batchMap, kvMap)
+			kvMap = map[*cache.Key]string{}
+			i = 0
+		}
+	}
+
+	var wg sync.WaitGroup
+	for i := range batchMap {
+		wg.Add(1)
+		go setBatchWithWg(batchMap[i], expiryInSecs, &wg)
+	}
+	wg.Wait()
+
+	return nil
+
+}
+
 func SetBatch(keyValue map[*cache.Key]string, expiryInSecs float64) error {
-	valuesStmnt := ""
-	params := make([]interface{}, 0)
+	var wg sync.WaitGroup
+
+	// Using as many go routines as length of the map for simplicity.
+	// Temporarily controlling db concurrency.
+	for k, v := range keyValue {
+		wg.Add(1)
+		go setWithWg(k, v, expiryInSecs, &wg)
+	}
+	wg.Wait()
+
+	return nil
+}
+
+func setBatchWithWg(keyValue map[*cache.Key]string, expiryInSecs float64, wg *sync.WaitGroup) error {
+	defer wg.Done()
+	return setBatch(keyValue, expiryInSecs)
+}
+
+func setWithWg(key *cache.Key, value string, expiryInSecs float64, wg *sync.WaitGroup) error {
+	defer wg.Done()
+	return Set(key, value, expiryInSecs)
+}
+
+func setBatch(keyValue map[*cache.Key]string, expiryInSecs float64) error {
+	db := config.GetServices().Db
+	tx, err := db.DB().Begin()
+	defer util.CloseTx(tx)
+	if err != nil {
+		return err
+	}
+
 	for k, v := range keyValue {
 		cacheRecord, err := getCacheRecord(k, v, expiryInSecs)
 		// Fail if one failure. Parity with redis implementation.
@@ -169,19 +244,22 @@ func SetBatch(keyValue map[*cache.Key]string, expiryInSecs float64) error {
 			return err
 		}
 
-		if valuesStmnt != "" {
-			valuesStmnt = valuesStmnt + ", "
-		}
-		valuesStmnt = valuesStmnt + "(?, ?, ?, ?, ?, ?, ?)"
-		params = append(params, cacheRecord.ProjectID, cacheRecord.Key, cacheRecord.Value,
+		stmnt := "INSERT INTO cache_db (`project_id`, `k`, `v`, `expiry_in_secs`, `expires_at`, `created_at`, `updated_at`) VALUES (?, ?, ?, ?, ?, ?, ?);"
+		_, err = tx.Exec(stmnt, cacheRecord.ProjectID, cacheRecord.Key, cacheRecord.Value,
 			cacheRecord.ExpiryInSecs, cacheRecord.ExpiresAt, util.TimeNowZ(), util.TimeNowZ())
-	}
+		if err != nil {
+			if IsDuplicateRecordError(err) {
+				// Update the record incase of conflict.
+				updateStmnt := "UPDATE cache_db SET v = ? WHERE project_id = ? AND k = ?;"
+				_, err = tx.Exec(updateStmnt, cacheRecord.Value, cacheRecord.ProjectID, cacheRecord.Key)
+				if err != nil {
+					log.WithField("k", k).Info("Updated key on db_cache after conflict during insert.")
+				}
+				continue
+			}
 
-	stmnt := "INSERT INTO cache_db (`project_id`, `k`, `v`, `expiry_in_secs`, `expires_at`, `created_at`, `updated_at`) VALUES " + valuesStmnt
-	db := config.GetServices().Db
-	err := db.Exec(stmnt, params...).Error
-	if err != nil {
-		return err
+			return err
+		}
 	}
 
 	return nil

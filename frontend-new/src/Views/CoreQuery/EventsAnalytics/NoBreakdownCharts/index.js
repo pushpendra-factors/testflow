@@ -117,6 +117,7 @@ const NoBreakdownChartsComponent = forwardRef(
           setDateSorter={setDateSorter}
           responseData={resultState.data}
           comparisonApplied={!!comparisonData.data}
+          resultState={resultState}
         />
       </div>
     );

@@ -7,15 +7,11 @@ import { SVG, Text } from 'Components/factorsComponents';
 import {
   selectActiveDashboard,
   selectAreDraftsSelected,
-  selectShowDashboardNewFolderModal,
   selectNewFolderCreationState,
   selectDeleteDashboardState
 } from 'Reducers/dashboard/selectors';
 
-import {
-  addDashboardToNewFolder,
-  deleteDashboardAction
-} from 'Reducers/dashboard/services';
+import { deleteDashboardAction } from 'Reducers/dashboard/services';
 import { NEW_DASHBOARD_TEMPLATES_MODAL_OPEN } from 'Reducers/types';
 import {
   makeDraftsActiveAction,
@@ -23,16 +19,13 @@ import {
 } from 'Reducers/dashboard/actions';
 import ConfirmationModal from 'Components/ConfirmationModal';
 import { PathUrls } from 'Routes/pathUrls';
-import SidebarSearch from './SidebarSearch';
-import DashboardNewFolderModal from './DashboardNewFolderModal';
+import { PlusOutlined } from '@ant-design/icons';
 import styles from './index.module.scss';
 import DashboardFoldersLayout from './DashboardFoldersLayout';
-import { PlusOutlined } from '@ant-design/icons';
 
 function DashboardSidebar() {
   const dispatch = useDispatch();
   const history = useHistory();
-  const [searchText, setSearchText] = useState('');
   const [deleteDashboardModal, setDeleteDashboardModal] = useState(false);
   const [activeDashboardForFolder, setActiveDashboardForFolder] =
     useState(null);
@@ -46,9 +39,7 @@ function DashboardSidebar() {
     selectNewFolderCreationState(state)
   );
   const { active_project } = useSelector((state) => state.global);
-  const showNewFolderModal = useSelector((state) =>
-    selectShowDashboardNewFolderModal(state)
-  );
+
   const queries = useSelector((state) => state.queries.data);
 
   const activeDashboard = useSelector((state) => selectActiveDashboard(state));
@@ -64,19 +55,6 @@ function DashboardSidebar() {
     }
     dispatch(makeDraftsActiveAction());
   };
-
-  const onNewFolderCreation = useCallback(
-    (folderName) => {
-      dispatch(
-        addDashboardToNewFolder(
-          active_project.id,
-          activeDashboardForFolder,
-          folderName
-        )
-      );
-    },
-    [activeDashboardForFolder, active_project.id]
-  );
 
   const handleDeleteDashboardClick = useCallback((dashboard) => {
     setDeleteDashboardModal(true);
@@ -141,12 +119,7 @@ function DashboardSidebar() {
           </Text>
         </div>
       </button>
-      <div className='flex flex-col gap-y-5 px-4'>
-        <SidebarSearch
-          placeholder='Search board'
-          setSearchText={setSearchText}
-          searchText={searchText}
-        />
+      <div className='flex flex-col gap-y-5'>
         <div
           className={cx(
             'flex flex-col gap-y-1 overflow-auto',
@@ -154,7 +127,6 @@ function DashboardSidebar() {
           )}
         >
           <DashboardFoldersLayout
-            searchText={searchText}
             setActiveDashboardForFolder={setActiveDashboardForFolder}
             onDeleteDashboardClick={handleDeleteDashboardClick}
           />
@@ -163,18 +135,14 @@ function DashboardSidebar() {
           onClick={() => {
             dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_OPEN });
           }}
+          className='mx-4'
           type='dashed'
           icon={<PlusOutlined />}
         >
           New Dashboard
         </Button>
       </div>
-      <DashboardNewFolderModal
-        handleCancel={hideDashboardNewFolderModal}
-        visible={showNewFolderModal}
-        handleSubmit={onNewFolderCreation}
-        isLoading={newFolderCreationState.loading}
-      />
+
       <ConfirmationModal
         visible={deleteDashboardModal}
         confirmationText='Are you sure you want to delete this Dashboard?'

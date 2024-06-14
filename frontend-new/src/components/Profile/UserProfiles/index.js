@@ -12,7 +12,8 @@ import {
   Avatar,
   Input,
   Form,
-  Tooltip
+  Tooltip,
+  message
 } from 'antd';
 import { connect, useDispatch, useSelector } from 'react-redux';
 import { bindActionCreators } from 'redux';
@@ -42,6 +43,8 @@ import ResizableTitle from 'Components/Resizable';
 import logger from 'Utils/logger';
 import useAutoFocus from 'hooks/useAutoFocus';
 import {
+  moveSegmentToNewFolder,
+  updateSegmentToFolder,
   updateTableProperties,
   updateTablePropertiesForSegment
 } from 'Reducers/timelines';
@@ -73,7 +76,8 @@ import {
   createNewSegment,
   getSavedSegments,
   updateSegmentForId,
-  deleteSegment
+  deleteSegment,
+  getSegmentFolders
 } from '../../../reducers/timelines/middleware';
 import ProfilesWrapper from '../ProfilesWrapper';
 import { getUserOptions } from './userProfiles.helpers';
@@ -94,9 +98,39 @@ import {
   headerClassStr,
   iconColors
 } from '../constants';
+import { FolderItemOptions } from 'Components/FolderStructure/FolderItem';
+import { selectSegmentsList } from 'Reducers/userProfilesView/selectors';
 
 const userOptions = getUserOptions();
 
+function SearchBar({ handleUsersSearch, listSearchItems, onSearchClose }) {
+  const searchBarRef = useAutoFocus();
+  return (
+    <div className='flex items-center justify-between'>
+      <Form
+        name='basic'
+        labelCol={{ span: 8 }}
+        wrapperCol={{ span: 16 }}
+        onFinish={handleUsersSearch}
+        autoComplete='off'
+      >
+        <Form.Item name='users'>
+          <Input
+            ref={searchBarRef}
+            size='large'
+            defaultValue={listSearchItems ? listSearchItems.join(', ') : null}
+            placeholder='Search Users'
+            style={{ width: '240px', 'border-radius': '5px' }}
+            prefix={<SVG name='search' size={24} color='#8c8c8c' />}
+          />
+        </Form.Item>
+      </Form>
+      <Button type='text' className='search-btn' onClick={onSearchClose}>
+        <SVG name='close' size={24} color='#8c8c8c' />
+      </Button>
+    </div>
+  );
+}
 function UserProfiles({
   createNewSegment,
   getSavedSegments,
@@ -107,7 +141,8 @@ function UserProfiles({
   fetchMarketoIntegration,
   fetchBingAdsIntegration,
   updateSegmentForId,
-  deleteSegment
+  deleteSegment,
+  getSegmentFolders
 }) {
   const dispatch = useDispatch();
   const history = useHistory();
@@ -134,11 +169,11 @@ function UserProfiles({
   const [appliedFilters, setAppliedFilters] = useState(
     INITIAL_USER_PROFILES_FILTERS_STATE
   );
-  const [showSegmentActions, setShowSegmentActions] = useState(false);
   const [moreActionsModalMode, setMoreActionsModalMode] = useState(null);
   const [peopleRow, setPeopleRow] = useState(null);
 
-  const { contacts } = useSelector((state) => state.timelines);
+  const { contacts, segmentFolders } = useSelector((state) => state.timelines);
+  const userSegmentsList = useSelector((state) => selectSegmentsList(state));
 
   const {
     bingAds,
@@ -172,6 +207,23 @@ function UserProfiles({
   const setTimelinePayload = useCallback((payload) => {
     dispatch(setTimelinePayloadAction(payload));
   }, []);
+
+  useEffect(() => {
+    if (userSegmentsList) {
+      for (const eachSegment of userSegmentsList) {
+        if (eachSegment?.id === timelinePayload?.segment?.id) {
+          setTimelinePayload({
+            ...timelinePayload,
+            segment: {
+              ...timelinePayload?.segment,
+              folder_id: eachSegment?.folder_id
+            }
+          });
+          break;
+        }
+      }
+    }
+  }, [userSegmentsList]);
 
   const displayTableProps = useMemo(() => {
     const tableProps = timelinePayload?.segment?.id
@@ -389,8 +441,11 @@ function UserProfiles({
       );
       return title;
     }
-    return timelinePayload?.segment?.name;
-  }, [timelinePayload, userOptions, newSegmentMode]);
+    return (
+      userSegmentsList.find((e) => e.id === timelinePayload?.segment?.id)
+        ?.name || timelinePayload?.segment?.name
+    );
+  }, [timelinePayload, userOptions, newSegmentMode, userSegmentsList]);
 
   const restoreFiltersDefaultState = useCallback(
     (
@@ -463,6 +518,7 @@ function UserProfiles({
   );
 
   const handleDeleteActiveSegment = useCallback(() => {
+    const messageHandler = message.loading('Deleting Segment', 0);
     deleteSegment({
       projectId: activeProject.id,
       segmentId: timelinePayload?.segment?.id
@@ -475,6 +531,7 @@ function UserProfiles({
         });
       })
       .finally(() => {
+        messageHandler();
         dispatch(
           setTimelinePayloadAction({
             source: 'All',
@@ -487,7 +544,7 @@ function UserProfiles({
   const handleRenameSegment = useCallback(
     async (name) => {
       if (!timelinePayload.segment) return;
-
+      const messageHandler = message.loading('Renaming Segment', 0);
       try {
         const segmentId = timelinePayload.segment.id;
 
@@ -507,6 +564,8 @@ function UserProfiles({
         setTimelinePayload(updatedPayload);
       } catch (error) {
         logger.error(error);
+      } finally {
+        messageHandler();
       }
     },
     [activeProject.id, timelinePayload.segment]
@@ -601,7 +660,7 @@ function UserProfiles({
     }
     const userPropsWithEnableKey = formatUserPropertiesToCheckList(
       userPropertiesModified,
-      tableProps.filter(
+      tableProps?.filter(
         (entry) => entry !== '' && entry !== undefined && entry !== null
       )
     );
@@ -728,30 +787,40 @@ function UserProfiles({
     }
   };
 
-  const applyTableProps = () => {
-    const newTableProps =
-      checkListUserProps
-        ?.filter((item) => item.enabled === true)
-        ?.map((item) => item?.prop_name)
-        ?.filter(
-          (entry) => entry !== '' && entry !== undefined && entry !== null
-        ) || [];
-    if (timelinePayload?.segment?.id?.length) {
-      updateTablePropertiesForSegment(
-        activeProject.id,
-        timelinePayload.segment.id,
-        newTableProps
-      )
-        .then(() => getSavedSegments(activeProject.id))
-        .finally(() => getUsers(timelinePayload));
-    } else {
-      updateTableProperties(
-        activeProject.id,
-        PROFILE_TYPE_USER,
-        newTableProps
-      ).then(() => getUsers(timelinePayload));
+  const applyTableProps = async () => {
+    try {
+      const newTableProps =
+        checkListUserProps
+          ?.filter((item) => item.enabled === true)
+          ?.map((item) => item?.prop_name)
+          ?.filter(
+            (entry) => entry !== '' && entry !== undefined && entry !== null
+          ) || [];
+      if (timelinePayload?.segment?.id?.length) {
+        await updateTablePropertiesForSegment(
+          activeProject.id,
+          timelinePayload.segment.id,
+          newTableProps
+        );
+        const updatedPayload = { ...timelinePayload };
+        updatedPayload.segment.query.table_props = newTableProps;
+        setTimelinePayload(updatedPayload);
+
+        // getSavedSegments(activeProject.id);
+      } else {
+        await updateTableProperties(
+          activeProject.id,
+          PROFILE_TYPE_USER,
+          newTableProps
+        );
+        await fetchProjectSettings(activeProject.id);
+        getUsers(timelinePayload);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setShowPopOver(false);
     }
-    setShowPopOver(false);
   };
 
   const handleDisableOptionClick = () => {
@@ -898,39 +967,14 @@ function UserProfiles({
     setSearchBarOpen(true);
   };
 
-  function SearchBar() {
-    const searchBarRef = useAutoFocus();
-    return (
-      <div className='flex items-center justify-between'>
-        <Form
-          name='basic'
-          labelCol={{ span: 8 }}
-          wrapperCol={{ span: 16 }}
-          onFinish={handleUsersSearch}
-          autoComplete='off'
-        >
-          <Form.Item name='users'>
-            <Input
-              ref={searchBarRef}
-              size='large'
-              defaultValue={listSearchItems ? listSearchItems.join(', ') : null}
-              placeholder='Search Users'
-              style={{ width: '240px', 'border-radius': '5px' }}
-              prefix={<SVG name='search' size={24} color='#8c8c8c' />}
-            />
-          </Form.Item>
-        </Form>
-        <Button type='text' className='search-btn' onClick={onSearchClose}>
-          <SVG name='close' size={24} color='#8c8c8c' />
-        </Button>
-      </div>
-    );
-  }
-
   const renderSearchSection = () => (
     <div className='relative'>
       <ControlledComponent controller={searchBarOpen}>
-        <SearchBar />
+        <SearchBar
+          handleUsersSearch={handleUsersSearch}
+          listSearchItems={listSearchItems}
+          onSearchClose={onSearchClose}
+        />
       </ControlledComponent>
       <ControlledComponent controller={!searchBarOpen}>
         <Tooltip title='Search'>
@@ -964,62 +1008,68 @@ function UserProfiles({
     </Popover>
   );
 
-  const moreActionsContent = () => (
-    <div className='flex flex-col'>
-      <div className='flex flex-col'>
-        <div
-          role='button'
-          tabIndex={-1}
-          onClick={() => {
-            setShowSegmentActions(false);
-            setMoreActionsModalMode(moreActionsMode.RENAME);
-          }}
-          className='flex cursor-pointer hover:bg-gray-100 gap-x-4 items-center py-2 px-4'
-        >
-          <SVG size={20} name='edit_query' color='#8c8c8c' />
-          <Text type='title' color='character-primary' extraClass='mb-0'>
-            Rename Segment
-          </Text>
-        </div>
-        <div
-          role='button'
-          tabIndex={-2}
-          onClick={() => {
-            setShowSegmentActions(false);
-            setMoreActionsModalMode(moreActionsMode.DELETE);
-          }}
-          className='flex cursor-pointer hover:bg-gray-100 gap-x-4 items-center py-2 px-4'
-        >
-          <SVG size={20} name='trash' color='#8c8c8c' />
-          <Text type='title' color='character-primary' extraClass='mb-0'>
-            Delete Segment
-          </Text>
-        </div>
-      </div>
-    </div>
-  );
-
+  const moveSegmentToFolder = async (folderID, segmentID) => {
+    const messageHandler = message.loading('Moving Segment to Folder', 0);
+    try {
+      await updateSegmentToFolder(
+        activeProject.id,
+        segmentID,
+        {
+          folder_id: folderID
+        },
+        'user'
+      );
+      await getSavedSegments(activeProject.id);
+      message.success('Segment Moved');
+    } catch (err) {
+      console.error(err);
+      message.error('Segment failed to move');
+    } finally {
+      messageHandler();
+    }
+  };
+  const handleMoveToNewFolder = async (segmentID, folder_name) => {
+    const messageHandler = message.loading(
+      `Moving Segment to \`${folder_name}\` Folder`,
+      0
+    );
+    try {
+      await moveSegmentToNewFolder(
+        activeProject?.id,
+        segmentID,
+        {
+          name: folder_name
+        },
+        'user'
+      );
+      getSegmentFolders(activeProject.id, 'user');
+      await getSavedSegments(activeProject.id);
+      message.success('Segment Moved to New Folder');
+    } catch (err) {
+      console.error(err);
+      message.error('Failed to move segment');
+    } finally {
+      messageHandler();
+    }
+  };
   const renderMoreActions = () => (
-    <Popover
-      placement='bottomLeft'
-      visible={showSegmentActions}
-      onVisibleChange={(visible) => {
-        setShowSegmentActions(visible);
-      }}
-      onClick={() => {
-        setShowSegmentActions(true);
-      }}
-      trigger='click'
-      content={moreActionsContent}
-      overlayClassName={cx(
-        'fa-activity--filter',
-        styles['more-actions-popover']
-      )}
-    >
-      <Button className='search-btn' type='text'>
-        <SVG size={24} color='#8c8c8c' name='more' />
-      </Button>
-    </Popover>
+    <div className='cursor-pointer'>
+      <FolderItemOptions
+        id={timelinePayload?.segment?.id}
+        unit='segment'
+        folder_id={timelinePayload?.segment?.folder_id}
+        folders={[{ id: '', name: 'All Segments' }, ...segmentFolders.peoples]}
+        handleEditUnit={() => {
+          setMoreActionsModalMode(moreActionsMode.RENAME);
+        }}
+        handleDeleteUnit={() => {
+          setMoreActionsModalMode(moreActionsMode.DELETE);
+        }}
+        moveToExistingFolder={moveSegmentToFolder}
+        handleNewFolder={handleMoveToNewFolder}
+        placement='bottom'
+      />
+    </div>
   );
 
   const handleTableChange = (pageParams, somedata, sorter) => {
@@ -1248,7 +1298,8 @@ const mapDispatchToProps = (dispatch) =>
       fetchBingAdsIntegration,
       udpateProjectSettings,
       updateSegmentForId,
-      deleteSegment
+      deleteSegment,
+      getSegmentFolders
     },
     dispatch
   );

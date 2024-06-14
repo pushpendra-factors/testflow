@@ -54,7 +54,10 @@ function ProjectDetails({
   }, [fetchProjectsList]);
   return (
     <div className='mb-10 '>
-      <CommonSettingsHeader title='Your Projects' />
+      <CommonSettingsHeader
+        title='Your Projects'
+        description='Easily manage the list of projects that you are part of. '
+      />
 
       <Row className='mt-2'>
         <Col span={24}>
@@ -73,7 +76,9 @@ function ProjectDetails({
                 return (
                   <div
                     key={index}
-                    className='flex justify-between items-center border-bottom--thin-2 py-5'
+                    className={`flex justify-between items-center border-bottom--thin-2 py-5 ${
+                      index === 0 ? '-mt-5' : ''
+                    }`}
                   >
                     <div className='flex justify-start items-center'>
                       <Avatar

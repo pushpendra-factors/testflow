@@ -1,4 +1,4 @@
-import { notification } from 'antd';
+import { message, notification } from 'antd';
 import { setItemToLocalStorage } from 'Utils/localStorage.helpers';
 import { get, getHostUrl, post, del, put } from '../../utils/request';
 import {
@@ -29,7 +29,7 @@ import {
   INITIATED_DELETE_DASHBOARD_FOLDER,
   DELETE_DASHBOARD_FOLDER_SUCCESSFUL,
   DELETE_DASHBOARD_FOLDER_FAILED,
-  INITIATE_DASHBOARD_DELETION,
+  INITIATE_DASHBOARD_DELETION
 } from './types';
 
 const host = getHostUrl();
@@ -127,6 +127,10 @@ export const fetchDashboardFolders = (projectId) =>
 
 export const addDashboardToNewFolder = (projectId, dashboardId, folderName) =>
   async function (dispatch) {
+    const loadingMessageHandle = message.loading(
+      `Moving Dashboard to '${folderName}' Folder`,
+      0
+    );
     try {
       dispatch({ type: INITIATED_DASHBOARD_NEW_FOLDER_CREATION });
       const url = `${host}projects/${projectId}/dashboard_folder`;
@@ -153,6 +157,8 @@ export const addDashboardToNewFolder = (projectId, dashboardId, folderName) =>
         description: 'Folder creation failed',
         duration: 2
       });
+    } finally {
+      loadingMessageHandle();
     }
   };
 
@@ -162,6 +168,10 @@ export const addDashboardToExistingFolder = (
   dashboardId
 ) =>
   async function (dispatch) {
+    const loadingMessageHandle = message.loading(
+      'Moving Dashboard to Folder',
+      0
+    );
     try {
       dispatch({ type: INITIATED_DASHBOARD_MOVE_TO_EXISTING_FOLDER });
       const url = `${host}projects/${projectId}/dashboards/${dashboardId}`;
@@ -187,11 +197,14 @@ export const addDashboardToExistingFolder = (
         description: 'Dashboard move failed',
         duration: 2
       });
+    } finally {
+      loadingMessageHandle();
     }
   };
 
 export const renameDashboardFolder = (projectId, folderId, newName) =>
   async function (dispatch) {
+    const loadingMessageHandle = message.loading('Renaming Folder', 0);
     try {
       dispatch({ type: INITIATED_RENAME_DASHBOARD_FOLDER });
       const url = `${host}projects/${projectId}/dashboard_folder/${folderId}`;
@@ -220,11 +233,14 @@ export const renameDashboardFolder = (projectId, folderId, newName) =>
         description: 'Folder rename failed',
         duration: 2
       });
+    } finally {
+      loadingMessageHandle();
     }
   };
 
 export const deleteDashboardFolder = (projectId, folderId) =>
   async function (dispatch) {
+    const loadingMessageHandle = message.loading('Deleting Folder', 0);
     try {
       dispatch({ type: INITIATED_DELETE_DASHBOARD_FOLDER });
       const url = `${host}projects/${projectId}/dashboards/folder/${folderId}`;
@@ -252,6 +268,8 @@ export const deleteDashboardFolder = (projectId, folderId) =>
         description: 'Folder deletion failed',
         duration: 2
       });
+    } finally {
+      loadingMessageHandle();
     }
   };
 

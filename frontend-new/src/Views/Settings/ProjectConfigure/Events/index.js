@@ -120,25 +120,16 @@ function Events({
                 <Row>
                   <Col span={18}>
                     <Text type='title' level={7} color='grey' extraClass='m-0'>
-                      Track and analyze user interactions in a way that aligns
-                      perfectly with your business objectives.
-                    </Text>
-                    <Text
-                      type='title'
-                      level={7}
-                      color='grey'
-                      extraClass='m-0 mt-2'
-                    >
-                      Define and capture custom events that matter most to your
-                      business, such as clicks, form submissions, lifecycle
-                      stage changes, or other specific actions.{' '}
-                      <a
+                      Set up unique touchpoints to track user interactions
+                      beyond automatic tracking, including signups, form
+                      submissions, and lifecycle stage changes.{' '}
+                      {/* <a
                         href='https://help.factors.ai/en/articles/7284092-custom-events'
                         target='_blank'
                         rel='noreferrer'
                       >
                         Learn more
-                      </a>
+                      </a> */}
                     </Text>
                   </Col>
                   <Col span={6}>

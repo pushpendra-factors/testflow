@@ -56,7 +56,6 @@ const FacebookIntegration = ({
               }));
               SetFbAdAccounts(adAccounts);
               setShowForm(true);
-              integrationCallback();
             } else {
               message.error(
                 "You don't have any ad accounts associated to the id you logged in with."
@@ -119,6 +118,7 @@ const FacebookIntegration = ({
             activeProject.name,
             'Facebook'
           );
+          integrationCallback();
         })
         .catch((e) => {
           console.log(e);

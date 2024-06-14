@@ -2037,9 +2037,9 @@ func (store *MemSQL) GetIntegrationState(projectID int64, integrationName string
 
 		if lastAtNull.Valid {
 			if synced == 1 {
-				lastPulledAt = lastAtNull.Time.Unix()
-			} else {
 				lastSyncedAt = lastAtNull.Time.Unix()
+			} else {
+				lastPulledAt = lastAtNull.Time.Unix()
 			}
 		}
 
@@ -2047,25 +2047,25 @@ func (store *MemSQL) GetIntegrationState(projectID int64, integrationName string
 
 	result := model.IntegrationState{}
 
-	if U.TimeNowUnix()-lastSyncedAt < model.IntegrationCheckFrequency[integrationName] {
-		result.State = model.SYNCED
-		result.Message = model.ErrorStateToErrorMessageMap[model.SYNCED]
-	} else if U.TimeNowUnix()-lastPulledAt < 2*model.IntegrationCheckFrequency[integrationName] {
+	if U.TimeNowUnix()-lastPulledAt > model.IntegrationCheckFrequency[integrationName] && lastPulledAt > 0 {
+
+		result.State = model.PULL_DELAYED
+		result.Message = fmt.Sprintf(model.ErrorStateToErrorMessageMap[model.PULL_DELAYED], model.FeatureDisplayNameByFeatureName(integrationName))
+
+	} else if U.TimeNowUnix()-lastSyncedAt > 2*model.IntegrationCheckFrequency[integrationName] {
 		result.State = model.SYNC_PENDING
 		result.Message = model.ErrorStateToErrorMessageMap[model.SYNC_PENDING]
-	} else {
-		result.State = model.PULL_DELAYED
-		result.Message = fmt.Sprintf(model.ErrorStateToErrorMessageMap[model.PULL_DELAYED], integrationName)
-		if msg, exists := model.ErrorStateToErrorMessageMap[fmt.Sprintf("%s_%s", integrationName, model.PULL_DELAYED)]; exists {
+		if msg, exists := model.ErrorStateToErrorMessageMap[fmt.Sprintf("%s_%s", integrationName, model.SYNC_PENDING)]; exists {
 			result.Message = msg
 		}
+
+	} else {
+		result.State = model.SYNCED
+		result.Message = model.ErrorStateToErrorMessageMap[model.SYNCED]
+
 	}
 
-	if U.ContainsStringInArray([]string{model.HUBSPOT, model.SALESFORCE, model.LEADSQUARED, model.MARKETO, model.LINKEDIN}, integrationName) {
-		result.LastSyncedAt = lastSyncedAt
-	} else {
-		result.LastSyncedAt = lastPulledAt
-	}
+	result.LastSyncedAt = lastSyncedAt
 
 	return result, http.StatusOK
 
@@ -2092,10 +2092,18 @@ func getQueryStmntFromIntegrationName(integrationName string, projectID int64) (
 		params = append(params, projectID, projectID, projectID)
 		return stmt, params
 
-	case model.FEATURE_HUBSPOT, model.FEATURE_SALESFORCE:
+	case model.FEATURE_HUBSPOT:
 
 		stmt = fmt.Sprintf(`with
-			step_1 as (SELECT type , synced, MAX(created_at) last_at from %s_documents where project_id= ? group by synced,type )
+			step_1 as (SELECT type , synced, MAX(created_at) last_at from %s_documents where project_id= ?  and type in (1,2,3,6,7) group by synced,type )
+			select synced,min(last_at) last_at from step_1 group by synced`, integrationName)
+		params = append(params, projectID)
+		return stmt, params
+
+	case model.FEATURE_SALESFORCE:
+
+		stmt = fmt.Sprintf(`with
+			step_1 as (SELECT type , synced, MAX(created_at) last_at from %s_documents where project_id= ?  and type in (1,2,3,4,6,9,10) group by synced,type )
 			select synced,min(last_at) last_at from step_1 group by synced`, integrationName)
 		params = append(params, projectID)
 		return stmt, params
@@ -2115,7 +2123,7 @@ func getQueryStmntFromIntegrationName(integrationName string, projectID int64) (
 	case model.FEATURE_LINKEDIN:
 
 		stmt = fmt.Sprintf(`with
-		step_1 as (select 0 synced, type , MAX(Timestamp(timestamp)) last_at  from linkedin_documents where project_id= ? group by type),
+		step_1 as (select 0 synced, type , MAX(Timestamp(timestamp)) last_at  from linkedin_documents where project_id= ? and type = 8 group by type),
 		 step_2 as (select 1 synced,  MAX(Timestamp(timestamp)) last_at from linkedin_documents where project_id= ? and type = 8 and is_group_user_created = true),
 		step_3 as (select synced , MIN(last_at) from step_1)
 		 select * from step_3 

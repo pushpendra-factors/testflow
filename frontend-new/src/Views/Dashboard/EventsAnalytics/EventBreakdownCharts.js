@@ -24,7 +24,8 @@ function EventBreakdownCharts({
   breakdown,
   section,
   chartType,
-  unit
+  unit,
+  durationObj
 }) {
   const [chartsData, setChartsData] = useState([]);
   const [visibleProperties, setVisibleProperties] = useState([]);
@@ -78,6 +79,8 @@ function EventBreakdownCharts({
         visibleProperties={visibleProperties}
         sorter={sorter}
         setSorter={setSorter}
+        durationObj={durationObj}
+        resultState={resultState}
       />
     );
   }

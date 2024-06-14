@@ -20,14 +20,6 @@ import (
 func EventsPerformedCheck(projectID int64, segmentId string, eventNameIDsMap map[string]string,
 	segmentQuery *model.Query, userID string, isAllAccounts bool, userArray []model.User) bool {
 
-	// default value to be set true
-	for index := range segmentQuery.EventsWithProperties {
-		if segmentQuery.EventsWithProperties[index].FrequencyOperator != "" {
-			continue
-		}
-		segmentQuery.EventsWithProperties[index].IsEventPerformed = true
-	}
-
 	isMatched := false
 
 	var didEventPresent, didNotDoEventPresent bool
@@ -861,10 +853,12 @@ func (store *MemSQL) GetAllPropertiesForDomain(projectID int64, domainGroupId in
 	domainID string, userCount *int64) ([]model.User, int) {
 
 	userStmnt := "AND (is_group_user IS NULL OR is_group_user=0) ORDER BY properties_updated_timestamp DESC LIMIT 100"
+	userLimit := 100
 	grpUserStmnt := "AND is_group_user=1 ORDER BY properties_updated_timestamp DESC LIMIT 50"
+	groupUsersLimit := 50
 
 	// fetching top 100 non group users
-	users, status := store.GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID, userStmnt)
+	users, status := store.GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID, userStmnt, userLimit)
 
 	if status == http.StatusInternalServerError {
 		log.WithField("project_id", projectID).Error("Unable to find users for domain ", domainID)
@@ -872,7 +866,7 @@ func (store *MemSQL) GetAllPropertiesForDomain(projectID int64, domainGroupId in
 	}
 
 	// fetching top 50 group users
-	grpUsers, status := store.GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID, grpUserStmnt)
+	grpUsers, status := store.GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID, grpUserStmnt, groupUsersLimit)
 
 	if status == http.StatusInternalServerError || (len(users) == 0 && len(grpUsers) == 0) {
 		log.WithField("project_id", projectID).Error("Unable to find users for domain ", domainID)
@@ -890,6 +884,31 @@ func (store *MemSQL) GetAllPropertiesForDomain(projectID int64, domainGroupId in
 
 	if status != http.StatusFound {
 		log.WithField("project_id", projectID).Error("Unable to find details for domain %s", domainID)
+	} else {
+		users = append(users, domDetails)
+	}
+
+	return users, http.StatusFound
+}
+
+func (store *MemSQL) GetAllGroupPropertiesForDomain(projectID int64, domainGroupId int,
+	domainID string) ([]model.User, int) {
+
+	grpUserStmnt := "AND is_group_user=1 ORDER BY properties_updated_timestamp DESC LIMIT 50"
+	grpUserLimit := 50
+	// fetching top 50 group users
+	users, status := store.GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID, grpUserStmnt, grpUserLimit)
+
+	if status == http.StatusInternalServerError || len(users) == 0 {
+		log.WithField("project_id", projectID).Error("Unable to find users for domain ", domainID)
+		return []model.User{}, status
+	}
+
+	// appending domain details to process domain based filters
+	domDetails, status := store.GetDomainDetailsByID(projectID, domainID, domainGroupId)
+
+	if status != http.StatusFound {
+		log.WithField("project_id", projectID).Errorf("Unable to find details for domain %s", domainID)
 	} else {
 		users = append(users, domDetails)
 	}

@@ -112,6 +112,8 @@ function EventsAnalytics({
         data={resultState.data}
         breakdown={breakdown}
         ref={renderedCompRef}
+        durationObj={durationObj}
+        resultState={resultState}
       />
     );
   }

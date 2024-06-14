@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestAPIGetProfileUserHandler(t *testing.T) {
+func TestTimelineGetProfileUserHandler(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 	project, agent, err := SetupProjectWithAgentDAO()
@@ -439,7 +439,7 @@ func sendGetProfileUserRequest(r *gin.Engine, projectId int64, agent *model.Agen
 	return w
 }
 
-func TestAPIGetProfileUserDetailsHandler(t *testing.T) {
+func TestTimelineGetProfileUserDetailsHandler(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 	project, agent, err := SetupProjectWithAgentDAO()
@@ -965,7 +965,7 @@ func sendGetProfileUserDetailsRequest(r *gin.Engine, projectId int64, agent *mod
 	return w
 }
 
-func TestAPIGetProfileAccountHandler(t *testing.T) {
+func TestTimelineGetProfileAccountHandler(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 	project, agent, err := SetupProjectWithAgentDAO()
@@ -1557,7 +1557,7 @@ func sendGetProfileAccountRequest(r *gin.Engine, projectId int64, agent *model.A
 	return w
 }
 
-func TestAPIGetProfileAccountDetailsHandler(t *testing.T) {
+func TestTimelineGetProfileAccountDetailsHandler(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 	project, agent, err := SetupProjectWithAgentDAO()
@@ -2284,7 +2284,7 @@ func sendGetProfileAccountOverviewRequest(r *gin.Engine, projectId int64, agent 
 	return w
 }
 
-func TestSegmentEventAnalyticsQuery(t *testing.T) {
+func TestTimelineSegmentEventAnalyticsQuery(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 	project, agent, err := SetupProjectWithAgentDAO()
@@ -3125,7 +3125,7 @@ func TestSegmentEventAnalyticsQuery(t *testing.T) {
 	}
 }
 
-func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
+func TestTimelineSegmentSupportEventAnalyticsQuery(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 	project, agent, err := SetupProjectWithAgentDAO()
@@ -3743,7 +3743,7 @@ func TestSegmentSupportEventAnalyticsQuery(t *testing.T) {
 
 }
 
-func TestAllAccountDefaultGroupProperties(t *testing.T) {
+func TestTimelineAllAccountDefaultGroupProperties(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 	project, agent, err := SetupProjectWithAgentDAO()
@@ -4451,7 +4451,7 @@ func TestAllAccountDefaultGroupProperties(t *testing.T) {
 }
 
 // Move TestAPIGetProfileAccountHandler Test Cases here.
-func TestAllAccounts(t *testing.T) {
+func TestTimelineAllAccounts(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 	project, agent, err := SetupProjectWithAgentDAO()
@@ -4616,6 +4616,12 @@ func TestAllAccounts(t *testing.T) {
 	}
 	assert.Equal(t, len(groupUsers), 15)
 	assert.Equal(t, len(users), 15)
+
+	// check total users created
+
+	userCount, status := store.GetStore().GetAccountAssociatedUserCountByProjectID(project.ID, 1)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, int64(30), userCount)
 
 	// Test Cases :-
 
@@ -4945,7 +4951,7 @@ func sendGetProfileAccountRequestConsumingMarker(r *gin.Engine, projectId int64,
 	return w
 }
 
-func TestAccountsConsumingMarker(t *testing.T) {
+func TestTimelineAccountsConsumingMarker(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 	project, agent, err := SetupProjectWithAgentDAO()
@@ -5146,7 +5152,7 @@ func sendUpdateEventConfigRequest(r *gin.Engine, projectId int64, agent *model.A
 	return w
 }
 
-func TestUpdateEventsConfig(t *testing.T) {
+func TestTimelineUpdateEventsConfig(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 	project, agent, err := SetupProjectWithAgentDAO()
@@ -5187,7 +5193,7 @@ func sendUpdateTablePropertiesRequest(r *gin.Engine, projectId int64, agent *mod
 	return w
 }
 
-func TestUpdateTablePropertiesHandler(t *testing.T) {
+func TestTimelineUpdateTablePropertiesHandler(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 	project, agent, err := SetupProjectWithAgentDAO()
@@ -5235,7 +5241,7 @@ func sendUpdateSegmentTablePropertiesRequest(r *gin.Engine, projectId int64, age
 	return w
 }
 
-func TestUpdateSegmentTablePropertiesHandler(t *testing.T) {
+func TestTimelineUpdateSegmentTablePropertiesHandler(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 	project, agent, err := SetupProjectWithAgentDAO()
@@ -5267,7 +5273,7 @@ func TestUpdateSegmentTablePropertiesHandler(t *testing.T) {
 	assert.Equal(t, newTableProperties, segmentQuery.TableProps)
 }
 
-func TestGetConfiguredUserPropertiesWithValuesHandler(t *testing.T) {
+func TestTimelineGetConfiguredUserPropertiesWithValuesHandler(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 	project, agent, err := SetupProjectWithAgentDAO()

@@ -79,7 +79,8 @@ const NewReportButton = ({
       history.push({
         pathname: `/analyse/${key}`,
         state: {
-          navigatedFromDashboardExistingReports: true
+          navigatedFromDashboardExistingReports: true,
+          showDefaultDashboard: true
         }
       });
     } else {

@@ -1,15 +1,15 @@
-import React from "react";
-import MultipleEventsWithBreakdown from "./MultipleEventsWithBreakdown";
-import SingleEventSingleBreakdown from "./SingleEventSingleBreakdown";
-import SingleEventMultipleBreakdown from "./SingleEventMultipleBreakdown";
-import NoBreakdownCharts from "./NoBreakdownCharts";
+import React from 'react';
+import MultipleEventsWithBreakdown from './MultipleEventsWithBreakdown';
+import SingleEventSingleBreakdown from './SingleEventSingleBreakdown';
+import SingleEventMultipleBreakdown from './SingleEventMultipleBreakdown';
+import NoBreakdownCharts from './NoBreakdownCharts';
 import {
   TOTAL_EVENTS_CRITERIA,
   EACH_USER_TYPE,
   ANY_USER_TYPE,
-  ALL_USER_TYPE,
-} from "../../../utils/constants";
-import EventBreakdownCharts from "./EventBreakdownCharts";
+  ALL_USER_TYPE
+} from '../../../utils/constants';
+import EventBreakdownCharts from './EventBreakdownCharts';
 
 function EventsAnalytics({
   breakdown,
@@ -20,7 +20,7 @@ function EventsAnalytics({
   durationObj,
   arrayMapper,
   section,
-  breakdownType,
+  breakdownType
 }) {
   let content = null;
 
@@ -94,6 +94,7 @@ function EventsAnalytics({
         breakdown={breakdown}
         chartType={chartType}
         unit={unit}
+        durationObj={durationObj}
       />
     );
   }

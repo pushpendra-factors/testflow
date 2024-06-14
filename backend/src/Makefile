@@ -1,4 +1,4 @@
-.PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds build-sdk serve-sdk serve-redis serve-predis clean pack-api upload-api pack-ps upload-ps pack-ds upload-ds pack-sdk upload-sdk pack-redis upload-redis pack-predis upload-predis pack-debug upload-debug pack-build-seq upload-build-seq pack-hubspot-enrich upload-hubspot-enrich pack-sdk-request-worker upload-sdk-request-worker pack-integration-request-worker upload-integration-request-worker pack-monitoring upload-monitoring pack-archive-events upload-archive-events pack-adhoc-archive-events upload-adhoc-archive-events pack-bigquery-upload upload-bigquery-upload pack-onboard-to-bigquery upload-onboard-to-bigquery pack-add-session upload-add-session pack-dashboard-caching upload-dashboard-caching pack-monthly-dashboard-caching upload-monthly-dashboard-caching pack-beam-dashboard-caching upload-beam-dashboard-caching pack-beam-dashboard-caching-now upload-beam-dashboard-caching-now pack-web-analytics-dashboard upload-web-analytics-dashboard pack-instantiate-event-user-cache upload-instantiate-event-user-cache pack-journey-mining upload-journey-mining build-api-doc pack-pull-events upload-pull-events go-fmt pack-beam-add-session upload-beam-add-session pack-memsql-hubspot-sync-fields upload-memsql-hubspot-sync-fields pack-replicate-properties upload-replicate-properties pack-precompiles-queries upload-precompile-queries pack-sdk-bundle upload-sdk-bundle pack-event-bundle upload-event-bundle pack-analytics-bundle upload-analytics-bundle test pack-convert_epoch_saved_queries_tz1_to_tz2 upload-convert_epoch_saved_queries_tz1_to_tz2 pack-channels-to-kpi-migration upload-channels-to-kpi-migration pack-predict-pull-events upload-predict-pull-events pack-form-fills upload-form-fills pack-delete-older-clickable-elements upload-delete-older-clickable-elements pack-dashboard-caching-queries-comparision upload-dashboard-caching-queries-comparision pack-segment-marker upload-segment-marker pack-create-default-segments upload-create-default-segments pack-cache-cleanup-filter-lists upload-cache-cleanup-filter-lists pack-saved-queries-migrate upload-saved-queries-migrate pack-weekly-mailmodo upload-weekly-mailmodo
+.PHONY: build-api serve-api build-ps serve-ps build-ds serve-ds build-sdk serve-sdk serve-redis serve-predis clean pack-api upload-api pack-ps upload-ps pack-ds upload-ds pack-sdk upload-sdk pack-redis upload-redis pack-predis upload-predis pack-debug upload-debug pack-build-seq upload-build-seq pack-hubspot-enrich upload-hubspot-enrich pack-sdk-request-worker upload-sdk-request-worker pack-integration-request-worker upload-integration-request-worker pack-monitoring upload-monitoring pack-archive-events upload-archive-events pack-adhoc-archive-events upload-adhoc-archive-events pack-bigquery-upload upload-bigquery-upload pack-onboard-to-bigquery upload-onboard-to-bigquery pack-add-session upload-add-session pack-dashboard-caching upload-dashboard-caching pack-monthly-dashboard-caching upload-monthly-dashboard-caching pack-beam-dashboard-caching upload-beam-dashboard-caching pack-beam-dashboard-caching-now upload-beam-dashboard-caching-now pack-web-analytics-dashboard upload-web-analytics-dashboard pack-instantiate-event-user-cache upload-instantiate-event-user-cache pack-journey-mining upload-journey-mining build-api-doc pack-pull-events upload-pull-events go-fmt pack-beam-add-session upload-beam-add-session pack-memsql-hubspot-sync-fields upload-memsql-hubspot-sync-fields pack-replicate-properties upload-replicate-properties pack-precompiles-queries upload-precompile-queries pack-sdk-bundle upload-sdk-bundle pack-event-bundle upload-event-bundle pack-analytics-bundle upload-analytics-bundle test pack-convert_epoch_saved_queries_tz1_to_tz2 upload-convert_epoch_saved_queries_tz1_to_tz2 pack-channels-to-kpi-migration upload-channels-to-kpi-migration pack-predict-pull-events upload-predict-pull-events pack-form-fills upload-form-fills pack-delete-older-clickable-elements upload-delete-older-clickable-elements pack-dashboard-caching-queries-comparision upload-dashboard-caching-queries-comparision pack-segment-marker upload-segment-marker pack-create-default-segments upload-create-default-segments pack-modify-segments upload-modify-segments pack-cache-cleanup-filter-lists upload-cache-cleanup-filter-lists pack-saved-queries-migrate upload-saved-queries-migrate pack-weekly-mailmodo upload-weekly-mailmodo
 .PHONY: pack-dbt-events-cube-aggregation-job upload-dbt-events-cube-aggregation-job pack-dbt-events-cube-aggregation-deploy upload-dbt-events-cube-aggregation-deploy pack-default-custom-metrics-for-segment-kpi upload-default-custom-metrics-for-segment-kpi
 
 # Update tag with the latest release version
@@ -163,6 +163,13 @@ pack-create-default-segments:
 upload-create-default-segments: export IMAGE_NAME=default-segments-creation-job
 upload-create-default-segments: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/default-segments-creation-job:$(TAG)
+
+pack-modify-segments:
+	docker build -t us.gcr.io/factors-$(ENV)/modify-segments-job:$(TAG) -f Dockerfile.modify_segments_job .
+
+upload-modify-segments: export IMAGE_NAME=modify-segments-job
+upload-modify-segments: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/modify-segments-job:$(TAG)
 
 pack-custom-beam:
 	docker build -t us.gcr.io/factors-$(ENV)/custom-beam:$(TAG) -f Dockerfile.custom_beam .
@@ -848,6 +855,13 @@ pack-factors-deanon-monitoring:
 upload-factors-deanon-monitoring: export IMAGE_NAME=factors-deanon-monitoring
 upload-factors-deanon-monitoring: notify-deployment
 	docker push us.gcr.io/factors-$(ENV)/factors-deanon-monitoring:$(TAG)
+
+pack-linkedin-frequency-capping:
+	docker build -t us.gcr.io/factors-$(ENV)/linkedin-frequency-capping:$(TAG) -f Dockerfile.linkedin_frequency_capping_job .
+
+upload-linkedin-frequency-capping: export IMAGE_NAME=linkedin-frequency-capping
+upload-linkedin-frequency-capping: notify-deployment
+	docker push us.gcr.io/factors-$(ENV)/linkedin-frequency-capping:$(TAG)
 
 
 

@@ -10,6 +10,7 @@ import React, {
 } from 'react';
 import has from 'lodash/has';
 import cx from 'classnames';
+import MetricChart from 'Components/MetricChart/MetricChart';
 import {
   formatData,
   formatDataInSeriesFormat,
@@ -38,7 +39,6 @@ import { CHART_COLOR_1 } from '../../../../constants/color.constants';
 import { CoreQueryContext } from '../../../../contexts/CoreQueryContext';
 import SingleEventSingleBreakdownHorizontalBarChart from './SingleEventSingleBreakdownHorizontalBarChart';
 import ColumnChart from '../../../../components/ColumnChart/ColumnChart';
-import MetricChart from 'Components/MetricChart/MetricChart';
 
 const legendsProps = {
   position: 'bottom',
@@ -173,6 +173,7 @@ const SingleEventSingleBreakdownComponent = forwardRef(
           compareCategories={compareCategories}
           frequency={durationObj.frequency}
           eventGroup={resultState?.data?.meta?.query?.grpa}
+          resultState={resultState}
         />
       </div>
     );
@@ -235,18 +236,16 @@ const SingleEventSingleBreakdownComponent = forwardRef(
           )}
         >
           {visibleSeriesData &&
-            visibleSeriesData.map((eachSeriesData, eachIndex) => {
-              return (
-                <MetricChart
-                  key={eachSeriesData.name}
-                  headerTitle={eachSeriesData.name}
-                  value={eachSeriesData.value}
-                  iconColor={colors[eachIndex]}
-                  compareValue={eachSeriesData.compareValue}
-                  showComparison={comparisonData.data != null}
-                />
-              );
-            })}
+            visibleSeriesData.map((eachSeriesData, eachIndex) => (
+              <MetricChart
+                key={eachSeriesData.name}
+                headerTitle={eachSeriesData.name}
+                value={eachSeriesData.value}
+                iconColor={colors[eachIndex]}
+                compareValue={eachSeriesData.compareValue}
+                showComparison={comparisonData.data != null}
+              />
+            ))}
         </div>
       );
     } else {

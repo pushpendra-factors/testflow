@@ -216,13 +216,16 @@ const Sharing = ({
           <div className='mb-10'>
             {!viewMode && (
               <>
-                <CommonSettingsHeader title='Sharing' />
+                <CommonSettingsHeader
+                  title='Sharing'
+                  description='Effortlessly manage automated report sharing to keep your team informed and aligned.'
+                />
 
                 <Row className='m-0'>
                   <Col span={24}>
-                    <div className='m-0 mt-2'>
+                    <div className='m-0 '>
                       <Table
-                        className='fa-table--basic mt-6'
+                        className='fa-table--basic'
                         onRow={(record, rowIndex) => ({
                           onClick: (event) => {
                             SetViewMode(true);

@@ -156,6 +156,7 @@ CREATE TABLE IF NOT EXISTS adwords_documents (
     -- Ref (project_id) -> projects(id)
     -- Ref (project_id, customer_account_id) -> project_settings(project_id, int_adwords_customer_account_id)
 );
+ALTER TABLE adwords_documents AUTOSTATS_ENABLED = OFF;
 
 CREATE ROWSTORE TABLE IF NOT EXISTS agents (
     uuid text,
@@ -443,10 +444,6 @@ CREATE ROWSTORE TABLE IF NOT EXISTS project_settings (
     int_linkedin_refresh_token text,
     int_linkedin_refresh_token_expiry bigint,
     int_linkedin_agent_uuid text,
-    int_linkedin_write_ad_account text,
-    int_linkedin_write_access_token text,
-    int_linkedin_write_refresh_token text,
-    int_linkedin_write_agent_uuid text,
     archive_enabled boolean NOT NULL DEFAULT FALSE,
     bigquery_enabled boolean NOT NULL DEFAULT FALSE,
     int_salesforce_enabled_agent_uuid text,
@@ -718,6 +715,7 @@ CREATE TABLE IF NOT EXISTS google_organic_documents (
     -- Unique (project_id, customer_ad_account_id, type, timestamp, id)
     -- Ref (project_id) -> projects(id)
 );
+ALTER TABLE google_organic_documents AUTOSTATS_ENABLED = OFF;
 
 CREATE ROWSTORE TABLE IF NOT EXISTS project_model_metadata
 (
@@ -1269,6 +1267,7 @@ CREATE TABLE IF NOT EXISTS segments(
     type text,
     updated_at timestamp(6) DEFAULT '2024-01-01 00:00:00',
     marker_run_segment timestamp(6) DEFAULT '1971-01-01 00:00:00',
+    folder_id text DEFAULT "", 
     PRIMARY KEY (project_id, id),
     SHARD KEY (project_id, id)
 );
@@ -1566,11 +1565,55 @@ CREATE TABLE IF NOT EXISTS workflows (
 );
 
 
+CREATE TABLE IF NOT EXISTS linkedin_capping_rules (
+    id text,
+    project_id bigint NOT NULL,
+    object_type text NOT NULL,
+    name text NOT NULL,
+    display_name text NOT NULL,
+    description text NOT NULL,
+    status text NOT NULL,
+    granularity text NOT NULL,
+    object_ids json,
+    impression_threshold bigint NOT NULL,
+    click_threshold bigint NOT NULL,
+    is_advanced_rule_enabled bool DEFAULT FALSE,
+    advanced_rule_type text,
+    advanced_rules json,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    SHARD KEY (project_id),
+    PRIMARY KEY (id, project_id, object_type, name)
+);
+
+CREATE TABLE IF NOT EXISTS linkedin_exclusions (
+    id text,
+    project_id bigint NOT NULL,
+    org_id text NOT NULL,
+    timestamp int NOT NULL,
+    company_name text,
+    campaigns json,
+    is_pushed_to_linkedin boolean DEFAULT false,
+    is_removed_from_linkedin boolean DEFAULT false,
+    rule_id text NOT NULL,
+    rule_object_type text NOT NULL,
+    rule_snapshot json,
+    properties_snapshot json,
+    exact_subrule_matched json,
+    linkedin_data json,
+    impressions_saved bigint,
+    clicks_saved bigint,
+    created_at timestamp(6) NOT NULL,
+    updated_at timestamp(6) NOT NULL,
+    SHARD KEY (project_id)
+);
 CREATE TABLE IF NOT EXISTS prompt_embeddings (
     project_id bigint NOT NULL DEFAULT 0,
     prompt TEXT,
     query TEXT,
     embedding VECTOR(768, F32) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (project_id, prompt)
     );
 
@@ -1582,3 +1625,12 @@ INDEX_OPTIONS '{
   "ef": 16,
   "metric_type":"DOT_PRODUCT"
 }';
+CREATE TABLE IF NOT EXISTS segment_folders (
+    id  text NOT NULl,
+    name text NOT NULL,
+    project_id bigint(20),
+    folder_type text,
+    created_at timestamp not null,
+    updated_at timestamp not null,
+        KEY (project_id) USING CLUSTERED COLUMNSTORE
+);

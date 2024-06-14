@@ -57,9 +57,7 @@ const ReportTable = ({
   const getCSVData = () => {
     if (!data) {
       return {
-        fileName: `SixSignalReport${
-          dataSelected ? `(${dataSelected})` : ''
-        }.csv`,
+        fileName: `SixSignalReport${dataSelected ? `(${dataSelected})` : ''}`,
         data: [getDefaultTableColumns().map((c) => c.dataIndex)]
       };
     }
@@ -78,7 +76,7 @@ const ReportTable = ({
     return {
       fileName: `Factors.ai website Visitor Identification report${
         dataSelected ? `(${dataSelected})` : ''
-      }.csv`,
+      }`,
       data: [columnsArray, ...rowsArray]
     };
   };

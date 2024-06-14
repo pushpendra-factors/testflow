@@ -1,34 +1,49 @@
 import { SVG, Text } from 'Components/factorsComponents';
-import { Button, Col, Row } from 'antd';
-import React, { useState } from 'react';
+import { Button, Col, Row, Spin } from 'antd';
+import React, { useEffect, useState } from 'react';
 
-import SavedProperties from '../../PropertySettings/PropertyMappingKPI/savedProperties';
+import { bindActionCreators } from 'redux';
+import { fetchPropertyMappings } from 'Reducers/settings/middleware';
+import { ConnectedProps, connect } from 'react-redux';
 import PropertyMappingKPI from '../../PropertySettings/PropertyMappingKPI';
+import SavedProperties from '../../PropertySettings/PropertyMappingKPI/savedProperties';
 
-const PropertyMapping = () => {
+const PropertyMapping = ({
+  fetchPropertyMappings,
+  activeProject
+}: PropertyMappingProps) => {
   const [showForm, setShowForm] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchPropertyMappings(activeProject?.id).then(() => {
+      setLoading(false);
+    });
+  }, []);
+  if (loading) {
+    return (
+      <div className='w-full h-full flex items-center justify-center'>
+        <Spin />
+      </div>
+    );
+  }
   return (
     <div className='mb-4'>
       {!showForm && (
         <Row>
           <Col span={20}>
             <Text type='title' level={7} color='grey' extraClass='m-0'>
-              Harness the full potential of your advertising data with Custom
-              Properties. By associating distinct attributes with your data, you
-              gain precise control over configuring and analyzing your ad
-              campaigns.
-            </Text>
-            <Text type='title' level={7} color='grey' extraClass='m-0 mt-2'>
-              Customize and tailor your data to align perfectly with your
-              business objectives, ensuring optimal insights and enhanced
-              advertising optimization.
-              <a
+              Align metrics from various platforms, like LinkedIn ads and Google
+              ads, using a common property such as 'Campaigns.' Seamlessly
+              analyze data across platforms to gain comprehensive insights into
+              your marketing efforts.{' '}
+              {/* <a
                 href='https://help.factors.ai/en/articles/7284109-custom-properties'
                 target='_blank'
                 rel='noreferrer'
               >
                 Learn more
-              </a>
+              </a> */}
             </Text>
           </Col>
           <Col span={4}>
@@ -52,4 +67,20 @@ const PropertyMapping = () => {
   );
 };
 
-export default PropertyMapping;
+const mapDispatchToProps = (dispatch) =>
+  bindActionCreators(
+    {
+      fetchPropertyMappings
+    },
+    dispatch
+  );
+
+const mapStateToProps = (state) => ({
+  activeProject: state.global.active_project
+});
+const connector = connect(mapStateToProps, mapDispatchToProps);
+type ReduxProps = ConnectedProps<typeof connector>;
+
+type PropertyMappingProps = ReduxProps;
+
+export default connector(PropertyMapping);

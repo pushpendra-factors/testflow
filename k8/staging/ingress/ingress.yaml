@@ -63,6 +63,13 @@ spec:
         path: /adwords/*
         pathType: ImplementationSpecific
       - backend:
+        service:
+          name: pythonappserver-service
+          port:
+            number: 80
+        path: /chat
+        pathType: ImplementationSpecific
+      - backend:
           service:
             name: pythonappserver-service
             port:

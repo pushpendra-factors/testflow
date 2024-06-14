@@ -65,9 +65,8 @@ import useAgentInfo from 'hooks/useAgentInfo';
 import { fetchAlertTemplates } from 'Reducers/alertTemplates';
 import {
   checkMatchPath,
-  isCampaignsUrl
+  isSettingsUrl
 } from 'Views/AppSidebar/appSidebar.helpers';
-import { AppContentHeader } from 'Views/AppContentHeader';
 import { PathUrls } from '../../routes/pathUrls';
 import {
   fetchEventDisplayNames,
@@ -365,7 +364,8 @@ function AppLayout({
                       pathname,
                       PathUrls.ProfilePeopleDetailsURL
                     ) &&
-                    !show_analytics_result
+                    !show_analytics_result &&
+                    !isSettingsUrl(pathname)
                 },
                 {
                   'py-2':
@@ -374,6 +374,9 @@ function AppLayout({
                       pathname,
                       PathUrls.ProfileAccountsSegmentsURL
                     )
+                },
+                {
+                  'px-8 py-4': isSettingsUrl(pathname)
                 }
               )}
             >

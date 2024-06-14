@@ -8,16 +8,18 @@ interface CommonSettingsHeaderProps {
   description?: string;
   learnMoreLink?: string;
   actionsNode?: React.ReactNode;
+  hasNoBottomPadding?: boolean;
 }
 
 const CommonSettingsHeader = ({
   title,
   description,
   learnMoreLink,
-  actionsNode
+  actionsNode,
+  hasNoBottomPadding = false
 }: CommonSettingsHeaderProps) => (
   <div>
-    <div className='flex items-center justify-between'>
+    <div className='flex items-center justify-between gap-4'>
       <div>
         <Text
           type='title'
@@ -34,7 +36,7 @@ const CommonSettingsHeader = ({
               type='paragraph'
               mini
               color='character-primary'
-              extraClass={`inline-block  m-0 ${!actionsNode ? 'w-3/4' : ''}`}
+              extraClass='inline-block  m-0 }'
             >
               {description}
               {learnMoreLink && (
@@ -62,7 +64,11 @@ const CommonSettingsHeader = ({
 
       {actionsNode && <>{actionsNode}</>}
     </div>
-    <Divider />
+    <Divider
+      style={{
+        margin: `${hasNoBottomPadding ? '16px 0px 0px 0px' : '16px 0px'}`
+      }}
+    />
   </div>
 );
 

@@ -104,9 +104,10 @@ type AlertInfo struct {
 }
 
 type CachedEventTriggerAlert struct {
-	Message    EventTriggerAlertMessage
-	FieldTags  map[string]string
-	IsWorkflow bool
+	Message        EventTriggerAlertMessage
+	FieldTags      map[string]string
+	IsWorkflow     bool
+	IsLinkedInCAPI bool
 }
 
 type EventTriggerAlertMessage struct {

@@ -262,13 +262,15 @@ func (store *MemSQL) RunInsightsQuery(projectId int64, query model.Query, enable
 
 	result, err, reqID := store.ExecQuery(stmnt, params)
 	if err != nil {
-		logCtx.WithError(err).Error("Failed executing SQL query generated.")
+		logCtx.WithError(err).WithField("stmnt", stmnt).WithField("params", params).Error("Failed executing SQL query generated.")
 		return &model.QueryResult{}, http.StatusInternalServerError, model.ErrMsgQueryProcessingFailure
 	}
 
 	startComputeTime := time.Now()
 	groupPropsLen := len(query.GroupByProperties)
-	if !query.IsLimitNotApplicable {
+
+	// not limiting query if download limit given
+	if !query.IsLimitNotApplicable && query.DownloadAccountsLimit == 0 {
 		err = LimitQueryResult(projectId, result, groupPropsLen, query.GetGroupByTimestamp() != "")
 		if err != nil {
 			logCtx.WithError(err).Error("Failed processing query results for limiting.")

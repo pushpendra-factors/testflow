@@ -1,6 +1,6 @@
 import React from 'react';
 import cx from 'classnames';
-import { Tooltip } from 'antd';
+import { Popover, Tooltip } from 'antd';
 import {
   Text,
   Number as NumFormat,
@@ -23,6 +23,44 @@ const CompareDurationTooltip = ({ title }) => (
     </span>
   </Tooltip>
 );
+
+const getPopoverContent = (metricName) => {
+  let text =
+    'Average of time between deal create date and deal close date for all deals that were closed in the selected time range.';
+  if (metricName === 'Marketing qualified leads') {
+    text = 'Count of marketing qualified leads from this segment.';
+  }
+  if (metricName === 'Sales qualified leads') {
+    text = 'Count of sales qualified leads from this segment.';
+  }
+  if (metricName === 'Opportunity Created') {
+    text =
+      'Count of all deals associated with accounts in this segment, created in the selected time range. ';
+  }
+  if (metricName === 'Pipeline Created') {
+    text =
+      'Sum of deal amount of all deals associated with accounts in this segment, created in the selected time range.';
+  }
+  if (metricName === 'Average Deal Size') {
+    text =
+      'Average of deal amount of all deals associated with accounts in this segment, created in the selected time range.';
+  }
+  if (metricName === 'Revenue Booked') {
+    text =
+      'Sum of deal amount of all closed won deals associated with accounts in this segment, closed in the selected time range. ';
+  }
+  if (metricName === 'Close Rate (%)') {
+    text =
+      '% of deals that were marked as closed won out of all the deals that were created in the selected time range. ';
+  }
+  return (
+    <div className={styles.metricDescriptionText}>
+      <Text type='title' extraClass='mb-0' color='character-primary' level={8}>
+        {text}
+      </Text>
+    </div>
+  );
+};
 
 function QueryMetric({
   queryMetric,
@@ -67,15 +105,31 @@ function QueryMetric({
       <div className='flex flex-col items-center w-full'>
         <div className='flex items-center justify-between w-full'>
           <div className='w-6' />
-          <Text
-            type='title'
-            level={7}
-            weight='medium'
-            color='character-primary'
-            extraClass='mb-0'
+          <Popover
+            trigger='hover'
+            placement='topRight'
+            title={
+              <Text
+                weight='medium'
+                type='title'
+                color='character-title'
+                extraClass='mb-0'
+              >
+                {queryMetric.d_name}
+              </Text>
+            }
+            content={getPopoverContent(queryMetric.d_name)}
           >
-            {queryMetric.d_name}
-          </Text>
+            <Text
+              type='title'
+              level={7}
+              weight='medium'
+              color='character-primary'
+              extraClass='mb-0'
+            >
+              {queryMetric.d_name}
+            </Text>
+          </Popover>
           <div
             onClick={handleEditMetric}
             className={cx('invisible', styles['edit-button'])}

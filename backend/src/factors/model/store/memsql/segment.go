@@ -50,6 +50,7 @@ func (store *MemSQL) CreateSegment(projectId int64, segmentPayload *model.Segmen
 		Query:       querySegment,
 		Type:        segmentPayload.Type,
 		UpdatedAt:   U.TimeNowZ(),
+		FolderID: "",
 	}
 
 	db := C.GetServices().Db
@@ -283,14 +284,14 @@ func (store *MemSQL) UpdateSegmentById(projectId int64, id string, segmentPayloa
 
 	db := C.GetServices().Db
 
-	updateFields := make(map[string]interface{}, 0)
+	var segment model.Segment
 
 	if segmentPayload.Name != "" {
-		updateFields["name"] = segmentPayload.Name
+		segment.Name = segmentPayload.Name
 	}
 
 	if segmentPayload.Description != "" {
-		updateFields["description"] = segmentPayload.Description
+		segment.Description = segmentPayload.Description
 	}
 
 	updatedQuery := segmentPayload.Query
@@ -299,7 +300,7 @@ func (store *MemSQL) UpdateSegmentById(projectId int64, id string, segmentPayloa
 			logCtx.Error("Failed to update segment by ID. Query is empty.")
 			return http.StatusBadRequest, fmt.Errorf("failed to update segment. Query is empty")
 		}
-		updateFields["type"] = segmentPayload.Type
+		segment.Type = segmentPayload.Type
 	}
 
 	if len(updatedQuery.EventsWithProperties) > 0 || len(updatedQuery.GlobalUserProperties) > 0 {
@@ -308,11 +309,14 @@ func (store *MemSQL) UpdateSegmentById(projectId int64, id string, segmentPayloa
 			log.WithFields(logFields).WithError(err).Error("Failed to encode segment query while segment updation")
 			return http.StatusInternalServerError, err
 		}
-		updateFields["query"] = querySegment
+
+		segment.Query = querySegment
+		segment.UpdatedAt = U.TimeNowZ()
 	}
 
 	err := db.Model(&model.Segment{}).Where("project_id = ? AND id = ? ",
-		projectId, id).Update(updateFields).Error
+		projectId, id).UpdateColumns(segment).Error
+
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return http.StatusNotFound, err
@@ -350,6 +354,53 @@ func (store *MemSQL) DeleteSegmentById(projectId int64, segmentId string) (int, 
 		}
 		logCtx.WithError(err).Error(
 			"Failed to delete segment by ID.")
+		return http.StatusInternalServerError, err
+	}
+
+	return http.StatusOK, nil
+}
+
+func (store *MemSQL) ModifySegment(projectID int64, segment model.Segment) (int, error) {
+	segmentQuery := model.Query{}
+	err := U.DecodePostgresJsonbToStructType(segment.Query, &segmentQuery)
+	if err != nil {
+		log.WithFields(log.Fields{"project_id": projectID, "segment_id": segment.Id}).
+			Error("Unable to decode segment query")
+		return http.StatusInternalServerError, err
+	}
+
+	// nothing to update
+	if len(segmentQuery.EventsWithProperties) == 0 {
+		return http.StatusOK, nil
+	}
+
+	for index := range segmentQuery.EventsWithProperties {
+		segmentQuery.EventsWithProperties[index].IsEventPerformed = true
+		segmentQuery.EventsWithProperties[index].Range = 180
+		segmentQuery.EventsWithProperties[index].Frequency = "0"
+		segmentQuery.EventsWithProperties[index].FrequencyOperator = model.GreaterThanOpStr
+	}
+
+	encodedQuery, err := U.EncodeStructTypeToPostgresJsonb(segmentQuery)
+	if err != nil {
+		log.WithFields(log.Fields{"project_id": projectID, "segment_id": segment.Id}).
+			Error("Unable to encode segment query")
+		return http.StatusInternalServerError, err
+	}
+
+	segment.Query = encodedQuery
+
+	db := C.GetServices().Db
+
+	query := `UPDATE segments
+	SET query = ?
+	WHERE project_id = ? AND id = ?;`
+
+	params := []interface{}{encodedQuery, projectID, segment.Id}
+
+	err = db.Exec(query, params...).Error
+
+	if err != nil {
 		return http.StatusInternalServerError, err
 	}
 

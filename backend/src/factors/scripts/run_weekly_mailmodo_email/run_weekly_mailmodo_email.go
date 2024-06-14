@@ -6,6 +6,7 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/util"
 	U "factors/util"
 	"flag"
 	"fmt"
@@ -35,6 +36,7 @@ func main() {
 
 	mailmodoTriggerCampaignAPIKey := flag.String("mailmodo_trigger_campaign_api_key", "dummy", "Mailmodo Email Alert API Key")
 	projectIdsStringList := flag.String("project_ids", "", "List of projects for which job will run")
+	blackListedProjectIdsStringList := flag.String("blacklisted_project_ids", "", "List of projects for which job will not run")
 
 	flag.Parse()
 
@@ -67,8 +69,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	// timestamp of last 45 day
-	timestamp := U.TimeNowUnix() - 45*24*60*60
+	// timestamp of last 15 day
+	timestamp := U.TimeNowUnix() - 15*24*60*60
+	blackListedProjectIds := C.GetTokensFromStringListAsUint64(*blackListedProjectIdsStringList)
 
 	var projectIds []int64
 	if *projectIdsStringList != "*" {
@@ -81,27 +84,35 @@ func main() {
 		}
 	}
 
-	errToProjectIDMap := make(map[interface{}][]int64)
-	projectIdToEmailFailureMap := make(map[int64]map[interface{}][]string)
+	errToProjectIDMap := make(map[string][]int64)
+
 	for _, projectId := range projectIds {
+
+		if util.Int64ValueIn(projectId, blackListedProjectIds) {
+			log.WithField("project_id", projectId).Warn("Skipping the project.")
+			continue
+		}
 
 		project, errCode := store.GetStore().GetProject(projectId)
 		if errCode != http.StatusFound {
-			errToProjectIDMap[errCode] = append(errToProjectIDMap[errCode], projectId)
+			errMsg := fmt.Sprintf("%v", errCode)
+			errToProjectIDMap[errMsg] = append(errToProjectIDMap[errMsg], projectId)
 			continue
 		}
 
 		// Get email id of agents of the project
 		emails, errCode := GetAgentEmailByProjectID(projectId)
 		if errCode != http.StatusFound {
-			errToProjectIDMap[errCode] = append(errToProjectIDMap[errCode], projectId)
+			errMsg := fmt.Sprintf("%v", errCode)
+			errToProjectIDMap[errMsg] = append(errToProjectIDMap[errMsg], projectId)
 			continue
 		}
 
 		// Get the timerange and metrics.
 		startTimeStamp, endTimeStamp, err := U.GetQueryRangePresetLastWeekIn(U.TimeZoneStringIST)
 		if err != nil {
-			errToProjectIDMap[err] = append(errToProjectIDMap[err], projectId)
+			errMsg := fmt.Sprintf("%v", err)
+			errToProjectIDMap[errMsg] = append(errToProjectIDMap[errMsg], projectId)
 			continue
 		}
 
@@ -110,24 +121,24 @@ func main() {
 
 		metrics, err := store.GetStore().GetWeeklyMailmodoEmailsMetrics(projectId, startTimeStamp, endTimeStamp)
 		if err != nil {
-			errToProjectIDMap[err] = append(errToProjectIDMap[err], projectId)
+			errMsg := fmt.Sprintf("%v", err)
+			errToProjectIDMap[errMsg] = append(errToProjectIDMap[errMsg], projectId)
 			continue
 		}
 
 		metrics.ProjectName = project.Name
 
 		log.WithField("metrics", metrics).Info("Weekly mailmodo metrics")
-		//mailmodo api hit.
+
 		for _, email := range emails {
 
 			isEmailAllowed, err := model.IsReceipentAllowedMailmodo(email, "transactional")
 			if err != nil {
-				projectIdToEmailFailureMap[projectId][err] = append(projectIdToEmailFailureMap[projectId][err], email)
+				log.WithFields(log.Fields{"projectId": projectId, "email": email}).Error("Failed to check if mail is allowed")
 				continue
 			}
 
 			if !isEmailAllowed {
-				projectIdToEmailFailureMap[projectId]["Blocked/Unsubscribed Mails"] = append(projectIdToEmailFailureMap[projectId][err], email)
 				continue
 			}
 
@@ -136,6 +147,11 @@ func main() {
 		}
 
 	}
+
+	if len(errToProjectIDMap) > 0 {
+		log.Warn("Error Map: ", errToProjectIDMap)
+	}
+
 }
 
 func GetAgentEmailByProjectID(projectId int64) ([]string, int) {

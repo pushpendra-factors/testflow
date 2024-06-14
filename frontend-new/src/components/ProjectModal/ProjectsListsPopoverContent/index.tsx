@@ -205,9 +205,9 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
       items: [
         {
           id: 'item-1',
-          text: 'Plans and Billing',
+          text: 'Plans & Billing',
           props: {
-            to: '/settings/pricing?activeTab=billing',
+            to: `${PathUrls.SettingsPricing}?activeTab=billing`,
             onClick: handleClosePopover
           }
         },
@@ -215,7 +215,7 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
           id: 'item-2',
           text: 'Invite users',
           props: {
-            to: '/settings/user',
+            to: PathUrls.SettingsMembers,
             onClick: handleClosePopover
           }
         },
@@ -223,7 +223,7 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
           id: 'item-3',
           text: 'Enrichment Rules',
           props: {
-            to: '/settings/integration/factors_deanonymisation?activeTab=enrichmentRules',
+            to: `${PathUrls.SettingsIntegration}/factors_deanonymisation?activeTab=enrichmentRules`,
             onClick: handleClosePopover
           }
         },
@@ -231,7 +231,7 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
           id: 'item-4',
           text: 'Setup Assist',
           props: {
-            to: '/checklist',
+            to: PathUrls.Checklist,
             onClick: handleClosePopover
           }
         }
@@ -336,7 +336,11 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
                   key={eachGroup.id + eachItem.id}
                   className={` ${styles.popover_content__additionalActions}`}
                 >
-                  <a {...eachItem?.props}>{eachItem.text}</a>
+                  {eachItem?.props?.href ? (
+                    <a {...eachItem?.props}>{eachItem.text}</a>
+                  ) : (
+                    <Link {...eachItem?.props}>{eachItem.text}</Link>
+                  )}
                 </div>
               ))}
 

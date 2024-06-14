@@ -327,6 +327,15 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.PUT("/:project_id/segments/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), UpdateSegmentHandler)
 	authRouteGroup.DELETE("/:project_id/segments/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), DeleteSegmentByIdHandler)
 
+	// Segment Folders
+	authRouteGroup.GET("/:project_id/segment_folders", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(GetAllSegmentFoldersByProjectIDHandler))
+	authRouteGroup.POST("/:project_id/segment_folders", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(CreateSegmentFolderRouteHandler))
+	authRouteGroup.PUT("/:project_id/segment_folders/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(UpdateSegmentFolderByIDHandler))
+	authRouteGroup.DELETE("/:project_id/segment_folders/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(DeleteSegmentFolderByIDHandler))
+	// Segment Folder Item ( Segment itself )
+	authRouteGroup.PUT("/:project_id/segment_folders_item/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(MoveSegmentFolderItemHandler))
+	authRouteGroup.POST("/:project_id/segment_folders_item/:id", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENT}), responseWrapper(MoveSegmentToNewFolderHandler))
+
 	// Segment analysis
 	authRouteGroup.GET("/:project_id/segments/analytics/config", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENTKPI_OVERVIEW}), GetSegmentAnalyticsConfigHandler)
 	authRouteGroup.POST("/:project_id/segments/analytics/widget_group/:widget_group_id/widgets", mid.FeatureMiddleware([]string{M.FEATURE_SEGMENTKPI_OVERVIEW}), responseWrapper(AddNewWidgetToWidgetGroupHandler))
@@ -475,8 +484,21 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/paragon/workflow", V1.TriggerParagonWorkflow)
 	authRouteGroup.DELETE("/:project_id/paragon/workflow", V1.DisableParagonWorflowForUser)
 
+	// frequency capping linkedin
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/linkedin_capping/rules/config", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN_FREQ_CAPPING}), responseWrapper(GetLinkedinCappingConfigHandler))
+	authRouteGroup.POST("/:project_id"+ROUTE_VERSION_V1+"/linkedin_capping/rules", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN_FREQ_CAPPING}), responseWrapper(CreateLinkedinCappingRulesHandler))
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/linkedin_capping/rules", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN_FREQ_CAPPING}), responseWrapper(GetLinkedinCappingRulesHandler))
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/linkedin_capping/rules/:rule_id", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN_FREQ_CAPPING}), responseWrapper(GetLinkedinCappingRuleByRuleIDHandler))
+	authRouteGroup.PUT("/:project_id"+ROUTE_VERSION_V1+"/linkedin_capping/rules/:rule_id", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN_FREQ_CAPPING}), responseWrapper(UpdateLinkedinCappingRulesHandler))
+	authRouteGroup.DELETE("/:project_id"+ROUTE_VERSION_V1+"/linkedin_capping/rules/:rule_id", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN_FREQ_CAPPING}), responseWrapper(DeleteLinkedinCappingRulesHandler))
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/linkedin_capping/exclusions/rule/:rule_id", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN_FREQ_CAPPING}), responseWrapper(GetLinkedinCappingExclusionsByRuleIDHandler))
+	authRouteGroup.GET("/:project_id"+ROUTE_VERSION_V1+"/linkedin_capping/exclusions/:timestamp", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN_FREQ_CAPPING}), responseWrapper(GetLinkedinCappingExclusionsHandler))
+
 	// factors_deanon
 	authRouteGroup.POST("/:project_id/factors_deanon/provider/:name/enable", mid.FeatureMiddleware([]string{M.FEATURE_FACTORS_DEANONYMISATION}), UpdateFactorsDeanonProvider)
+
+	// linkedin_capi
+	authRouteGroup.GET("/:project_id/linkedin_capi/conversions", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}), GetLinkedinCAPIConversionsList)
 
 	// weekly mailmodo mail
 	authRouteGroup.GET("/:project_id/internal/weekly_email_metrics", mid.SetLoggedInAgentInternalOnly(), stringifyWrapper(GetWeeklyMailmodoEmailMetricsHandler))
@@ -584,14 +606,6 @@ func InitIntRoutes(r *gin.Engine) {
 		mid.SetLoggedInAgent(),
 		mid.SetAuthorizedProjectsByLoggedInAgent(), mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}),
 		IntLinkedinAddAccessTokenHandler)
-
-	intRouteGroup.POST("/linkedin/write/auth", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}), IntLinkedinWriteAuthHandler)
-	intRouteGroup.POST("/linkedin/write/ad_accounts", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}), IntLinkedinWriteAccountHandler)
-
-	intRouteGroup.POST("/linkedin/write/add_access_token",
-		mid.SetLoggedInAgent(),
-		mid.SetAuthorizedProjectsByLoggedInAgent(), mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}),
-		IntLinkedinWriteAddAccessTokenHandler)
 
 	intRouteGroup.POST("/salesforce/enable",
 		mid.SetLoggedInAgent(),
@@ -740,10 +754,11 @@ func InitDataServiceRoutes(r *gin.Engine) {
 	dataServiceRouteGroup.POST("/task/end", responseWrapper(V1.InsertTaskEndRecordHandler))
 	dataServiceRouteGroup.DELETE("/task/end", responseWrapper(V1.DeleteTaskEndRecordHandler))
 	dataServiceRouteGroup.GET("/task/dependent_task_done", responseWrapper(V1.IsDependentTaskDoneHandler))
-	dataServiceRouteGroup.POST("/chat/job/scratch", IH.DataServiceAddEmbeddingsFromScratch)
-	dataServiceRouteGroup.POST("/chat/job/new", IH.DataServiceAddNewEmbeddings)
-	dataServiceRouteGroup.GET("/chat/job", IH.DataServiceGetDBPrompts)
+
+	dataServiceRouteGroup.POST("/chat/job", IH.DataServiceAddEmbeddings)
 	dataServiceRouteGroup.GET("/chat/app/matching", IH.DataServiceGetMatchingEmbeddings)
+	dataServiceRouteGroup.GET("/chat/job/missing", IH.DataServiceGetMissingPrompts)
+	dataServiceRouteGroup.DELETE("/chat/job", IH.DataServiceDeleteDataByProjectId)
 
 }
 

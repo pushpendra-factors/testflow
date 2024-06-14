@@ -99,7 +99,7 @@ var mapOfTypeToLinkedinJobCTEAlias = map[string]string{
 var errorEmptyLinkedinDocument = errors.New("empty linked document")
 
 const linkedinFilterQueryStr = "SELECT DISTINCT(LCASE(JSON_EXTRACT_STRING(value, ?))) as filter_value FROM linkedin_documents WHERE project_id = ? AND" +
-	" " + "customer_ad_account_id = ? AND type = ? AND JSON_EXTRACT_STRING(value, ?) IS NOT NULL AND timestamp BETWEEN ? AND ? LIMIT 5000"
+	" " + "customer_ad_account_id in ( ? ) AND type = ? AND JSON_EXTRACT_STRING(value, ?) IS NOT NULL AND timestamp BETWEEN ? AND ? LIMIT 5000"
 
 const fromLinkedinDocuments = " FROM linkedin_documents "
 
@@ -1041,13 +1041,14 @@ func (store *MemSQL) getLinkedinFilterValuesByType(projectID int64, docType int,
 		logCtx.Info(integrationNotAvailable)
 		return []interface{}{}, http.StatusNotFound
 	}
+	customerAccountIDs := strings.Split(customerAccountID, ",")
 	logCtx = log.WithField("project_id", projectID).WithField("doc_type", docType).WithField("req_id", reqID)
 	from, to := model.GetFromAndToDatesForFilterValues()
-	params := []interface{}{property, projectID, customerAccountID, docType, property, from, to}
+	params := []interface{}{property, projectID, customerAccountIDs, docType, property, from, to}
 	_, resultRows, err := store.ExecuteSQL(linkedinFilterQueryStr, params, logCtx)
 	if err != nil {
 		logCtx.WithError(err).WithField("query", linkedinFilterQueryStr).WithField("params", params).Error(model.LinkedinSpecificError)
-		return make([]interface{}, 0, 0), http.StatusInternalServerError
+		return make([]interface{}, 0), http.StatusInternalServerError
 	}
 
 	return Convert2DArrayTo1DArray(resultRows), http.StatusFound
@@ -1076,8 +1077,9 @@ func (store *MemSQL) GetLinkedinSQLQueryAndParametersForFilterValues(projectID i
 		logCtx.Info(integrationNotAvailable)
 		return "", nil, http.StatusNotFound
 	}
+	customerAccountIDs := strings.Split(customerAccountID, ",")
 	from, to := model.GetFromAndToDatesForFilterValues()
-	params := []interface{}{linkedinInternalFilterProperty, projectID, customerAccountID, docType, linkedinInternalFilterProperty, from, to}
+	params := []interface{}{linkedinInternalFilterProperty, projectID, customerAccountIDs, docType, linkedinInternalFilterProperty, from, to}
 
 	return "(" + linkedinFilterQueryStr + ")", params, http.StatusFound
 }
@@ -1965,4 +1967,63 @@ func (store *MemSQL) PullLinkedInRowsV2(projectID int64, startTime, endTime int6
 
 	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
 	return rows, tx, err
+}
+
+const (
+	LinkedinCappingDataSetAdAccountQuery = "select id as org_id, JSON_EXTRACT_STRING(value, 'localizedWebsite') as company_domain, " +
+		"JSON_EXTRACT_STRING(value, 'localizedName') as company_name, sum(JSON_EXTRACT_STRING(value, 'impressions')) as impressions, " +
+		"sum(JSON_EXTRACT_STRING(value, 'clicks')) as clicks from linkedin_documents where project_id = ? and type = ? and  timestamp >= ? " +
+		"group by id order by impressions desc, clicks desc"
+	LinkedinCappingDataSetCampaignGroupQuery = "select id as org_id, JSON_EXTRACT_STRING(value, 'localizedWebsite') as company_domain, " +
+		"campaign_group_id, JSON_EXTRACT_STRING(value, 'localizedName') as company_name, sum(JSON_EXTRACT_STRING(value, 'impressions')) as impressions, " +
+		"sum(JSON_EXTRACT_STRING(value, 'clicks')) as clicks from linkedin_documents where project_id = ? and type = ? and  timestamp >= ? " +
+		"group by id, campaign_group_id order by impressions desc, clicks desc"
+	LinkedinCappingDataSetCampaignQuery = "select id as org_id, JSON_EXTRACT_STRING(value, 'localizedWebsite') as company_domain, " +
+		"campaign_group_id, campaign_id, JSON_EXTRACT_STRING(value, 'campaign_name') as campaign_name, " +
+		"JSON_EXTRACT_STRING(value, 'localizedName') as company_name, sum(JSON_EXTRACT_STRING(value, 'impressions')) as impressions, " +
+		"sum(JSON_EXTRACT_STRING(value, 'clicks')) as clicks from linkedin_documents where project_id = ? and type = ? and  timestamp >= ? " +
+		"group by id, campaign_group_id, campaign_id order by impressions desc, clicks desc"
+)
+
+func (store *MemSQL) GetDataSetForFrequencyCappingForMonthForObjectType(projectID int64, timestamp int64, objectType string) ([]model.LinkedinCappingDataSet, int) {
+	logFields := log.Fields{
+		"project_id":  projectID,
+		"timestamp":   timestamp,
+		"object_type": objectType,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	logCtx := log.WithFields(logFields)
+	linkedinCappingDataSet := make([]model.LinkedinCappingDataSet, 0)
+
+	db := C.GetServices().Db
+	query := ""
+
+	if objectType == model.LINKEDIN_ACCOUNT {
+		query = LinkedinCappingDataSetAdAccountQuery
+	} else if objectType == model.LINKEDIN_CAMPAIGN_GROUP {
+		query = LinkedinCappingDataSetCampaignGroupQuery
+	} else if objectType == model.LINKEDIN_CAMPAIGN {
+		query = LinkedinCappingDataSetCampaignQuery
+	} else {
+		logCtx.Error("Failed to get frequency capping data set: invalid object type")
+		return make([]model.LinkedinCappingDataSet, 0), http.StatusInternalServerError
+	}
+	err := db.Raw(query, projectID, LinkedinDocumentTypeAlias["member_company_insights"], timestamp).Find(&linkedinCappingDataSet).Error
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to get frequency capping data set for account")
+		return make([]model.LinkedinCappingDataSet, 0), http.StatusInternalServerError
+	}
+	sanitizedlinkedinCappingDataSet := make([]model.LinkedinCappingDataSet, 0)
+
+	rawDomainToSanitizedDomainMap := make(map[string]string)
+	for _, linkedinCappingData := range linkedinCappingDataSet {
+		if linkedinCappingData.CompanyDomain != "$none" {
+			if _, exists := rawDomainToSanitizedDomainMap[linkedinCappingData.CompanyDomain]; !exists {
+				rawDomainToSanitizedDomainMap[linkedinCappingData.CompanyDomain] = U.GetDomainGroupDomainName(projectID, linkedinCappingData.CompanyDomain)
+			}
+			linkedinCappingData.CompanyDomain = rawDomainToSanitizedDomainMap[linkedinCappingData.CompanyDomain]
+		}
+		sanitizedlinkedinCappingDataSet = append(sanitizedlinkedinCappingDataSet, linkedinCappingData)
+	}
+	return sanitizedlinkedinCappingDataSet, http.StatusOK
 }

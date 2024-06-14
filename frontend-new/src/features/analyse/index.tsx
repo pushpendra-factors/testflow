@@ -52,15 +52,16 @@ import {
   UPDATE_PIVOT_CONFIG
 } from 'Views/CoreQuery/constants';
 import {
+  initialState,
   formatApiData,
   getFunnelQuery,
+  getKPIQuery,
   getKPIStateFromRequestQuery,
   getQuery,
   getStateQueryFromRequestQuery,
-  isComparisonEnabled
+  isComparisonEnabled,
+  resultantDataTransformation
 } from 'Views/CoreQuery/utils';
-import { getQueryOptionsFromEquivalentQuery } from './utils';
-import { CoreQueryState, QueryParams, ResultState } from './types';
 import { QUERY_UPDATED, SHOW_ANALYTICS_RESULT } from 'Reducers/types';
 import CoreQueryReducer from 'Views/CoreQuery/CoreQueryReducer';
 import {
@@ -92,6 +93,8 @@ import { getChartChangedKey } from 'Views/CoreQuery/AnalysisResultsPage/analysis
 import _ from 'lodash';
 import KPIComposer from 'Components/KPIComposer';
 import { CoreQueryContext } from 'Context/CoreQueryContext';
+import { CoreQueryState, QueryParams, ResultState } from './types';
+import { getQueryOptionsFromEquivalentQuery } from './utils';
 
 const CoreQuery = () => {
   // Query params
@@ -217,9 +220,7 @@ const CoreQuery = () => {
   );
 
   const getQueryFromHashId = () =>
-    savedQueries?.find((quer: any, index: number) => {
-      return quer.id_text === query_id;
-    });
+    savedQueries?.find((quer: any, index: number) => quer.id_text === query_id);
 
   const updateCoreQueryReducer = useCallback((payload) => {
     localDispatch({
@@ -297,28 +298,17 @@ const CoreQuery = () => {
 
   const updateResultFromSavedQuery = (res: any, qState: CoreQueryState) => {
     const data = res.data.result || res.data;
-    let resultSt;
-    if (result_criteria === TOTAL_EVENTS_CRITERIA) {
-      resultSt = {
-        ...INITIAL_RESULT_STATE,
-        data: formatApiData(data.result_group[0], data.result_group[1]),
-        apiCallStatus: res.status
-      };
-    } else if (result_criteria === TOTAL_USERS_CRITERIA) {
-      if (user_type === EACH_USER_TYPE) {
-        resultSt = {
-          ...INITIAL_RESULT_STATE,
-          data: formatApiData(data.result_group[0], data.result_group[1]),
-          apiCallStatus: res.status
-        };
-      } else {
-        resultSt = {
-          ...INITIAL_RESULT_STATE,
-          data: data.result_group[0],
-          apiCallStatus: res.status
-        };
-      }
-    }
+
+    const resultantData = resultantDataTransformation(
+      data,
+      result_criteria,
+      user_type
+    );
+    const resultSt = {
+      ...INITIAL_RESULT_STATE,
+      data: resultantData,
+      apiCallStatus: res.status
+    };
     qState.setItem('resultState', resultSt);
   };
 
@@ -665,6 +655,83 @@ const CoreQuery = () => {
     setCoreQueryState(queryState);
   };
 
+  const runFunnelQuery = useCallback(
+    async (isQuerySaved, dateRange, isCompareQuery) => {
+      try {
+        let durationObj;
+        const qState = _.cloneDeep(coreQueryState);
+
+        if (!dateRange) {
+          durationObj = coreQueryState.queryOptions.date_range;
+        } else {
+          durationObj = dateRange;
+        }
+
+        const query = getFunnelQuery(
+          coreQueryState.queryOptions.groupBy,
+          coreQueryState.queries,
+          coreQueryState.queryOptions.session_analytics_seq,
+          durationObj,
+          coreQueryState.queryOptions.globalFilters,
+          coreQueryState.queryOptions.events_condition,
+          coreQueryState.queryOptions.group_analysis,
+          coreQueryReducerState.funnelConversionDurationNumber,
+          coreQueryReducerState.funnelConversionDurationUnit
+        );
+
+        if (!isQuerySaved) {
+          // Factors RUN_QUERY tracking
+          // factorsai.track('RUN-QUERY', {
+          //   email_id: currentAgent?.email,
+          //   query_type: QUERY_TYPE_FUNNEL,
+          //   project_id: activeProject?.id,
+          //   project_name: activeProject?.name
+          // });
+        }
+
+        if (!isCompareQuery) {
+          setLoading(true);
+          configActionsOnRunningQuery(isQuerySaved, qState);
+          setAppliedBreakdowns(coreQueryState.queryOptions?.groupBy, qState);
+          qState.showResult = true;
+          qState.loading = true;
+          // configActionsOnRunningQuery(false, qState);
+          qState.requestQuery = query;
+          qState.resultState = { ...qState.resultState, loading: true };
+          qState.querySaved = {};
+          setCoreQueryState(qState);
+        } else {
+          updateLocalReducer(COMPARISON_DATA_LOADING, null);
+        }
+
+        const res = await getFunnelData(active_project.id, query, null, true);
+
+        const queryToAdd = { ...getQueryFromHashId() };
+        if (!isQuerySaved) {
+          queryToAdd.query = query;
+        }
+
+        if (isCompareQuery) {
+          updateLocalReducer(
+            COMPARISON_DATA_FETCHED,
+            res.data.result || res.data
+          );
+        } else {
+          createFunnelStateFromResult(queryToAdd, res, durationObj, false);
+        }
+      } catch (err) {
+        logger.error(err);
+        setLoading(false);
+        // updateResultState({ ...initialState, error: true, status: err.status });
+      }
+    },
+    [
+      coreQueryState,
+      coreQueryReducerState.funnelConversionDurationNumber,
+      coreQueryReducerState.funnelConversionDurationUnit
+    ]
+  );
+
   const runEventsQueryFromUrl = () => {
     const queryToAdd = { ...getQueryFromHashId() };
     if (queryToAdd) {
@@ -710,7 +777,7 @@ const CoreQuery = () => {
     <CoreQueryContext.Provider
       value={{
         coreQueryState: coreQueryReducerState,
-        updateCoreQueryReducer: updateCoreQueryReducer
+        updateCoreQueryReducer
       }}
     >
       <div
@@ -759,6 +826,19 @@ const CoreQuery = () => {
         elem.alias ? elem.alias : elem.label
       );
     }
+    if (coreQueryState.queryType === QUERY_TYPE_KPI) {
+      qState.appliedQueries = coreQueryState.queries.map((q) => {
+        const category = KPI_config.find(
+          (elem) =>
+            elem.category === q.category && q.group === elem.display_category
+        );
+        const metric = category?.metrics.find((m) => m.name === q.metric);
+        return {
+          ...q,
+          metricType: metric?.type != null ? metric.type : q.metricType
+        };
+      });
+    }
   };
 
   const runQuery = async (
@@ -794,7 +874,7 @@ const CoreQuery = () => {
       //   });
       // }
 
-      //if (!isCompareQuery) {
+      // if (!isCompareQuery) {
 
       setAppliedBreakdowns(coreQueryState.queryOptions?.groupBy, qState);
       qState.showResult = true;
@@ -810,7 +890,7 @@ const CoreQuery = () => {
       qState.querySaved = {};
       setCoreQueryState(qState);
       // resetComparisonData();
-      //}
+      // }
 
       const res: any = await getEventsData(
         active_project.id,
@@ -821,22 +901,11 @@ const CoreQuery = () => {
 
       const data = res.data.result || res.data;
       let resultantData = null;
-
-      if (result_criteria === TOTAL_EVENTS_CRITERIA) {
-        resultantData = formatApiData(
-          data.result_group[0],
-          data.result_group[1]
-        );
-      } else if (result_criteria === TOTAL_USERS_CRITERIA) {
-        if (user_type === EACH_USER_TYPE) {
-          resultantData = formatApiData(
-            data.result_group[0],
-            data.result_group[1]
-          );
-        } else {
-          resultantData = data.result_group[0];
-        }
-      }
+      resultantData = resultantDataTransformation(
+        data,
+        result_criteria,
+        user_type
+      );
 
       if (dateRange && !isCompareQuery) {
         qState.queryOptions.date_range = dateRange;
@@ -868,6 +937,109 @@ const CoreQuery = () => {
       setCoreQueryState(qState);
     }
   };
+
+  const getDashboardConfigs = useCallback(
+    (isQuerySaved) => {
+      // use cache urls when user expands the dashboard widget
+      if (isQuerySaved && coreQueryReducerState.navigatedFromDashboard) {
+        if (
+          coreQueryReducerState?.navigatedFromDashboard?.dashboard_id &&
+          coreQueryReducerState?.navigatedFromDashboard?.id
+        ) {
+          return {
+            id: coreQueryReducerState.navigatedFromDashboard.dashboard_id,
+            unit_id: coreQueryReducerState.navigatedFromDashboard.id,
+            refresh: false
+          };
+        }
+      }
+      return null;
+    },
+    [coreQueryReducerState.navigatedFromDashboard]
+  );
+
+  const runKPIQuery = useCallback(
+    async (
+      dateRange: any = undefined,
+      isCompareQuery = false,
+      isGranularityChange = false
+    ) => {
+      const qState = _.cloneDeep(coreQueryState);
+      try {
+        let durationObj;
+        if (!dateRange) {
+          durationObj = coreQueryState.queryOptions.date_range;
+        } else {
+          durationObj = dateRange;
+        }
+        const KPIquery = getKPIQuery(
+          coreQueryState.queries,
+          durationObj,
+          coreQueryState.queryOptions.groupBy,
+          coreQueryState.queryOptions
+        );
+
+        // setDateFromTo({ from: KPIquery?.qG[0]?.fr, to: KPIquery?.qG[0]?.to });
+
+        // if (!isQuerySaved) {
+        //   // Factors RUN_QUERY tracking
+        //   factorsai.track('RUN-QUERY', {
+        //     email_id: currentAgent?.email,
+        //     query_type: QUERY_TYPE_KPI,
+        //     project_id: activeProject?.id,
+        //     project_name: activeProject?.name
+        //   });
+        // }
+
+        if (!isCompareQuery) {
+          setLoading(true);
+          configActionsOnRunningQuery(false, qState);
+          qState.resultState = { ...initialState, loading: true };
+          qState.requestQuery = KPIquery;
+          resetComparisonData();
+        } else {
+          updateLocalReducer(COMPARISON_DATA_LOADING);
+        }
+
+        const res = await getKPIData(
+          active_project.id,
+          KPIquery,
+          getDashboardConfigs(false),
+          true
+        );
+
+        if (dateRange && !isCompareQuery) {
+          qState.queryOptions.date_range = dateRange;
+        }
+
+        if (isCompareQuery) {
+          updateLocalReducer(
+            COMPARISON_DATA_FETCHED,
+            res.data.result || res.data
+          );
+        } else {
+          qState.loading = false;
+          setLoading(false);
+          qState.resultState = {
+            ...initialState,
+            data: res.data.result || res.data,
+            status: res.status,
+            loading: false
+          };
+        }
+        setCoreQueryState(qState);
+      } catch (err) {
+        setLoading(false);
+        qState.resultState = {
+          ...initialState,
+          error: true,
+          status: err.status
+        };
+        setCoreQueryState(qState);
+      }
+    },
+    [coreQueryState]
+  );
 
   const handleDurationChange = (dates: any, isCompareDate = false) => {
     let from;
@@ -954,6 +1126,10 @@ const CoreQuery = () => {
         runQuery();
         break;
       }
+      case QUERY_TYPE_KPI: {
+        runKPIQuery();
+        break;
+      }
       default: {
         return false;
       }
@@ -963,7 +1139,7 @@ const CoreQuery = () => {
   const queryChange = (
     newEvent: any,
     index: number,
-    changeType: string = 'add',
+    changeType = 'add',
     flag = null
   ) => {
     const queryupdated = [...coreQueryState.queries];
@@ -987,12 +1163,10 @@ const CoreQuery = () => {
       queryupdated.push(newEvent);
     }
     setQueries(
-      queryupdated.map((q) => {
-        return {
-          ...q,
-          key: q.key || generateRandomKey()
-        };
-      })
+      queryupdated.map((q) => ({
+        ...q,
+        key: q.key || generateRandomKey()
+      }))
     );
   };
 
@@ -1025,19 +1199,20 @@ const CoreQuery = () => {
   const handleGranularityChange = useCallback(
     ({ key: frequency }) => {
       // resetComparisonData();
+      const qState = _.cloneDeep(coreQueryState);
+      const appliedDateRange = {
+        ...coreQueryState.queryOptions.date_range,
+        frequency
+      };
+      qState.queryOptions = {
+        ...qState.queryOptions,
+        date_range: appliedDateRange
+      };
+
       if (
         coreQueryState.queryType === QUERY_TYPE_EVENT ||
         coreQueryState.queryType === QUERY_TYPE_KPI
       ) {
-        const qState = _.cloneDeep(coreQueryState);
-        const appliedDateRange = {
-          ...coreQueryState.queryOptions.date_range,
-          frequency
-        };
-        qState.queryOptions = {
-          ...qState.queryOptions,
-          date_range: appliedDateRange
-        };
         setCoreQueryState(qState);
         // setQueryOptions((currState) => ({
         //   ...currState,
@@ -1046,9 +1221,9 @@ const CoreQuery = () => {
         if (coreQueryState.queryType === QUERY_TYPE_EVENT) {
           runQuery(appliedDateRange);
         }
-        // if (queryType === QUERY_TYPE_KPI) {
-        //   runKPIQuery(querySaved, appliedDateRange, true);
-        // }
+        if (coreQueryState.queryType === QUERY_TYPE_KPI) {
+          runKPIQuery(appliedDateRange, true);
+        }
       }
     },
     [coreQueryState.queryOptions, runQuery]
@@ -1063,7 +1238,7 @@ const CoreQuery = () => {
 
   const handleChartTypeChange = useCallback(
     ({ key, callUpdateService = true }) => {
-      //#TODO fix
+      // #TODO fix
 
       // console.log(coreQueryReducerState);
       const qType = coreQueryState.queryType;
@@ -1116,83 +1291,6 @@ const CoreQuery = () => {
     ]
   );
 
-  const runFunnelQuery = useCallback(
-    async (isQuerySaved, dateRange, isCompareQuery) => {
-      try {
-        let durationObj;
-        const qState = _.cloneDeep(coreQueryState);
-
-        if (!dateRange) {
-          durationObj = coreQueryState.queryOptions.date_range;
-        } else {
-          durationObj = dateRange;
-        }
-
-        const query = getFunnelQuery(
-          coreQueryState.queryOptions.groupBy,
-          coreQueryState.queries,
-          coreQueryState.queryOptions.session_analytics_seq,
-          durationObj,
-          coreQueryState.queryOptions.globalFilters,
-          coreQueryState.queryOptions.events_condition,
-          coreQueryState.queryOptions.group_analysis,
-          coreQueryReducerState.funnelConversionDurationNumber,
-          coreQueryReducerState.funnelConversionDurationUnit
-        );
-
-        if (!isQuerySaved) {
-          // Factors RUN_QUERY tracking
-          // factorsai.track('RUN-QUERY', {
-          //   email_id: currentAgent?.email,
-          //   query_type: QUERY_TYPE_FUNNEL,
-          //   project_id: activeProject?.id,
-          //   project_name: activeProject?.name
-          // });
-        }
-
-        if (!isCompareQuery) {
-          setLoading(true);
-          configActionsOnRunningQuery(isQuerySaved, qState);
-          setAppliedBreakdowns(coreQueryState.queryOptions?.groupBy, qState);
-          qState.showResult = true;
-          qState.loading = true;
-          // configActionsOnRunningQuery(false, qState);
-          qState.requestQuery = query;
-          qState.resultState = { ...qState.resultState, loading: true };
-          qState.querySaved = {};
-          setCoreQueryState(qState);
-        } else {
-          updateLocalReducer(COMPARISON_DATA_LOADING, null);
-        }
-
-        const res = await getFunnelData(active_project.id, query, null, true);
-
-        const queryToAdd = { ...getQueryFromHashId() };
-        if (!isQuerySaved) {
-          queryToAdd.query = query;
-        }
-
-        if (isCompareQuery) {
-          updateLocalReducer(
-            COMPARISON_DATA_FETCHED,
-            res.data.result || res.data
-          );
-        } else {
-          createFunnelStateFromResult(queryToAdd, res, durationObj, false);
-        }
-      } catch (err) {
-        logger.error(err);
-        setLoading(false);
-        // updateResultState({ ...initialState, error: true, status: err.status });
-      }
-    },
-    [
-      coreQueryState,
-      coreQueryReducerState.funnelConversionDurationNumber,
-      coreQueryReducerState.funnelConversionDurationUnit
-    ]
-  );
-
   const contextValue = useMemo(
     () => ({
       coreQueryState: coreQueryReducerState,
@@ -1201,9 +1299,11 @@ const CoreQuery = () => {
       runFunnelQuery,
       setQueries,
       updateCoreQueryReducer,
-      resetComparisonData
+      resetComparisonData,
+      resultState: coreQueryState.resultState
     }),
     [
+      coreQueryState.resultState,
       coreQueryState,
       runQuery,
       queryChange,
@@ -1247,6 +1347,7 @@ const CoreQuery = () => {
           setSelectedMainCategory={setSelectedMainCategory}
           KPIConfigProps={KPIConfigProps}
           setKPIConfigProps={setKPIConfigProps}
+          collapse
         />
       );
     }

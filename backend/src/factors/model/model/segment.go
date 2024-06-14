@@ -28,6 +28,7 @@ type Segment struct {
 	IsLongRunComplete bool            `json:"long_run_comp" gorm:"-"`
 	UpdatedAt         time.Time       `json:"updated_at"`
 	MarkerRunSegment  time.Time       `json:"marker_run_segment"`
+	FolderID		  string			  `json:"folder_id"`
 }
 
 type AssociatedSegments struct {

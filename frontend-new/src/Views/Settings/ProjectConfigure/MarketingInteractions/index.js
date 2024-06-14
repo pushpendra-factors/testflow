@@ -237,12 +237,16 @@ const MartInt = ({ activeProject, udpateProjectDetails }) => {
   return (
     <>
       <div className='mb-10'>
-        {/* <Row>
-                <Col span={24}>
-                    <Text type={'title'} level={3} weight={'bold'} extraClass={'m-0'}>Marketing Touchpoints</Text>
-                    <Text type={'title'} level={7} extraClass={'m-0'}>Define how your online marketing efforts should be tracked.</Text>
-                </Col>
-            </Row> */}
+        <Row>
+          <Col span={24}>
+            <div>
+              <Text type='title' level={7} extraClass='m-0' color='grey'>
+                Map specific parameters with your UTM parameters to analyze and
+                optimize marketing performance effectively.
+              </Text>
+            </div>
+          </Col>
+        </Row>
 
         <Row className='mt-2'>
           <Col span={24}>

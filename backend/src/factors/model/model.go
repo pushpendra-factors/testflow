@@ -713,10 +713,11 @@ type Model interface {
 	GetCustomerUserIdFromUserId(projectID int64, id string) (string, int)
 	AssociateUserDomainsGroup(projectID int64, requestUserID string, requestGroupName, requestGroupUserID string) int
 	GetAssociatedDomainForUser(projectID int64, userID string, isAnonymous bool) (string, error)
-	GetUsersAssociatedToDomainList(projectID int64, domainGroupID int, domainID string, userStmnt string) ([]model.User, int)
+	GetUsersAssociatedToDomainList(projectID int64, domainGroupID int, domainID string, userStmnt string, limit int) ([]model.User, int)
 	GetDomainDetailsByID(projectID int64, id string, domGroupID int) (model.User, int)
 	GetAllDomainsByProjectID(projectID int64, domainGroupID int, limitVal int) ([]string, int)
 	GetAllDomainsForPreviewByProjectID(projectID int64, domainGroupID int, limitVal int, filters []model.QueryProperty, searchFilter []string) ([]string, int)
+	GetAccountAssociatedUserCountByProjectID(projectID int64, domainGroupID int) (int64, int)
 	GetLatestUpatedDomainsByProjectID(projectID int64, domainGroupID int, fromTime time.Time, limitVal int) ([]string, int)
 	UpdateAssociatedSegments(projectID int64, id string, associatedSegments map[string]model.AssociatedSegments) (int, error)
 	GetNonGroupUsersUpdatedAtGivenHour(projectID int64, fromTime time.Time) ([]model.User, int)
@@ -820,10 +821,10 @@ type Model interface {
 	DeleteTaskEndRecord(taskId uint64, projectId int64, delta uint64) (int, string)
 	GetAllProcessedIntervalsFromStartDate(taskID uint64, projectId int64, startDate *time.Time) ([]uint64, int, string)
 
-	DeleteAllEmbeddings() (int, string)
-	AddAllEmbeddings([]string, []string, [][]float32) (int, string)
-	GetMatchingEmbeddings([]float32) (int, string, model.PromptEmbeddingsPayload)
-	GetDBPromptsByProjectID(int64) (int, string, []string)
+	DeleteEmbeddingsByProject(int64) (int, string)
+	AddAllEmbeddings(int64, []string, []string, [][]float32) (int, string)
+	GetMatchingEmbeddings(int64, []float32) (int, string, model.PromptEmbeddingsPayload)
+	GetMissingPromptsByProjectID(int64, []string) (int, string, []string)
 
 	// project model metadata
 	CreateProjectModelMetadata(pmm *model.ProjectModelMetadata) (int, string)
@@ -994,10 +995,15 @@ type Model interface {
 	UpdateDefaultTablePropertiesConfig(projectID int64, profileType string, updatedConfig []string) (int, error)
 	UpdateSegmentTablePropertiesConfig(projectID int64, segmentID string, updatedConfig []string) (int, error)
 	GetDomainIDFromDomainName(projectID int64, domainName string, domainGroupID int) (string, error)
+	UpdateProfilesConfigForFeatureScoring(projectID int64, isScoringEnabled bool) error
+	UpdateDefaultTimelinesConfigForFeatureScoring(projectID int64, timelinesConfig *model.TimelinesConfig, isScoringEnabled bool) error
+	UpdateAllSegmentsConfigForFeatureScoring(projectID int64, isScoringEnabled bool) error
+	UpdateSegmentConfigForFeatureScoring(projectID int64, segment *model.Segment, isScoringEnabled bool) error
 
 	// Timeline consuming segment_marker
 	GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload, downloadLimitGiven bool) ([]model.Profile, int, string)
 	GetAllPropertiesForDomain(projectID int64, domainGroupId int, domainID string, userCount *int64) ([]model.User, int)
+	GetAllGroupPropertiesForDomain(projectID int64, domainGroupId int, domainID string) ([]model.User, int)
 	GetDomainsListFromMarker(projectID int64, payload model.TimelinePayload,
 		domainGroupID int, downloadLimitGiven bool) ([]model.Profile, int, string)
 	GetPreviewDomainsListByProjectId(projectID int64, payload model.TimelinePayload,
@@ -1015,6 +1021,17 @@ type Model interface {
 	CreateDefaultSegment(projectID int64, entity string, isGroup bool) (int, error)
 	GetSegmentByGivenIds(projectId int64, segmentIds []string) (map[string][]model.Segment, int)
 	UpdateMarkerRunSegment(projectID int64, ids []string, updateTime time.Time) int
+	ModifySegment(projectID int64, segment model.Segment) (int, error)
+
+	// Segment Folder Item ( Segment Itself )
+	MoveSegmentFolderItem(projectID int64, segmentID string, folderID string, folder_type string) int
+	MoveSegmentToNewFolder(projectID int64, segmentID string, folderName string, folder_type string) int
+
+	// segment folders
+	GetAllSegmentFolders(projectID int64, folder_type string) ([]model.SegmentFolder, int)
+	CreateSegmentFolder(projectID int64, name string, folder_type string) int
+	UpdateSegmentFolderByID(projectID int64, id string, name string, folder_type string) int
+	DeleteSegmentFolderByID(projectID int64, id string, folder_type string) int
 
 	// segment analytics
 	GetWidgetGroupAndWidgetsForConfig(projectID int64) ([]model.WidgetGroup, string, int)
@@ -1090,7 +1107,7 @@ type Model interface {
 	UpdateInternalStatusAndGetAlertIDs(projectID int64) ([]string, int, error)
 	GetInternalStatusForEventTriggerAlert(projectID int64, id string) (string, int, error)
 	GetParagonMetadataForEventTriggerAlert(projectID int64, alertID string) (map[string]interface{}, int, error)
-	FindAndCacheAlertForCurrentSegment(projectID int64, segmentID, domainID, actionPerformed string) (int, error)
+	FindAndCacheAlertForCurrentSegment(projectID int64, segmentID, domainID, actionPerformed string, timeOfActionPerformed time.Time) (int, error)
 
 	//ExplainV2
 	GetAllExplainV2EntityByProject(projectID int64) ([]model.ExplainV2EntityInfo, int)
@@ -1183,6 +1200,33 @@ type Model interface {
 	CreateWorkflow(projectID int64, agentID, oldIDIfEdit string, alertBody model.WorkflowAlertBody) (*model.Workflow, int, error)
 	UpdateWorkflow(projectID int64, id, agentID string, fieldsToUpdate map[string]interface{}) (int, error)
 	DeleteWorkflow(projectID int64, id, agentID string) (int, error)
+
+	//linkedin capi
+	GetLinkedInCAPICofigByWorkflowId(projectID int64, workflowID string) (model.LinkedinCAPIConfig, error)
+	FillConfigurationValuesForLinkedinCAPIWorkFlow(projectId int64, workflowAlertBody *model.WorkflowAlertBody)
+	FillLinkedInPropertiesInCacheForWorkflow(msgPropMap *map[string]interface{}, properties *map[string]interface{}, workflowAlertBody model.WorkflowAlertBody)
+	NewLinkedCapiRequestPayload(properties *map[string]interface{}, linkedinCAPIConfig model.LinkedinCAPIConfig) (model.BatchLinkedinCAPIRequestPayload, error)
+
+	// linkedin frequency capping
+	GetLinkedinFreqCappingConfig(projectID int64) ([]model.LinkedinCappingConfig, int)
+	CreateLinkedinCappingRule(projectID int64, linkedinCappingRule *model.LinkedinCappingRule) (model.LinkedinCappingRule, string, int)
+	GetAllLinkedinCappingRules(projectID int64) ([]model.LinkedinCappingRule, int)
+	GetAllActiveLinkedinCappingRules(projectID int64) ([]model.LinkedinCappingRule, int)
+	GetAllActiveLinkedinCappingRulesByObjectType(projectID int64, objectType string) ([]model.LinkedinCappingRule, int)
+	GetLinkedinCappingRule(projectID int64, ruleID string) (model.LinkedinCappingRule, int)
+	UpdateLinkedinCappingRule(projectID int64, linkedinCappingRule *model.LinkedinCappingRule) (string, int)
+	DeleteLinkedinCappingRule(projectID int64, ruleID string) int
+	GetLinkedinCappingExclusionsForRule(projectID int64, ruleID string) ([]model.LinkedinExclusion, int)
+	GetAllLinkedinCappingExclusionsForTimerange(projectID int64, monthStart int64, monthEnd int64) ([]model.LinkedinExclusion, int)
+	CreateLinkedinExclusion(projectID int64, linkedinExclusionDoc model.LinkedinExclusion) int
+	GetNonPushedExclusionsForMonth(projectID int64, startOfMonthDate int64) ([]model.LinkedinExclusion, int)
+	GetNonRemovedExclusionsForMonth(projectID int64, startOfMonthDate int64, endOfMonthDate int64) ([]model.LinkedinExclusion, int)
+	UpdateLinkedinPushSyncStatusForOrgAndRule(projectID int64, startOfMonthDate int64, orgID string, ruleID string) int
+	UpdateLinkedinRemoveSyncStatusForOrgAndRule(projectID int64, startOfMonthDate int64, endOfMonthDate int64, orgID string, ruleID string) int
+	GetDataSetForFrequencyCappingForMonthForObjectType(projectID int64, timestamp int64, objectType string) ([]model.LinkedinCappingDataSet, int)
+	ApplyRuleOnLinkedinCappingData(projectID int64, linkedinCappingDataSet model.LinkedinCappingDataSet,
+		rule model.LinkedinCappingRuleWithDecodedValues, groupData model.GroupRelatedData) (bool, model.RuleMatchedDataSet, error)
+	GetGroupRelatedData(projectID int64, groupID int, domain string, existingGroupData map[string]model.GroupRelatedData) (model.GroupRelatedData, error)
 
 	//Weekly Mailmodo Emails
 	GetWeeklyMailmodoEmailsMetrics(projectId, startTimeStamp, endTimeStamp int64) (model.WeeklyMailmodoEmailMetrics, error)

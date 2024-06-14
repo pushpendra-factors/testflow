@@ -111,7 +111,10 @@ function GroupBlock({
     const newGroupByState = {
       prop_category: option?.extraProps?.propertyType,
       eventName: '$present',
-      groupName: option?.extraProps?.groupName,
+      groupName:
+        groupName === 'users'
+          ? option?.extraProps?.propertyType
+          : option?.extraProps?.groupName,
       property: option?.value,
       prop_type: option?.extraProps?.valueType,
       gbty: option?.extraProps?.valueType === 'numerical' ? 'raw_values' : '',

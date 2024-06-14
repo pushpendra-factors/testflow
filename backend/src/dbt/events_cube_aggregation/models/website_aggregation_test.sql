@@ -63,7 +63,7 @@ FROM
     events INNER JOIN session_event_name ON events.project_id = session_event_name.project_id AND events.event_name_id = session_event_name.id
     AND events.timestamp BETWEEN {{ var('from') }} AND {{ var('to') }}
 
-GROUP BY events.project_id, timestamp_at_day, source, medium, campaign, landing_page_url, referrer_url, country, region,
+GROUP BY events.project_id, timestamp_at_day, event_name, event_type, source, medium, campaign, landing_page_url, referrer_url, country, region,
     city, browser, browser_version, os, os_version, channel, 6signal_industry, 6signal_employee_range, 6signal_revenue_range,
     6signal_naics_description, 6signal_sic_description
 ),
@@ -109,7 +109,7 @@ FROM
     events INNER JOIN page_view_event_name ON events.project_id = page_view_event_name.project_id AND events.event_name_id = page_view_event_name.id
     AND events.timestamp BETWEEN {{ var('from') }} AND {{ var('to') }}
 
-GROUP BY events.project_id, timestamp_at_day, source, medium, campaign, landing_page_url, referrer_url, country, region,
+GROUP BY events.project_id, timestamp_at_day, event_name, event_type, source, medium, campaign, landing_page_url, referrer_url, country, region,
     city, browser, browser_version, os, os_version, channel, 6signal_industry, 6signal_employee_range, 6signal_revenue_range,
     6signal_naics_description, 6signal_sic_description
 ),
@@ -155,7 +155,7 @@ FROM
     events INNER JOIN virtual_page_view_event_name ON events.project_id = virtual_page_view_event_name.project_id AND events.event_name_id = virtual_page_view_event_name.id
     AND events.timestamp BETWEEN {{ var('from') }} AND {{ var('to') }}
 
-GROUP BY events.project_id, timestamp_at_day, source, medium, campaign, landing_page_url, referrer_url, country, region,
+GROUP BY events.project_id, timestamp_at_day, event_name, event_type, source, medium, campaign, landing_page_url, referrer_url, country, region,
     city, browser, browser_version, os, os_version, channel, 6signal_industry, 6signal_employee_range, 6signal_revenue_range,
     6signal_naics_description, 6signal_sic_description
 ),

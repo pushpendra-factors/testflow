@@ -454,7 +454,8 @@ func (store *MemSQL) GetUsers(projectId int64, offset uint64, limit uint64) ([]m
 }
 
 // get all users assocuated to given domains
-func (store *MemSQL) GetUsersAssociatedToDomainList(projectID int64, domainGroupID int, domID string, userStmnt string) ([]model.User, int) {
+func (store *MemSQL) GetUsersAssociatedToDomainList(projectID int64, domainGroupID int, domID string, userStmnt string,
+	limit int) ([]model.User, int) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"dom_id":     domID,
@@ -463,23 +464,30 @@ func (store *MemSQL) GetUsersAssociatedToDomainList(projectID int64, domainGroup
 
 	var users []model.User
 
-	query := fmt.Sprintf(`SELECT 
-	id, 
-	properties, 
-	is_group_user, 
-	source, 
-	last_event_at
-  FROM 
-	users 
-  WHERE 
-	project_id = ? 
-	AND source != ? 
-	AND is_deleted = false
-	AND group_%d_user_id = ?
-	%s;`, domainGroupID, userStmnt)
+	query := fmt.Sprintf(`WITH required_users AS (
+		SELECT id FROM 
+			users 
+		  WHERE 
+			project_id = ? 
+			AND source != ? 
+			AND is_deleted = false
+			AND group_%d_user_id = ?
+			%s
+		)
+		SELECT 
+			id, 
+			properties, 
+			is_group_user, 
+			source, 
+			last_event_at
+		  FROM 
+			users 
+		  WHERE 
+			project_id = ? 
+			AND id IN (SELECT id FROM required_users LIMIT %d);`, domainGroupID, userStmnt, limit)
 
 	db := C.GetServices().Db
-	err := db.Raw(query, projectID, model.UserSourceDomains, domID).Scan(&users).Error
+	err := db.Raw(query, projectID, model.UserSourceDomains, domID, projectID).Scan(&users).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			return []model.User{}, http.StatusNotFound
@@ -594,6 +602,9 @@ func getLatestDomainsByProjectIDQuery(projectID int64, domainGroupID int, limitV
 		return query, queryParams
 	}
 
+	lastEventAtLimit := U.TimeNowZ().AddDate(-1, 0, 0)
+	queryParams = append(queryParams, lastEventAtLimit)
+
 	whereStr, filterParams, err := buildWhereFromProperties(projectID, filters, 0)
 
 	if err != nil && len(filters) > 0 {
@@ -618,7 +629,7 @@ func getLatestDomainsByProjectIDQuery(projectID int64, domainGroupID int, limitV
 	AND group_%d_user_id IS NOT NULL 
 	AND source != ? 
 	AND is_deleted = false
-	AND last_event_at IS NOT NULL %s
+	AND last_event_at > ? %s
   GROUP BY 
 	group_%d_user_id 
   ORDER BY MAX(last_event_at) DESC
@@ -642,7 +653,12 @@ func (store *MemSQL) GetAllDomainsForPreviewByProjectID(projectID int64, domainG
 	query, queryParams := getLatestDomainsByProjectIDQuery(projectID, domainGroupID, limitVal, filters,
 		searchFilter)
 
-	db := C.GetServices().Db
+	var db *gorm.DB
+	if C.IsDBConnectionPool2Enabled() {
+		db = C.GetServices().Db2
+	} else {
+		db = C.GetServices().Db
+	}
 	rows, err := db.Raw(query, queryParams...).Rows()
 
 	if rows != nil {
@@ -669,6 +685,44 @@ func (store *MemSQL) GetAllDomainsForPreviewByProjectID(projectID int64, domainG
 	}
 
 	return domainIDs, http.StatusFound
+}
+
+// account associated users count in past one year
+func (store *MemSQL) GetAccountAssociatedUserCountByProjectID(projectID int64, domainGroupID int) (int64, int) {
+	queryParams := []interface{}{projectID, model.UserSourceDomains}
+
+	db := C.GetServices().Db
+	query := fmt.Sprintf(`SELECT COUNT(*) FROM users WHERE 
+	project_id = ? 
+	AND group_%d_user_id IS NOT NULL 
+	AND source != ? 
+	AND is_deleted = false
+	AND last_event_at > ?;`, domainGroupID)
+
+	lastEventAtLimit := U.TimeNowZ().AddDate(-1, 0, 0)
+	queryParams = append(queryParams, lastEventAtLimit)
+
+	rows, err := db.Raw(query, queryParams...).Rows()
+
+	if rows != nil {
+		defer rows.Close()
+	}
+
+	var count int64
+	if err != nil {
+		log.WithField("project_id", projectID).WithError(err).Error("Error fetching number of users for project")
+		return count, http.StatusInternalServerError
+	}
+
+	for rows.Next() {
+		err = rows.Scan(&count)
+	}
+
+	if err != nil {
+		log.WithField("project_id", projectID).WithError(err).Error("Error fetching number of users for project")
+		return count, http.StatusInternalServerError
+	}
+	return count, http.StatusFound
 }
 
 // get all domains to run marker for in time range

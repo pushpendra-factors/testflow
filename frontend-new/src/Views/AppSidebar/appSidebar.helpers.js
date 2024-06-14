@@ -23,6 +23,7 @@ export const isSettingsUrl = (pathname) =>
   pathname === PathUrls.SettingsCustomDefinition ||
   pathname === PathUrls.ConfigurePlans ||
   pathname === PathUrls.SettingsAttribution ||
+  pathname === PathUrls.SettingsAccountScoring ||
   checkMatchPath(pathname, PathUrls.SettingsIntegrationURLID);
 
 export const isAccountsUrl = (pathname) =>
