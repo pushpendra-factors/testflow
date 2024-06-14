@@ -4617,6 +4617,12 @@ func TestTimelineAllAccounts(t *testing.T) {
 	assert.Equal(t, len(groupUsers), 15)
 	assert.Equal(t, len(users), 15)
 
+	// check total users created
+
+	userCount, status := store.GetStore().GetAccountAssociatedUserCountByProjectID(project.ID, 1)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, int64(30), userCount)
+
 	// Test Cases :-
 
 	// Search a Hubspot Company

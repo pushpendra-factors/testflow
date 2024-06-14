@@ -717,6 +717,7 @@ type Model interface {
 	GetDomainDetailsByID(projectID int64, id string, domGroupID int) (model.User, int)
 	GetAllDomainsByProjectID(projectID int64, domainGroupID int, limitVal int) ([]string, int)
 	GetAllDomainsForPreviewByProjectID(projectID int64, domainGroupID int, limitVal int, filters []model.QueryProperty, searchFilter []string) ([]string, int)
+	GetAccountAssociatedUserCountByProjectID(projectID int64, domainGroupID int) (int64, int)
 	GetLatestUpatedDomainsByProjectID(projectID int64, domainGroupID int, fromTime time.Time, limitVal int) ([]string, int)
 	UpdateAssociatedSegments(projectID int64, id string, associatedSegments map[string]model.AssociatedSegments) (int, error)
 	GetNonGroupUsersUpdatedAtGivenHour(projectID int64, fromTime time.Time) ([]model.User, int)
