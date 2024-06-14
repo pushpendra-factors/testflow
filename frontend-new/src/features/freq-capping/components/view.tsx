@@ -36,6 +36,12 @@ import {
 } from 'Reducers/coreQuery/actions';
 import { cloneDeep } from 'lodash';
 import cx from 'classnames';
+import {
+  formatFiltersForQuery,
+  getKPIStateFromRequestQuery,
+  getStateFromKPIFilters,
+  processFiltersFromQuery
+} from 'Views/CoreQuery/utils';
 import { AdvanceRuleFilters, FrequencyCap } from '../types';
 import styles from '../index.module.scss';
 
@@ -63,10 +69,15 @@ const FrequencyCappingView = ({
   const availableGroups = useSelector((state) => state.coreQuery.groups);
 
   const [objectIds, setObjectIds] = useState([]);
+  const [advanceTableData, setAdvanceTableData] = useState([]);
 
   useEffect(() => {
     getGroupsDispatch(active_project.id);
   }, []);
+
+  useEffect(() => {
+    console.log(ruleToView);
+  }, [ruleToView]);
 
   const getGroupsDispatch = async (projectID) => {
     const response = await fetchGroups(projectID);
@@ -391,17 +402,28 @@ const FrequencyCappingView = ({
     [userProperties, groupProperties, availableGroups]
   );
 
-  const handleInsertFilter = (filterState, index) => {};
+  const handleInsertFilter = (filterState, index) => {
+    const filterPayload = formatFiltersForQuery([filterState]);
+    const editedRule = cloneDeep(ruleToView);
+    editedRule?.advanced_rules[index]?.filters = filterPayload;
+    setRuleToEdit(editedRule);
+  };
 
   const handleCloseFilter = () => {};
 
-  const handleDeleteFilter = () => {};
+  const handleDeleteFilter = (index) => {
+    const editedRule = cloneDeep(ruleToView);
+    editedRule?.advanced_rules.splice(index, 1);
+    setRuleToEdit(editedRule);
+  };
 
   const showFilterDropdown = () => {
     const editedRule = cloneDeep(ruleToView);
-    editedRule?.advanced_rules.push([
-      { click_threshold: 0, impression_threshold: 0, filters: [] }
-    ]);
+    editedRule?.advanced_rules.push({
+      click_threshold: 0,
+      impression_threshold: 0,
+      filters: []
+    });
     setRuleToEdit(editedRule);
   };
 
@@ -423,57 +445,89 @@ const FrequencyCappingView = ({
     </Button>
   );
 
-  const renderAdvanceCapRules = () => {
-    const columns = [
-      {
-        title: 'Accounts that match',
-        dataIndex: 'filters',
-        key: 'filters',
-        width: '700px',
-        render: (filters: any, index) => (
-          <FilterWrapper
-            viewMode={false}
-            projectID={active_project?.id}
-            index={index}
-            filterProps={mainFilterProps}
-            minEntriesPerGroup={3}
-            insertFilter={handleInsertFilter}
-            closeFilter={handleCloseFilter}
-            deleteFilter={handleDeleteFilter}
-            showInList={false}
-          />
-        )
-      },
-      {
-        title: 'Total Clicks Cap',
-        dataIndex: 'total_clicks',
-        key: 'total_clicks',
-        render: (item: number) => <InputNumber value={item} />
-      },
-      {
-        title: 'Total Impressions Cap',
-        dataIndex: 'total_impression',
-        key: 'total_impression',
-        render: (item: number) => <InputNumber value={item} />
-      }
-    ];
+  const setAdvanceRuleClick = (val, index) => {
+    const editedRule = cloneDeep(ruleToView);
+    editedRule?.advanced_rules[index].click_threshold = val;
+    setRuleToEdit(editedRule);
+  };
 
-    const tableData = ruleToView?.advanced_rules.map(
-      (rule: AdvanceRuleFilters) => ({
-        filters: rule.filters,
-        total_clicks: rule.click_threshold,
-        total_impression: rule.impression_threshold
-      })
-    );
+  const setAdvanceRuleImpression = (val, index) => {
+    const editedRule = cloneDeep(ruleToView);
+    editedRule?.advanced_rules[index].impression_threshold = val;
+    setRuleToEdit(editedRule);
+  };
 
+  const renderFilter = (item) => {
+    const filterToView = item.filter
+      ? processFiltersFromQuery(item.filter)
+      : undefined;
     return (
-      <Row>
+      <FilterWrapper
+        viewMode={false}
+        projectID={active_project?.id}
+        index={item.index}
+        filterProps={mainFilterProps}
+        minEntriesPerGroup={3}
+        filter={filterToView?.[0]}
+        insertFilter={(f, i) => handleInsertFilter(f, item.index)}
+        closeFilter={handleCloseFilter}
+        deleteFilter={handleDeleteFilter}
+        showInList={false}
+      />
+    );
+  };
+
+  const advancedColumns = [
+    {
+      title: 'Accounts that match',
+      dataIndex: 'filters',
+      key: 'filters',
+      width: '700px',
+      render: renderFilter
+    },
+    {
+      title: 'Total Clicks Cap',
+      dataIndex: 'total_clicks',
+      key: 'total_clicks',
+      render: (item: any) => (
+        <InputNumber
+          value={item.click_threshold}
+          onChange={(v) => setAdvanceRuleClick(v, item.index)}
+        />
+      )
+    },
+    {
+      title: 'Total Impressions Cap',
+      dataIndex: 'total_impression',
+      key: 'total_impression',
+      render: (item: any) => (
+        <InputNumber
+          value={item.impression_threshold}
+          onChange={(v) => setAdvanceRuleImpression(v, item.index)}
+        />
+      )
+    }
+  ];
+
+  const advancedTableData = ruleToView?.advanced_rules?.map(
+    (rule: AdvanceRuleFilters, index) => ({
+      filters: { filter: rule.filters, index },
+      total_clicks: { click_threshold: rule.click_threshold, index },
+      total_impression: {
+        impression_threshold: rule.impression_threshold,
+        index
+      }
+    })
+  );
+
+  const renderAdvanceCapRules = useCallback(
+    () => (
+      <Row className='mt-3'>
         <Collapse
           className={`w-full ${styles['advance-rules-cap']}`}
-          onChange={() => {}}
           expandIconPosition='right'
           expandIcon={renderCollapseIcon}
-          defaultActiveKey={ruleToView?.is_advanced_rule_enabled ? 1 : 0}
+          activeKey={ruleToView?.is_advanced_rule_enabled ? 1 : 0}
         >
           <Panel key={1} header={renderAdvanceCapHeader()}>
             <Row className='mt-4'>
@@ -485,20 +539,21 @@ const FrequencyCappingView = ({
             <Row className={`mt-4 ${styles['cap-table']}`}>
               <Table
                 className='fa-table--basic mt-6'
-                columns={columns}
-                dataSource={tableData}
+                columns={advancedColumns}
+                dataSource={advancedTableData}
                 bordered={false}
                 pagination={false}
                 loading={false}
                 tableLayout='fixed'
-                footer={renderAdvanceCapTableFooter}
+                footer={() => renderAdvanceCapTableFooter()}
               />
             </Row>
           </Panel>
         </Collapse>
       </Row>
-    );
-  };
+    ),
+    [ruleToView?.advanced_rules, ruleToView?.is_advanced_rule_enabled]
+  );
 
   const renderCappingConditions = () => (
     <div className='mt-8'>

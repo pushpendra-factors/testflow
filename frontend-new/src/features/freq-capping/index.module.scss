@@ -42,6 +42,13 @@
   }
 }
 
+.header-title {
+  :global(.ant-typography-edit-content) {
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+}
+
 .add-filter-button {
   width: fit-content;
   &:hover {

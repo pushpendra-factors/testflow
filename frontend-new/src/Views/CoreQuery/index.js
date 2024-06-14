@@ -26,6 +26,10 @@ import {
   fetchMarketoIntegration,
   fetchBingAdsIntegration
 } from 'Reducers/global';
+import SaveQuery from 'Components/SaveQuery';
+import _ from 'lodash';
+import { fetchKPIConfig } from 'Reducers/kpi';
+import CommonBeforeIntegrationPage from 'Components/GenericComponents/CommonBeforeIntegrationPage';
 import QueryComposer from '../../components/QueryComposer';
 import AttrQueryComposer from '../../components/AttrQueryComposer';
 import CoreQueryHome from '../CoreQueryHome';
@@ -115,10 +119,6 @@ import {
   getSavedPivotConfig
 } from './coreQuery.helpers';
 import { getChartChangedKey } from './AnalysisResultsPage/analysisResultsPage.helpers';
-import SaveQuery from 'Components/SaveQuery';
-import _ from 'lodash';
-import { fetchKPIConfig } from 'Reducers/kpi';
-import CommonBeforeIntegrationPage from 'Components/GenericComponents/CommonBeforeIntegrationPage';
 
 function CoreQuery({
   activeProject,
@@ -1401,12 +1401,10 @@ function CoreQuery({
         queryupdated.push(newEvent);
       }
       setQueries(
-        queryupdated.map((q) => {
-          return {
-            ...q,
-            key: q.key || generateRandomKey()
-          };
-        })
+        queryupdated.map((q) => ({
+          ...q,
+          key: q.key || generateRandomKey()
+        }))
       );
     },
     [queriesA, deleteGroupByForEvent]
@@ -1642,7 +1640,7 @@ function CoreQuery({
       <Modal
         title={
           <AnalysisHeader
-            isFromAnalysisPage={true}
+            isFromAnalysisPage
             requestQuery={requestQuery}
             onBreadCrumbClick={handleBreadCrumbClick}
             queryType={queryType}
@@ -1713,7 +1711,7 @@ function CoreQuery({
   }, [findKPIitem, selectedMainCategory]);
 
   useEffect(() => {
-    //collapsing the query composer once run query is executed
+    // collapsing the query composer once run query is executed
     if (loading) {
       setQueryOpen(false);
     }

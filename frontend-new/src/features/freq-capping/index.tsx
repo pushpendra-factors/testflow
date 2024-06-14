@@ -174,6 +174,7 @@ const FrequencyCapping = () => {
           publishFreqCalRules();
         }}
         fetchFreqCapRules={fetchFreqCapRules}
+        setRuleBasedOnRuleId={setRuleBasedOnRuleId}
       />
       <FrequencyCappingView
         campaignConfig={campaignConfig}

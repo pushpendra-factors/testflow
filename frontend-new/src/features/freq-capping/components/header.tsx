@@ -30,14 +30,18 @@ import { PathUrls } from 'Routes/pathUrls';
 import { cloneDeep } from 'lodash';
 import { ComponentStates, FrequencyCap } from '../types';
 import { updateLinkedinFreqCapRules } from '../state/service';
+import styles from '../index.module.scss';
 
 interface FreqCapHeaderType {
   state: ComponentStates;
-  ruleToView: FrequencyCap | undefined;
-  isRuleEdited: boolean;
-  setRuleToEdit: Dispatch<SetStateAction<FrequencyCap | undefined>> | undefined;
-  publishChanges: () => any;
-  fetchFreqCapRules: () => any;
+  ruleToView?: FrequencyCap | undefined;
+  isRuleEdited?: boolean;
+  setRuleToEdit?:
+    | Dispatch<SetStateAction<FrequencyCap | undefined>>
+    | undefined;
+  publishChanges?: () => any;
+  fetchFreqCapRules?: () => any;
+  setRuleBasedOnRuleId?: () => any;
 }
 export const FreqCapHeader = ({
   state,
@@ -45,7 +49,8 @@ export const FreqCapHeader = ({
   isRuleEdited,
   setRuleToEdit,
   publishChanges,
-  fetchFreqCapRules
+  fetchFreqCapRules,
+  setRuleBasedOnRuleId
 }: FreqCapHeaderType) => {
   const history = useHistory();
   const { rule_id } = useParams();
@@ -61,9 +66,9 @@ export const FreqCapHeader = ({
   const headerContent = () => {
     if (state === ComponentStates.LIST || state === ComponentStates.EMPTY) {
       return (
-        <Row>
+        <Row className='items-start'>
           {/* <SVG name='userLock' size={24} /> */}
-          <Text type='title' level={7} weight='bold' extraClass='ml-1'>
+          <Text type='title' level={7} weight='bold' extraClass='ml-1 mb-0'>
             Account Level Frequency Capping (ALFC)
           </Text>
         </Row>
@@ -71,7 +76,7 @@ export const FreqCapHeader = ({
     }
     if (state === ComponentStates.VIEW) {
       return (
-        <Row>
+        <Row className={`items-start ${styles['header-title']}`}>
           <Button
             icon={<ArrowLeftOutlined />}
             onClick={() => history.replace(`${PathUrls.FreqCap}`)}
@@ -90,7 +95,7 @@ export const FreqCapHeader = ({
             type='title'
             level={4}
             weight='bold'
-            extraClass='ml-1'
+            extraClass='ml-1 mb-0'
           >
             {ruleToView?.display_name || `Untitled Frequency cap rule`}
           </Text>
@@ -148,51 +153,57 @@ export const FreqCapHeader = ({
   const actions = () => {
     if (state === ComponentStates.LIST || state === ComponentStates.EMPTY) {
       return (
-        <Button
-          type='primary'
-          id='fa-at-btn--new-report'
-          onClick={() => history.replace(`${PathUrls.FreqCap}/new`)}
-        >
-          <Space>
-            <SVG name='plus' size={16} color='white' />
-            Add New Rule
-          </Space>
-        </Button>
+        <Row>
+          <Button
+            type='primary'
+            id='fa-at-btn--new-report'
+            onClick={() => history.replace(`${PathUrls.FreqCap}/new`)}
+          >
+            <Space>
+              <SVG name='plus' size={16} color='white' />
+              Add New Rule
+            </Space>
+          </Button>
+        </Row>
       );
     }
     if (state === ComponentStates.VIEW) {
       if (rule_id === 'new') {
         return (
-          <Button
-            type='primary'
-            id='fa-at-btn--new-report'
-            onClick={() => publishChanges()}
-            disabled={
-              !ruleToView?.display_name ||
-              (ruleToView?.object_type !== 'account' &&
-                ruleToView.object_ids.length === 0)
-            }
-          >
-            <Space>Publish</Space>
-          </Button>
+          <Row className='items-center'>
+            <Button
+              type='primary'
+              id='fa-at-btn--new-report'
+              onClick={() => publishChanges()}
+              disabled={
+                !ruleToView?.display_name ||
+                (ruleToView?.object_type !== 'account' &&
+                  ruleToView.object_ids.length === 0)
+              }
+            >
+              <Space>Publish</Space>
+            </Button>
+          </Row>
         );
       }
       if (rule_id !== 'new' && !isRuleEdited) {
         return (
-          <Switch
-            checkedChildren='Active'
-            unCheckedChildren='Paused'
-            onChange={toggleStatus}
-            checked={ruleToView?.status === 'active'}
-          />
+          <Row className='items-center'>
+            <Switch
+              checkedChildren='Active'
+              unCheckedChildren='Paused'
+              onChange={toggleStatus}
+              checked={ruleToView?.status === 'active'}
+            />
+          </Row>
         );
       }
       if (rule_id !== 'new' && isRuleEdited) {
         return (
-          <div>
+          <Row className='items-center'>
             <Button
               id='fa-at-btn--new-report mr-1'
-              onClick={() => publishChanges()}
+              onClick={() => setRuleBasedOnRuleId()}
             >
               <Space>Discard Changes</Space>
             </Button>
@@ -203,7 +214,7 @@ export const FreqCapHeader = ({
             >
               <Space>Publish</Space>
             </Button>
-          </div>
+          </Row>
         );
       }
     }
