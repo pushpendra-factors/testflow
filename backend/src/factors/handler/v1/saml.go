@@ -193,7 +193,7 @@ func SamlCallbackHandler(c *gin.Context) {
 	errCode := store.GetStore().UpdateAgentLastLoginInfo(agent.UUID, ts)
 	if errCode != http.StatusAccepted {
 		log.WithField("email", agent.Email).Error("Failed to update Agent lastLoginInfo")
-		c.Redirect(http.StatusPermanentRedirect, buildRedirectURLforLogin(c, "saml", "SERVER_ERROR"))
+		c.Redirect(http.StatusPermanentRedirect, buildRedirectURLforLogin(c, "login", "SERVER_ERROR"))
 		return
 	}
 
