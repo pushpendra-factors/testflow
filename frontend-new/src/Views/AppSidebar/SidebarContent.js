@@ -33,6 +33,12 @@ function SidebarContent() {
     return <SettingsSidebar />;
   }
   if (
+    checkMatchPath(pathname, PathUrls.Alerts) ||
+    checkMatchPath(pathname, PathUrls.Workflows)
+  ) {
+    return <AlertsSidebar />;
+  }
+  if (
     checkMatchPath(pathname, PathUrls.FreqCap) ||
     checkMatchPath(pathname, PathUrls.FreqCapView)
   ) {

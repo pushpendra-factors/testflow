@@ -79,7 +79,6 @@ import FactorsSalesforceCompany from './Templates/FactorsSalesforceCompany';
 import FactorsApolloSalesforceContacts from './Templates/FactorsApolloSalesforceContacts';
 import WorkflowHubspotThumbnail from '../../../../../assets/images/workflow-hubspot-thumbnail.png';
 import QueryBlock from '../../Alerts/EventBasedAlert/QueryBlock';
-import logger from 'Utils/logger';
 import FactorsLinkedInCAPI from './Templates/FactorsLinkedInCAPI';
 
 const host = getHostUrl();
@@ -563,7 +562,8 @@ const WorkflowBuilder = ({
           setApolloFormDetails={setApolloFormDetails}
         />
       );
-    } else if (
+    }
+    if (
       workflowItem?.template_id == TemplateIDs.FACTORS_LINKEDIN_CAPI ||
       workflowItem?.id == TemplateIDs.FACTORS_LINKEDIN_CAPI
     ) {
@@ -577,9 +577,9 @@ const WorkflowBuilder = ({
           isTemplate={isTemplate}
         />
       );
-    } else {
-      return null;
     }
+    return null;
+
     return null;
   };
 

@@ -1559,11 +1559,3 @@ video {
 .transition {
   transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
 }
-.hover\:bg-gray-100:hover {
-  --tw-bg-opacity: 1;
-  background-color: rgb(247 250 252 / var(--tw-bg-opacity));
-}
-.hover\:bg-gray-300:hover {
-  --tw-bg-opacity: 1;
-  background-color: rgb(226 232 240 / var(--tw-bg-opacity));
-}
