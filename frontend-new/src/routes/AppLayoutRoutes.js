@@ -335,7 +335,7 @@ const FeatureLockConfigurationWorkflows = withFeatureLockHOC(Workflows, {
   LockedComponent: (props) => (
     <CommonLockedComponent
       title='Workflows'
-      description='With real-time alerts in Slack, stay informed the moment a prospect visits a high-intent page on your website or when a significant change occurs in a KPI that matters to your organization. Be instantly notified, take immediate action, and seize every opportunity to drive conversions, optimize performance, and achieve your business objectives.'
+      description='With workflows, stay informed the moment a prospect visits a high-intent page on your website or when a significant change occurs in a KPI that matters to your organization. Be instantly notified, take immediate action, and seize every opportunity to drive conversions, optimize performance, and achieve your business objectives.'
       learnMoreLink='https://help.factors.ai/en/articles/7284705-alerts'
       {...props}
     />
@@ -560,7 +560,7 @@ export const APP_LAYOUT_ROUTES = {
     exact: true,
     path: PathUrls.Workflows,
     Component: FeatureLockConfigurationWorkflows,
-    Private: false
+    Private: true
   },
 
   SettingsAttribution: {

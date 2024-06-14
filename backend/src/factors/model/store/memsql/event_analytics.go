@@ -268,7 +268,9 @@ func (store *MemSQL) RunInsightsQuery(projectId int64, query model.Query, enable
 
 	startComputeTime := time.Now()
 	groupPropsLen := len(query.GroupByProperties)
-	if !query.IsLimitNotApplicable {
+
+	// not limiting query if download limit given
+	if !query.IsLimitNotApplicable && query.DownloadAccountsLimit == 0 {
 		err = LimitQueryResult(projectId, result, groupPropsLen, query.GetGroupByTimestamp() != "")
 		if err != nil {
 			logCtx.WithError(err).Error("Failed processing query results for limiting.")

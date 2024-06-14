@@ -368,16 +368,15 @@ const Workflows = ({
               <Row>
                 <Col span={24}>
                   <Text type='title' level={7} color='grey-2' extraClass='m-0'>
-                    Set up automatic workflows for your platforms such as your
-                    CRM.
-                    <a
+                  Set up automated actions like sending data from Factors to your CRM, updating your LinkedIn audience, automating outbound and more.
+                    {/* <a
                       href='https://help.factors.ai/en/articles/7284705-alerts'
                       target='_blank'
                       rel='noreferrer'
                     >
                       {' '}
                       Learn more
-                    </a>
+                    </a> */}
                   </Text>
 
                   {tableData ? (
@@ -424,6 +423,8 @@ const Workflows = ({
                         dispatch({ type: NEW_DASHBOARD_TEMPLATES_MODAL_CLOSE });
                       }}
                       Step2Screen={newStep2Comp}
+                      step1Title="Select a workflow"
+                      step1Desc="Choose from a list of workflows to set up sync with your CRM, automate your outbound, build LinkedIn audiences and more."
                     />
                   )}
                 </Col>

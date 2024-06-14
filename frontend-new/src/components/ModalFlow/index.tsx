@@ -117,6 +117,8 @@ interface FirstScreenPropType {
   FirstScreenIllustration?: JSX.Element;
   handleSelectedItem?: (item: FlowItemType) => void;
   isDashboardTemplatesFlow: boolean;
+  step1Title?:string;
+  step1Desc?:string;
 }
 function FirstScreen({
   data,
@@ -124,7 +126,9 @@ function FirstScreen({
   startFreshVisible = false,
   FirstScreenIllustration,
   handleSelectedItem,
-  isDashboardTemplatesFlow = false
+  isDashboardTemplatesFlow = false,
+  step1Title="",
+  step1Desc="",
 }: FirstScreenPropType) {
   const dispatch = useDispatch();
   const [categories, setCategories] = useState<string[]>([]);
@@ -322,11 +326,11 @@ function FirstScreen({
           <img style={{ width: 64, margin: 9.25}} src={FirstScreenIllustration ? DashboardTemplatesHeader : AlertTemplatesHeader} />
           <div>
             <Text type='title' level={4} weight='bold'>
-            {isDashboardTemplatesFlow ? 'What are you planning today ?' : 'Select a Template'}
+            {isDashboardTemplatesFlow ? 'What are you planning today ?' : (step1Title ? step1Title :'Select a Template')}
             </Text>
 
             <Paragraph style={{width:'512px'}}>
-              { FirstScreenIllustration ? ` Discover the perfect dashboard template with ease. Simplify your selection process and find the ideal design to elevate your project effortlessly.` : `What kind of prospect activity do you want to be alerted for?`}
+              { FirstScreenIllustration ? ` Discover the perfect dashboard template with ease. Simplify your selection process and find the ideal design to elevate your project effortlessly.` : (step1Desc ? step1Desc : `What kind of prospect activity do you want to be alerted for?`)}
             </Paragraph>
           </div>
         </div>
