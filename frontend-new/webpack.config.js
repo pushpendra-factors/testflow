@@ -263,7 +263,7 @@ module.exports = {
   output: {
     path: getBuildPath(),
     publicPath: '/',
-    filename: '[name].[hash].js'
+    filename: isDev ? '[name].[hash].js' : '[name].[contenthash].js'
   },
   devServer: {
     historyApiFallback: true,
