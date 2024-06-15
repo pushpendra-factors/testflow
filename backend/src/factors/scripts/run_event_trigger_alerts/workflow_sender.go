@@ -35,14 +35,6 @@ func ProcessWorkflow(key *cache.Key, cachedWorkflow *model.CachedEventTriggerAle
 func SendHelperForParagonWorkflow(key *cache.Key, cachedWorkflow *model.CachedEventTriggerAlert,
 	workflowID string, retry bool, sendTo string, logCtx log.Entry) (totalSuccess bool, partialSuccess bool, sendReport SendReportLogCount) {
 
-	errMessage := make([]string, 0)
-	deliveryFailures := make([]string, 0)
-	rejectedQueue := false
-
-	if sendTo == "RejectedQueue" {
-		rejectedQueue = true
-	}
-
 	url := cachedWorkflow.Message.Message //Storing the url to be hit in message for workflow
 	var response = make(map[string]interface{})
 
@@ -53,54 +45,8 @@ func SendHelperForParagonWorkflow(key *cache.Key, cachedWorkflow *model.CachedEv
 	}
 	logCtx.WithField("cached_workflow", cachedWorkflow).WithField("response", response).Info("Webhook dropped for alert.")
 
-	stat := response["status"]
-	//if atleast one property field is not null in payload the payload is considered not null
-	isPayloadNull := true
-	for _, val := range cachedWorkflow.Message.MessageProperty {
-		if val != nil {
-			isPayloadNull = false
-		}
-	}
-	log.WithFields(log.Fields{
-		"project_id":      key.ProjectID,
-		"alert_id":        workflowID,
-		"mode":            WEBHOOK,
-		"retry":           retry,
-		"is_success":      stat == "success",
-		"tag":             "alert_tracker",
-		"is_payload_null": isPayloadNull,
-		"is_workflow":     cachedWorkflow.IsWorkflow,
-	}).Info("ALERT TRACKER.")
-
-	if stat != "success" {
-		log.WithField("status", stat).WithField("response", response).Error("Workflow error details")
-		sendReport.WebhookFail++
-		errMessage = append(errMessage, fmt.Sprintf("Webhook host reported %v error", response["error"]))
-		deliveryFailures = append(deliveryFailures, WEBHOOK)
-
-	} else {
-		sendReport.WebhookSuccess++
-	}
-
-	totalSuccess, partialSuccess = findTotalAndPartialSuccess(sendReport)
-	// not total success means there has been atleast one failure
-	if !totalSuccess {
-		err := ParagonWorkflowFailureExecution(key, workflowID, deliveryFailures, errMessage, rejectedQueue, partialSuccess)
-		if err != nil {
-			logCtx.WithError(err).Error("failed while updating teams-fail flow")
-		}
-	}
-
-	// partial success means there has been atleast one success
-	if partialSuccess {
-		status, err := store.GetStore().UpdateWorkflow(key.ProjectID, workflowID, "",
-			map[string]interface{}{"last_workflow_triggered_at": U.TimeNowZ()})
-		if status != http.StatusAccepted || err != nil {
-			logCtx.WithError(err).Error("Failed to update db field")
-		}
-	}
-
-	return totalSuccess, partialSuccess, sendReport
+	return getReportFromResponseAndHandleFailure(response, key, cachedWorkflow,
+		workflowID, retry, sendTo, logCtx)
 }
 
 func ParagonWorkflowFailureExecution(key *cache.Key, workflowID string,
@@ -153,36 +99,25 @@ func SendHelperForLinkedInCAPI(key *cache.Key, cachedWorkflow *model.CachedEvent
 	workflowID string, retry bool, sendTo string, logCtx log.Entry) (totalSuccess bool, partialSuccess bool, sendReport SendReportLogCount) {
 
 	logCtx.WithField("func", "SendHelperForLinkedInCAPI").Info("intiate SendHelperForLinkedInCAPI")
+
+	response, err := linkedin_capi.GetLinkedInCapi().SendHelper(key, cachedWorkflow, workflowID, retry, sendTo, logCtx)
+	if err != nil {
+		logCtx.WithError(err).Error("failed to execute linkedin capi")
+	}
+
+	return getReportFromResponseAndHandleFailure(response, key, cachedWorkflow,
+		workflowID, retry, sendTo, logCtx)
+}
+
+func getReportFromResponseAndHandleFailure(response map[string]interface{}, key *cache.Key, cachedWorkflow *model.CachedEventTriggerAlert,
+	workflowID string, retry bool, sendTo string, logCtx log.Entry) (totalSuccess bool, partialSuccess bool, sendReport SendReportLogCount) {
+
 	errMessage := make([]string, 0)
 	deliveryFailures := make([]string, 0)
 	rejectedQueue := false
 
 	if sendTo == "RejectedQueue" {
 		rejectedQueue = true
-	}
-
-	config, err := store.GetStore().GetLinkedInCAPICofigByWorkflowId(key.ProjectID, workflowID)
-	if err != nil {
-		logCtx.WithError(err).Error("failed  to get linkedin configuration")
-	}
-
-	var linkedCAPIPayloadBatch model.BatchLinkedinCAPIRequestPayload
-	linkedinCAPIPayloadString := U.GetPropertyValueAsString(cachedWorkflow.Message.MessageProperty["linkedCAPI_payload"])
-
-	err = U.DecodeJSONStringToStructType(linkedinCAPIPayloadString, linkedCAPIPayloadBatch)
-	if err != nil {
-		logCtx.WithError(err).Error("failed to decode linkedin capi payload")
-	}
-
-	response, err := linkedin_capi.SendEventsToLinkedCAPI(config, linkedCAPIPayloadBatch)
-	if err != nil {
-		logCtx.WithFields(log.Fields{"server_response": response}).WithError(err).Error("LinkedIn CAPI Workflow failure.")
-	}
-	logCtx.WithField("cached_workflow", cachedWorkflow).WithField("response", response).Info("LinkedIn CAPI workflow sent.")
-
-	stat := ""
-	if response != nil {
-		stat = "success"
 	}
 
 	//if atleast one property field is not null in payload the payload is considered not null
@@ -192,6 +127,9 @@ func SendHelperForLinkedInCAPI(key *cache.Key, cachedWorkflow *model.CachedEvent
 			isPayloadNull = false
 		}
 	}
+
+	stat := response["status"]
+
 	log.WithFields(log.Fields{
 		"project_id":      key.ProjectID,
 		"alert_id":        workflowID,
@@ -233,4 +171,5 @@ func SendHelperForLinkedInCAPI(key *cache.Key, cachedWorkflow *model.CachedEvent
 	}
 
 	return totalSuccess, partialSuccess, sendReport
+
 }

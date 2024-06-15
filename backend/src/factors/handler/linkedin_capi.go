@@ -37,7 +37,7 @@ func GetLinkedinCAPIConversionsList(c *gin.Context) {
 		return
 	}
 
-	response, err := linkedin_capi.GetConversionFromLinkedCAPI(config)
+	response, err := linkedin_capi.GetLinkedInCapi().GetConversionFromLinkedCAPI(config)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "failed to get conversions "})
 		return
