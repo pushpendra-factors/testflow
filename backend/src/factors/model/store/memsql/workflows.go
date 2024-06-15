@@ -175,15 +175,9 @@ func (store *MemSQL) CreateWorkflow(projectID int64, agentID, oldIDIfEdit string
 	transTime := U.TimeNowZ()
 	id := U.GetUUID()
 
-	alertJson, err := U.EncodeStructTypeToPostgresJsonb(alertBody)
-	if err != nil {
-		logCtx.WithError(err).Error("Failed to encode workflow body")
-		return nil, http.StatusInternalServerError, err
-	}
-
 	url, errCode := store.GetWorklfowUrlFromTemplate(alertBody.TemplateID)
 	if errCode != http.StatusOK {
-		logCtx.WithError(err).Error("Failed to assign workflow url.")
+		logCtx.Error("Failed to assign workflow url.")
 		return nil, http.StatusInternalServerError, fmt.Errorf("no url for template")
 	}
 
@@ -199,10 +193,21 @@ func (store *MemSQL) CreateWorkflow(projectID int64, agentID, oldIDIfEdit string
 			if isLinkedinCAPI, ok := (*templateDetails)["is_linkedin_capi"]; ok {
 
 				if isLinkedinCAPI.(bool) {
-					store.FillConfigurationValuesForLinkedinCAPIWorkFlow(projectID, &alertBody)
+					err = store.FillConfigurationValuesForLinkedinCAPIWorkFlow(projectID, &alertBody)
+					if err != nil {
+						logCtx.WithError(err).Error("fail to fill linkedin capi  properties")
+						return nil, http.StatusInternalServerError, fmt.Errorf("fail to fill linkedin capi  properties")
+					}
+
 				}
 			}
 		}
+	}
+
+	alertJson, err := U.EncodeStructTypeToPostgresJsonb(alertBody)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to encode workflow body")
+		return nil, http.StatusInternalServerError, err
 	}
 
 	workflow = model.Workflow{
@@ -716,7 +721,7 @@ func (store *MemSQL) AddWorkflowToCache(workflow *model.Workflow, msgProps *U.Pr
 func (store *MemSQL) FillLinkedInPropertiesInCacheForWorkflow(msgPropMap *map[string]interface{}, properties *map[string]interface{}, workflowAlertBody model.WorkflowAlertBody) {
 
 	var linkedinCAPIConfig model.LinkedinCAPIConfig
-	if workflowAlertBody.MessageProperties != nil {
+	if workflowAlertBody.AdditonalConfigurations != nil {
 		err := U.DecodePostgresJsonbToStructType(workflowAlertBody.AdditonalConfigurations, &linkedinCAPIConfig)
 		if err != nil {
 			log.WithError(err).Error("Jsonb decoding to struct failure")

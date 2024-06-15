@@ -118,42 +118,48 @@ func (store *MemSQL) GetLinkedInCAPICofigByWorkflowId(projectID int64, workflowI
 	return linkedinCAPIConfig, nil
 }
 
-func (store *MemSQL) FillConfigurationValuesForLinkedinCAPIWorkFlow(projectId int64, workflowAlertBody *model.WorkflowAlertBody) {
+func (store *MemSQL) FillConfigurationValuesForLinkedinCAPIWorkFlow(projectId int64, workflowAlertBody *model.WorkflowAlertBody) error {
 
 	logCtx := log.WithFields(log.Fields{
 		"projectID": projectId,
 	})
 	linkedInWorkflowConfig := model.LinkedinCAPIConfig{}
+	linkedInCAPIConversionsResponseList := []model.SingleLinkedInCAPIConversionsResponse{}
 	settings, errCode := store.GetProjectSetting(projectId)
 	if errCode != http.StatusFound {
-		return
+		return errors.New("project settings not found")
 	}
 
-	err := U.DecodePostgresJsonbToStructType(workflowAlertBody.AdditonalConfigurations, linkedInWorkflowConfig)
+	if settings.IntLinkedinAccessToken == "" || settings.IntLinkedinAdAccount == "" {
+		logCtx.Error("unable to fetch linkedin account info ")
+		return errors.New("unable to fetch linkedin account info ")
+	}
+
+	err := U.DecodePostgresJsonbToStructType(workflowAlertBody.AdditonalConfigurations, &linkedInCAPIConversionsResponseList)
 	if err != nil {
 		logCtx.Error(err)
-		return
+		return err
 	}
 
+	linkedInWorkflowConfig.Conversions = model.BatchLinkedInCAPIConversionsResponse{LinkedInCAPIConversionsResponseList: linkedInCAPIConversionsResponseList}
 	linkedInWorkflowConfig.LinkedInAccessToken = settings.IntLinkedinAccessToken
-
 	linkedInWorkflowConfig.LinkedInAdAccounts = config.GetTokensFromStringListAsString(settings.IntLinkedinAdAccount)
-
-	linkedInWorkflowConfig.IsLinkedInCAPI = true
 
 	if len(linkedInWorkflowConfig.Conversions.LinkedInCAPIConversionsResponseList) == 0 {
 		logCtx.Error("No conversions for linkedin capi")
-		return
+		return errors.New("No conversions for linkedin capi")
 	}
+
+	linkedInWorkflowConfig.IsLinkedInCAPI = true
 
 	additonalConfigurations, err := U.EncodeStructTypeToPostgresJsonb(linkedInWorkflowConfig)
 	if err != nil {
 		logCtx.Error(err)
-		return
+		return err
 	}
 
 	workflowAlertBody.AdditonalConfigurations = additonalConfigurations
 
-	return
+	return nil
 
 }
