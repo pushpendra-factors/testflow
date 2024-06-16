@@ -37,7 +37,7 @@ import {
 } from '../../reducers/coreQuery/middleware';
 import { fetchDashboards } from '../../reducers/dashboard/services';
 import PageSuspenseLoader from '../../components/SuspenseLoaders/PageSuspenseLoader';
-import { FaErrorComp, FaErrorLog } from 'factorsComponents';
+import { FaErrorComp, FaErrorLog, Text } from 'factorsComponents';
 import { ErrorBoundary } from 'react-error-boundary';
 import { fetchWeeklyIngishtsMetaData } from 'Reducers/insights';
 import { fetchKPIConfig, fetchPageUrls } from '../../reducers/kpi';
@@ -67,19 +67,19 @@ import {
   checkMatchPath,
   isSettingsUrl
 } from 'Views/AppSidebar/appSidebar.helpers';
+import { PathUrls } from '../../routes/pathUrls';
+import {
+  fetchEventDisplayNames,
+  fetchQueries
+} from '../../reducers/coreQuery/services';
+import GlobalSearchModal from './GlobalSearchModal';
+import AppSidebar from '../AppSidebar';
+import styles from './index.module.scss';
 import {
   SIGNUP_HS_FORM_ID,
   SIGNUP_HS_PORTAL_ID,
   routesWithSidebar
 } from './appLayout.constants';
-import styles from './index.module.scss';
-import AppSidebar from '../AppSidebar';
-import GlobalSearchModal from './GlobalSearchModal';
-import {
-  fetchEventDisplayNames,
-  fetchQueries
-} from '../../reducers/coreQuery/services';
-import { PathUrls } from '../../routes/pathUrls';
 
 // customizing highcharts for project requirements
 customizeHighCharts(Highcharts);

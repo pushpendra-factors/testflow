@@ -8,6 +8,7 @@ import ProjectModal from 'Components/ProjectModal';
 import {
   isAccountsUrl,
   isAlertsUrl,
+  isCampaignsUrl,
   // isAttributionsUrl,
   isReportsMainUrl,
   // isReportsUrl,
@@ -360,6 +361,27 @@ function FaHeader() {
                 Attribution
               </Text>
             </Link> */}
+
+            <Link
+              to={PathUrls.FreqCap}
+              className={cx(
+                `flex items-center pl-2 pr-1 py-1 ${styles['header-item']}`,
+                {
+                  [styles['active-header-item']]: isCampaignsUrl(pathname)
+                }
+              )}
+              id='fa-at-link--attribution'
+            >
+              <Text
+                type='title'
+                color='white'
+                level={7}
+                extraClass='mb-0'
+                weight='medium'
+              >
+                Campaigns
+              </Text>
+            </Link>
 
             <Link
               to={`${PathUrls.Alerts}?type=realtime`}
