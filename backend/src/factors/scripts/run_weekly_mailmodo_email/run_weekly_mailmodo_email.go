@@ -6,7 +6,6 @@ import (
 	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
-	"factors/util"
 	U "factors/util"
 	"flag"
 	"fmt"
@@ -88,7 +87,7 @@ func main() {
 
 	for _, projectId := range projectIds {
 
-		if util.Int64ValueIn(projectId, blackListedProjectIds) {
+		if U.Int64ValueIn(projectId, blackListedProjectIds) {
 			log.WithField("project_id", projectId).Warn("Skipping the project.")
 			continue
 		}
