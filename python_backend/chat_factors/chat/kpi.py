@@ -4,13 +4,16 @@ import json
 from datetime import datetime, timedelta
 import pytz
 import Levenshtein
+from lib.data_services.factors_data_service import FactorsDataService
+from chat_factors.chat.helper import get_closest_match, ValueNotFoundError
 
 DEFAULT_TIMEZONE = "Asia/Kolkata"
 DEFAULT_CATEGORY = "events"
 DEFAULT_DISPLAY_CATEGORY = "website_session"
 
+
 # todo : Add error handling for matching not found
-def get_transformed_kpi_query(gpt_response, kpi_config,
+def get_transformed_kpi_query(pid, gpt_response, kpi_config,
                               raw_data_path=os.path.join('chat_factors/chatgpt_poc', 'data.json')):
     query_payload = {}
     try:
@@ -62,11 +65,10 @@ def get_transformed_kpi_query(gpt_response, kpi_config,
 
     break_down_info = add_break_down_info_kpi(display_category, gpt_response["qb"], kpi_config)
 
-    filter_info = add_filter_info_kpi(display_category, gpt_response["qf"], kpi_config)
+    filter_info = add_filter_info_kpi(pid, kpi_info, gpt_response["qf"], kpi_config)
 
     query_payload["gGBy"] = break_down_info
     query_payload["gFil"] = filter_info
-
 
     return query_payload
 
@@ -74,12 +76,12 @@ def get_transformed_kpi_query(gpt_response, kpi_config,
 def get_kpi_info(name, kpi_config):
     lowest_edit_distance = 100
     kpi_info = {}
+
     for category_config in kpi_config:
         for metric in category_config.get("metrics", []):
             current_string = metric.get("name")
             current_distance = Levenshtein.distance(name, current_string)
-            normalized_distance = current_distance / max(len(name), len(current_string))
-            if normalized_distance < 0.3 and current_distance < lowest_edit_distance:
+            if current_distance < lowest_edit_distance:
                 lowest_edit_distance = current_distance
                 best_match = current_string
                 kpi_info = {
@@ -88,14 +90,11 @@ def get_kpi_info(name, kpi_config):
                     "display_category": category_config.get("display_category"),
                     "kpi_query_type": metric.get("kpi_query_type"),
                 }
-        return kpi_info
+        if lowest_edit_distance / len(name) < 0.3:
+            return kpi_info
 
-    log.error("kpi not found in the kpi_config")
-    raise KPIOrPropertyNotFoundError(f"KPI with name '{name}' not found in the kpi_config")
-
-
-class KPIOrPropertyNotFoundError(Exception):
-    pass
+    log.error("KPI not found in the kpi_config")
+    raise ValueNotFoundError(f"KPI with name '{name}' not found in the kpi_config")
 
 
 # returns default time range as "this_week"
@@ -198,16 +197,16 @@ def get_break_down_info(display_category, breakdown_name, kpi_config):
                 return break_down_info
 
     log.error("breakdown property not found in the kpi_config")
-    raise KPIOrPropertyNotFoundError(f"breakdown property '{breakdown_name}' not found in the kpi_config")
+    raise ValueNotFoundError(f"breakdown property '{breakdown_name}' not found in the kpi_config")
 
 
-def add_filter_info_kpi(display_category, filters, kpi_config):
+def add_filter_info_kpi(pid, kpi_info, filters, kpi_config):
     query_filters = []
 
     if filters != '':
         filter_list = filters
         for filter_property in filter_list:
-            filter_info = get_filter_info(display_category, filter_property, kpi_config)
+            filter_info = get_filter_info(pid, kpi_info, filter_property, kpi_config)
             log.info("breakdown info for breakdown_property: %s", filter_info)
 
             query_filter = {
@@ -227,18 +226,17 @@ def add_filter_info_kpi(display_category, filters, kpi_config):
                 "lOp": "AND"
             }
 
-
             query_filters.append(query_filter)
 
     return query_filters
 
 
-def get_filter_info(display_category, filter_name_val, kpi_config):
+def get_filter_info(pid, kpi_info, filter_name_val, kpi_config):
     filter_info = {}
-    filter_name= filter_name_val["na"]
+    filter_name = filter_name_val["na"]
     lowest_edit_distance = 100
     for category_config in kpi_config:
-        if category_config.get("display_category") == display_category:
+        if category_config.get("display_category") == kpi_info["display_category"]:
             for metric in category_config.get("properties", []):
                 current_string = metric.get("name")
                 current_distance = Levenshtein.distance(filter_name, current_string)
@@ -250,14 +248,38 @@ def get_filter_info(display_category, filter_name_val, kpi_config):
                         "data_type": metric.get("data_type"),
                         "entity": metric.get("entity"),
                         "display_name": metric.get("display_name"),
-                        "filter_value" : filter_name_val["val"]
+                        "filter_value": filter_name_val["val"]
                     }
             if lowest_edit_distance / len(filter_name) < 0.2:
+                filter_info["filter_value"] = closest_filter_val_kpi(pid, kpi_info, filter_info)
                 return filter_info
 
     log.error("filter property not found in the kpi_config")
-    raise KPIOrPropertyNotFoundError(f"filter property '{filter_name}' not found in the kpi_config")
+    raise ValueNotFoundError(f"filter property '{filter_name}' not found in the kpi_config")
 
 
+def closest_filter_val_kpi(pid, kpi_info, filter_info):
+    try:
+        filter_values = FactorsDataService.get_kpi_filter_values(pid, kpi_info, filter_info)
 
+        if filter_values is None:
+            log.info("Filter values list is None")
+            return filter_info['filter_value']
 
+        # Check for empty filter_values
+        if not filter_values:
+            log.info("Filter values are empty")
+            return filter_info['filter_value']
+
+        # Extract the list of display names from the map
+        filter_values_display_name_list = list(filter_values.values())
+
+        filter_val = get_closest_match(filter_info['filter_value'], filter_values_display_name_list, 0.2)
+
+        return filter_val
+    except ValueNotFoundError as e:
+        log.error("An error occurred in closest_filter_val_kpi: %s", str(e))
+        raise
+    except Exception as e:
+        log.error("An unexpected error occurred in closest_filter_val_kpi: %s", str(e))
+        raise
