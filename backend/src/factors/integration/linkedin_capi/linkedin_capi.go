@@ -141,7 +141,7 @@ func (li *LinkedInCapiInfo) SendHelper(key *cache.Key, cachedWorkflow *model.Cac
 	var linkedCAPIPayloadBatch model.BatchLinkedinCAPIRequestPayload
 	linkedinCAPIPayloadString := U.GetPropertyValueAsString(cachedWorkflow.Message.MessageProperty["linkedCAPI_payload"])
 
-	err = U.DecodeJSONStringToStructType(linkedinCAPIPayloadString, linkedCAPIPayloadBatch)
+	err = U.DecodeJSONStringToStructType(linkedinCAPIPayloadString, &linkedCAPIPayloadBatch)
 	if err != nil {
 		logCtx.WithError(err).Error("failed to decode linkedin capi payload")
 	}
