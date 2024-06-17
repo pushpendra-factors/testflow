@@ -11,7 +11,7 @@ from chatgpt_poc.chat import get_answer_from_ir_model_local, get_answer_using_ir
 from chatgpt_poc.bert import embed_sentence
 from chat.final_query import get_url_and_query_payload_from_gpt_response, validate_gpt_response, \
     UnexpectedGptResponseError
-from chat.kpi import KPIOrPropertyNotFoundError
+from chat.kpi import ValueNotFoundError
 from google.cloud import storage
 from lib.data_services.factors_data_service import FactorsDataService
 import io
@@ -72,11 +72,11 @@ class ChatHandler(BaseHandler):
 
             cls.write(result_json)
 
-        except KPIOrPropertyNotFoundError as kpnfe:
+        except ValueNotFoundError as vnfe:
             # Handle kpi not found error here
-            log.error("CustomProcessingError processing request: %s", str(kpnfe))
+            log.error("CustomProcessingError processing request: %s", str(vnfe))
             cls.set_status(400)  # Bad Request
-            cls.write(json.dumps({'error': {'code': 400, 'message': str(kpnfe)}}))
+            cls.write(json.dumps({'error': {'code': 400, 'message': str(vnfe)}}))
         except Exception as e:
             # Handle other exceptions
             log.error("Error processing request: %s", str(e))

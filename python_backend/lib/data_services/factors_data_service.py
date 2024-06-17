@@ -8,6 +8,7 @@ import time
 
 from requests import Response
 from lib.utils.sync_util import SyncUtil
+from chat_factors.chat.helper import ValueNotFoundError
 
 
 # Note: This class currently holds 2 functionalities - 1. Fetching data 2. Provide data with proper transformation(sometimes).
@@ -243,7 +244,7 @@ class FactorsDataService:
 
     # Add sample response
     # Add failure handling.
-    
+
     # this throws an exception and it is caught at pipeline app level
     @classmethod
     def get_facebook_last_sync_info(cls, project_id, customer_account_id) -> dict:
@@ -257,7 +258,7 @@ class FactorsDataService:
         if resp is None or errMsg != '':
             log.error(errMsg)
             raise Exception(errMsg)
-        
+
         all_info: List = resp.json()
         sync_info_with_type: dict = {}
         for info in all_info:
@@ -284,4 +285,27 @@ class FactorsDataService:
             log.error("Failed to decode chat embeddings response")
             return None
 
-    
+    @classmethod
+    def get_kpi_filter_values(cls, pid, kpi_info, filter_info):
+        url: str = cls.data_service_path + "/chat/" + pid + "/v1" + "/kpi/filter_values"
+        payload = {
+            "category": kpi_info['category'],
+            "display_category": kpi_info['display_category'],
+            "object_type": kpi_info['display_category'],
+            "property_name": filter_info['filter_property'],
+            "entity": filter_info['entity'],
+            "me": "",
+            "is_property_mapping": False,
+        }
+
+        response = requests.post(url, json=payload)
+
+        if not response.ok:
+            raise ValueNotFoundError("unable to get filter values")
+
+        try:
+            filter_values = response.json()  # Assuming the response is JSON
+            return filter_values
+        except ValueError:
+            log.error("Failed to decode chat embeddings response")
+            return None
