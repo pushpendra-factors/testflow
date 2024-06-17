@@ -156,30 +156,13 @@ const FactorsLinkedInCAPI = ({
                     />
                   </div>
                 )}
-                <Text
-                  type={'title'}
-                  level={7}
-                  color={'grey'}
-                  extraClass={'m-0 mt-4 w-3/4'}
-                >
-                  Factors is a secure partner with Linkedin. 
-                  <a
-                    href='https://zapier.com/legal/data-privacy#step-1'
-                    target='_blank'
-                    style={{ color: 'grey', textDecoration: 'underline' }}
-                  >
-                    Your credentials are encrypted & can be removed at any time
-                  </a>
-                  . You can 
-                  <a
-                    href='https://zapier.com/app/login?next=%2Fapp%2Fconnections'
-                    target='_blank'
-                    style={{ color: 'grey', textDecoration: 'underline' }}
-                  >
-                    manage all of your connected accounts here
-                  </a>
-                  .
-                </Text>
+                 <Text
+                type={'title'}
+                level={7}
+                color={'grey'}
+                extraClass={'m-0 mt-2 mb-2'}
+              >{`Your credentials are encrypted & can be removed at any time. You can manage all of your connected accounts `}
+              <a target="_blank" href='https://app.factors.ai/settings/integration'>here.</a></Text>
               </div>
             </div>
             <div className='p-4 mt-4 flex items-center justify-end'>
