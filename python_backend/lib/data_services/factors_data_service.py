@@ -301,7 +301,8 @@ class FactorsDataService:
         response = requests.post(url, json=payload)
 
         if not response.ok:
-            raise ValueNotFoundError("unable to get filter values")
+            log.error("Failed to get filter values")
+            return {}
 
         try:
             filter_values = response.json()  # Assuming the response is JSON

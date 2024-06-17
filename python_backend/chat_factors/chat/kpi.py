@@ -259,14 +259,27 @@ def get_filter_info(pid, kpi_info, filter_name_val, kpi_config):
 
 
 def closest_filter_val_kpi(pid, kpi_info, filter_info):
-    filter_values = FactorsDataService.get_kpi_filter_values(pid, kpi_info, filter_info)
+    try:
+        filter_values = FactorsDataService.get_kpi_filter_values(pid, kpi_info, filter_info)
 
-    if filter_values is None:
-        raise ValueNotFoundError("Filter values list is None")
+        if filter_values is None:
+            log.info("Filter values list is None")
+            return filter_info['filter_value']
 
-    # Extract the list of display names from the map
-    filter_values_display_name_list = list(filter_values.values())
+        # Check for empty filter_values
+        if not filter_values:
+            log.info("Filter values are empty")
+            return filter_info['filter_value']
 
-    filter_val = get_closest_match(filter_info['filter_value'], filter_values_display_name_list, 0.2)
+        # Extract the list of display names from the map
+        filter_values_display_name_list = list(filter_values.values())
 
-    return filter_val
+        filter_val = get_closest_match(filter_info['filter_value'], filter_values_display_name_list, 0.2)
+
+        return filter_val
+    except ValueNotFoundError as e:
+        log.error("An error occurred in closest_filter_val_kpi: %s", str(e))
+        raise
+    except Exception as e:
+        log.error("An unexpected error occurred in closest_filter_val_kpi: %s", str(e))
+        raise
