@@ -873,12 +873,13 @@ func (store *MemSQL) getWorkflowMessageProperties(projectID int64,
 	// for  linkedin CAPI
 	if model.IsLinkedInCAPICofigByWorkflow(*workflowAlertBody) {
 
-		log.WithField("msgPropMap", msgPropMap).Info("Linkedin CAPI TEST - 872")
 		err := store.FillLinkedInPropertiesInCacheForWorkflow(&msgPropMap, allProperties, *workflowAlertBody)
 		if err != nil {
 			log.WithError(err).Error("failed to fill linkedin property")
+			return nil
 		}
-		return nil
+
+		log.WithField("msgPropMap", msgPropMap).WithField("allProperties", allProperties).Info("Linkedin CAPI TEST - 872")
 
 	}
 

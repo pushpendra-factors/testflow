@@ -3084,6 +3084,10 @@ func buildMapOfTimestampOrgIDCampaignIDV3(linkedinArr []LinkedinEventFieldsV3) (
 	return resultantMap, nil
 }
 
+type ActiveProjectIds struct {
+	ProjectId int64 `json:"project_id"`
+}
+
 func (store *MemSQL) GetActiveProjectByEventsPerformedTimeStamp(timestamp int64) ([]int64, error) {
 
 	query := "SELECT DISTINCT(project_id) from events where timestamp>=?"
@@ -3099,13 +3103,15 @@ func (store *MemSQL) GetActiveProjectByEventsPerformedTimeStamp(timestamp int64)
 	project_ids := make([]int64, 0)
 
 	for rows.Next() {
-		var project_id int64
+		var projectIdValue ActiveProjectIds
 
-		if err := db.ScanRows(rows, &project_id); err != nil {
+		if err := db.ScanRows(rows, &projectIdValue); err != nil {
 			log.WithError(err).Error("Failed to scan rows")
 			return nil, err
 		}
-		project_ids = append(project_ids, project_id)
+
+		project_ids = append(project_ids, projectIdValue.ProjectId)
+
 	}
 
 	return project_ids, nil
