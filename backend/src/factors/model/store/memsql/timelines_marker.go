@@ -619,7 +619,8 @@ func modifyFiltersForAllAccounts(globalFilters []model.QueryProperty) []model.Qu
 			break
 		}
 
-		if filter.GroupName == model.GROUP_NAME_DOMAINS {
+		// not including negative filters and domain type filters
+		if filter.GroupName == model.GROUP_NAME_DOMAINS || model.IsNegativeFilter(filter) {
 			continue
 		}
 		filter.LogicalOp = "OR"
