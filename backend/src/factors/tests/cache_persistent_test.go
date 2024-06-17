@@ -5,6 +5,8 @@ import (
 
 	"factors/cache"
 	cacheDB "factors/cache/db"
+	cachePersistent "factors/cache/persistent"
+	cacheRedis "factors/cache/redis"
 	"factors/model/model"
 	U "factors/util"
 
@@ -60,4 +62,27 @@ func TestCacheDBSetBatch(t *testing.T) {
 	assert.Equal(t, "value11", v1)
 	assert.Equal(t, "value22", v2)
 	assert.Equal(t, "value33", v3)
+}
+
+func TestCacheDBFallback(t *testing.T) {
+
+	// set cache only on redis
+	cacheKey1, _ := model.GetValuesByEventPropertyRollUpCacheKey(2, "$session", U.RandomLowerAphaNumString(5), "20240524")
+	err := cacheRedis.SetPersistent(cacheKey1, "value1", 7200)
+	assert.Nil(t, err)
+
+	v, b, err := cacheRedis.GetIfExistsPersistent(cacheKey1)
+	assert.Nil(t, err)
+	assert.True(t, b)
+	assert.Equal(t, "value1", v)
+
+	v, b, err = cachePersistent.GetIfExists(cacheKey1, true)
+	assert.Nil(t, err)
+	assert.True(t, b)
+	assert.NotEmpty(t, "value1", v)
+
+	v, err = cachePersistent.Get(cacheKey1, true)
+	assert.Nil(t, err)
+	assert.True(t, b)
+	assert.NotEmpty(t, "value1", v)
 }

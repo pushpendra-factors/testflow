@@ -1136,12 +1136,17 @@ func getEventNamesOrderedByOccurenceAndRecencyFromCache(projectID int64, dateKey
 	}
 	eventNames, _, err := pCache.GetIfExists(eventNamesKey, true)
 	if eventNames == "" {
-		logCtx.WithField("date_key", dateKey).Info("MISSING ROLLUP EN")
+		logCtx.WithError(err).WithField("date_key", dateKey).Info("MISSING ROLLUP EN")
 		return model.CacheEventNamesWithTimestamp{}, nil
 	}
 	var cacheEventNames model.CacheEventNamesWithTimestamp
 	err = json.Unmarshal([]byte(eventNames), &cacheEventNames)
 	if err != nil {
+		keyString, _ := eventNamesKey.Key()
+		log.WithError(err).
+			WithField("event_names", eventNames).
+			WithField("key", keyString).
+			Warn("JSON unmarshal error")
 		return model.CacheEventNamesWithTimestamp{}, err
 	}
 	return cacheEventNames, nil
