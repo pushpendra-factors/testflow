@@ -718,25 +718,30 @@ func (store *MemSQL) AddWorkflowToCache(workflow *model.Workflow, msgProps *U.Pr
 	return http.StatusCreated, nil
 }
 
-func (store *MemSQL) FillLinkedInPropertiesInCacheForWorkflow(msgPropMap *map[string]interface{}, properties *map[string]interface{}, workflowAlertBody model.WorkflowAlertBody) {
+func (store *MemSQL) FillLinkedInPropertiesInCacheForWorkflow(msgPropMap *map[string]interface{}, properties *map[string]interface{}, workflowAlertBody model.WorkflowAlertBody) error {
 
 	var linkedinCAPIConfig model.LinkedinCAPIConfig
 	if workflowAlertBody.AdditonalConfigurations != nil {
 		err := U.DecodePostgresJsonbToStructType(workflowAlertBody.AdditonalConfigurations, &linkedinCAPIConfig)
 		if err != nil {
 			log.WithError(err).Error("Jsonb decoding to struct failure")
-			return
+			return err
 		}
 	}
 
 	batchLinkedCAPIPayload, err := store.NewLinkedCapiRequestPayload(properties, linkedinCAPIConfig)
 	if err != nil {
 		log.WithError(err).Error("failed to get batchLinkedCAPIPayload")
-		return
+		return err
 	}
 
-	batchLinkedCAPIPayloadBytes, _ := json.Marshal(batchLinkedCAPIPayload)
+	batchLinkedCAPIPayloadBytes, err := json.Marshal(batchLinkedCAPIPayload)
+	if err != nil {
+		log.WithError(err).Error("failed to marshall batchLinkedCAPIPayload")
+		return err
+	}
 	(*msgPropMap)["linkedCAPI_payload"] = string(batchLinkedCAPIPayloadBytes)
+	return nil
 
 }
 
@@ -868,8 +873,13 @@ func (store *MemSQL) getWorkflowMessageProperties(projectID int64,
 	// for  linkedin CAPI
 	if model.IsLinkedInCAPICofigByWorkflow(*workflowAlertBody) {
 
-		store.FillLinkedInPropertiesInCacheForWorkflow(&msgPropMap, allProperties, *workflowAlertBody)
-		log.WithField("msgPropMap", msgPropMap).Info("Linkedin CAPI TEST - 865")
+		log.WithField("msgPropMap", msgPropMap).Info("Linkedin CAPI TEST - 872")
+		err := store.FillLinkedInPropertiesInCacheForWorkflow(&msgPropMap, allProperties, *workflowAlertBody)
+		if err != nil {
+			log.WithError(err).Error("failed to fill linkedin property")
+		}
+		return nil
+
 	}
 
 	// log.WithFields(log.Fields{

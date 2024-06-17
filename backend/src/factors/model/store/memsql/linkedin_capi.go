@@ -12,6 +12,35 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func fillUserIdentifierFromPropertiesForLinkedinCapi(properties *map[string]interface{}, linkedinCAPIRequestPayload *model.SingleLinkedinCAPIRequestPayload) {
+	if emailId, exists := (*properties)[U.EP_EMAIL]; exists {
+
+		hashedEmail, err := U.GetSHA256Hash(U.GetPropertyValueAsString(emailId))
+		if err != nil {
+			log.WithError(err).Error("Failed to hash email")
+		} else {
+			linkedinCAPIRequestPayload.User.UserIds = append(linkedinCAPIRequestPayload.User.UserIds, model.UserId{IDType: model.SHA256_EMAIL, IDValue: hashedEmail})
+		}
+	}
+
+	if emailId, exists := (*properties)[U.UP_EMAIL]; exists {
+
+		hashedEmail, err := U.GetSHA256Hash(U.GetPropertyValueAsString(emailId))
+		if err != nil {
+			log.WithError(err).Error("Failed to hash email")
+		} else {
+			linkedinCAPIRequestPayload.User.UserIds = append(linkedinCAPIRequestPayload.User.UserIds, model.UserId{IDType: model.SHA256_EMAIL, IDValue: hashedEmail})
+		}
+
+	}
+
+	if liclid, exists := (*properties)[U.EP_LICLID]; exists {
+
+		linkedinCAPIRequestPayload.User.UserIds = append(linkedinCAPIRequestPayload.User.UserIds, model.UserId{IDType: model.LINKEDIN_FIRST_PARTY_ADS_TRACKING_UUID, IDValue: U.GetPropertyValueAsString(liclid)})
+
+	}
+
+}
 func (store *MemSQL) NewLinkedCapiRequestPayload(properties *map[string]interface{}, linkedinCAPIConfig model.LinkedinCAPIConfig) (model.BatchLinkedinCAPIRequestPayload, error) {
 
 	linkedinCAPIRequestPayloadBatch := make([]model.SingleLinkedinCAPIRequestPayload, 0)
@@ -22,26 +51,7 @@ func (store *MemSQL) NewLinkedCapiRequestPayload(properties *map[string]interfac
 		return model.BatchLinkedinCAPIRequestPayload{}, errors.New("failed to hash email")
 	}
 
-	if emailId, exists := (*properties)[U.EP_EMAIL]; exists {
-
-		hashedEmail, err := U.GetSHA256Hash(U.GetPropertyValueAsString(emailId))
-		if err != nil {
-			log.WithError(err).Error("Failed to hash email")
-			return model.BatchLinkedinCAPIRequestPayload{}, errors.New("failed to hash email")
-		}
-		_linkedinCAPIRequestPayload.User.UserIds = append(_linkedinCAPIRequestPayload.User.UserIds, model.UserId{IDType: model.SHA256_EMAIL, IDValue: hashedEmail})
-	}
-
-	if emailId, exists := (*properties)[U.UP_EMAIL]; exists {
-
-		hashedEmail, err := U.GetSHA256Hash(U.GetPropertyValueAsString(emailId))
-		if err != nil {
-			log.WithError(err).Error("Failed to hash email")
-			return model.BatchLinkedinCAPIRequestPayload{}, errors.New("failed to hash email")
-		}
-		_linkedinCAPIRequestPayload.User.UserIds = append(_linkedinCAPIRequestPayload.User.UserIds, model.UserId{IDType: model.SHA256_EMAIL, IDValue: hashedEmail})
-
-	}
+	fillUserIdentifierFromPropertiesForLinkedinCapi(properties, &_linkedinCAPIRequestPayload)
 
 	if len(_linkedinCAPIRequestPayload.User.UserIds) == 0 {
 		log.Error("no user identifier found for linked capi")
@@ -61,12 +71,6 @@ func (store *MemSQL) NewLinkedCapiRequestPayload(properties *map[string]interfac
 			return model.BatchLinkedinCAPIRequestPayload{}, errors.New("timestamp older than 90 days")
 		}
 		_linkedinCAPIRequestPayload.ConversionHappenedAt = intTimestamp * int64(1000)
-
-	}
-
-	if liclid, exists := (*properties)[U.EP_LICLID]; exists {
-
-		_linkedinCAPIRequestPayload.User.UserIds = append(_linkedinCAPIRequestPayload.User.UserIds, model.UserId{IDType: model.LINKEDIN_FIRST_PARTY_ADS_TRACKING_UUID, IDValue: U.GetPropertyValueAsString(liclid)})
 
 	}
 

@@ -2808,7 +2808,7 @@ func TestCacheAlertForCurrentSegment(t *testing.T) {
 	})
 }
 
-func TestWorkflowCraetion(t *testing.T) {
+func TestWorkflowCreation(t *testing.T) {
 
 	r := gin.Default()
 	H.InitAppRoutes(r)
@@ -2823,7 +2823,7 @@ func TestWorkflowCraetion(t *testing.T) {
 	})
 	assert.Equal(t, http.StatusAccepted, status)
 
-	// linkedInCapiAlertbodyJsonString1 := `{"action_performed":"action_event","addtional_configuration":[{"account":"urn:li:sponsoredAccount:508934217","enabled":true,"id":17819097,"name":"MQL Conversions Alpha - Factors"}],"alert_limit":5,"breakdown_properties":[],"cool_down_time":1800,"description":"fe-testcapi-email-known","event":"$session","event_level":"user","filters":[{"en":"user","grpn":"user","lop":"AND","op":"notEqual","pr":"$email","ty":"categorical","va":"$none"}],"message_properties":{},"notifications":false,"repeat_alerts":true,"template_description":"","template_id":4000005,"template_title":"","title":"fe-testcapi-email-known"}`
+	linkedInCapiAlertbodyJsonString1 := `{"action_performed":"action_event","addtional_configuration":[{"account":"urn:li:sponsoredAccount:508934217","enabled":true,"id":17819097,"name":"MQL Conversions Alpha - Factors"}],"alert_limit":5,"breakdown_properties":[],"cool_down_time":1800,"description":"fe-testcapi-email-known","event":"$session","event_level":"user","filters":[{"en":"user","grpn":"user","lop":"AND","op":"notEqual","pr":"$email","ty":"categorical","va":"$none"}],"message_properties":{},"notifications":false,"repeat_alerts":true,"template_description":"","template_id":4000005,"template_title":"","title":"fe-testcapi-email-known"}`
 	linkedInCapiAlertbodyJsonString := `{
 		"action_performed": "action_event",
 		"alert_limit": 5,
@@ -2859,7 +2859,7 @@ func TestWorkflowCraetion(t *testing.T) {
 		err := U.DecodePostgresJsonbToStructType(&postgres.Jsonb{RawMessage: json.RawMessage(linkedInCapiAlertbodyJsonString)}, &workflow)
 		assert.Nil(t, err)
 
-		err = U.DecodePostgresJsonbToStructType(&postgres.Jsonb{RawMessage: json.RawMessage(linkedInCapiAlertbodyJsonString)}, &workflow)
+		err = U.DecodePostgresJsonbToStructType(&postgres.Jsonb{RawMessage: json.RawMessage(linkedInCapiAlertbodyJsonString1)}, &workflow)
 		assert.Nil(t, err)
 
 		wf, _, err := store.GetStore().CreateWorkflow(project.ID, agent.UUID, "", workflow)
