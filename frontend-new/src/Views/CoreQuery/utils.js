@@ -46,6 +46,8 @@ import {
   INITIAL_EVENT_WITH_PROPERTIES_STATE,
   INITIAL_STATE
 } from './constants';
+import { message } from 'antd';
+import logger from 'Utils/logger';
 
 export const initialState = INITIAL_STATE;
 
@@ -2012,6 +2014,7 @@ export const getEventsCSVData = async (
   formatDataBasedOnChartParams = {},
   comparisonQuery = null
 ) => {
+  let messageHandle = message.loading('Processing your data', 0);
   try {
     const res = await getEventsData(
       id,
@@ -2021,6 +2024,8 @@ export const getEventsCSVData = async (
       null,
       true
     );
+    messageHandle();
+    messageHandle = message.loading('Finalizing Report');
     const data = res.data.result || res.data;
     let resultantData = null;
     resultantData = resultantDataTransformation(
@@ -2121,10 +2126,13 @@ export const getEventsCSVData = async (
     }
     const tmp = tableDataSelector(d);
     const jsonArray = getCSVData(tmp);
-
+    messageHandle();
+    message.success('Report Downloaded!');
     return jsonArray;
   } catch (error) {
-    console.log('Error', error);
+    logger.error('Error', error);
+    if (messageHandle) messageHandle();
+    message.error('Failed to download report');
     return [];
   }
 };

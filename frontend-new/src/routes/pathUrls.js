@@ -20,6 +20,9 @@ export const PathUrls = {
   PathAnalysis: '/path-analysis',
   PathAnalysisInsights: '/path-analysis/insights',
 
+  FreqCap: '/freq-cap',
+  FreqCapView: '/freq-cap/:rule_id',
+
   // general settings
   SettingsGeneral: '/settings/general',
   SettingsMembers: '/settings/members',

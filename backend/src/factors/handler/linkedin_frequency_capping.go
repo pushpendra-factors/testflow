@@ -66,6 +66,7 @@ func CreateLinkedinCappingRulesHandler(c *gin.Context) (interface{}, int, string
 		log.WithError(err).Error("Failed to decode Json request on create linkedin capping handler.")
 		return nil, http.StatusInternalServerError, V1.PROCESSING_FAILED, "Failed to decode Json request on create linkedin capping handler.", true
 	}
+	linkedinCappingRulesReqPayload.ProjectID = projectID
 
 	linkedinCappingRule, errMsg, errCode := store.GetStore().CreateLinkedinCappingRule(projectID, &linkedinCappingRulesReqPayload)
 	if errCode != http.StatusCreated {
@@ -107,6 +108,7 @@ func UpdateLinkedinCappingRulesHandler(c *gin.Context) (interface{}, int, string
 		log.WithError(err).Error("Failed to decode Json request on update linkedin capping handler.")
 		return nil, http.StatusInternalServerError, V1.PROCESSING_FAILED, "Failed to decode Json request on create linkedin capping handler.", true
 	}
+	linkedinCappingRule.ProjectID = projectID
 
 	errMsg, errCode := store.GetStore().UpdateLinkedinCappingRule(projectID, &linkedinCappingRule)
 	if errCode != http.StatusAccepted {

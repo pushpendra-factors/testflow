@@ -32,7 +32,6 @@ function SixSignalFactorsIntegration({
         setLoading(true);
         udpateProjectSettings(activeProject.id, {
           int_factors_six_signal_key: true,
-          six_signal_config: {},
           // updating table user and account table config when six signal is activated
           timelines_config: getDefaultTimelineConfigForSixSignal(
             currentProjectSettings
@@ -63,8 +62,7 @@ function SixSignalFactorsIntegration({
       onOk: () => {
         setLoading(true);
         udpateProjectSettings(activeProject.id, {
-          int_factors_six_signal_key: false,
-          six_signal_config: {}
+          int_factors_six_signal_key: false
         })
           .then(() => {
             setLoading(false);

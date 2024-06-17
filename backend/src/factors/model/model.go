@@ -713,10 +713,11 @@ type Model interface {
 	GetCustomerUserIdFromUserId(projectID int64, id string) (string, int)
 	AssociateUserDomainsGroup(projectID int64, requestUserID string, requestGroupName, requestGroupUserID string) int
 	GetAssociatedDomainForUser(projectID int64, userID string, isAnonymous bool) (string, error)
-	GetUsersAssociatedToDomainList(projectID int64, domainGroupID int, domainID string, userStmnt string) ([]model.User, int)
+	GetUsersAssociatedToDomainList(projectID int64, domainGroupID int, domainID string, userStmnt string, limit int) ([]model.User, int)
 	GetDomainDetailsByID(projectID int64, id string, domGroupID int) (model.User, int)
 	GetAllDomainsByProjectID(projectID int64, domainGroupID int, limitVal int) ([]string, int)
 	GetAllDomainsForPreviewByProjectID(projectID int64, domainGroupID int, limitVal int, filters []model.QueryProperty, searchFilter []string) ([]string, int)
+	GetAccountAssociatedUserCountByProjectID(projectID int64, domainGroupID int) (int64, int)
 	GetLatestUpatedDomainsByProjectID(projectID int64, domainGroupID int, fromTime time.Time, limitVal int) ([]string, int)
 	UpdateAssociatedSegments(projectID int64, id string, associatedSegments map[string]model.AssociatedSegments) (int, error)
 	GetNonGroupUsersUpdatedAtGivenHour(projectID int64, fromTime time.Time) ([]model.User, int)
@@ -1202,8 +1203,8 @@ type Model interface {
 
 	//linkedin capi
 	GetLinkedInCAPICofigByWorkflowId(projectID int64, workflowID string) (model.LinkedinCAPIConfig, error)
-	FillConfigurationValuesForLinkedinCAPIWorkFlow(projectId int64, workflowAlertBody *model.WorkflowAlertBody)
-	FillLinkedInPropertiesInCacheForWorkflow(msgPropMap *map[string]interface{}, properties *map[string]interface{}, workflowAlertBody model.WorkflowAlertBody)
+	FillConfigurationValuesForLinkedinCAPIWorkFlow(projectId int64, workflowAlertBody *model.WorkflowAlertBody) error
+	FillLinkedInPropertiesInCacheForWorkflow(msgPropMap *map[string]interface{}, properties *map[string]interface{}, workflowAlertBody model.WorkflowAlertBody) error
 	NewLinkedCapiRequestPayload(properties *map[string]interface{}, linkedinCAPIConfig model.LinkedinCAPIConfig) (model.BatchLinkedinCAPIRequestPayload, error)
 
 	// linkedin frequency capping

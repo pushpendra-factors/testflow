@@ -646,7 +646,7 @@ function EventsBlock({
   };
 
   const renderDaysMenu = () => {
-    const daysArray = [7, 14, 30, 60, 90];
+    const daysArray = [7, 14, 30, 60, 90, 180];
     return (
       <Menu
         onClick={(info) => {

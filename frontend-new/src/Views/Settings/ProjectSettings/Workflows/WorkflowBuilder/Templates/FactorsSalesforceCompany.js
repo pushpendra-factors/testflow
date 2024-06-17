@@ -98,10 +98,8 @@ const FactorsSalesforceCompany = ({
         >
           <div className='flex flex-col p-4'>
             <Text type='title' level={7} color='grey' extraClass='m-0 mb-2'>
-              Factors is a secure partner with Zapier. Your credentials are
-              encrypted & can be removed at any time. You can manage all of your
-              connected accounts here.
-            </Text>
+            {`Your credentials are encrypted & can be removed at any time. You can manage all of your connected accounts `}
+            <a target="_blank" href='https://app.factors.ai/settings/integration'>here.</a></Text>
             <div className=''>
               <Button
                 // disabled={isSFIntEnabled}

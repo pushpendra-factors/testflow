@@ -45,9 +45,9 @@ type BatchLinkedInCAPIConversionsResponse struct {
 	LinkedInCAPIConversionsResponseList []SingleLinkedInCAPIConversionsResponse `json:"elements"`
 }
 type SingleLinkedInCAPIConversionsResponse struct {
-	ConversionsId          string `json:"id"`
+	ConversionsId          int64  `json:"id"`
 	ConversoinsDisplayName string `json:"name"`
-	IsEnabled              string `json:"enabled"`
+	IsEnabled              bool   `json:"enabled"`
 	AdAccount              string `json:"account"`
 }
 

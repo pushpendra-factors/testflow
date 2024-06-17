@@ -853,10 +853,12 @@ func (store *MemSQL) GetAllPropertiesForDomain(projectID int64, domainGroupId in
 	domainID string, userCount *int64) ([]model.User, int) {
 
 	userStmnt := "AND (is_group_user IS NULL OR is_group_user=0) ORDER BY properties_updated_timestamp DESC LIMIT 100"
+	userLimit := 100
 	grpUserStmnt := "AND is_group_user=1 ORDER BY properties_updated_timestamp DESC LIMIT 50"
+	groupUsersLimit := 50
 
 	// fetching top 100 non group users
-	users, status := store.GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID, userStmnt)
+	users, status := store.GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID, userStmnt, userLimit)
 
 	if status == http.StatusInternalServerError {
 		log.WithField("project_id", projectID).Error("Unable to find users for domain ", domainID)
@@ -864,7 +866,7 @@ func (store *MemSQL) GetAllPropertiesForDomain(projectID int64, domainGroupId in
 	}
 
 	// fetching top 50 group users
-	grpUsers, status := store.GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID, grpUserStmnt)
+	grpUsers, status := store.GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID, grpUserStmnt, groupUsersLimit)
 
 	if status == http.StatusInternalServerError || (len(users) == 0 && len(grpUsers) == 0) {
 		log.WithField("project_id", projectID).Error("Unable to find users for domain ", domainID)
@@ -893,8 +895,9 @@ func (store *MemSQL) GetAllGroupPropertiesForDomain(projectID int64, domainGroup
 	domainID string) ([]model.User, int) {
 
 	grpUserStmnt := "AND is_group_user=1 ORDER BY properties_updated_timestamp DESC LIMIT 50"
+	grpUserLimit := 50
 	// fetching top 50 group users
-	users, status := store.GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID, grpUserStmnt)
+	users, status := store.GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID, grpUserStmnt, grpUserLimit)
 
 	if status == http.StatusInternalServerError || len(users) == 0 {
 		log.WithField("project_id", projectID).Error("Unable to find users for domain ", domainID)

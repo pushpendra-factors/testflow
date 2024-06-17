@@ -3,6 +3,7 @@ import { PathUrls } from '../../../routes/pathUrls';
 import {
   checkMatchPath,
   isAlertsUrl,
+  isCampaignsUrl,
   isSettingsUrl
 } from '../appSidebar.helpers';
 
@@ -57,6 +58,14 @@ const useSidebarTitleConfig = () => {
       title: 'Automations',
       icon: 'radar',
       iconColor: '#8C8C8C'
+    };
+  }
+
+  if (isCampaignsUrl(pathname)) {
+    return {
+      title: 'Campaign Optimizer',
+      icon: '',
+      iconColor: ''
     };
   }
 

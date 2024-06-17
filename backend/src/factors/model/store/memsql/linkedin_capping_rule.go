@@ -114,8 +114,8 @@ func (store *MemSQL) validateLinkedinCappingRule(projectID int64, linkedinCappin
 		return errors.New("object IDs not found for campaign/campaign_group level rules")
 	}
 	// Product/cs inform
-	if linkedinCappingRule.ImpressionThreshold < 1000 && linkedinCappingRule.ClickThreshold < 5 {
-		return errors.New("min threshold value for impressions 1000, clicks 5")
+	if linkedinCappingRule.ImpressionThreshold < 500 && linkedinCappingRule.ClickThreshold < 3 {
+		return errors.New("min threshold value for impressions 500, clicks 3")
 	}
 	advRules := make([]model.AdvancedRuleFilters, 0)
 	if linkedinCappingRule.AdvancedRules != nil {
@@ -130,8 +130,8 @@ func (store *MemSQL) validateLinkedinCappingRule(projectID int64, linkedinCappin
 	}
 	for _, subRule := range advRules {
 		// Check with product team
-		if subRule.ImpressionThreshold < 1000 && subRule.ClickThreshold < 5 {
-			return errors.New("min threshold value for impressions 1000, clicks 5")
+		if subRule.ImpressionThreshold < 500 && subRule.ClickThreshold < 3 {
+			return errors.New("min threshold value for impressions 500, clicks 3")
 		}
 	}
 

@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"factors/config"
 	"factors/integration/linkedin_capi"
 	mid "factors/middleware"
+	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
 	"net/http"
@@ -12,13 +14,6 @@ import (
 
 func GetLinkedinCAPIConversionsList(c *gin.Context) {
 
-	workflowId := c.Query("workflow_id")
-
-	if workflowId == "" {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid workflow_id."})
-		return
-	}
-
 	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectId == 0 {
 		c.AbortWithStatusJSON(
@@ -27,13 +22,22 @@ func GetLinkedinCAPIConversionsList(c *gin.Context) {
 		return
 	}
 
-	config, err := store.GetStore().GetLinkedInCAPICofigByWorkflowId(projectId, workflowId)
-	if err != nil {
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err})
+	settings, errCode := store.GetStore().GetProjectSetting(projectId)
+	if errCode != http.StatusFound {
+		c.AbortWithStatusJSON(http.StatusNotFound, gin.H{"error": "Failed to get project settings."})
 		return
 	}
 
-	response, err := linkedin_capi.GetConversionFromLinkedCAPI(config)
+	config := model.LinkedinCAPIConfig{
+		LinkedInAccessToken: settings.IntLinkedinAccessToken,
+		LinkedInAdAccounts:  config.GetTokensFromStringListAsString(settings.IntLinkedinAdAccount),
+	}
+	if len(config.LinkedInAdAccounts) == 0 || config.LinkedInAccessToken == "" {
+		c.AbortWithStatusJSON(errCode, gin.H{"error": "no linked user found account found"})
+		return
+	}
+
+	response, err := linkedin_capi.GetLinkedInCapi().GetConversionFromLinkedCAPI(config)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "failed to get conversions "})
 		return

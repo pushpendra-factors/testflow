@@ -498,7 +498,7 @@ func InitAppRoutes(r *gin.Engine) {
 	authRouteGroup.POST("/:project_id/factors_deanon/provider/:name/enable", mid.FeatureMiddleware([]string{M.FEATURE_FACTORS_DEANONYMISATION}), UpdateFactorsDeanonProvider)
 
 	// linkedin_capi
-	authRouteGroup.POST("/:project_id/linkedin_capi/conversions", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}), GetLinkedinCAPIConversionsList)
+	authRouteGroup.GET("/:project_id/linkedin_capi/conversions", mid.FeatureMiddleware([]string{M.FEATURE_LINKEDIN}), GetLinkedinCAPIConversionsList)
 
 	// weekly mailmodo mail
 	authRouteGroup.GET("/:project_id/internal/weekly_email_metrics", mid.SetLoggedInAgentInternalOnly(), stringifyWrapper(GetWeeklyMailmodoEmailMetricsHandler))
@@ -759,6 +759,7 @@ func InitDataServiceRoutes(r *gin.Engine) {
 	dataServiceRouteGroup.GET("/chat/app/matching", IH.DataServiceGetMatchingEmbeddings)
 	dataServiceRouteGroup.GET("/chat/job/missing", IH.DataServiceGetMissingPrompts)
 	dataServiceRouteGroup.DELETE("/chat/job", IH.DataServiceDeleteDataByProjectId)
+	dataServiceRouteGroup.POST("/chat/:project_id"+ROUTE_VERSION_V1+"/kpi/filter_values", mid.SetScopeProjectId(), responseWrapper(V1.GetKPIFilterValuesHandler))
 
 }
 

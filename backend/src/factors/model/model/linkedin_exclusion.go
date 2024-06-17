@@ -8,6 +8,7 @@ import (
 )
 
 type LinkedinExclusion struct {
+	ID                    string          `json:"id"`
 	ProjectID             int64           `gorm:"primary_key:true;auto_increment:false" json:"project_id"`
 	OrgID                 string          `gorm:"primary_key:true;auto_increment:false" json:"org_id"`
 	Timestamp             int64           `gorm:"primary_key:true;auto_increment:false" json:"timestamp"` //format yyyymmdd

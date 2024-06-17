@@ -206,6 +206,8 @@ func main() {
 	numberOfRunsForPreview := flag.Int("number_of_runs_for_preview", 10, "No of runs to process domains for preview using marker per run.")
 	accountLimitPreviewListing := flag.Int("account_limit_preview_listing", 100, "No of accounts to show for preview using marker per run.")
 	useMarkerByProjectID := flag.String("use_marker_by_project_id", "", "List of projectIds to enable segment marker.")
+	useOptimisedEventsQueryProjectIDs := flag.String("use_optimised_events_query_project_ids", "",
+		"Project Id to enable optimised query for event based filters check For Marker. A comma separated list of project Ids and supports '*' for all projects. ex: 1,2,6,9")
 	enableNewAllAccountsByProjectID := flag.String("enable_new_all_accounts_by_project_id", "", "List of projectIds to enable domain.")
 	IngestionTimezoneEnabledProjectIDs := flag.String("ingestion_timezone_enabled_projects", "", "List of projectIds whose ingestion timezone is enabled.")
 	enableEventFiltersInSegments := flag.Bool("enable_event_filters_in_segments", false, "Enables adding event filters in segment query")
@@ -382,6 +384,7 @@ func main() {
 		NumberOfRunsForPreview:                         *numberOfRunsForPreview,
 		AccountLimitPreviewListing:                     *accountLimitPreviewListing,
 		UseMarkerByProjectID:                           *useMarkerByProjectID,
+		UseOptimisedEventsQueryProjectIDs:              *useOptimisedEventsQueryProjectIDs,
 		IngestionTimezoneEnabledProjectIDs:             C.GetTokensFromStringListAsString(*IngestionTimezoneEnabledProjectIDs),
 		EnableEventFiltersInSegments:                   *enableEventFiltersInSegments,
 		EnableFeatureGates:                             *enableFeatureGates,

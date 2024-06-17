@@ -5,9 +5,9 @@ import styles from './index.module.scss';
 import { isAlertsUrl } from './appSidebar.helpers';
 import { useHistory, useLocation } from 'react-router-dom';
 import { PathUrls } from 'Routes/pathUrls';
-import useQuery from 'hooks/useQuery';
-import { useSelector } from 'react-redux';
-import { featureLock } from 'Routes/feature';
+import useQuery from 'hooks/useQuery'; 
+import useFeatureLock from 'hooks/useFeatureLock';
+import { FEATURES } from 'Constants/plans.constants';
 
 const AlertsSidebar = () => {
   const history = useHistory();
@@ -18,8 +18,11 @@ const AlertsSidebar = () => {
 
   const [alertType, setAlertType] = useState('realtime');
 
-  const { agent_details } = useSelector((state: any) => state.agent);
+  const featureFlag = useFeatureLock(FEATURES.FEATURE_WORKFLOWS);
 
+  const featureLocked =
+    featureFlag.isLoading === false && featureFlag.isFeatureLocked === true;
+    
   useEffect(() => {
     const type = routeQuery.get('type');
     if (type && ['realtime', 'weekly'].includes(type)) {
@@ -89,7 +92,7 @@ const AlertsSidebar = () => {
         </div>
       </div>
 
-      {featureLock(agent_details?.email) && (
+      {!featureLocked && (
         <div
           role='button'
           onClick={() => {

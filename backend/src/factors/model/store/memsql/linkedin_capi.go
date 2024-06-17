@@ -12,6 +12,35 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func fillUserIdentifierFromPropertiesForLinkedinCapi(properties *map[string]interface{}, linkedinCAPIRequestPayload *model.SingleLinkedinCAPIRequestPayload) {
+	if emailId, exists := (*properties)[U.EP_EMAIL]; exists {
+
+		hashedEmail, err := U.GetSHA256Hash(U.GetPropertyValueAsString(emailId))
+		if err != nil {
+			log.WithError(err).Error("Failed to hash email")
+		} else {
+			linkedinCAPIRequestPayload.User.UserIds = append(linkedinCAPIRequestPayload.User.UserIds, model.UserId{IDType: model.SHA256_EMAIL, IDValue: hashedEmail})
+		}
+	}
+
+	if emailId, exists := (*properties)[U.UP_EMAIL]; exists {
+
+		hashedEmail, err := U.GetSHA256Hash(U.GetPropertyValueAsString(emailId))
+		if err != nil {
+			log.WithError(err).Error("Failed to hash email")
+		} else {
+			linkedinCAPIRequestPayload.User.UserIds = append(linkedinCAPIRequestPayload.User.UserIds, model.UserId{IDType: model.SHA256_EMAIL, IDValue: hashedEmail})
+		}
+
+	}
+
+	if liclid, exists := (*properties)[U.EP_LICLID]; exists {
+
+		linkedinCAPIRequestPayload.User.UserIds = append(linkedinCAPIRequestPayload.User.UserIds, model.UserId{IDType: model.LINKEDIN_FIRST_PARTY_ADS_TRACKING_UUID, IDValue: U.GetPropertyValueAsString(liclid)})
+
+	}
+
+}
 func (store *MemSQL) NewLinkedCapiRequestPayload(properties *map[string]interface{}, linkedinCAPIConfig model.LinkedinCAPIConfig) (model.BatchLinkedinCAPIRequestPayload, error) {
 
 	linkedinCAPIRequestPayloadBatch := make([]model.SingleLinkedinCAPIRequestPayload, 0)
@@ -22,25 +51,11 @@ func (store *MemSQL) NewLinkedCapiRequestPayload(properties *map[string]interfac
 		return model.BatchLinkedinCAPIRequestPayload{}, errors.New("failed to hash email")
 	}
 
-	if emailId, exists := (*properties)[U.EP_EMAIL]; exists {
+	fillUserIdentifierFromPropertiesForLinkedinCapi(properties, &_linkedinCAPIRequestPayload)
 
-		hashedEmail, err := U.GetSHA256Hash(U.GetPropertyValueAsString(emailId))
-		if err != nil {
-			log.WithError(err).Error("Failed to hash email")
-			return model.BatchLinkedinCAPIRequestPayload{}, errors.New("failed to hash email")
-		}
-		_linkedinCAPIRequestPayload.User.UserIds = append(_linkedinCAPIRequestPayload.User.UserIds, model.UserId{IDType: model.SHA256_EMAIL, IDValue: hashedEmail})
-	}
-
-	if emailId, exists := (*properties)[U.UP_EMAIL]; exists {
-
-		hashedEmail, err := U.GetSHA256Hash(U.GetPropertyValueAsString(emailId))
-		if err != nil {
-			log.WithError(err).Error("Failed to hash email")
-			return model.BatchLinkedinCAPIRequestPayload{}, errors.New("failed to hash email")
-		}
-		_linkedinCAPIRequestPayload.User.UserIds = append(_linkedinCAPIRequestPayload.User.UserIds, model.UserId{IDType: model.SHA256_EMAIL, IDValue: hashedEmail})
-
+	if len(_linkedinCAPIRequestPayload.User.UserIds) == 0 {
+		log.Error("no user identifier found for linked capi")
+		return model.BatchLinkedinCAPIRequestPayload{}, errors.New("no user identifier found for linked capi")
 	}
 
 	if timestamp, exists := (*properties)[U.EP_TIMESTAMP]; exists {
@@ -59,12 +74,6 @@ func (store *MemSQL) NewLinkedCapiRequestPayload(properties *map[string]interfac
 
 	}
 
-	if liclid, exists := (*properties)[U.EP_LICLID]; exists {
-
-		_linkedinCAPIRequestPayload.User.UserIds = append(_linkedinCAPIRequestPayload.User.UserIds, model.UserId{IDType: model.LINKEDIN_FIRST_PARTY_ADS_TRACKING_UUID, IDValue: U.GetPropertyValueAsString(liclid)})
-
-	}
-
 	if len(linkedinCAPIConfig.Conversions.LinkedInCAPIConversionsResponseList) == 0 {
 		log.Error("no conversions found for linked capi")
 		return model.BatchLinkedinCAPIRequestPayload{}, errors.New("no conversions found for linked capi")
@@ -73,7 +82,7 @@ func (store *MemSQL) NewLinkedCapiRequestPayload(properties *map[string]interfac
 	for _, conversion := range linkedinCAPIConfig.Conversions.LinkedInCAPIConversionsResponseList {
 
 		linkedinCAPIRequestPayload := _linkedinCAPIRequestPayload
-		linkedinCAPIRequestPayload.Conversion = fmt.Sprintf("urn:lla:llaPartnerConversion:%s", conversion.ConversionsId)
+		linkedinCAPIRequestPayload.Conversion = fmt.Sprintf("urn:lla:llaPartnerConversion:%d", conversion.ConversionsId)
 		linkedinCAPIRequestPayloadBatch = append(linkedinCAPIRequestPayloadBatch, linkedinCAPIRequestPayload)
 
 	}
@@ -113,42 +122,48 @@ func (store *MemSQL) GetLinkedInCAPICofigByWorkflowId(projectID int64, workflowI
 	return linkedinCAPIConfig, nil
 }
 
-func (store *MemSQL) FillConfigurationValuesForLinkedinCAPIWorkFlow(projectId int64, workflowAlertBody *model.WorkflowAlertBody) {
+func (store *MemSQL) FillConfigurationValuesForLinkedinCAPIWorkFlow(projectId int64, workflowAlertBody *model.WorkflowAlertBody) error {
 
 	logCtx := log.WithFields(log.Fields{
 		"projectID": projectId,
 	})
 	linkedInWorkflowConfig := model.LinkedinCAPIConfig{}
+	linkedInCAPIConversionsResponseList := []model.SingleLinkedInCAPIConversionsResponse{}
 	settings, errCode := store.GetProjectSetting(projectId)
 	if errCode != http.StatusFound {
-		return
+		return errors.New("project settings not found")
 	}
 
-	err := U.DecodePostgresJsonbToStructType(workflowAlertBody.AdditonalConfigurations, linkedInWorkflowConfig)
+	if settings.IntLinkedinAccessToken == "" || settings.IntLinkedinAdAccount == "" {
+		logCtx.Error("unable to fetch linkedin account info ")
+		return errors.New("unable to fetch linkedin account info ")
+	}
+
+	err := U.DecodePostgresJsonbToStructType(workflowAlertBody.AdditonalConfigurations, &linkedInCAPIConversionsResponseList)
 	if err != nil {
 		logCtx.Error(err)
-		return
+		return err
 	}
 
+	linkedInWorkflowConfig.Conversions = model.BatchLinkedInCAPIConversionsResponse{LinkedInCAPIConversionsResponseList: linkedInCAPIConversionsResponseList}
 	linkedInWorkflowConfig.LinkedInAccessToken = settings.IntLinkedinAccessToken
-
 	linkedInWorkflowConfig.LinkedInAdAccounts = config.GetTokensFromStringListAsString(settings.IntLinkedinAdAccount)
-
-	linkedInWorkflowConfig.IsLinkedInCAPI = true
 
 	if len(linkedInWorkflowConfig.Conversions.LinkedInCAPIConversionsResponseList) == 0 {
 		logCtx.Error("No conversions for linkedin capi")
-		return
+		return errors.New("No conversions for linkedin capi")
 	}
+
+	linkedInWorkflowConfig.IsLinkedInCAPI = true
 
 	additonalConfigurations, err := U.EncodeStructTypeToPostgresJsonb(linkedInWorkflowConfig)
 	if err != nil {
 		logCtx.Error(err)
-		return
+		return err
 	}
 
 	workflowAlertBody.AdditonalConfigurations = additonalConfigurations
 
-	return
+	return nil
 
 }

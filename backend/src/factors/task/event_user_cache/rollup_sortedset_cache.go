@@ -313,7 +313,7 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 						valueKeySortedSet,
 						userPropertyCategoryKeySortedSet,
 						userValueKeySortedSet},
-						true,
+						false,
 					)
 					if err != nil {
 						logCtx.WithError(err).Error("Failed to del cache keys")
@@ -423,10 +423,11 @@ func DoRollUpSortedSet(configs map[string]interface{}) (map[string]interface{}, 
 				logCtx.Info("Cached group property values rollup.")
 
 				if isCurrentDay == false {
+					// Delete sortedset on the persistent redis.
 					err = pCache.Del([]*cache.Key{
 						groupPropertyCategoryKeySortedSet,
 						groupValueKeySortedSet,
-					}, true,
+					}, false,
 					)
 					if err != nil {
 						logCtx.WithError(err).Error("Failed to del cache keys")

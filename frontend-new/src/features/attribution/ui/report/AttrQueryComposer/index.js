@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { connect, useSelector, useDispatch } from 'react-redux';
 import { bindActionCreators } from 'redux';
-import styles from './index.module.scss';
 import { SVG, Text } from 'Components/factorsComponents';
-import ConversionGoalBlock from './ConversionGoalBlock';
 import FaDatepicker from 'Components/FaDatepicker';
 import ComposerBlock from 'Components/QueryCommons/ComposerBlock';
 import { INITIALIZE_GROUPBY } from 'Reducers/coreQuery/actions';
@@ -24,10 +22,12 @@ import {
   setAttrDateRange
 } from 'Attribution/state/actions';
 import { Button, Tooltip } from 'antd';
+import { SET_ATTR_QUERIES } from 'Attribution/state/action.constants';
 import MarkTouchpointBlock from './MarkTouchpointBlock';
 import AttributionOptions from './AttributionOptions';
 import LinkedEventsBlock from './LinkedEventsBlock';
-import { SET_ATTR_QUERIES } from 'Attribution/state/action.constants';
+import ConversionGoalBlock from './ConversionGoalBlock';
+import styles from './index.module.scss';
 
 const AttrQueryComposer = ({
   activeProject,
@@ -108,50 +108,44 @@ const AttrQueryComposer = ({
   };
 
   const renderConversionBlock = () => {
-    const qs = attrQueries.map((query, index) => {
-      return (
-        <ConversionGoalBlock
-          eventGoal={query}
-          eventGoalChange={(val) => setToQueries(val, index)}
-          delEvent={() => delQuery(index)}
-          group_analysis={'all'}
-          showDerivedKPI={false}
-        ></ConversionGoalBlock>
-      );
-    });
+    const qs = attrQueries.map((query, index) => (
+      <ConversionGoalBlock
+        eventGoal={query}
+        eventGoalChange={(val) => setToQueries(val, index)}
+        delEvent={() => delQuery(index)}
+        group_analysis='all'
+        showDerivedKPI={false}
+      />
+    ));
 
     if (qs.length < 5) {
       qs.push(
         <ConversionGoalBlock
           eventGoalChange={(val) => setToQueries(val, -1)}
-          group_analysis={'all'}
+          group_analysis='all'
           showDerivedKPI={false}
-        ></ConversionGoalBlock>
+        />
       );
     }
 
     return qs;
   };
 
-  const renderMarkTouchpointBlock = () => {
-    return (
-      <MarkTouchpointBlock
-        touchPoint={touchPoint}
-        setTouchpoint={(tchPoint) => setTouchPoint(tchPoint)}
-      ></MarkTouchpointBlock>
-    );
-  };
+  const renderMarkTouchpointBlock = () => (
+    <MarkTouchpointBlock
+      touchPoint={touchPoint}
+      setTouchpoint={(tchPoint) => setTouchPoint(tchPoint)}
+    />
+  );
 
-  const renderAttributionOptions = () => {
-    return (
-      <AttributionOptions
-        models={models}
-        setModelOpt={(val) => setModels(val)}
-        window={window}
-        setWindowOpt={(win) => setWindow(win)}
-      ></AttributionOptions>
-    );
-  };
+  const renderAttributionOptions = () => (
+    <AttributionOptions
+      models={models}
+      setModelOpt={(val) => setModels(val)}
+      window={window}
+      setWindowOpt={(win) => setWindow(win)}
+    />
+  );
 
   const toggleLinkEvExpansion = () => {
     if (models.length > 1) return null;
@@ -163,7 +157,7 @@ const AttrQueryComposer = ({
   };
 
   const setDateRange = (ranges) => {
-    const dtRange = Object.assign({}, dateRange);
+    const dtRange = { ...dateRange };
     if (ranges && ranges.startDate) {
       if (Array.isArray(ranges.startDate)) {
         dtRange.from = ranges.startDate[0];
@@ -196,30 +190,30 @@ const AttrQueryComposer = ({
             presetRange
             quarterPicker
             monthPicker
-            buttonSize={`large`}
-            className={`mr-2`}
+            buttonSize='large'
+            className='mr-2'
             range={{
               startDate: dateRange.from,
               endDate: dateRange.to
             }}
             placement='topRight'
             onSelect={setDateRange}
-            withoutYesterday={true}
+            withoutYesterday
           />
         ) : (
           <Button
-            className={`mr-2`}
-            size={'large'}
-            type={'default'}
+            className='mr-2'
+            size='large'
+            type='default'
             onClick={() => setCollapse(false)}
           >
-            <SVG name={`arrowUp`} size={20} extraClass={`mr-1`}></SVG>Collapse
-            all
+            <SVG name='arrowUp' size={20} extraClass='mr-1' />
+            Collapse all
           </Button>
         )}
         <Button
-          className={`ml-2`}
-          size={'large'}
+          className='ml-2'
+          size='large'
           type='primary'
           onClick={handleRunQuery}
         >
@@ -230,7 +224,7 @@ const AttrQueryComposer = ({
   };
 
   const setGroupAnalysis = (group) => {
-    const opts = Object.assign({}, queryOptions);
+    const opts = { ...queryOptions };
     opts.group_analysis = group;
     opts.globalFilters = [];
     dispatch({
@@ -246,30 +240,30 @@ const AttrQueryComposer = ({
   try {
     return (
       <div className={`${styles.composer}`}>
-        {/*renderGroupSection()*/}
+        {/* renderGroupSection() */}
         <ComposerBlock
-          blockTitle={'CONVERSION GOALS'}
+          blockTitle='CONVERSION GOALS'
           isOpen={convGblockOpen}
-          showIcon={true}
+          showIcon
           onClick={() => setConvGblockOpen(!convGblockOpen)}
-          extraClass={`no-padding-l no-padding-r`}
+          extraClass='no-padding-l no-padding-r'
         >
           {renderConversionBlock()}
         </ComposerBlock>
 
         {eventGoal?.label?.length || attrQueries.length ? (
-          <div className={`no-padding-l no-padding-r`}>
+          <div className='no-padding-l no-padding-r'>
             {renderMarkTouchpointBlock()}
           </div>
         ) : null}
 
         {eventGoal?.label?.length || attrQueries.length ? (
           <ComposerBlock
-            blockTitle={'Attribution Model'}
+            blockTitle='Attribution Model'
             isOpen={criteriablockOpen}
-            showIcon={true}
+            showIcon
             onClick={() => setCriteriablockOpen(!criteriablockOpen)}
-            extraClass={`no-padding-l no-padding-r`}
+            extraClass='no-padding-l no-padding-r'
           >
             {renderAttributionOptions()}
           </ComposerBlock>

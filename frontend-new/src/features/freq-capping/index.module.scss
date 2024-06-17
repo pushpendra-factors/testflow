@@ -1,0 +1,57 @@
+.antdActionMenu {
+  min-width: 200px;
+  border-radius: 5px;
+
+  :global(.ant-dropdown-menu-item) {
+    border-radius: 10px;
+    padding: 10px 12px !important;
+  }
+
+  :global(.anticon) {
+    vertical-align: 0px !important;
+  }
+}
+
+.left-tab-button {
+  border-top-left-radius: 0.5rem !important;
+  border-bottom-left-radius: 0.5rem !important;
+}
+
+.right-tab-button {
+  border-top-right-radius: 0.5rem !important;
+  border-bottom-right-radius: 0.5rem !important;
+}
+
+.advance-rules-cap {
+  :global(.ant-collapse-content) {
+    overflow: visible;
+  }
+}
+
+.cap-table {
+  :global(.ant-empty-normal) {
+    display: none;
+  }
+
+  :global(.fa-table--basic .ant-table-tbody .ant-table-cell) {
+    border-bottom: 0px !important;
+  }
+
+  :global(.ant-table-footer) {
+    background: none;
+  }
+}
+
+.header-title {
+  :global(.ant-typography-edit-content) {
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+}
+
+.add-filter-button {
+  width: fit-content;
+  &:hover {
+    background: transparent;
+  }
+}

@@ -26,7 +26,7 @@ type LinkedinCappingRule struct {
 	ClickThreshold        int64           `json:"click_threshold"`
 	IsAdvancedRuleEnabled bool            `json:"is_advanced_rule_enabled"`
 	AdvancedRuleType      string          `json:"advanced_rule_type"` //account or segment
-	AdvancedRules         *postgres.Jsonb `json:"advanced_rule"`
+	AdvancedRules         *postgres.Jsonb `json:"advanced_rules"`
 	CreatedAt             time.Time       `json:"created_at"`
 	UpdatedAt             time.Time       `json:"updated_at"`
 }

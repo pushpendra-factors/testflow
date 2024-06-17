@@ -4,10 +4,43 @@ import { Button, Divider, notification, Spin, Tooltip } from 'antd';
 import { Link, useHistory, useLocation } from 'react-router-dom';
 import { Text, SVG } from 'Components/factorsComponents';
 import FaPublicHeader from 'Components/FaPublicHeader';
-import style from './index.module.scss';
 import { ConnectedProps, connect, useSelector } from 'react-redux';
 
-import SideDrawer from './components/SideDrawer';
+// import FaSelect from 'Components/FaSelect';
+import FaSelect from 'Components/GenericComponents/FaSelect';
+import useAgentInfo from 'hooks/useAgentInfo';
+import useQuery from 'hooks/useQuery';
+import logger from 'Utils/logger';
+import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
+import { OptionType } from 'Components/GenericComponents/FaSelect/types';
+import { setShowAnalyticsResult } from 'Reducers/coreQuery/actions';
+import { bindActionCreators } from 'redux';
+import usePrevious from 'hooks/usePrevious';
+import RangeNudge from 'Components/GenericComponents/RangeNudge';
+import { FeatureConfigState } from 'Reducers/featureConfig/types';
+import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
+import {
+  VisitorReportActions,
+  initialState,
+  visitorReportReducer
+} from './localStateReducer';
+import ShareModal from './components/ShareModal';
+import {
+  fetchPageViewUrls,
+  getSavedReportDates,
+  getSixSignalReportData,
+  getSixSignalReportPublicData,
+  shareSixSignalReport
+} from '../state/services';
+import { ALL_CHANNEL, SHARE_QUERY_PARAMS } from '../const';
+import ReportTable from './components/ReportTable';
+import {
+  ShareApiResponse,
+  WeekStartEnd,
+  ReportApiResponse,
+  SavedReportDatesApiResponse,
+  PageViewUrlApiResponse
+} from '../types';
 import {
   generateEllipsisOption,
   generateUnsavedReportDateRanges,
@@ -16,41 +49,8 @@ import {
   parseResultGroupResponse,
   parseSavedReportDates
 } from '../utils';
-// import FaSelect from 'Components/FaSelect';
-import FaSelect from 'Components/GenericComponents/FaSelect';
-import {
-  ShareApiResponse,
-  WeekStartEnd,
-  ReportApiResponse,
-  SavedReportDatesApiResponse,
-  PageViewUrlApiResponse
-} from '../types';
-import ReportTable from './components/ReportTable';
-import { ALL_CHANNEL, SHARE_QUERY_PARAMS } from '../const';
-import {
-  fetchPageViewUrls,
-  getSavedReportDates,
-  getSixSignalReportData,
-  getSixSignalReportPublicData,
-  shareSixSignalReport
-} from '../state/services';
-import useAgentInfo from 'hooks/useAgentInfo';
-import ShareModal from './components/ShareModal';
-import useQuery from 'hooks/useQuery';
-import logger from 'Utils/logger';
-import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
-import { OptionType } from 'Components/GenericComponents/FaSelect/types';
-import { setShowAnalyticsResult } from 'Reducers/coreQuery/actions';
-import { bindActionCreators } from 'redux';
-import {
-  VisitorReportActions,
-  initialState,
-  visitorReportReducer
-} from './localStateReducer';
-import usePrevious from 'hooks/usePrevious';
-import RangeNudge from 'Components/GenericComponents/RangeNudge';
-import { FeatureConfigState } from 'Reducers/featureConfig/types';
-import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
+import SideDrawer from './components/SideDrawer';
+import style from './index.module.scss';
 
 const SixSignalReport = ({
   setShowAnalyticsResult
@@ -82,10 +82,10 @@ const SixSignalReport = ({
     : false;
 
   const isSixSignalActivated = currentProjectSettings
-    ? !currentProjectSettings?.int_factors_six_signal_key &&
-      !currentProjectSettings?.int_client_six_signal_key
-      ? false
-      : true
+    ? !(
+        !currentProjectSettings?.int_factors_six_signal_key &&
+        !currentProjectSettings?.int_client_six_signal_key
+      )
     : true;
 
   const showDrawer = () => {
@@ -104,25 +104,20 @@ const SixSignalReport = ({
 
   const getOptions = (values: string[], selectedOptions?: string[]) => {
     if (!values || !Array.isArray(values)) return [];
-    return values.map((value: string) => {
-      return {
-        value,
-        label: value,
-        isSelected: selectedOptions
-          ? selectedOptions.indexOf(value) > -1
-          : undefined
-      };
-    });
+    return values.map((value: string) => ({
+      value,
+      label: value,
+      isSelected: selectedOptions
+        ? selectedOptions.indexOf(value) > -1
+        : undefined
+    }));
   };
 
-  const getDateOptions = () => {
-    return state.dateValues.map((date) => {
-      return {
-        label: date.formattedRangeOption,
-        value: date.formattedRange
-      };
-    });
-  };
+  const getDateOptions = () =>
+    state.dateValues.map((date) => ({
+      label: date.formattedRangeOption,
+      value: date.formattedRange
+    }));
 
   const handleCampaignApplyClick = (
     _options: OptionType[],
@@ -132,7 +127,7 @@ const SixSignalReport = ({
       type: VisitorReportActions.SET_SELECTED_CAMPAIGNS,
       payload: selectedOption
     });
-    //For resetting Channel filter
+    // For resetting Channel filter
     localDispatch({
       type: VisitorReportActions.SET_SELECTED_CHANNELS,
       payload: ''
@@ -158,7 +153,7 @@ const SixSignalReport = ({
 
   const handleShareClick = async () => {
     try {
-      //checking if share data is already fetched for the dates
+      // checking if share data is already fetched for the dates
       if (state.selectedDate === state.shareData?.data?.dateSelected) {
         localDispatch({
           type: VisitorReportActions.SET_SHARE_MODAL_VISIBILITY,
@@ -237,7 +232,7 @@ const SixSignalReport = ({
     });
   };
 
-  //Effect for hiding the side panel and menu
+  // Effect for hiding the side panel and menu
   useEffect(() => {
     let hideSidePanel = false;
     if (!isLoggedIn) {
@@ -251,12 +246,12 @@ const SixSignalReport = ({
   }, [isLoggedIn, setShowAnalyticsResult]);
 
   // Todo: Remove this effect once this is set with the help of route config
-  //Effect for setting page title
+  // Effect for setting page title
   useEffect(() => {
     document.title = 'Visitor Identification - FactorsAI';
   }, [location]);
 
-  //Effect for fetching page view Urls
+  // Effect for fetching page view Urls
   useEffect(() => {
     const fetchPageUrls = async (projectId: string, queryId?: string) => {
       try {
@@ -281,7 +276,7 @@ const SixSignalReport = ({
       fetchPageUrls(paramProjectId, paramQueryId);
   }, [isLoggedIn, paramProjectId, paramQueryId, active_project?.id, email]);
 
-  //Effect for fetching dates
+  // Effect for fetching dates
   useEffect(() => {
     if (!active_project?.id) return;
     const getSavedReports = async () => {
@@ -315,7 +310,7 @@ const SixSignalReport = ({
     getSavedReports();
   }, [active_project?.id]);
 
-  //Effect for fetching the visitor identification public data
+  // Effect for fetching the visitor identification public data
   useEffect(() => {
     const fetchPublicData = async () => {
       try {
@@ -374,7 +369,7 @@ const SixSignalReport = ({
     state.selectedPageViews
   ]);
 
-  //Effect for fetching the visitor identification logged in data
+  // Effect for fetching the visitor identification logged in data
   useEffect(() => {
     const fetchDataForLoggedInUser = async () => {
       try {
@@ -416,7 +411,7 @@ const SixSignalReport = ({
     getDateObjFromSelectedDate
   ]);
 
-  //Effect for formatting data when api data is available.
+  // Effect for formatting data when api data is available.
   useEffect(() => {
     if (reportData) {
       const value = parseResultGroupResponse(reportData.result_group[0]);
@@ -431,7 +426,7 @@ const SixSignalReport = ({
     }
   }, [reportData]);
 
-  //effect for removing filters based on new options
+  // effect for removing filters based on new options
   useEffect(() => {
     if (
       prevCampaigns !== state.campaigns &&
@@ -440,8 +435,8 @@ const SixSignalReport = ({
     )
       localDispatch({
         type: VisitorReportActions.SET_SELECTED_CAMPAIGNS,
-        payload: state.selectedCampaigns.filter((campaign) =>
-          state?.campaigns?.includes(campaign)
+        payload: state.selectedCampaigns.filter(
+          (campaign) => state?.campaigns?.includes(campaign)
         )
       });
   }, [state.campaigns, state.selectedCampaigns, prevCampaigns]);
@@ -487,24 +482,24 @@ const SixSignalReport = ({
         <div className='flex justify-between align-middle'>
           <div className='flex align-middle gap-6'>
             <div className={style.mixChartContainer}>
-              <SVG name={'MixChart'} color='#5ACA89' size={24} />
+              <SVG name='MixChart' color='#5ACA89' size={24} />
             </div>
             <div>
               <div>
                 <div className='flex'>
                   <Text
-                    type={'title'}
+                    type='title'
                     level={4}
-                    weight={'bold'}
+                    weight='bold'
                     color='grey-1'
                     extraClass='mb-1'
-                    id={'fa-at-text--page-title'}
+                    id='fa-at-text--page-title'
                   >
                     Top accounts that visited your website{' '}
                   </Text>
                 </div>
                 <div className='flex items-center flex-wrap gap-1'>
-                  <Text type={'paragraph'} mini color='grey'>
+                  <Text type='paragraph' mini color='grey'>
                     See which key accounts are engaging with your marketing.
                     Take action and close more deals.
                   </Text>
@@ -548,7 +543,7 @@ const SixSignalReport = ({
                   type='primary'
                   icon={
                     <SVG
-                      name={'link'}
+                      name='link'
                       color={`${showShareButton ? '#fff' : '#b8b8b8'}`}
                     />
                   }
@@ -601,7 +596,7 @@ const SixSignalReport = ({
                 >
                   {!state.channels?.length ? (
                     <div className='px-2'>
-                      <Text type={'title'} level={7} extraClass={'m-0'}>
+                      <Text type='title' level={7} extraClass='m-0'>
                         No Channels Found!
                       </Text>
                     </div>
@@ -646,7 +641,7 @@ const SixSignalReport = ({
                 >
                   {!state.campaigns?.length ? (
                     <div className='px-2'>
-                      <Text type={'title'} level={7} extraClass={'m-0'}>
+                      <Text type='title' level={7} extraClass='m-0'>
                         No Campaigns Found!
                       </Text>
                     </div>
@@ -698,7 +693,7 @@ const SixSignalReport = ({
                 >
                   {!state.pageViewUrls?.data?.length ? (
                     <div className='px-2'>
-                      <Text type={'title'} level={7} extraClass={'m-0'}>
+                      <Text type='title' level={7} extraClass='m-0'>
                         No Page Views!
                       </Text>
                     </div>
@@ -713,8 +708,8 @@ const SixSignalReport = ({
               <div className='flex items-center gap-2'>
                 {state.selectedDate && (
                   <>
-                    <SVG name={'calendar'} color='#8692A3' size={16} />
-                    <Text type={'paragraph'} mini extraClass={'m-0'}>
+                    <SVG name='calendar' color='#8692A3' size={16} />
+                    <Text type='paragraph' mini extraClass='m-0'>
                       {state.selectedDate}
                     </Text>
                   </>
@@ -728,7 +723,7 @@ const SixSignalReport = ({
                     payload: true
                   })
                 }
-                icon={<SVG name={'calendar'} color='#8692A3' size={16} />}
+                icon={<SVG name='calendar' color='#8692A3' size={16} />}
                 className={style.customButton}
                 disabled={
                   !state.isPastDatesDataAvailable && !isSixSignalActivated
@@ -776,19 +771,20 @@ const SixSignalReport = ({
                 isPastDateDataAvailable={state.isPastDatesDataAvailable}
                 dataSelected={state.selectedDate}
               />
-              {!!reportData && reportData.result_group?.[0]?.rows?.length > 0 && (
-                <div className='text-right font-size--small'>
-                  Logos provided by
-                  <a
-                    className='font-size--small'
-                    href='https://www.clearbit.com'
-                    target='_blank'
-                    rel='noreferrer'
-                  >
-                    Clearbit
-                  </a>
-                </div>
-              )}
+              {!!reportData &&
+                reportData.result_group?.[0]?.rows?.length > 0 && (
+                  <div className='text-right font-size--small'>
+                    Logos provided by
+                    <a
+                      className='font-size--small'
+                      href='https://www.clearbit.com'
+                      target='_blank'
+                      rel='noreferrer'
+                    >
+                      Clearbit
+                    </a>
+                  </div>
+                )}
             </>
           )}
         </div>

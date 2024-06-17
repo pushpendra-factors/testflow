@@ -21,6 +21,8 @@ export const routesWithSidebar = [
   PathUrls.SettingsPersonalProjects,
   PathUrls.SettingsPersonalUser,
   PathUrls.SettingsCustomDefinition,
+  PathUrls.FreqCap,
+  PathUrls.FreqCapView,
   PathUrls.SettingsAccountScoring
 ];
 

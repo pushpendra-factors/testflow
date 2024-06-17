@@ -563,7 +563,7 @@ export function fetchConversionAPIData(projectID) {
       get(dispatch, `${host}projects/${projectID}/linkedin_capi/conversions`)
         .then((response) => {
           dispatch({
-            type: FETCH_CONVERSION_DATA_FULFILLED,
+            type: 'FETCH_CONVERSION_DATA_FULFILLED',
             payload: response.data
           });
           resolve(response);
