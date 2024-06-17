@@ -29,12 +29,14 @@ def get_query_templates():
         },
         'filter': {
             'timeless_equal': ['%s having %s as %s',
+                               '%s with %s equals %s',
                                "Number of %s having %s as %s",
                                "How many %s with %s equals %s",
                                "Count of %s filter by %s equals %s"],
 
             'timeful_equal': [
                 '%s having %s as %s in %s',
+                '%s with %s equals %s in %s',
                 'Number of %s having %s as %s in %s',
                 'How many %s with %s equals %s we had %s',
                 'Count of %s filter by %s equals %s %s'

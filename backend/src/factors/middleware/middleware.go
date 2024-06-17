@@ -1221,3 +1221,16 @@ func isFeatureAvailable(status int) bool {
 func isFeatureEnabled(status int) bool {
 	return status == FEATURE_ENABLED
 }
+
+func SetScopeProjectId() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		urlParamProjectId, err := strconv.ParseInt(c.Params.ByName("project_id"), 10, 64)
+		if err != nil || urlParamProjectId == 0 {
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Invalid project id on param."})
+			return
+		}
+
+		U.SetScope(c, SCOPE_PROJECT_ID, urlParamProjectId)
+		return
+	}
+}
