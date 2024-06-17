@@ -759,6 +759,7 @@ func InitDataServiceRoutes(r *gin.Engine) {
 	dataServiceRouteGroup.GET("/chat/app/matching", IH.DataServiceGetMatchingEmbeddings)
 	dataServiceRouteGroup.GET("/chat/job/missing", IH.DataServiceGetMissingPrompts)
 	dataServiceRouteGroup.DELETE("/chat/job", IH.DataServiceDeleteDataByProjectId)
+	dataServiceRouteGroup.POST("/chat/:project_id"+ROUTE_VERSION_V1+"/kpi/filter_values", mid.SetScopeProjectId(), responseWrapper(V1.GetKPIFilterValuesHandler))
 
 }
 
