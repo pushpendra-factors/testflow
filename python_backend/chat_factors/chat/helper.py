@@ -19,4 +19,4 @@ def get_closest_match(query_string, complete_list, threshold):
         return best_match
     else:
         log.error("matching not found in the list")
-        raise ValueNotFoundError(f"Filter value:'{query_string}' not found in the list")
+        return query_string
