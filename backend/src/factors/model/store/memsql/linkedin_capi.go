@@ -15,21 +15,30 @@ import (
 func fillUserIdentifierFromPropertiesForLinkedinCapi(properties *map[string]interface{}, linkedinCAPIRequestPayload *model.SingleLinkedinCAPIRequestPayload) {
 	if emailId, exists := (*properties)[U.EP_EMAIL]; exists {
 
-		hashedEmail, err := U.GetSHA256Hash(U.GetPropertyValueAsString(emailId))
-		if err != nil {
-			log.WithError(err).Error("Failed to hash email")
-		} else {
-			linkedinCAPIRequestPayload.User.UserIds = append(linkedinCAPIRequestPayload.User.UserIds, model.UserId{IDType: model.SHA256_EMAIL, IDValue: hashedEmail})
+		email := U.GetEmailLowerCase(emailId)
+		if email != "" {
+
+			hashedEmail, err := U.GetSHA256Hash(U.GetPropertyValueAsString(email))
+			if err != nil {
+				log.WithError(err).Error("Failed to hash email")
+			} else {
+				linkedinCAPIRequestPayload.User.UserIds = append(linkedinCAPIRequestPayload.User.UserIds, model.UserId{IDType: model.SHA256_EMAIL, IDValue: hashedEmail})
+			}
 		}
+
 	}
 
 	if emailId, exists := (*properties)[U.UP_EMAIL]; exists {
 
-		hashedEmail, err := U.GetSHA256Hash(U.GetPropertyValueAsString(emailId))
-		if err != nil {
-			log.WithError(err).Error("Failed to hash email")
-		} else {
-			linkedinCAPIRequestPayload.User.UserIds = append(linkedinCAPIRequestPayload.User.UserIds, model.UserId{IDType: model.SHA256_EMAIL, IDValue: hashedEmail})
+		email := U.GetEmailLowerCase(emailId)
+		if email != "" {
+
+			hashedEmail, err := U.GetSHA256Hash(U.GetPropertyValueAsString(email))
+			if err != nil {
+				log.WithError(err).Error("Failed to hash email")
+			} else {
+				linkedinCAPIRequestPayload.User.UserIds = append(linkedinCAPIRequestPayload.User.UserIds, model.UserId{IDType: model.SHA256_EMAIL, IDValue: hashedEmail})
+			}
 		}
 
 	}
@@ -66,12 +75,15 @@ func (store *MemSQL) NewLinkedCapiRequestPayload(properties *map[string]interfac
 			return model.BatchLinkedinCAPIRequestPayload{}, errors.New("Unable to get timestamp")
 		}
 
-		if intTimestamp-time.Now().Unix() > 90*U.SECONDS_IN_A_DAY {
+		if time.Now().Unix()-intTimestamp > 90*U.SECONDS_IN_A_DAY {
 			log.WithError(err).Error("timestamp older than 90 days")
 			return model.BatchLinkedinCAPIRequestPayload{}, errors.New("timestamp older than 90 days")
 		}
 		_linkedinCAPIRequestPayload.ConversionHappenedAt = intTimestamp * int64(1000)
 
+	} else {
+		log.Error("Unable to get timestamp for linkedin capi")
+		return model.BatchLinkedinCAPIRequestPayload{}, errors.New("Unable to get timestamp for linked in capi")
 	}
 
 	if len(linkedinCAPIConfig.Conversions.LinkedInCAPIConversionsResponseList) == 0 {
