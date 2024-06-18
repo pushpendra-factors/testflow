@@ -8,7 +8,9 @@ import React, {
 } from 'react';
 import {
   Button,
+  Dropdown,
   Input,
+  Menu,
   Modal,
   Row,
   Space,
@@ -29,7 +31,10 @@ import {
 import { PathUrls } from 'Routes/pathUrls';
 import { cloneDeep } from 'lodash';
 import { ComponentStates, FrequencyCap } from '../types';
-import { updateLinkedinFreqCapRules } from '../state/service';
+import {
+  deleteLinkedinFreqCapRules,
+  updateLinkedinFreqCapRules
+} from '../state/service';
 import styles from '../index.module.scss';
 
 interface FreqCapHeaderType {
@@ -68,7 +73,7 @@ export const FreqCapHeader = ({
       return (
         <Row className='items-start'>
           {/* <SVG name='userLock' size={24} /> */}
-          <Text type='title' level={7} weight='bold' extraClass='ml-1 mb-0'>
+          <Text type='title' level={6} weight='bold' extraClass='ml-1 mb-0'>
             Account Level Frequency Capping (ALFC)
           </Text>
         </Row>
@@ -150,6 +155,49 @@ export const FreqCapHeader = ({
     });
   };
 
+  const makeACopy = () => {
+    const editedCopy = cloneDeep(ruleToView);
+    history.replace(`${PathUrls.FreqCap}/new`);
+  };
+
+  const deleteRule = async () => {
+    const response = await deleteLinkedinFreqCapRules(
+      ruleToView?.project_id,
+      rule_id
+    );
+    if (response?.status === 200) {
+      notification.success({
+        message: 'Success',
+        description: 'Rule Successfully Deleted!',
+        duration: 3
+      });
+
+      fetchFreqCapRules();
+      history.replace(`${PathUrls.FreqCap}`);
+    }
+  };
+
+  const getMoreOptions = () => (
+    <Menu style={{ minWidth: '200px', padding: '10px' }}>
+      <Menu.Item
+        icon={
+          <SVG
+            name='trash'
+            extraClass='self-center'
+            style={{ marginRight: '10px' }}
+          />
+        }
+        style={{ display: 'flex', padding: '10px', margin: '5px' }}
+        key='delete'
+        onClick={() => {
+          deleteRule();
+        }}
+      >
+        <span style={{ paddingLeft: '5px' }}>Delete</span>
+      </Menu.Item>
+    </Menu>
+  );
+
   const actions = () => {
     if (state === ComponentStates.LIST || state === ComponentStates.EMPTY) {
       return (
@@ -183,6 +231,22 @@ export const FreqCapHeader = ({
             >
               <Space>Publish</Space>
             </Button>
+
+            <Dropdown
+              disabled
+              placement='bottomRight'
+              overlay={getMoreOptions()}
+              trigger={['click']}
+            >
+              <Button
+                type='text'
+                size='large'
+                className='fa-btn--custom ml-2'
+                disabled
+              >
+                <SVG name='more' />
+              </Button>
+            </Dropdown>
           </Row>
         );
       }
@@ -195,6 +259,20 @@ export const FreqCapHeader = ({
               onChange={toggleStatus}
               checked={ruleToView?.status === 'active'}
             />
+            <Dropdown
+              placement='bottomRight'
+              overlay={getMoreOptions()}
+              trigger={['click']}
+            >
+              <Button
+                type='text'
+                size='large'
+                className='fa-btn--custom ml-1'
+                disabled
+              >
+                <SVG name='more' />
+              </Button>
+            </Dropdown>
           </Row>
         );
       }
