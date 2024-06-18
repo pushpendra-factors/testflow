@@ -374,6 +374,7 @@ type Configuration struct {
 	SkipSalesforceLeadEnrichmentByProjectID              string
 	SalesforceEnrichOnlyObjects                          string
 	SixSignalV3ProjectIds                                string
+	ChatDebug                                            int
 }
 
 type Services struct {
@@ -2749,6 +2750,10 @@ func DisableCRMUniquenessConstraintsCheckByProjectID(projectID int64) bool {
 
 func GetHubspotBatchInsertBatchSize() int {
 	return GetConfig().HubspotBatchInsertBatchSize
+}
+
+func GetChatDebug() int {
+	return GetConfig().ChatDebug
 }
 
 func EnableHubspotFormsEventsByProjectID(projectID int64) bool {

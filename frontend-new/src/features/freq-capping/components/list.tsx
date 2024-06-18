@@ -5,21 +5,33 @@ import { MoreOutlined } from '@ant-design/icons';
 import { useHistory } from 'react-router-dom';
 import { PathUrls } from 'Routes/pathUrls';
 import { useSelector } from 'react-redux';
-import { FrequencyCap } from '../types';
+import { cloneDeep } from 'lodash';
+import { ComponentStates, FrequencyCap } from '../types';
 import styles from '../index.module.scss';
 import { deleteLinkedinFreqCapRules } from '../state/service';
 
 interface FreqCapListProps {
+  componentState: ComponentStates;
   freqCapRules: Array<FrequencyCap>;
+  setSelectedRule: (rule: FrequencyCap) => any;
   deleteCallBack: () => any;
 }
 const FrequencyCappingList = ({
+  componentState,
   freqCapRules,
+  setSelectedRule,
   deleteCallBack
 }: FreqCapListProps) => {
   const history = useHistory();
 
   const { active_project } = useSelector((state: any) => state.global);
+
+  const makeACopy = (id: string) => {
+    const ruleToCopy = freqCapRules.find((val) => val.id === id);
+    const editedCopy = cloneDeep(ruleToCopy);
+    setSelectedRule(editedCopy);
+    history.replace(`${PathUrls.FreqCap}/new`);
+  };
 
   const columns = [
     {
@@ -98,14 +110,14 @@ const FrequencyCappingList = ({
       >
         <a>Edit rule</a>
       </Menu.Item>
-      <Menu.Item
+      {/* <Menu.Item
         key='1'
         onClick={(e) => {
-          // crearte copy
+          makeACopy();
         }}
       >
         <a>Create copy</a>
-      </Menu.Item>
+      </Menu.Item> */}
       <Menu.Divider />
       <Menu.Item
         key='2'
@@ -157,7 +169,7 @@ const FrequencyCappingList = ({
           columns={columns}
           dataSource={freqCapRules}
           pagination={false}
-          loading={false}
+          loading={componentState === ComponentStates.LOADING}
           tableLayout='fixed'
           rowClassName='cursor-pointer'
         />

@@ -17,6 +17,7 @@ import {
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import { useSelector } from 'react-redux';
 import { SolutionsAccountId } from 'Routes/constants';
+import { featureLock } from 'Routes/feature';
 import { PathUrls } from '../../routes/pathUrls';
 import styles from './index.module.scss';
 
@@ -362,26 +363,28 @@ function FaHeader() {
               </Text>
             </Link> */}
 
-            <Link
-              to={PathUrls.FreqCap}
-              className={cx(
-                `flex items-center pl-2 pr-1 py-1 ${styles['header-item']}`,
-                {
-                  [styles['active-header-item']]: isCampaignsUrl(pathname)
-                }
-              )}
-              id='fa-at-link--attribution'
-            >
-              <Text
-                type='title'
-                color='white'
-                level={7}
-                extraClass='mb-0'
-                weight='medium'
+            {featureLock(activeAgent) && (
+              <Link
+                to={PathUrls.FreqCap}
+                className={cx(
+                  `flex items-center pl-2 pr-1 py-1 ${styles['header-item']}`,
+                  {
+                    [styles['active-header-item']]: isCampaignsUrl(pathname)
+                  }
+                )}
+                id='fa-at-link--attribution'
               >
-                Campaigns
-              </Text>
-            </Link>
+                <Text
+                  type='title'
+                  color='white'
+                  level={7}
+                  extraClass='mb-0'
+                  weight='medium'
+                >
+                  Campaigns
+                </Text>
+              </Link>
+            )}
 
             <Link
               to={`${PathUrls.Alerts}?type=realtime`}

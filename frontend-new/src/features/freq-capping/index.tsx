@@ -15,6 +15,11 @@ import {
 import { cloneDeep, isEqual } from 'lodash';
 import { AppContentHeader } from 'Views/AppContentHeader';
 import { PathUrls } from 'Routes/pathUrls';
+import { FEATURES } from 'Constants/plans.constants';
+import EmptyScreen from 'Components/EmptyScreen';
+import useFeatureLock from 'hooks/useFeatureLock';
+import { Text } from 'factorsComponents';
+import LockedScreen from '../../assets/images/freq_cap_locked.png';
 import FrequencyCappingList from './components/list';
 import FrequencyCappingView from './components/view';
 import { ComponentStates, FrequencyCap, RuleQueryParams } from './types';
@@ -43,6 +48,10 @@ const FrequencyCapping = () => {
 
   const { rule_id } = useParams<RuleQueryParams>();
 
+  const { isFeatureLocked: isFreqCapLocked } = useFeatureLock(
+    FEATURES.FEATURE_LINKEDIN_FREQUENCY_CAPPING
+  );
+
   useEffect(() => {
     // getUserPropertiesV2(active_project.id);
     getGroups(active_project);
@@ -51,7 +60,6 @@ const FrequencyCapping = () => {
 
     // Fetch call
     fetchFreqCapRules();
-    setComponentState(ComponentStates.LIST);
   }, []);
 
   useEffect(() => {
@@ -103,6 +111,7 @@ const FrequencyCapping = () => {
     if (response?.status === 200) {
       setFreqCapRules(response.data);
     }
+    setComponentState(ComponentStates.LIST);
   };
 
   const publishFreqCalRules = async () => {
@@ -159,6 +168,7 @@ const FrequencyCapping = () => {
       <FrequencyCappingList
         freqCapRules={freqCapRules}
         deleteCallBack={fetchFreqCapRules}
+        setSelectedRule={setSelectedRule}
       />
     </div>
   );
@@ -183,6 +193,26 @@ const FrequencyCapping = () => {
       />
     </div>
   );
+
+  if (isFreqCapLocked) {
+    return (
+      <div className='overview-container'>
+        <EmptyScreen
+          upgradeScreen
+          imageStyle={{ width: '600px', height: '450px' }}
+          image={LockedScreen}
+          title={
+            <Text type='title' level={7} color='grey-2' extraClass='m-0'>
+              {' '}
+              Account Level Frequency Capping (ALFC) is a feature that limits
+              the number of times ads are shown to a user across all campaigns
+              within an advertiser's account.
+            </Text>
+          }
+        />
+      </div>
+    );
+  }
 
   switch (componentState) {
     case ComponentStates.LOADING: {

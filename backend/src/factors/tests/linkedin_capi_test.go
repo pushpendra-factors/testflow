@@ -9,6 +9,7 @@ import (
 	U "factors/util"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm/dialects/postgres"
@@ -185,15 +186,15 @@ func TestLinkedinCapiForWorkflow(t *testing.T) {
 	})
 	assert.Equal(t, http.StatusAccepted, status)
 
-	t.Run("TestRun", func(t *testing.T) {
+	t.Run("TestLinkedinCapiWorkflow", func(t *testing.T) {
 
 		_, status := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
 			IntLinkedinAdAccount:   "508934217",
-			IntLinkedinAccessToken: "AQVCGk2KGIsrJU2M5nOlCQQXCTn1GzZyrzQ1dEKdMMRv-iNCG3-MQo1zhfYplv_yyzmX5Uzj4aUSGeBBt2EpYyniNckulTHBvZiVJHDlcvYuj1lWU7i2nWmqiuYAOK-Cz25Wq-3R6QE7mRh0vwTUG6CbbS1dUVHsrR_BCmJ9TW0iArOJNkK8yVkNGBM9MOBM6rTbRcKgp1I309W3lmJarL4jnPjIp0lZhbYC9g306gVRXRQMxizOmmMwN2M8jMz2WKrPL_EYkoeHWSHYrMcmfTX4FFaS101PeAeokJ1oTCBxVLNb29sa3lzl3HN_dKl7dbXEbfu4U6hDOdn3B3DmQ41exDawlZVMCEEcoVYFOrXvzP_f2JMAlbJDDfLIaqIgt8Jsy6PwrsgNf_HOQ9w",
+			IntLinkedinAccessToken: "123456",
 		})
 		assert.Equal(t, http.StatusAccepted, status)
 
-		aa := `{"action_performed":"action_event","addtional_configuration":[{"account":"urn:li:sponsoredAccount:508934217","enabled":true,"id":17819097,"name":"MQL Conversions Alpha - Factors"}],"alert_limit":5,"breakdown_properties":[],"cool_down_time":1800,"description":"fe-testcapi-email-known","event":"$session","event_level":"user","filters":[{"en":"user","grpn":"user","lop":"AND","op":"notEqual","pr":"$email","ty":"categorical","va":"$none"}],"message_properties":{},"notifications":false,"repeat_alerts":true,"template_description":"","template_id":4000005,"template_title":"","title":"fe-testcapi-email-known"}
+		linkedInCapiAlertbodyJsonString1 := `{"action_performed":"action_event","addtional_configuration":[{"account":"urn:li:sponsoredAccount:508934217","enabled":true,"id":17819097,"name":"MQL Conversions Alpha - Factors"}],"alert_limit":5,"breakdown_properties":[],"cool_down_time":1800,"description":"fe-testcapi-email-known","event":"$session","event_level":"user","filters":[{"en":"user","grpn":"user","lop":"AND","op":"notEqual","pr":"$email","ty":"categorical","va":"$none"}],"message_properties":{},"notifications":false,"repeat_alerts":true,"template_description":"","template_id":4000005,"template_title":"","title":"fe-testcapi-email-known"}
 	`
 		linkedInCapiAlertbodyJsonString := `{
 			"action_performed": "action_event",
@@ -228,7 +229,7 @@ func TestLinkedinCapiForWorkflow(t *testing.T) {
 		err := U.DecodePostgresJsonbToStructType(&postgres.Jsonb{RawMessage: json.RawMessage(linkedInCapiAlertbodyJsonString)}, &workflow)
 		assert.Nil(t, err)
 
-		err = U.DecodePostgresJsonbToStructType(&postgres.Jsonb{RawMessage: json.RawMessage(aa)}, &workflow)
+		err = U.DecodePostgresJsonbToStructType(&postgres.Jsonb{RawMessage: json.RawMessage(linkedInCapiAlertbodyJsonString1)}, &workflow)
 		assert.Nil(t, err)
 
 		wf, _, err := store.GetStore().CreateWorkflow(project.ID, agent.UUID, "", workflow)
@@ -302,6 +303,62 @@ func TestLinkedinCapiForWorkflow(t *testing.T) {
 		res, err := linkedinCapiSendEventsMock.SendEventsToLinkedCAPI(config, body)
 		assert.NotNil(t, res)
 		assert.Nil(t, err)
+
+	})
+
+}
+
+func TestFillLinkedInPropertiesInCacheForWorkflow(t *testing.T) {
+	r := gin.Default()
+	H.InitAppRoutes(r)
+
+	project, agent, err := SetupProjectWithAgentDAO()
+	assert.Nil(t, err)
+	assert.NotNil(t, project)
+
+	_, status := store.GetStore().UpdateProjectSettings(project.ID, &model.ProjectSetting{
+		IntLinkedinAdAccount:   "1234",
+		IntLinkedinAccessToken: "12345566",
+	})
+	assert.Equal(t, http.StatusAccepted, status)
+	linkedInCapiAlertbodyJsonString1 := `{"action_performed":"action_event","addtional_configuration":[{"account":"urn:li:sponsoredAccount:508934217","enabled":true,"id":17819097,"name":"MQL Conversions Alpha - Factors"}],"alert_limit":5,"breakdown_properties":[],"cool_down_time":1800,"description":"fe-testcapi-email-known","event":"$session","event_level":"user","filters":[{"en":"user","grpn":"user","lop":"AND","op":"notEqual","pr":"$email","ty":"categorical","va":"$none"}],"message_properties":{},"notifications":false,"repeat_alerts":true,"template_description":"","template_id":4000005,"template_title":"","title":"fe-testcapi-email-known"}`
+
+	t.Run("TestFillLinkedinPropertiesInCache", func(t *testing.T) {
+
+		var workflowAlertBody model.WorkflowAlertBody
+		err = U.DecodePostgresJsonbToStructType(&postgres.Jsonb{RawMessage: json.RawMessage(linkedInCapiAlertbodyJsonString1)}, &workflowAlertBody)
+		assert.Nil(t, err)
+
+		wf, _, err := store.GetStore().CreateWorkflow(project.ID, agent.UUID, "", workflowAlertBody)
+		assert.Nil(t, err)
+
+		alertBody := model.WorkflowAlertBody{}
+		err = U.DecodePostgresJsonbToStructType(wf.AlertBody, &alertBody)
+		assert.Nil(t, err)
+		assert.NotNil(t, alertBody)
+
+		payloadProperties := model.WorkflowParagonPayload{}
+
+		msgPropMap, err := U.EncodeStructTypeToMap(payloadProperties)
+		assert.Nil(t, err)
+
+		allProperties := map[string]interface{}{
+			"$email":       "Parth@factors.ai",
+			U.EP_TIMESTAMP: time.Now().Unix() - 45*U.SECONDS_IN_A_DAY,
+		}
+
+		err = store.GetStore().FillLinkedInPropertiesInCacheForWorkflow(&msgPropMap, &allProperties, alertBody)
+		assert.Nil(t, err)
+
+		var linkedCAPIPayloadBatch model.BatchLinkedinCAPIRequestPayload
+		linkedinCAPIPayloadString := U.GetPropertyValueAsString(msgPropMap["linkedCAPI_payload"])
+
+		err = U.DecodeJSONStringToStructType(linkedinCAPIPayloadString, &linkedCAPIPayloadBatch)
+		assert.Nil(t, err)
+
+		singlePayload := linkedCAPIPayloadBatch.LinkedinCAPIRequestPayloadList[0]
+		assert.Equal(t, singlePayload.ConversionHappenedAt, allProperties[U.EP_TIMESTAMP].(int64)*1000)
+		assert.Equal(t, len(singlePayload.User.UserIds), 1)
 
 	})
 
