@@ -13,6 +13,13 @@ import (
 )
 
 func fillUserIdentifierFromPropertiesForLinkedinCapi(properties *map[string]interface{}, linkedinCAPIRequestPayload *model.SingleLinkedinCAPIRequestPayload) {
+
+	if liclid, exists := (*properties)[U.EP_LICLID]; exists {
+
+		linkedinCAPIRequestPayload.User.UserIds = append(linkedinCAPIRequestPayload.User.UserIds, model.UserId{IDType: model.LINKEDIN_FIRST_PARTY_ADS_TRACKING_UUID, IDValue: U.GetPropertyValueAsString(liclid)})
+		return
+	}
+
 	if emailId, exists := (*properties)[U.EP_EMAIL]; exists {
 
 		email := U.GetEmailLowerCase(emailId)
@@ -23,6 +30,7 @@ func fillUserIdentifierFromPropertiesForLinkedinCapi(properties *map[string]inte
 				log.WithError(err).Error("Failed to hash email")
 			} else {
 				linkedinCAPIRequestPayload.User.UserIds = append(linkedinCAPIRequestPayload.User.UserIds, model.UserId{IDType: model.SHA256_EMAIL, IDValue: hashedEmail})
+				return
 			}
 		}
 
@@ -38,14 +46,10 @@ func fillUserIdentifierFromPropertiesForLinkedinCapi(properties *map[string]inte
 				log.WithError(err).Error("Failed to hash email")
 			} else {
 				linkedinCAPIRequestPayload.User.UserIds = append(linkedinCAPIRequestPayload.User.UserIds, model.UserId{IDType: model.SHA256_EMAIL, IDValue: hashedEmail})
+				return
 			}
+
 		}
-
-	}
-
-	if liclid, exists := (*properties)[U.EP_LICLID]; exists {
-
-		linkedinCAPIRequestPayload.User.UserIds = append(linkedinCAPIRequestPayload.User.UserIds, model.UserId{IDType: model.LINKEDIN_FIRST_PARTY_ADS_TRACKING_UUID, IDValue: U.GetPropertyValueAsString(liclid)})
 
 	}
 

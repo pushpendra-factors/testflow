@@ -414,7 +414,6 @@ func (store *MemSQL) FindAndCacheWorkflowsWithFiltersMatchingProperties(projectI
 		criteria := E.MapFilterProperties(modifiedFilters)
 		if E.EventMatchesFilterCriterionList(projectId, *userPropMap, *eventPropMap, criteria) {
 
-			log.WithField("workflow", workflow).Info("Linkedin CAPI TEST - 865")
 			store.CacheWorkflowToBeSent(&workflow, event, userPropMap)
 		}
 	}
@@ -878,8 +877,6 @@ func (store *MemSQL) getWorkflowMessageProperties(projectID int64,
 			log.WithError(err).Error("failed to fill linkedin property")
 			return nil
 		}
-
-		log.WithField("msgPropMap", msgPropMap).WithField("allProperties", allProperties).Info("Linkedin CAPI TEST - 872")
 
 	}
 
