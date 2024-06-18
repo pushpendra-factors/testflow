@@ -162,6 +162,14 @@ func GetKPIFilterValuesHandler(c *gin.Context) (interface{}, int, string, string
 		return nil, http.StatusInternalServerError, INVALID_INPUT, "Error during validation of KPI FilterValues Data.", true
 	}
 
+	if C.GetChatDebug() == 1 {
+
+		logCtx.WithFields(log.Fields{"request": request,
+			"projectID": projectID,
+			"method":    "GetKPIFilterValuesHandler"}).Info(" chat debug")
+
+	}
+
 	var kpiFilterValues interface{}
 	var status int
 	var errString, errMsg string
@@ -169,12 +177,34 @@ func GetKPIFilterValuesHandler(c *gin.Context) (interface{}, int, string, string
 	// If property mapping is requested, then get the union of individual property values
 	if request.IsPropertyMapping {
 		kpiFilterValues, status, errString, errMsg, failures = getKpiFilterValuesForPropertyMapping(request, projectID, reqID)
+		if C.GetChatDebug() == 1 {
+			logCtx.WithFields(log.Fields{
+				"status":    status,
+				"errString": errString,
+				"errMsg":    errMsg,
+				"failures":  failures,
+				"method":    "GetKPIFilterValuesHandler"}).Info("chat debug 2")
+		}
 	} else {
 		kpiFilterValues, status, errString, errMsg, failures = getKpiFilterValuesForStaticProperty(request, projectID, reqID)
+		if C.GetChatDebug() == 1 {
+			logCtx.WithFields(log.Fields{
+				"status":    status,
+				"errString": errString,
+				"errMsg":    errMsg,
+				"failures":  failures,
+				"method":    "GetKPIFilterValuesHandler"}).Info("chat debug 3")
+		}
 	}
 
 	if failures {
 		return kpiFilterValues, status, errString, errMsg, failures
+	}
+
+	if C.GetChatDebug() == 1 {
+		logCtx.WithFields(log.Fields{
+			"kpiFilterValues": kpiFilterValues,
+			"method":          "GetKPIFilterValuesHandler"}).Info("chat debug 4")
 	}
 
 	label := c.Query("label")
@@ -183,6 +213,11 @@ func GetKPIFilterValuesHandler(c *gin.Context) (interface{}, int, string, string
 	}
 
 	propertyValueLabel := getPropertyValueLabel(projectID, request.PropertyName, kpiFilterValues)
+	if C.GetChatDebug() == 1 {
+		logCtx.WithFields(log.Fields{
+			"propertyValueLabel": propertyValueLabel,
+			"method":             "GetKPIFilterValuesHandler"}).Info("chat debug 5")
+	}
 
 	return propertyValueLabel, http.StatusOK, "", "", false
 }

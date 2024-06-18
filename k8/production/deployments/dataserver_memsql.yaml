@@ -92,6 +92,8 @@ spec:
         - $(GCP_PROJECT_ID)
         - --gcp_project_location
         - $(GCP_PROJECT_LOCATION)
+        - --chat_debug
+        - "0"
         envFrom:
         - configMapRef:
             name: config-env

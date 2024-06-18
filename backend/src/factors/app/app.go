@@ -232,7 +232,7 @@ func main() {
 	emailUTMParameterAllowedProjects := flag.String("email_utm_parameter_allowed_projects", "", "")
 	enableCacheDBWriteProjects := flag.String("cache_db_write_projects", "", "")
 	enableCacheDBReadProjects := flag.String("cache_db_read_projects", "", "")
-
+	chatDebug := flag.Int("chat_debug", 0, "")
 	flag.Parse()
 
 	defaultAppName := "app_server"
@@ -410,6 +410,7 @@ func main() {
 		EnableCacheDBWriteProjects:                     *enableCacheDBWriteProjects,
 		EnableCacheDBReadProjects:                      *enableCacheDBReadProjects,
 		WebsiteAggregationTestEnabledProjects:          *websiteAggregationTestEnabledProjects,
+		ChatDebug:                                      *chatDebug,
 	}
 	C.InitConf(config)
 
