@@ -1532,17 +1532,17 @@ CREATE TABLE IF NOT EXISTS widget_groups (
     UNIQUE KEY unique_widget_groups_project_id_name_idx(project_id, display_name) USING HASH
 );
 
-CREATE TABLE IF NOT EXISTS cache_db (
-    k TEXT NOT NULL,
-    v TEXT,
-    project_id BIGINT NOT NULL,
-    expiry_in_secs INT NOT NULL,
-    expires_at INT NOT NULL,
-    created_at timestamp(6) NOT NULL,
-    updated_at timestamp(6) NOT NULL,    
-    PRIMARY KEY (k),
-    SHARD KEY (k),
-    KEY (expires_at) USING CLUSTERED COLUMNSTORE
+CREATE TABLE cache_db (
+  `k` text CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL,
+  `v` longtext CHARACTER SET utf8 COLLATE utf8_general_ci,
+  `project_id` bigint(20) NOT NULL,
+  `expiry_in_secs` int(11) NOT NULL,
+  `expires_at` int(11) NOT NULL,
+  `created_at` timestamp(6) NOT NULL,
+  `updated_at` timestamp(6) NOT NULL,
+  PRIMARY KEY (`project_id`,`k`),
+  SHARD KEY `__SHARDKEY` (`project_id`,`k`),
+  SORT KEY `expires_at` (`expires_at`)
 );
 
 CREATE TABLE IF NOT EXISTS workflows (
