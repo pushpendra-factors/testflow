@@ -695,6 +695,9 @@ func InitDataServiceRoutes(r *gin.Engine) {
 	dataServiceRouteGroup.POST("/hubspot/documents/sync_info", mid.FeatureMiddleware([]string{M.FEATURE_HUBSPOT}),
 		IH.DataServiceHubspotUpdateSyncInfo)
 
+	dataServiceRouteGroup.POST("/hubspot/documents/synced", mid.FeatureMiddleware([]string{M.FEATURE_HUBSPOT}),
+		IH.DataServiceHubspotProjectSyncedHandler)
+
 	dataServiceRouteGroup.GET("/hubspot/documents/types/form", mid.FeatureMiddleware([]string{M.FEATURE_HUBSPOT}),
 		IH.DataServiceGetHubspotFormDocumentsHandler)
 

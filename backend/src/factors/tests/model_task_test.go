@@ -13,8 +13,8 @@ import (
 )
 
 func TestTaskRegistration(t *testing.T) {
-	taskName1 := fmt.Sprintf("%v_%v_1", "task_event", U.TimeNowZ().Unix())
-	_, code, message := store.GetStore().RegisterTaskWithDefaultConfiguration(taskName1, "Source", model.Hourly, false)
+	taskName1 := fmt.Sprintf("%v_%v_1", "hubspot_sync", U.TimeNowZ().Unix())
+	_, code, message := store.GetStore().RegisterTaskWithDefaultConfiguration("hubspot_sync", "Source", model.Hourly, false)
 	assert.Equal(t, http.StatusCreated, code)
 	assert.Equal(t, "", message)
 	_, code, message = store.GetStore().RegisterTaskWithDefaultConfiguration(taskName1, "Source", model.Hourly, false)

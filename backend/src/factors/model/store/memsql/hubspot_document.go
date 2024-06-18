@@ -936,6 +936,20 @@ func (store *MemSQL) updateHubspotProjectSettingsLastSyncInfo(projectID int64, i
 	return nil
 }
 
+func (store *MemSQL) UpdateHubspotFirstTimeSynced(projectID int64) int {
+	logCtx := log.WithFields(log.Fields{"project_id": projectID})
+	_, status := store.UpdateProjectSettings(projectID, &model.ProjectSetting{
+		IntHubspotFirstTimeSynced: true,
+	})
+
+	if status != http.StatusAccepted {
+		logCtx.Error("Failed to update hubspot first time synced.")
+		return http.StatusInternalServerError
+	}
+
+	return status
+}
+
 // UpdateHubspotProjectSettingsBySyncStatus update hubspot sync project settings
 func (store *MemSQL) UpdateHubspotProjectSettingsBySyncStatus(success []model.HubspotProjectSyncStatus,
 	failure []model.HubspotProjectSyncStatus, syncALl bool) int {
@@ -943,34 +957,6 @@ func (store *MemSQL) UpdateHubspotProjectSettingsBySyncStatus(success []model.Hu
 		&log.Fields{"success": success, "failure": failure, "sync_all": syncALl})
 
 	anyFailure := false
-	if syncALl {
-		syncStatus, status := model.GetHubspotProjectOverAllStatus(success, failure)
-		for pid, projectSuccess := range status {
-			if projectSuccess {
-				_, status := store.UpdateProjectSettings(pid, &model.ProjectSetting{
-					IntHubspotFirstTimeSynced: true,
-				})
-
-				if status != http.StatusAccepted {
-					log.WithFields(log.Fields{"project_id": pid, "err_code": status}).
-						Error("Failed to update hubspot first time sync status on success.")
-					anyFailure = true
-				}
-
-				err := store.updateHubspotProjectSettingsLastSyncInfo(pid, syncStatus[pid])
-				if err != nil {
-					log.WithFields(log.Fields{"project_id": pid}).WithError(err).Error("Failed to update hubspot last sync info.")
-					anyFailure = true
-				}
-			}
-		}
-
-		if anyFailure {
-			return http.StatusInternalServerError
-		}
-
-		return http.StatusAccepted
-	}
 
 	syncStatus, _ := model.GetHubspotProjectOverAllStatus(success, failure)
 
@@ -996,34 +982,20 @@ func (store *MemSQL) GetHubspotFirstSyncProjectsInfo() (*model.HubspotSyncInfo, 
 	// project sync of hubspot enable projects.
 	enabledProjectLastSync := make(map[int64]map[string]int64, 0)
 
-	// get project settings of hubspot enabled projects.
-	projectSettings, errCode := store.GetAllHubspotProjectSettings()
+	projectAllowedObjects, projectSettings, errCode := store.GetHubspotEnabledProjectAllowedObjectsAndProjectSettings()
 	if errCode != http.StatusFound {
 		return nil, http.StatusInternalServerError
 	}
 
-	featureProjectIDs, err := store.GetAllProjectsWithFeatureEnabled(model.FEATURE_HUBSPOT, false)
-	if err != nil {
-		log.WithError(err).Error("Failed to get hubspot feature enabled projects.")
-		return nil, http.StatusInternalServerError
-	}
-
-	featureProjectSettings := []model.HubspotProjectSettings{}
-	for i := range projectSettings {
-		if util.ContainsInt64InArray(featureProjectIDs, projectSettings[i].ProjectId) {
-			featureProjectSettings = append(featureProjectSettings, projectSettings[i])
-		}
-	}
-	projectSettings = featureProjectSettings
-
 	settingsByProject := make(map[int64]*model.HubspotProjectSettings, 0)
+	// first time sync
 	for i, ps := range projectSettings {
 		if ps.IsFirstTimeSynced {
 			continue
 		}
 
 		// add types not synced before.
-		for typ := range model.HubspotDocumentTypeAlias {
+		for typ := range projectAllowedObjects[ps.ProjectId] {
 			if !C.AllowHubspotEngagementsByProjectID(ps.ProjectId) && typ == model.HubspotDocumentTypeNameEngagement {
 				continue
 			}
@@ -1036,14 +1008,46 @@ func (store *MemSQL) GetHubspotFirstSyncProjectsInfo() (*model.HubspotSyncInfo, 
 				enabledProjectLastSync[ps.ProjectId] = make(map[string]int64)
 			}
 
-			_, typExists := enabledProjectLastSync[ps.ProjectId][typ]
-			if !typExists {
-				// last sync timestamp as zero as type not synced before.
-				enabledProjectLastSync[ps.ProjectId][typ] = 0
+			enabledProjectLastSync[ps.ProjectId][typ] = 0
+		}
+
+		settingsByProject[projectSettings[i].ProjectId] = projectSettings[i]
+	}
+
+	// project already did first time sync but added new objects
+	for i, ps := range projectSettings {
+		if !ps.IsFirstTimeSynced {
+			continue
+		}
+
+		var lastSyncInfoMap *U.PropertiesMap
+		if ps.SyncInfo == nil {
+			log.WithFields(log.Fields{"project_id": ps.ProjectId}).Error("Missing last sync info. Pulling all objects.")
+			lastSyncInfoMap = &U.PropertiesMap{}
+		} else {
+			syncInfoMap, err := util.DecodePostgresJsonbAsPropertiesMap(projectSettings[i].SyncInfo)
+			if err != nil {
+				log.WithFields(log.Fields{"project_id": ps.ProjectId}).WithError(err).
+					Error("Failed to decode hubspot last sync info on first time sync info.")
+				lastSyncInfoMap = &U.PropertiesMap{}
+			} else {
+				lastSyncInfoMap = syncInfoMap
 			}
 		}
 
-		settingsByProject[projectSettings[i].ProjectId] = &projectSettings[i]
+		allowedObjects := projectAllowedObjects[ps.ProjectId]
+		for docType := range allowedObjects {
+			if _, exist := (*lastSyncInfoMap)[docType]; exist {
+				continue
+			}
+
+			if _, exist := enabledProjectLastSync[ps.ProjectId]; !exist {
+				enabledProjectLastSync[ps.ProjectId] = make(map[string]int64)
+			}
+
+			enabledProjectLastSync[ps.ProjectId][docType] = 0
+			settingsByProject[ps.ProjectId] = projectSettings[i]
+		}
 	}
 
 	var syncInfo model.HubspotSyncInfo
@@ -1082,25 +1086,10 @@ func (store *MemSQL) GetHubspotSyncInfo() (*model.HubspotSyncInfo, int) {
 	// project sync of hubspot enable projects.
 	enabledProjectLastSync := make(map[int64]map[string]int64, 0)
 
-	// get project settings of hubspot enaled projects.
-	projectSettings, errCode := store.GetAllHubspotProjectSettings()
-	if errCode != http.StatusFound {
+	projectAllowedObjects, projectSettings, status := store.GetHubspotEnabledProjectAllowedObjectsAndProjectSettings()
+	if status != http.StatusFound {
 		return nil, http.StatusInternalServerError
 	}
-
-	featureProjectIDs, err := store.GetAllProjectsWithFeatureEnabled(model.FEATURE_HUBSPOT, false)
-	if err != nil {
-		log.WithError(err).Error("Failed to get hubspot feature enabled projects.")
-		return nil, http.StatusInternalServerError
-	}
-
-	featureProjectSettings := []model.HubspotProjectSettings{}
-	for i := range projectSettings {
-		if util.ContainsInt64InArray(featureProjectIDs, projectSettings[i].ProjectId) {
-			featureProjectSettings = append(featureProjectSettings, projectSettings[i])
-		}
-	}
-	projectSettings = featureProjectSettings
 
 	settingsByProject := make(map[int64]*model.HubspotProjectSettings, 0)
 	for i, ps := range projectSettings {
@@ -1155,14 +1144,101 @@ func (store *MemSQL) GetHubspotSyncInfo() (*model.HubspotSyncInfo, int) {
 			}
 		}
 
-		settingsByProject[projectSettings[i].ProjectId] = &projectSettings[i]
+		settingsByProject[projectSettings[i].ProjectId] = projectSettings[i]
+	}
+
+	enabledProjectLastSyncByFeature := map[int64]map[string]int64{}
+	for projectID, lastSyncInfo := range enabledProjectLastSync {
+		allowedObjects := projectAllowedObjects[projectID]
+
+		projectSettings := settingsByProject[projectID]
+
+		lastSyncInfoMap, err := util.DecodePostgresJsonbAsPropertiesMap(projectSettings.SyncInfo)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectID}).WithError(err).
+				Error("Failed to decode hubspot last sync info in daily sync info. Skipping project on daily sync.")
+			continue
+		}
+
+		for typ := range lastSyncInfo {
+			if !allowedObjects[typ] {
+				continue
+			}
+
+			if _, exist := (*lastSyncInfoMap)[typ]; !exist {
+				continue
+			}
+
+			if _, exist := enabledProjectLastSyncByFeature[projectID]; !exist {
+				enabledProjectLastSyncByFeature[projectID] = make(map[string]int64)
+			}
+			enabledProjectLastSyncByFeature[projectID][typ] = lastSyncInfo[typ]
+		}
 	}
 
 	var syncInfo model.HubspotSyncInfo
-	syncInfo.LastSyncInfo = enabledProjectLastSync
+	syncInfo.LastSyncInfo = enabledProjectLastSyncByFeature
 	syncInfo.ProjectSettings = settingsByProject
 
 	return &syncInfo, http.StatusFound
+}
+
+func (store *MemSQL) GetHubspotEnabledProjectAllowedObjectsAndProjectSettings() (map[int64]map[string]bool, map[int64]*model.HubspotProjectSettings, int) {
+	// get project settings of hubspot enaled projects.
+	projectSettings, errCode := store.GetAllHubspotProjectSettings()
+	if errCode != http.StatusFound {
+		return nil, nil, http.StatusInternalServerError
+	}
+
+	projectFeature := make(map[int64]string, 0)
+	for _, featureName := range []string{model.FEATURE_HUBSPOT, model.FEATURE_HUBSPOT_BASIC} {
+		featureProjectIDs, err := store.GetAllProjectsWithFeatureEnabled(featureName, false)
+		if err != nil {
+			log.WithError(err).Error("Failed to get hubspot feature enabled projects.")
+			return nil, nil, http.StatusInternalServerError
+		}
+
+		for i := range featureProjectIDs {
+			projectFeature[featureProjectIDs[i]] = featureName
+		}
+	}
+
+	featureProjectSettings := []model.HubspotProjectSettings{}
+	for i := range projectSettings {
+		if _, exist := projectFeature[projectSettings[i].ProjectId]; !exist {
+			continue
+		}
+
+		featureProjectSettings = append(featureProjectSettings, projectSettings[i])
+	}
+	projectSettings = featureProjectSettings
+
+	allowedObjectsByProjectID := make(map[int64]map[string]bool)
+	featureEnabledProjectSettings := make(map[int64]*model.HubspotProjectSettings)
+	for i := range projectSettings {
+		plan, exist := projectFeature[projectSettings[i].ProjectId]
+		if !exist {
+			continue
+		}
+
+		allowedObjectsByProjectID[projectSettings[i].ProjectId] = make(map[string]bool)
+		allowedObjects, err := model.GetHubspotAllowedObjectsByPlan(plan)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectSettings[i].ProjectId}).WithError(err).Error("Failed to get allowed objects in GetHubspotProjectAllowedObjects.")
+			continue
+		}
+
+		for typ := range model.HubspotDocumentTypeAlias {
+			if !allowedObjects[typ] {
+				continue
+			}
+
+			allowedObjectsByProjectID[projectSettings[i].ProjectId][typ] = true
+		}
+		featureEnabledProjectSettings[projectSettings[i].ProjectId] = &projectSettings[i]
+	}
+
+	return allowedObjectsByProjectID, featureEnabledProjectSettings, http.StatusFound
 }
 
 func (store *MemSQL) GetHubspotFormDocuments(projectId int64) ([]model.HubspotDocument, int) {
@@ -2059,7 +2135,7 @@ func (store *MemSQL) GetHubspotOwnerEmailFromOwnerId(projectID int64, ownerID st
 	return email, http.StatusFound, nil
 }
 
-func (store *MemSQL) GetHubspotHubspotDocumentMinCreatedAt(projectID int64) (int64, int) {
+func (store *MemSQL) GetHubspotHubspotDocumentOverAllMinCreatedAt(projectID int64) (int64, int) {
 	logFields := log.Fields{"project_id": projectID}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
@@ -2069,22 +2145,84 @@ func (store *MemSQL) GetHubspotHubspotDocumentMinCreatedAt(projectID int64) (int
 		return 0, http.StatusInternalServerError
 	}
 
-	var docTypeMinCreateDate struct {
-		MinCreatedAt *time.Time
+	_, overAllMinCreatedAt, status := store.GetHubspotDocumentCreatedAt(projectID, false, true, true, false)
+	if status != http.StatusFound {
+		return 0, status
+	}
+
+	return overAllMinCreatedAt.Unix(), http.StatusFound
+}
+
+func (store *MemSQL) GetHubspotDocumentCreatedAt(projectID int64, synced bool, unsynced bool, min bool, max bool) (map[string]*time.Time, *time.Time, int) {
+	logFields := log.Fields{"project_id": projectID}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+	if projectID == 0 {
+		logCtx.Error("Invalid parameters.")
+		return nil, nil, http.StatusInternalServerError
+	}
+	if min == max && (min == true || min == false) {
+		logCtx.Error("Invalid min max in GetHubspotDocumentCreatedAt.")
+		return nil, nil, http.StatusInternalServerError
+	}
+
+	whereStmnt := "project_id = ? "
+	whereParams := []interface{}{projectID}
+	if synced {
+		whereStmnt = whereStmnt + " AND synced = true"
+	} else if unsynced {
+		whereStmnt = whereStmnt + " AND synced = false"
+	}
+
+	selectStmnt := ""
+	if min {
+		selectStmnt = "type, min(created_at) as required_created_at"
+	}
+	if max {
+		selectStmnt = "type, max(created_at) as required_created_at"
+
+	}
+
+	var docTypesMinCreateDate []struct {
+		Type              int
+		RequiredCreatedAt *time.Time
 	}
 
 	db := C.GetServices().Db
-	err := db.Model(model.HubspotDocument{}).Select("DATE(min(created_at)) as min_created_at").
-		Where("project_id = ? AND synced = false", projectID).Scan(&docTypeMinCreateDate).Error
+	err := db.Model(model.HubspotDocument{}).Select(selectStmnt).
+		Where(whereStmnt, whereParams...).Group("type").Scan(&docTypesMinCreateDate).Error
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to get hubspot min created at by doc type.")
-		return 0, http.StatusInternalServerError
+		return nil, nil, http.StatusInternalServerError
 	}
 
-	if docTypeMinCreateDate.MinCreatedAt == nil {
-		return 0, http.StatusNotFound
+	if len(docTypesMinCreateDate) == 0 {
+		return nil, nil, http.StatusNotFound
 	}
 
-	return docTypeMinCreateDate.MinCreatedAt.Unix(), http.StatusFound
+	docTypesMinCreateDateMap := make(map[string]*time.Time)
+	var overAllCreatedAt *time.Time
+	for i := range docTypesMinCreateDate {
+		doc := docTypesMinCreateDate[i]
+		docTypesMinCreateDateMap[model.GetHubspotTypeAliasByType(doc.Type)] = doc.RequiredCreatedAt
+		if overAllCreatedAt == nil {
+			overAllCreatedAt = doc.RequiredCreatedAt
+		}
 
+		if min {
+			if overAllCreatedAt.After(*doc.RequiredCreatedAt) {
+				overAllCreatedAt = doc.RequiredCreatedAt
+			}
+		}
+
+		if max {
+			if overAllCreatedAt.Before(*doc.RequiredCreatedAt) {
+				overAllCreatedAt = doc.RequiredCreatedAt
+			}
+		}
+
+	}
+
+	return docTypesMinCreateDateMap, overAllCreatedAt, http.StatusFound
 }

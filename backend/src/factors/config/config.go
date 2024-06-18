@@ -373,6 +373,7 @@ type Configuration struct {
 	EnableCacheDBReadProjects                            string
 	SkipSalesforceLeadEnrichmentByProjectID              string
 	SalesforceEnrichOnlyObjects                          string
+	EnableSalesforceRelationshipPullByProjectID          string
 	SixSignalV3ProjectIds                                string
 	ChatDebug                                            int
 }
@@ -3252,7 +3253,11 @@ func SalesforceSkipLeadUpdatesProcessingByProjectID(projectID int64) bool {
 }
 
 func SalesforceAllowOpportunityOverrideCreateCreatedEvent(projectID int64) bool {
-	_, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().SalesforceAllowOpportunityOverrideCreateCreatedEvent, "")
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().SalesforceAllowOpportunityOverrideCreateCreatedEvent, "")
+	if allProjects {
+		return true
+	}
+
 	return allowedProjectIDs[projectID]
 }
 
@@ -3376,6 +3381,19 @@ func IsSalesforceEnabledEnrichObject(docTypeAlias string) bool {
 		return true
 	}
 	return false
+}
+
+func IsSalesforceEnabledEnrichObjectSet() bool {
+	return strings.TrimSpace(GetConfig().SalesforceEnrichOnlyObjects) != ""
+}
+
+func EnableSalesforceRelationshipPullByProjectID(projectID int64) bool {
+	allProjects, allowedProjectIDs, _ := GetProjectsFromListWithAllProjectSupport(GetConfig().EnableSalesforceRelationshipPullByProjectID, "")
+	if allProjects {
+		return true
+	}
+
+	return allowedProjectIDs[projectID]
 }
 
 func IsSixSignalV3Enabled(projectId int64) bool {

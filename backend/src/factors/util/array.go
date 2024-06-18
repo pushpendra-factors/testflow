@@ -33,6 +33,15 @@ func ContainsStringInArray(s []string, e string) bool {
 	return false
 }
 
+func ContainsIntInArray(s []int, e int) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
 func AppendNonNullValues(args ...string) []string {
 	result := make([]string, 0, 0)
 

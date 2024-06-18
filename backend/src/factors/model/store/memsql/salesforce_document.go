@@ -82,20 +82,18 @@ func (store *MemSQL) isSalesforceDocumentExistByPrimaryKey(document *model.Sales
 	return http.StatusFound
 }
 
-// GetSalesforceSyncInfo returns list of projects and their corresponding sync status
-func (store *MemSQL) GetSalesforceSyncInfo() (model.SalesforceSyncInfo, int) {
-
+func (store *MemSQL) GetSalesforceSyncInfo() (*model.SalesforceSyncInfo, int) {
 	defer model.LogOnSlowExecutionWithParams(time.Now(), nil)
 	var syncInfo model.SalesforceSyncInfo
 
 	lastSyncInfo, err := getSalesforceSyncInfoFromDB(false)
 	if err != nil {
-		return syncInfo, http.StatusInternalServerError
+		return nil, http.StatusInternalServerError
 	}
 
 	deletedLastSyncInfo, err := getSalesforceSyncInfoFromDB(true)
 	if err != nil {
-		return syncInfo, http.StatusInternalServerError
+		return nil, http.StatusInternalServerError
 	}
 
 	lastSyncInfoByProject := make(map[int64]map[string]int64, 0)
@@ -116,71 +114,111 @@ func (store *MemSQL) GetSalesforceSyncInfo() (model.SalesforceSyncInfo, int) {
 		deletedLastSyncInfoByProject[syncInfo.ProjectID][model.GetSalesforceAliasByDocType(syncInfo.Type)] = syncInfo.Timestamp
 	}
 
+	projectAllowedObjects, projectSettings, status := store.GetSalesforceEnabledProjectAllowedObjectsAndProjectSettings()
+	if status != http.StatusFound {
+		log.Error("Failed to GetSalesforceEnabledProjectAllowedObjectsAndProjectSettings.")
+		return nil, http.StatusInternalServerError
+	}
+
 	enabledProjectLastSync := make(map[int64]map[string]int64, 0)
-
-	projectSettings, errCode := store.GetAllSalesforceProjectSettings()
-	if errCode != http.StatusFound {
-		return syncInfo, http.StatusInternalServerError
-	}
-
-	settingsByProject := make(map[int64]*model.SalesforceProjectSettings, 0)
-	for i, ps := range projectSettings {
-		_, pExists := lastSyncInfoByProject[ps.ProjectID]
-
-		if !pExists {
-			// add projects not synced before.
-			enabledProjectLastSync[ps.ProjectID] = make(map[string]int64, 0)
-		} else {
-			// add sync info if avaliable.
-			enabledProjectLastSync[ps.ProjectID] = lastSyncInfoByProject[ps.ProjectID]
-		}
-
-		// add types not synced before.
-		for typ := range model.GetSalesforceDocumentTypeAlias(ps.ProjectID) {
-			_, typExists := enabledProjectLastSync[ps.ProjectID][typ]
-			if !typExists {
-				// last sync timestamp as zero as type not synced before.
-				enabledProjectLastSync[ps.ProjectID][typ] = 0
-			}
-		}
-
-		settingsByProject[projectSettings[i].ProjectID] = &projectSettings[i]
-	}
-
 	enabledProjectDeletedRecordLastSync := make(map[int64]map[string]int64, 0)
-	for _, ps := range projectSettings {
-		if !C.EnableSalesforceDeletedRecordByProjectID(ps.ProjectID) {
-			continue
+	enabledProjectSettings := make(map[int64]*model.SalesforceProjectSettings)
+	for projectID, allowedObjects := range projectAllowedObjects {
+		syncInfo := lastSyncInfoByProject[projectID]
+		if syncInfo == nil {
+			syncInfo = map[string]int64{}
+		}
+		for typ := range allowedObjects {
+			if _, exist := enabledProjectLastSync[projectID]; !exist {
+				enabledProjectLastSync[projectID] = map[string]int64{}
+			}
+			enabledProjectLastSync[projectID][typ] = syncInfo[typ]
 		}
 
-		_, pExists := deletedLastSyncInfoByProject[ps.ProjectID]
-		if !pExists {
-			enabledProjectDeletedRecordLastSync[ps.ProjectID] = make(map[string]int64, 0)
-		} else {
-			enabledProjectDeletedRecordLastSync[ps.ProjectID] = deletedLastSyncInfoByProject[ps.ProjectID]
+		// deleted object sync info
+		deletedObjectSyncInfo := deletedLastSyncInfoByProject[projectID]
+		if deletedObjectSyncInfo == nil {
+			deletedObjectSyncInfo = map[string]int64{}
 		}
-
-		// add types not synced before.
+		enabledProjectDeletedRecordLastSync[projectID] = map[string]int64{}
+		// add deleted types not synced before.
 		for typ := range map[string]bool{model.SalesforceDocumentTypeNameLead: true,
 			model.SalesforceDocumentTypeNameContact:     true,
 			model.SalesforceDocumentTypeNameAccount:     true,
 			model.SalesforceDocumentTypeNameOpportunity: true} {
-			_, typExists := enabledProjectDeletedRecordLastSync[ps.ProjectID][typ]
-			if !typExists {
-				// last sync timestamp as zero as type not synced before.
-				enabledProjectDeletedRecordLastSync[ps.ProjectID][typ] = 0
+			if !allowedObjects[typ] {
+				continue
 			}
-		}
+			enabledProjectDeletedRecordLastSync[projectID][typ] = deletedObjectSyncInfo[typ]
 
+		}
+		enabledProjectSettings[projectID] = projectSettings[projectID]
 	}
 
 	syncInfo.LastSyncInfo = enabledProjectLastSync
-	syncInfo.ProjectSettings = settingsByProject
+	syncInfo.ProjectSettings = enabledProjectSettings
 	syncInfo.DeletedRecordLastSyncInfo = enabledProjectDeletedRecordLastSync
-
-	return syncInfo, http.StatusFound
+	return &syncInfo, http.StatusFound
 }
 
+func (store *MemSQL) GetSalesforceEnabledProjectAllowedObjectsAndProjectSettings() (map[int64]map[string]bool, map[int64]*model.SalesforceProjectSettings, int) {
+	// get project settings of salesforce enaled projects.
+	projectSettings, errCode := store.GetAllSalesforceProjectSettings()
+	if errCode != http.StatusFound {
+		return nil, nil, http.StatusInternalServerError
+	}
+
+	projectFeature := make(map[int64]string, 0)
+	for _, featureName := range []string{model.FEATURE_SALESFORCE, model.FEATURE_SALESFORCE_BASIC} {
+		featureProjectIDs, err := store.GetAllProjectsWithFeatureEnabled(featureName, false)
+		if err != nil {
+			log.WithError(err).Error("Failed to get salesforce feature enabled projects.")
+			return nil, nil, http.StatusInternalServerError
+		}
+
+		for i := range featureProjectIDs {
+			projectFeature[featureProjectIDs[i]] = featureName
+		}
+	}
+
+	featureProjectSettings := []model.SalesforceProjectSettings{}
+	for i := range projectSettings {
+		if _, exist := projectFeature[projectSettings[i].ProjectID]; !exist {
+			continue
+		}
+
+		featureProjectSettings = append(featureProjectSettings, projectSettings[i])
+	}
+	projectSettings = featureProjectSettings
+
+	allowedObjectsByProjectID := make(map[int64]map[string]bool)
+	featureEnabledProjectSettings := map[int64]*model.SalesforceProjectSettings{}
+	for i := range projectSettings {
+		plan, exist := projectFeature[projectSettings[i].ProjectID]
+		if !exist {
+			continue
+		}
+
+		allowedObjectsByProjectID[projectSettings[i].ProjectID] = make(map[string]bool)
+		allowedObjects, err := model.GetSalesforceAllowedObjectsByPlan(plan)
+		if err != nil {
+			log.WithFields(log.Fields{"project_id": projectSettings[i].ProjectID}).WithError(err).Error("Failed to get allowed objects in GetSalesforceProjectAllowedObjects.")
+			continue
+		}
+
+		for typ := range model.SalesforceDocumentTypeAlias {
+			if !allowedObjects[typ] {
+				continue
+			}
+
+			allowedObjectsByProjectID[projectSettings[i].ProjectID][typ] = true
+		}
+		featureEnabledProjectSettings[projectSettings[i].ProjectID] = &projectSettings[i]
+	}
+
+	return allowedObjectsByProjectID, featureEnabledProjectSettings, http.StatusFound
+
+}
 func getSalesforceSyncInfoFromDB(deletedRecords bool) ([]model.SalesforceLastSyncInfo, error) {
 	var lastSyncInfo []model.SalesforceLastSyncInfo
 
@@ -189,7 +227,9 @@ func getSalesforceSyncInfoFromDB(deletedRecords bool) ([]model.SalesforceLastSyn
 		"project_id, type, MAX(timestamp) as timestamp").Group(
 		"project_id, type")
 
-	if deletedRecords {
+	if !deletedRecords {
+		dbtx = dbtx.Where("action != ?", model.SalesforceDocumentDeleted)
+	} else {
 		dbtx = dbtx.Where("action = ?", model.SalesforceDocumentDeleted)
 	}
 
@@ -1257,4 +1297,72 @@ func (store *MemSQL) GetSalesforceDocumentByTypeAndAction(projectID int64, id st
 		return nil, http.StatusNotFound
 	}
 	return &documents[0], http.StatusFound
+}
+
+func (store *MemSQL) GetSalesforceDocumentCreatedAt(projectID int64, synced, unsynced, min, max bool) (map[int]*time.Time, *time.Time, int) {
+	if projectID == 0 {
+		log.Error("Invalid project id.")
+		return nil, nil, http.StatusBadRequest
+	}
+
+	var docCreatedAt []struct {
+		Type              int
+		RequiredCreatedAt *time.Time
+	}
+
+	whereStmnt := "project_id = ?"
+	whereParams := []interface{}{projectID}
+	if synced {
+		whereStmnt += " AND synced = true"
+	}
+
+	if unsynced {
+		whereStmnt += " AND synced = false"
+	}
+
+	selectStmnt := ""
+	if min {
+		selectStmnt = "type, min(created_at) as required_created_at"
+	}
+
+	if max {
+		selectStmnt = "type, max(created_at) as required_created_at"
+	}
+	db := C.GetServices().Db
+	err := db.Model(&model.SalesforceDocument{}).Where(whereStmnt, whereParams...).Select(selectStmnt).Group("type").Scan(&docCreatedAt).Error
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return nil, nil, http.StatusNotFound
+		}
+		log.WithField("project_id", projectID).WithError(err).Error("Failed to get salesforce documents.")
+		return nil, nil, http.StatusInternalServerError
+	}
+
+	if len(docCreatedAt) < 1 {
+		return nil, nil, http.StatusNotFound
+	}
+
+	docMinCreatedAtMap := map[int]*time.Time{}
+	var overAlldocCreatedAt *time.Time
+
+	for i := range docCreatedAt {
+		if overAlldocCreatedAt == nil {
+			overAlldocCreatedAt = docCreatedAt[i].RequiredCreatedAt
+		}
+
+		if min {
+			if overAlldocCreatedAt.After(*docCreatedAt[i].RequiredCreatedAt) {
+				overAlldocCreatedAt = docCreatedAt[i].RequiredCreatedAt
+			}
+		}
+
+		if max {
+			if overAlldocCreatedAt.Before(*docCreatedAt[i].RequiredCreatedAt) {
+				overAlldocCreatedAt = docCreatedAt[i].RequiredCreatedAt
+			}
+		}
+
+		docMinCreatedAtMap[docCreatedAt[i].Type] = docCreatedAt[i].RequiredCreatedAt
+	}
+	return docMinCreatedAtMap, overAlldocCreatedAt, http.StatusFound
 }

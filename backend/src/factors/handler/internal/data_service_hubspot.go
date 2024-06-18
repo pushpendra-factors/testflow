@@ -148,6 +148,31 @@ func DataServiceHubspotUpdateSyncInfo(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
+func DataServiceHubspotProjectSyncedHandler(c *gin.Context) {
+	pid := c.Query("project_id")
+	if pid == "" {
+		log.Error("Missing project id for marking project as synced.")
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "project id missing."})
+		return
+	}
+
+	projecID, err := U.GetPropertyValueAsInt64(pid)
+	if err != nil {
+		log.WithError(err).Error("Failed to parse project id.")
+		c.AbortWithStatus(http.StatusInternalServerError)
+		return
+	}
+
+	status := store.GetStore().UpdateHubspotFirstTimeSynced(projecID)
+	if status != http.StatusAccepted {
+		c.AbortWithStatusJSON(http.StatusInternalServerError,
+			gin.H{"error": "failed to set project as synced."})
+		return
+	}
+	c.Status(http.StatusOK)
+}
+
 func DataServiceGetHubspotFormDocumentsHandler(c *gin.Context) {
 	projectId, err := strconv.ParseInt(c.Query("project_id"), 10, 64)
 	if err != nil || projectId == 0 {
