@@ -1477,7 +1477,8 @@ func (store *MemSQL) FindAndCacheAlertForCurrentSegment(projectID int64, segment
 
 	// get all group and account properties
 	groupUserProps := store.GetAllGroupPropertiesForGivenDomainGroupUserID(projectID, domainsGroup.ID, domainID)
-
+	(*groupUserProps)[U.EP_TIMESTAMP] = timeOfActionPerformed
+	
 	for _, alert := range alerts {
 		// check for empty jsonb
 		if alert.EventTriggerAlert == nil {
