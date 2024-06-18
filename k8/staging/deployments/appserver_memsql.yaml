@@ -137,6 +137,8 @@ spec:
           - "10"
           - --attribution_debug
           - 0
+          - --chat_debug
+          - "0"
           - --project_analytics_whitelisted_uuids
           - a2d600fc-75b4-4384-9bda-7a039f6e64c9
           - --primary_datastore
