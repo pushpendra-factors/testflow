@@ -607,7 +607,8 @@ const KPIBasedAlert = ({
         tempArr.push({
           name: slack[i].name,
           id: slack[i].id,
-          is_private: slack[i].is_private
+          is_private: slack[i].is_private,
+          team_id: slack[i].context_team_id
         });
       }
       setChannelOpts(tempArr);
