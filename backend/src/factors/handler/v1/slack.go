@@ -59,7 +59,7 @@ func SlackAuthRedirectHandler(c *gin.Context) {
 }
 func GetSlackAuthorisationURL(clientID string, state string) string {
 
-	url := fmt.Sprintf(`https://slack.com/oauth/v2/authorize?client_id=%s&scope=channels:read,chat:write,chat:write.public,users:read,users:read.email&user_scope=channels:read,chat:write,groups:read,mpim:read,users:read,users:read.email&state=%s`, clientID, state)
+	url := fmt.Sprintf(`https://slack.com/oauth/v2/authorize?client_id=%s&scope=channels:read,chat:write,chat:write.public,users:read&user_scope=channels:read,chat:write,groups:read,mpim:read,users:read&state=%s`, clientID, state)
 	return url
 }
 func SlackCallbackHandler(c *gin.Context) {
@@ -396,6 +396,43 @@ func SlackEventListnerHandler(c *gin.Context) {
 					c.AbortWithError(http.StatusInternalServerError, errors.New("Slack accsess Token removal failed."))
 					return
 				}
+			}
+
+			alerts, err := store.GetStore().GetAllEventTriggerAlertsBySlackTeamID(teamId)
+			if err != nil {
+				logCtx.WithError(err).Error("failed to fetch all alerts by slack team id.")
+				c.AbortWithError(http.StatusInternalServerError, errors.New("Operation Failed"))
+			}
+			for _, alert := range alerts {
+				var alertConfig model.EventTriggerAlertConfig
+				err = U.DecodePostgresJsonbToStructType(alert.EventTriggerAlert, &alertConfig)
+				if err != nil {
+					logCtx.WithError(err).Error("failed to unmarshal event trigger alert config.")
+					c.AbortWithError(http.StatusInternalServerError, errors.New("Operation Failed"))
+				}
+
+				alertConfig.SlackChannels = nil
+				alertConfig.Slack = false
+				alertConfig.SlackMentions = nil
+				alertConfig.SlackFieldsTag = []string{}
+
+				alertConfigJson, err := U.EncodeStructTypeToPostgresJsonb(alertConfig)
+				if err != nil {
+					logCtx.WithError(err).Error("failed to marshal event trigger alert config.")
+					c.AbortWithError(http.StatusInternalServerError, errors.New("Operation Failed"))
+				}
+
+				updates := make(map[string]interface{})
+
+				updates["event_trigger_alert"] = alertConfigJson
+				updates["internal_status"] = model.Disabled
+
+				status, err := store.GetStore().UpdateEventTriggerAlertField(alert.ProjectID, alert.ID, updates)
+				if status != http.StatusOK {
+					logCtx.WithError(err).Error("failed to update alerts.")
+					c.AbortWithError(http.StatusInternalServerError, errors.New("Operation Failed"))
+				}
+
 			}
 
 			c.JSON(http.StatusOK, nil)
