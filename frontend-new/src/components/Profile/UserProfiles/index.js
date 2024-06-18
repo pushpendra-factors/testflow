@@ -30,8 +30,6 @@ import {
   setNewSegmentModeAction
 } from 'Reducers/userProfilesView/actions';
 import { useHistory, useLocation } from 'react-router-dom';
-import RangeNudge from 'Components/GenericComponents/RangeNudge';
-import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
 import CommonBeforeIntegrationPage from 'Components/GenericComponents/CommonBeforeIntegrationPage';
 import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
 import { ProfilesSidebarIconsMapping } from 'Views/AppSidebar/appSidebar.constants';
@@ -48,6 +46,9 @@ import {
   updateTableProperties,
   updateTablePropertiesForSegment
 } from 'Reducers/timelines';
+import { FolderItemOptions } from 'Components/FolderStructure/FolderItem';
+import { selectSegmentsList } from 'Reducers/userProfilesView/selectors';
+import UpgradeNudge from 'Components/GenericComponents/UpgradeNudge';
 import { Text, SVG } from '../../factorsComponents';
 import { getUserPropertiesV2 } from '../../../reducers/coreQuery/middleware';
 import PropertyFilter from '../AccountProfiles/PropertyFilter';
@@ -98,8 +99,6 @@ import {
   headerClassStr,
   iconColors
 } from '../constants';
-import { FolderItemOptions } from 'Components/FolderStructure/FolderItem';
-import { selectSegmentsList } from 'Reducers/userProfilesView/selectors';
 
 const userOptions = getUserOptions();
 
@@ -194,8 +193,6 @@ function UserProfiles({
     newSegmentMode,
     filtersDirty: areFiltersDirty
   } = useSelector((state) => state.userProfilesView);
-
-  const { sixSignalInfo } = useSelector((state) => state.featureConfig);
 
   const setFiltersDirty = useCallback(
     (value) => {
@@ -402,16 +399,6 @@ function UserProfiles({
       newSegmentMode,
       selectedFilters
     ]
-  );
-
-  const showRangeNudge = useMemo(
-    () =>
-      showUpgradeNudge(
-        sixSignalInfo?.usage || 0,
-        sixSignalInfo?.limit || 0,
-        currentProjectSettings
-      ),
-    [sixSignalInfo?.usage, sixSignalInfo?.limit, currentProjectSettings]
   );
 
   const titleIcon = useMemo(() => {
@@ -1164,15 +1151,9 @@ function UserProfiles({
   if (isIntegrationEnabled) {
     return (
       <ProfilesWrapper>
-        <ControlledComponent controller={showRangeNudge === true}>
-          <div className='mb-4'>
-            <RangeNudge
-              title='Users Identified'
-              amountUsed={sixSignalInfo?.usage || 0}
-              totalLimit={sixSignalInfo?.limit || 0}
-            />
-          </div>
-        </ControlledComponent>
+        <div className='mb-4'>
+          <UpgradeNudge />
+        </div>
 
         <div className='flex justify-between items-center'>
           <div className='flex gap-x-2  items-center'>

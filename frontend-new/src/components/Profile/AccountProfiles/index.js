@@ -34,8 +34,6 @@ import {
 } from 'Reducers/accountProfilesView/actions';
 import useFeatureLock from 'hooks/useFeatureLock';
 import { FEATURES } from 'Constants/plans.constants';
-import RangeNudge from 'Components/GenericComponents/RangeNudge';
-import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
 import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
 import { selectGroupsList } from 'Reducers/groups/selectors';
 import {
@@ -72,6 +70,7 @@ import {
   getSegmentFolders
 } from 'Reducers/timelines/middleware';
 import { FolderItemOptions } from 'Components/FolderStructure/FolderItem';
+import UpgradeNudge from 'Components/GenericComponents/UpgradeNudge';
 import DownloadCSVModal from './DownloadCSVModal';
 import UpdateSegmentModal from './UpdateSegmentModal';
 import {
@@ -191,9 +190,11 @@ function AccountProfiles({
     preview
   } = useSelector((state) => state.accountProfilesView);
 
-  const previousSegmentId = usePrevious(accountPayload?.segment?.id);
+  const { loading: isFeatureLoading } = useSelector(
+    (state) => state.featureConfig
+  );
 
-  const { sixSignalInfo } = useSelector((state) => state.featureConfig);
+  const previousSegmentId = usePrevious(accountPayload?.segment?.id);
 
   const { isFeatureLocked: isScoringLocked } = useFeatureLock(
     FEATURES.FEATURE_ACCOUNT_SCORING
@@ -264,16 +265,6 @@ function AccountProfiles({
   const disableDiscardButton = useMemo(
     () => isEqual(selectedFilters, appliedFilters),
     [selectedFilters, appliedFilters]
-  );
-
-  const showRangeNudge = useMemo(
-    () =>
-      showUpgradeNudge(
-        sixSignalInfo?.usage || 0,
-        sixSignalInfo?.limit || 0,
-        currentProjectSettings
-      ),
-    [currentProjectSettings, sixSignalInfo?.limit, sixSignalInfo?.usage]
   );
 
   const { saveButtonDisabled } = useMemo(
@@ -1230,16 +1221,9 @@ function AccountProfiles({
 
   return (
     <Wrapper>
-      <ControlledComponent controller={showRangeNudge}>
-        <div className='mb-4'>
-          <RangeNudge
-            title='Accounts Identified'
-            amountUsed={sixSignalInfo?.usage || 0}
-            totalLimit={sixSignalInfo?.limit || 0}
-          />
-        </div>
-      </ControlledComponent>
-
+      <div className='mt-2 mb-4 px-10'>
+        <UpgradeNudge showCarousel />
+      </div>
       <div className='flex justify-between items-center pb-2 px-10'>
         <div className='flex gap-x-2  items-center'>
           <div className='flex items-center rounded justify-center h-10 w-10'>
@@ -1277,7 +1261,9 @@ function AccountProfiles({
             </ControlledComponent>
           </div>
         </div>
-        <ControlledComponent controller={accounts.isLoading}>
+        <ControlledComponent
+          controller={accounts.isLoading || isFeatureLoading}
+        >
           <div className='accounts-loader-div'>
             <Spin size='large' />
           </div>
