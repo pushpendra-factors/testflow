@@ -42,7 +42,9 @@ const FactorsLinkedInCAPI = ({
   useEffect(() => {
     if (selectedTemp && !isTemplate) {
       setPropertyMapMandatory(selectedTemp?.addtional_configuration);
-      SetSelectedProps(selectedTemp?.addtional_configuration[0]?.id);
+      SetSelectedProps(
+        selectedTemp?.addtional_configuration?.conversions?.elements?.[0]?.name
+      );
     }
   }, [selectedTemp]);
 
@@ -156,13 +158,20 @@ const FactorsLinkedInCAPI = ({
                     />
                   </div>
                 )}
-                 <Text
-                type={'title'}
-                level={7}
-                color={'grey'}
-                extraClass={'m-0 mt-2 mb-2'}
-              >{`Your credentials are encrypted & can be removed at any time. You can manage all of your connected accounts `}
-              <a target="_blank" href='https://app.factors.ai/settings/integration'>here.</a></Text>
+                <Text
+                  type={'title'}
+                  level={7}
+                  color={'grey'}
+                  extraClass={'m-0 mt-2 mb-2'}
+                >
+                  {`Your credentials are encrypted & can be removed at any time. You can manage all of your connected accounts `}
+                  <a
+                    target='_blank'
+                    href='https://app.factors.ai/settings/integration'
+                  >
+                    here.
+                  </a>
+                </Text>
               </div>
             </div>
             <div className='p-4 mt-4 flex items-center justify-end'>
