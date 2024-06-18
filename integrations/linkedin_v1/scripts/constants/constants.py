@@ -34,7 +34,7 @@ SYNC_STATUS_T0 = 0
 T8_END_BUFFER = 0
 SYNC_INFO_KEY_T8 = MEMBER_COMPANY_INSIGHTS + ":1"
 SYNC_INFO_KEY_T22 = MEMBER_COMPANY_INSIGHTS + ":2"
-LINKEDIN_VERSION = '202305'
+LINKEDIN_VERSION = '202405'
 PROTOCOL_VERSION = '2.0.0'
 META_DATA_URL = 'https://api.linkedin.com/rest/adAccounts/{}/{}?q=search&search=(status:(values:List(ACTIVE,PAUSED)))&start={}&count={}'
 INSIGHTS_REQUEST_URL_FORMAT = 'https://api.linkedin.com/rest/adAnalytics?q=analytics&pivot={}&dateRange=(start:(day:{},month:{},year:{}),end:(day:{},month:{},year:{}))&timeGranularity=DAILY&fields={}&accounts=List(urn%3Ali%3AsponsoredAccount%3A{})&start={}&count={}'
