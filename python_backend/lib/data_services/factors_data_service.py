@@ -287,7 +287,7 @@ class FactorsDataService:
 
     @classmethod
     def get_kpi_filter_values(cls, pid, kpi_info, filter_info):
-        url: str = cls.data_service_path + "/chat/" + pid + "/v1" + "/kpi/filter_values"
+        url: str = cls.data_service_path + "/chat/" + pid + "/v1" + "/kpi/filter_values?label=true"
         payload = {
             "category": kpi_info['category'],
             "display_category": kpi_info['display_category'],
@@ -297,6 +297,7 @@ class FactorsDataService:
             "me": "",
             "is_property_mapping": False,
         }
+        log.info(f"data service url: {url}")
 
         response = requests.post(url, json=payload)
 
@@ -306,6 +307,7 @@ class FactorsDataService:
 
         try:
             filter_values = response.json()  # Assuming the response is JSON
+            log.info(f"Received filter values: {filter_values}")
             return filter_values
         except ValueError:
             log.error("Failed to decode chat embeddings response")

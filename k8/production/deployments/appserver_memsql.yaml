@@ -150,6 +150,8 @@ spec:
           - "20"
           - --attribution_debug
           - "0"
+          - --chat_debug
+          - "0"
           - --project_analytics_whitelisted_uuids
           - 1b993a1b-8a76-4ddd-a827-fa3c579ba8b9
           - --allow_smart_event_rule_creation
