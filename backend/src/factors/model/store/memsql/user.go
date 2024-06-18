@@ -612,8 +612,9 @@ func getLatestDomainsByProjectIDQuery(projectID int64, domainGroupID int, limitV
 	whereStr = strings.ReplaceAll(whereStr, "users.properties", "properties")
 	whereStr = strings.ReplaceAll(whereStr, "user_global_user_properties", "properties")
 
-	query := fmt.Sprintf(`SELECT 
-	group_%d_user_id 
+	query := fmt.Sprintf(`SELECT group_%d_user_id FROM (
+	SELECT 
+	group_%d_user_id, MAX(last_event_at) as max_last_event  
   FROM 
 	users 
   WHERE 
@@ -623,10 +624,10 @@ func getLatestDomainsByProjectIDQuery(projectID int64, domainGroupID int, limitV
 	AND is_deleted = false
 	AND last_event_at > ? %s
   GROUP BY 
-	group_%d_user_id 
-  ORDER BY MAX(last_event_at) DESC
+	group_%d_user_id )
+  ORDER BY max_last_event DESC
   LIMIT 
-	%d;`, domainGroupID, domainGroupID, whereStr, domainGroupID, limitVal)
+	%d;`, domainGroupID, domainGroupID, domainGroupID, whereStr, domainGroupID, limitVal)
 
 	return query, queryParams
 }

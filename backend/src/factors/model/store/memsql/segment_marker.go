@@ -458,11 +458,7 @@ func CheckPropertyInAllUsers(projectId int64, p model.QueryProperty, decodedProp
 		isValueFound = CheckPropertyOfGivenType(projectId, p, &decodedProperties[index], fileValuesMap)
 
 		// check for negative filters
-		if (p.Operator == model.NotContainsOpStr && p.Value != model.PropertyValueNone) ||
-			(p.Operator == model.ContainsOpStr && p.Value == model.PropertyValueNone) ||
-			(p.Operator == model.NotEqualOpStr && p.Value != model.PropertyValueNone) ||
-			(p.Operator == model.EqualsOpStr && p.Value == model.PropertyValueNone) ||
-			(p.Operator == model.NotInList && p.Value != model.PropertyValueNone) {
+		if model.IsNegativeFilter(p) {
 			if !isValueFound {
 				return isValueFound
 			}
@@ -732,11 +728,7 @@ func NumericalPropCheck(operator string, propertyValue float64, checkValue float
 func checkCategoricalTypeProperty(projectId int64, segmentRule model.QueryProperty, properties *map[string]interface{},
 	fileValuesMap map[string]map[string]bool) bool {
 
-	if (segmentRule.Operator == model.NotContainsOpStr && segmentRule.Value != model.PropertyValueNone) ||
-		(segmentRule.Operator == model.ContainsOpStr && segmentRule.Value == model.PropertyValueNone) ||
-		(segmentRule.Operator == model.NotEqualOpStr && segmentRule.Value != model.PropertyValueNone) ||
-		(segmentRule.Operator == model.EqualsOpStr && segmentRule.Value == model.PropertyValueNone) ||
-		(segmentRule.Operator == model.NotInList && segmentRule.Value != model.PropertyValueNone) {
+	if model.IsNegativeFilter(segmentRule) {
 		if _, exists := (*properties)[segmentRule.Property]; !exists {
 			return true
 		}
