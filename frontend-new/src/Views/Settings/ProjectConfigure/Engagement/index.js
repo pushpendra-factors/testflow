@@ -1,6 +1,7 @@
 import {
   Button,
   Col,
+  message,
   Modal,
   notification,
   Popover,
@@ -127,6 +128,10 @@ function EngagementConfig({
   };
 
   const handleOk = (config, editMode) => {
+    if (parseInt(saleWindowValue) === 0) {
+      message.error('Engagement window should greater than 0');
+      return;
+    }
     const weightConf = [...weightsConfig];
     const newConfig = transformPayloadForWeightConfig(config);
 
