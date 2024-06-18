@@ -125,8 +125,6 @@ func (li *LinkedInCapiInfo) SendEventsToLinkedCAPI(config model.LinkedinCAPIConf
 
 	jsonResponse["status"] = "success"
 
-	logCtx.WithField("jsonResponse", jsonResponse).Info("Linkedin CAPI TEST - 25")
-
 	return jsonResponse, nil
 }
 
