@@ -1,6 +1,7 @@
 package memsql
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"factors/cache"
@@ -2026,7 +2027,6 @@ func GetEventNameFromCache(projectID int64, eventName string) (model.EventName, 
 	result, err := cacheRedis.Get(cacheKey)
 	if err != nil {
 		if err == redis.ErrNil {
-			logCtx.WithError(err).Error("cache not found on GetEventNameFromCache")
 			return model.EventName{}, err
 		}
 		logCtx.WithError(err).Error("error getting cache result on GetEventNameFromCache")
@@ -2051,5 +2051,5 @@ func DeleteEventNameFromCache(projectID int64, eventName string) error {
 }
 
 func GetEventNameCacheKey(projectID int64, eventName string) (*cache.Key, error) {
-	return cache.NewKey(projectID, "EN", eventName)
+	return cache.NewKey(projectID, "EN", base64.StdEncoding.EncodeToString([]byte(eventName)))
 }
