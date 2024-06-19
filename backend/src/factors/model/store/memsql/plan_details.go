@@ -109,7 +109,6 @@ func GetProjectPlanMappingFromCache(projectID int64) (model.ProjectPlanMapping, 
 	result, err := cacheRedis.Get(cacheKey)
 	if err != nil {
 		if err == redis.ErrNil {
-			logCtx.WithError(err).Error("cache not found on GetProjectPlanMappingFromCache")
 			return model.ProjectPlanMapping{}, err
 		}
 		logCtx.WithError(err).Error("error getting cache result on GetProjectPlanMappingFromCache")
