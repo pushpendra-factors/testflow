@@ -3,7 +3,9 @@ package memsql
 import (
 	"encoding/json"
 	"errors"
+	"factors/cache"
 	pCache "factors/cache/persistent"
+	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	U "factors/util"
 	"fmt"
@@ -11,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gomodule/redigo/redis"
 	"github.com/jinzhu/gorm"
 	log "github.com/sirupsen/logrus"
 
@@ -407,6 +410,13 @@ func (store *MemSQL) GetEventName(name string, projectId int64) (*model.EventNam
 		return nil, http.StatusNotFound
 	}
 
+	// Get event name from cache
+	eventNameCache, err := GetEventNameFromCache(projectId, name)
+	if err == nil {
+		return &eventNameCache, http.StatusFound
+	}
+
+	// Get event name from Query
 	var eventName model.EventName
 	db := C.GetServices().Db
 	if err := db.Limit(1).
@@ -419,6 +429,10 @@ func (store *MemSQL) GetEventName(name string, projectId int64) (*model.EventNam
 		log.WithFields(logFields).WithError(err).Error("Failed to get event_name.")
 		return nil, http.StatusInternalServerError
 	}
+
+	// Cache the retrieved event name
+	SetEventNameCache(projectId, name, eventName)
+
 	return &eventName, http.StatusFound
 }
 
@@ -1383,6 +1397,10 @@ func (store *MemSQL) UpdateEventName(projectId int64, id string,
 		return nil, http.StatusBadRequest
 	}
 
+	if err := DeleteEventNameFromCache(projectId, eventName.Name); err != nil {
+		log.WithFields(logFields).Error("Failed to invalidate cache on UpdateEventName")
+	}
+
 	return &updatedEventName, http.StatusAccepted
 }
 
@@ -1474,6 +1492,10 @@ func (store *MemSQL) updateCRMSmartEventFilter(projectID int64, id string, nameT
 		return nil, http.StatusBadRequest
 	}
 
+	if err := DeleteEventNameFromCache(projectID, eventName.Name); err != nil {
+		log.WithFields(logFields).Error("Failed to invalidate cache on updateCRMSmartEventFilter")
+	}
+
 	return &updatedEventName, http.StatusAccepted
 }
 
@@ -1524,7 +1546,7 @@ func (store *MemSQL) DeleteSmartEventFilter(projectID int64, id string) (*model.
 		return nil, http.StatusBadRequest
 	}
 
-	status = DeleteEventName(projectID, eventName.ID, eventName.Type)
+	status = store.DeleteEventName(projectID, eventName.ID, eventName.Type)
 	if status != http.StatusAccepted {
 		return nil, http.StatusInternalServerError
 	}
@@ -1542,7 +1564,7 @@ func (store *MemSQL) UpdateFilterEventName(projectId int64, id string, eventName
 	return store.UpdateEventName(projectId, id, model.TYPE_FILTER_EVENT_NAME, eventName)
 }
 
-func DeleteEventName(projectId int64, id string,
+func (store *MemSQL) DeleteEventName(projectId int64, id string,
 	nameType string) int {
 	logFields := log.Fields{
 		"project_id": projectId,
@@ -1573,6 +1595,16 @@ func DeleteEventName(projectId int64, id string,
 		return http.StatusBadRequest
 	}
 
+	// Cache invalidation
+	eventName, _, err := store.GetEventNameByID(projectId, id)
+	if err != nil {
+		return http.StatusBadRequest
+	}
+
+	if err := DeleteEventNameFromCache(projectId, eventName.Name); err != nil {
+		log.WithFields(logFields).Error("Failed to invalidate cache on UpdateEventName")
+	}
+
 	return http.StatusAccepted
 }
 
@@ -1582,7 +1614,7 @@ func (store *MemSQL) DeleteFilterEventName(projectId int64, id string) int {
 		"id":         id,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	return DeleteEventName(projectId, id, model.TYPE_FILTER_EVENT_NAME)
+	return store.DeleteEventName(projectId, id, model.TYPE_FILTER_EVENT_NAME)
 }
 
 // Returns sanitized filter expression and valid or not bool.
@@ -1804,16 +1836,13 @@ func (store *MemSQL) GetEventNameIDFromEventName(eventName string, projectId int
 		"project_id": projectId,
 		"event_name": eventName,
 	}
-	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
-	db := C.GetServices().Db
-	var event_name model.EventName
-	queryStr := "SELECT * FROM event_names WHERE name = ? AND project_id = ?"
-	err := db.Raw(queryStr, eventName, projectId).Scan(&event_name).Error
-	if err != nil {
-		log.WithError(err).Error("Failed to get event_id from event_name")
-		return nil, err
+
+	eventNameModel, errCode := store.GetEventName(eventName, projectId)
+	if errCode != http.StatusOK {
+		log.WithFields(logFields).Error("Failed to get event_id from event_name")
+		return nil, errors.New("Failed to get event_id from event_name")
 	}
-	return &event_name, nil
+	return eventNameModel, nil
 }
 
 func convert(eventNamesWithAggregation []model.EventNameWithAggregation) []model.EventName {
@@ -1953,4 +1982,74 @@ func (store *MemSQL) GetEventNameByID(projectID int64, id string) (*model.EventN
 	}
 
 	return &eventName, http.StatusFound, nil
+}
+
+func SetEventNameCache(projectID int64, eventName string, eventNameModel model.EventName) {
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectID,
+		"event_name": eventName,
+	})
+
+	cacheKey, err := GetEventNameCacheKey(projectID, eventName)
+	if err != nil {
+		logCtx.WithError(err).Error("Error getting SetEventNameCache key")
+		return
+	}
+
+	eventNameBytes, err := json.Marshal(eventNameModel)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to marshal value on SetEventNameCache")
+		return
+	}
+
+	const cacheInvalidationDuration = 24 * 60 * 60 // 24 hours in seconds
+	err = cacheRedis.Set(cacheKey, string(eventNameBytes), cacheInvalidationDuration)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to set cache on SetEventNameCache")
+		return
+	}
+}
+
+func GetEventNameFromCache(projectID int64, eventName string) (model.EventName, error) {
+	var eventNameModel model.EventName
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectID,
+		"event_name": eventName,
+	})
+
+	cacheKey, err := GetEventNameCacheKey(projectID, eventName)
+	if err != nil {
+		logCtx.WithError(err).Error("error getting GetEventNameFromCache key")
+		return model.EventName{}, err
+	}
+
+	result, err := cacheRedis.Get(cacheKey)
+	if err != nil {
+		if err == redis.ErrNil {
+			logCtx.WithError(err).Error("cache not found on GetEventNameFromCache")
+			return model.EventName{}, err
+		}
+		logCtx.WithError(err).Error("error getting cache result on GetEventNameFromCache")
+		return model.EventName{}, err
+	}
+
+	if err := json.Unmarshal([]byte(result), &eventNameModel); err != nil {
+		logCtx.WithError(err).Error("error decoding cache on GetEventNameFromCache")
+		return model.EventName{}, err
+	}
+
+	return eventNameModel, nil
+}
+
+func DeleteEventNameFromCache(projectID int64, eventName string) error {
+	if cacheKey, err := GetEventNameCacheKey(projectID, eventName); err != nil {
+		return err
+	} else if err := cacheRedis.Del(cacheKey); err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetEventNameCacheKey(projectID int64, eventName string) (*cache.Key, error) {
+	return cache.NewKey(projectID, "EN", eventName)
 }
