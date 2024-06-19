@@ -46,6 +46,8 @@ func main() {
 	dbMaxAllowedPacket := flag.Int64("db_max_allowed_packet", 0, "database maximum allowed packet ")
 	enableSyncReferenceFieldsByProjectID := flag.String("enable_sync_reference_fields_by_project_id", "", "")
 	chatDebug := flag.Int("chat_debug", 0, "")
+	lookbackWindowForEventUserCache := flag.Int("lookback_window_event_user_cache",
+		20, "look back window in cache for event/user cache")
 	flag.Parse()
 
 	defaultAppName := "data_server"
@@ -85,6 +87,7 @@ func main() {
 		DBMaxAllowedPacket:                              *dbMaxAllowedPacket,
 		EnableSyncReferenceFieldsByProjectID:            *enableSyncReferenceFieldsByProjectID,
 		ChatDebug:                                       *chatDebug,
+		LookbackWindowForEventUserCache:                 *lookbackWindowForEventUserCache,
 	}
 	C.InitConf(config)
 	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)

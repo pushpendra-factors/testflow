@@ -620,8 +620,9 @@ func getLatestDomainsByProjectIDQuery(projectID int64, domainGroupID int, limitV
 	whereStr = strings.ReplaceAll(whereStr, "users.properties", "properties")
 	whereStr = strings.ReplaceAll(whereStr, "user_global_user_properties", "properties")
 
-	query := fmt.Sprintf(`SELECT 
-	group_%d_user_id 
+	query := fmt.Sprintf(`SELECT group_%d_user_id FROM (
+	SELECT 
+	group_%d_user_id, MAX(last_event_at) as max_last_event  
   FROM 
 	users 
   WHERE 
@@ -631,10 +632,10 @@ func getLatestDomainsByProjectIDQuery(projectID int64, domainGroupID int, limitV
 	AND is_deleted = false
 	AND last_event_at > ? %s
   GROUP BY 
-	group_%d_user_id 
-  ORDER BY MAX(last_event_at) DESC
+	group_%d_user_id )
+  ORDER BY max_last_event DESC
   LIMIT 
-	%d;`, domainGroupID, domainGroupID, whereStr, domainGroupID, limitVal)
+	%d;`, domainGroupID, domainGroupID, domainGroupID, whereStr, domainGroupID, limitVal)
 
 	return query, queryParams
 }
@@ -1851,6 +1852,15 @@ func (store *MemSQL) GetPropertyValuesByUserProperty(projectID int64,
 	}
 	currentDate := model.OverrideCacheDateRangeForProjects(projectID)
 	values := make([]U.CachePropertyValueWithTimestamp, 0)
+
+	if C.GetChatDebug() == 1 {
+		log.WithFields(log.Fields{
+			"project_id":   projectID,
+			"propertyName": propertyName,
+			"limit":        limit,
+			"lastNDays":    lastNDays,
+			"method":       "GetPropertyValuesByUserProperty"}).Info("chat debug 1 ")
+	}
 	for i := 0; i < lastNDays; i++ {
 		currentDateOnlyFormat := currentDate.AddDate(0, 0, -i).Format(U.DATETIME_FORMAT_YYYYMMDD)
 		value, err := getPropertyValuesByUserPropertyFromCache(projectID, propertyName, currentDateOnlyFormat)
@@ -1858,6 +1868,12 @@ func (store *MemSQL) GetPropertyValuesByUserProperty(projectID int64,
 			return []string{}, err
 		}
 		values = append(values, value)
+	}
+
+	if C.GetChatDebug() == 1 {
+		log.WithFields(log.Fields{
+			"values": values,
+			"method": "GetPropertyValuesByUserProperty"}).Info("chat debug 2 ")
 	}
 
 	valueStrings := make([]string, 0)

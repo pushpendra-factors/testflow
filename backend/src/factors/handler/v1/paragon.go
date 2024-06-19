@@ -13,7 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const ParagonIntegrationsCountLimit = 10
+const ParagonIntegrationsCountLimit = 20
 
 func GetParagonAuthenticationTokenForProject(c *gin.Context) (interface{}, int, string, string, bool) {
 	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
