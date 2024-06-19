@@ -461,4 +461,5 @@ class Util:
         
         error = "Failed to get data from url: {}, retry: {}".format(
                     url, retries)
+        log.error(error + " ashhar")
         return None, error
