@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"encoding/json"
 	"factors/config"
+
 	"factors/model/model"
 	"factors/model/store"
 	U "factors/util"
@@ -442,7 +443,6 @@ func SendPayloadToParagonWorkflow(projectID int64, url string, payload *model.Ca
 		"payload":    *payload,
 	}
 	logCtx := log.WithFields(logFields)
-
 
 	signedToken, errCode, err := store.GetStore().GetParagonTokenFromProjectSetting(projectID)
 	if err != nil || errCode != http.StatusFound {

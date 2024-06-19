@@ -29,7 +29,9 @@ export const TemplateIDs = {
   FACTORS_SALESFORCE_COMPANY:
     window.document.domain === 'app.factors.ai' ? 1000002 : 4000003,
   FACTORS_APOLLO_SALESFORCE_CONTACTS:
-    window.document.domain === 'app.factors.ai' ? 1000003 : 4000004
+    window.document.domain === 'app.factors.ai' ? 1000003 : 4000004,
+  FACTORS_LINKEDIN_CAPI:
+    window.document.domain === 'app.factors.ai' ? 1000004 : 4000005
 };
 
 export const getAlertTemplatesTransformation = (data) => {

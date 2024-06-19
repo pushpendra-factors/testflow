@@ -1119,7 +1119,12 @@ function AccountProfiles({
         setFiltersDirty(false);
       }
       dispatch(setNewSegmentModeAction(false));
-      handleClearFilters();
+      dispatch(
+        setAccountPayloadAction({
+          source: GROUP_NAME_DOMAINS,
+          segment: response?.payload?.segment
+        })
+      );
     } catch (err) {
       notification.error({
         message: 'Error',

@@ -7,6 +7,7 @@ import ProfilesSidebar from './ProfilesSidebar';
 import SettingsSidebar from './SettingsSidebar';
 import AlertsSidebar from './AlertsSidebar';
 import { checkMatchPath, isSettingsUrl } from './appSidebar.helpers';
+import CampaignsSidebar from './CampaingsSidebar';
 
 function SidebarContent() {
   const location = useLocation();
@@ -36,6 +37,12 @@ function SidebarContent() {
     checkMatchPath(pathname, PathUrls.Workflows)
   ) {
     return <AlertsSidebar />;
+  }
+  if (
+    checkMatchPath(pathname, PathUrls.FreqCap) ||
+    checkMatchPath(pathname, PathUrls.FreqCapView)
+  ) {
+    return <CampaignsSidebar />;
   }
   return null;
 }

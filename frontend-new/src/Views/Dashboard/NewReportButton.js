@@ -160,7 +160,7 @@ const NewReportButton = ({
             ref={WrapperRef}
             className='w-full h-full flex items-center justify-center'
             onClick={(e) => {
-              var rightClickEvent = new MouseEvent('contextmenu', {
+              const rightClickEvent = new MouseEvent('contextmenu', {
                 bubbles: true,
                 cancelable: true,
                 view: window,

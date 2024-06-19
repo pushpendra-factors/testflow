@@ -12,10 +12,6 @@ import { ErrorBoundary } from 'react-error-boundary';
 import factorsai from 'factorsai';
 import _ from 'lodash';
 import { sendSlackNotification } from '../../../../../utils/slack';
-import {
-  linkedInScope_rw_ads,
-  linkedInScope_rw_conversions
-} from './constants';
 import { getBackendHost } from '../util';
 
 const LinkedInIntegration = ({
@@ -117,17 +113,8 @@ const LinkedInIntegration = ({
       if (port === undefined || port === '') {
         redirect_uri = `${protocol}//${hostname}`;
       }
-      // linkedIn scope check for accounts (defined in ./constants file).
-      const scope_rw_ads = linkedInScope_rw_ads.includes(activeProject?.id);
-      const scope_rw_conversions = linkedInScope_rw_conversions.includes(
-        activeProject?.id
-      );
-      // linkedIn oauth url gets updated based on the scopes assigned to project.
-      const href = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${
-        BUILD_CONFIG.linkedin_client_id
-      }&redirect_uri=${redirect_uri}&state=factors&scope=r_basicprofile%20r_liteprofile%20r_ads_reporting${
-        scope_rw_ads ? '%20rw_ads' : '%20r_ads'
-      }${scope_rw_conversions ? '%20rw_conversions' : ''}`;
+
+      const href = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${BUILD_CONFIG.linkedin_client_id}&redirect_uri=${redirect_uri}&state=factors&scope=r_basicprofile%20r_liteprofile%20r_ads_reporting%20rw_ads%20rw_conversions%20rw_dmp_segments`;
       return (
         <a href={href} className='ant-btn ant-btn-primary'>
           Connect Now

@@ -163,6 +163,9 @@ github.com/aws/aws-sdk-go/service/sqs
 github.com/aws/aws-sdk-go/service/sqs/sqsiface
 github.com/aws/aws-sdk-go/service/sts
 github.com/aws/aws-sdk-go/service/sts/stsiface
+# github.com/beevik/etree v1.1.0
+## explicit
+github.com/beevik/etree
 # github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973
 ## explicit
 # github.com/boj/redistore v0.0.0-20180917114910-cd5dcc76aeff
@@ -549,6 +552,7 @@ github.com/jinzhu/now
 github.com/jmespath/go-jmespath
 # github.com/jonboulle/clockwork v0.4.0
 ## explicit; go 1.15
+github.com/jonboulle/clockwork
 # github.com/josharian/intern v1.0.0
 ## explicit; go 1.5
 github.com/josharian/intern
@@ -587,6 +591,9 @@ github.com/lib/pq/scram
 github.com/mailru/easyjson/buffer
 github.com/mailru/easyjson/jlexer
 github.com/mailru/easyjson/jwriter
+# github.com/mattermost/xml-roundtrip-validator v0.1.0
+## explicit; go 1.14
+github.com/mattermost/xml-roundtrip-validator
 # github.com/mattn/go-isatty v0.0.19
 ## explicit; go 1.15
 github.com/mattn/go-isatty
@@ -648,6 +655,16 @@ github.com/richardlehane/msoleps/types
 # github.com/rs/xid v1.2.1
 ## explicit
 github.com/rs/xid
+# github.com/russellhaering/gosaml2 v0.9.1
+## explicit; go 1.13
+github.com/russellhaering/gosaml2
+github.com/russellhaering/gosaml2/types
+github.com/russellhaering/gosaml2/uuid
+# github.com/russellhaering/goxmldsig v1.3.0
+## explicit; go 1.15
+github.com/russellhaering/goxmldsig
+github.com/russellhaering/goxmldsig/etreeutils
+github.com/russellhaering/goxmldsig/types
 # github.com/sirupsen/logrus v1.8.1
 ## explicit; go 1.13
 github.com/sirupsen/logrus
@@ -656,8 +673,8 @@ github.com/sirupsen/logrus
 # github.com/streadway/amqp v1.0.0
 ## explicit; go 1.10
 github.com/streadway/amqp
-# github.com/stretchr/testify v1.8.3
-## explicit; go 1.20
+# github.com/stretchr/testify v1.9.0
+## explicit; go 1.17
 github.com/stretchr/testify/assert
 # github.com/stvp/tempredis v0.0.0-20181119212430-b82af8480203
 ## explicit
@@ -699,17 +716,10 @@ github.com/twitchyliquid64/golang-asm/sys
 github.com/twitchyliquid64/golang-asm/unsafeheader
 # github.com/ucarion/c14n v0.1.0
 ## explicit; go 1.14
-github.com/ucarion/c14n
-github.com/ucarion/c14n/internal/sortattr
-github.com/ucarion/c14n/internal/stack
 # github.com/ucarion/dsig v0.1.0
 ## explicit; go 1.14
-github.com/ucarion/dsig
-github.com/ucarion/dsig/internal/sigsplit
-github.com/ucarion/dsig/internal/stack
 # github.com/ucarion/saml v0.1.2
 ## explicit; go 1.14
-github.com/ucarion/saml
 # github.com/ugorji/go/codec v1.2.11
 ## explicit; go 1.11
 github.com/ugorji/go/codec

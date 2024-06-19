@@ -351,7 +351,7 @@ func EventTriggerAlertsSender(projectID int64, configs map[string]interface{},
 		totalSuccess := false
 		sendReport := SendReportLogCount{}
 		if msg.IsWorkflow {
-			totalSuccess, _, sendReport = SendHelperForWorkflow(cacheKey, &msg, alertID, false, "")
+			totalSuccess, _, sendReport = ProcessWorkflow(cacheKey, &msg, alertID, false, "")
 		} else {
 			totalSuccess, _, sendReport = sendHelperForEventTriggerAlert(cacheKey, &msg, alertID, false, "")
 		}
@@ -1012,8 +1012,8 @@ func sendTeamsAlertForEventTriggerAlert(projectID int64, agentUUID string,
 				}
 				logCtx.WithFields(log.Fields{
 					"err_response": response,
-					"error_code": errorCode,
-					}).WithError(err).Error("Failed to send teams message for event alert.")
+					"error_code":   errorCode,
+				}).WithError(err).Error("Failed to send teams message for event alert.")
 				return false, errMessage
 			}
 
@@ -1254,11 +1254,13 @@ func RetryFailedEventTriggerAlerts(projectID int64, blockedAlerts map[string]boo
 		var totalSuccess bool
 		sendReport := SendReportLogCount{}
 		if msg.IsWorkflow {
-			totalSuccess, _, sendReport = SendHelperForWorkflow(cacheKey, &msg, alertID, true, sendTo)
+			if cc <= 3 {
+				totalSuccess, _, sendReport = ProcessWorkflow(cacheKey, &msg, alertID, true, sendTo)
+			}
 		} else {
 			totalSuccess, _, sendReport = sendHelperForEventTriggerAlert(cacheKey, &msg, alertID, true, sendTo)
 		}
-		
+
 		sendReportForProject.addToSendReport(sendReport)
 
 		if totalSuccess {

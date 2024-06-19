@@ -741,8 +741,8 @@ const GlobalFilterSelect = ({
                 ? valuesState
                     .map((vl) =>
                       truncateURL(
-                        DISPLAY_PROP[vl]
-                          ? DISPLAY_PROP[vl]
+                        valueDisplayNames[vl]
+                          ? valueDisplayNames[vl]
                           : formatCsvUploadValue(vl),
                         projectDomainsList
                       )

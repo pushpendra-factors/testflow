@@ -85,6 +85,17 @@ type ValueForEventLookupMap struct {
 	PropertyValue int64  `json:"p_value"`
 }
 
+type LinkedinCappingDataSet struct {
+	OrgID           string `json:"org_id"`
+	CompanyDomain   string `json:"company_domain"`
+	CompanyName     string `json:"company_name"`
+	CampaignGroupID string `json:"campaign_group_id"`
+	CampaignID      string `json:"campaign_id"`
+	CampaignName    string `json:"campaign_name"`
+	Impressions     int64  `json:"impressions"`
+	Clicks          int64  `json:"clicks"`
+}
+
 const (
 	LinkedinCampaignGroup         = "campaign_group"
 	LinkedinCampaign              = "campaign"

@@ -61,7 +61,7 @@ class Text extends React.Component {
     // AntD throws error for level>4
     const isSizeDefined = level || size;
 
-    //checks if text truncation and is child is string. ignores if its array.
+    // checks if text truncation and is child is string. ignores if its array.
     const isTextTruncatePossible = truncate && !isArray(children);
 
     const isOverFlow = children?.length > charLimit;
@@ -76,10 +76,7 @@ class Text extends React.Component {
       const sizeValue = isSizeDefined > 4 ? 4 : isSizeDefined;
       if ((isTextTruncatePossible && isOverFlow) || toolTipTitle) {
         return (
-          <Tooltip
-            placement={'top'}
-            title={toolTipTitle ? toolTipTitle : children}
-          >
+          <Tooltip placement='top' title={toolTipTitle || children}>
             <Title
               level={sizeValue}
               {...otherProps}
@@ -89,16 +86,16 @@ class Text extends React.Component {
             </Title>
           </Tooltip>
         );
-      } else
-        return (
-          <Title
-            level={sizeValue}
-            {...otherProps}
-            className={classnames({ ...classList })}
-          >
-            {children}
-          </Title>
-        );
+      }
+      return (
+        <Title
+          level={sizeValue}
+          {...otherProps}
+          className={classnames({ ...classList })}
+        >
+          {children}
+        </Title>
+      );
     }
     if (type === textType.paragraph) {
       return (
@@ -106,10 +103,9 @@ class Text extends React.Component {
           {children}
         </Paragraph>
       );
-    } else {
-      console.error('Invalid type for Text (Factor-Components)');
-      return null;
     }
+    console.error('Invalid type for Text (Factor-Components)');
+    return null;
   }
 }
 

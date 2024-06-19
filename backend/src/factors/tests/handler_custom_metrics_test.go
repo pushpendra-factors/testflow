@@ -44,13 +44,6 @@ func TestCustomMetricsPostHandler(t *testing.T) {
 		transformations := &postgres.Jsonb{json.RawMessage(`{"agFn": "sum", "agPr": "$hubspot_amount", "agPrTy": "numerical", "fil": [], "daFie": "$hubspot_datefield2"}`)}
 		w := sendCreateCustomMetric(r, project.ID, agent, transformations, name1, description1, "salesforce_users", 1)
 		assert.Equal(t, http.StatusConflict, w.Code)
-		// result := make(map[string]interface{})
-		// decoder := json.NewDecoder(w.Body)
-		// decoder.Decode(&result)
-		// log.WithField("result", result).Warn("kark4-1")
-		// innerErrorResult := result["err"].(map[string]interface{})
-		// log.WithField("innerErrorResult", innerErrorResult).Warn("kark4")
-		// assert.Equal(t, innerErrorResult["display_name"].(string), "Duplicate record insertion in db")
 	})
 }
 

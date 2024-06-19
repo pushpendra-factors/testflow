@@ -219,7 +219,7 @@ const EventBasedAlert = ({
   const dispatch = useDispatch();
   const { confirm } = Modal;
 
-  // Segment Support 
+  // Segment Support
   const [segmentType, setSegmentType] = useState('action_event');
   const [selectedSegment, setSelectedSegment] = useState('');
   const [segmentOptions, setSegmentOptions] = useState([]);
@@ -1008,7 +1008,12 @@ const EventBasedAlert = ({
         cool_down_time: coolDownTime * 3600,
         breakdown_properties: formatBreakdownsForQuery(breakDownProperties),
         slack: slackEnabled,
-        slack_channels: saveSelectedChannel,
+        slack_team_id: saveSelectedChannel?.[0]?.team_id,
+        slack_channels: saveSelectedChannel.map(({ name, id, is_private }) => ({
+          name,
+          id,
+          is_private
+        })),
         webhook: webhookEnabled,
         url: finalWebhookUrl,
         teams: teamsEnabled,
@@ -1239,7 +1244,8 @@ const EventBasedAlert = ({
         tempArr.push({
           name: slack[i].name,
           id: slack[i].id,
-          is_private: slack[i].is_private
+          is_private: slack[i].is_private,
+          team_id: slack[i].context_team_id
         });
       }
       setChannelOpts(tempArr);

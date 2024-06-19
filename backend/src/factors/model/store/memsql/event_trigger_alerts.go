@@ -59,6 +59,33 @@ func (store *MemSQL) GetAllEventTriggerAlertsByProject(projectID int64) ([]model
 	return alertArray, http.StatusFound
 }
 
+func (store *MemSQL) GetAllEventTriggerAlertsBySlackTeamID(slackTeamID string) ([]model.EventTriggerAlert, error) {
+	logFields := log.Fields{
+		"slack_team_id": slackTeamID,
+	}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+	db := C.GetServices().Db
+
+	var alerts []model.EventTriggerAlert
+
+	rows, err := db.Raw("SELECT * FROM event_trigger_alerts WHERE JSON_EXTRACT_STRING (event_trigger_alert,slack_team_id) = ? AND is_deleted = false )", slackTeamID).Rows()
+	if err != nil {
+		log.WithError(err).Error("Failed to execute query on get event trigger alerts by slack team id ")
+		return alerts, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var alert model.EventTriggerAlert
+		if err := db.ScanRows(rows, &alert); err != nil {
+			log.WithError(err).Error("Failed scanning rows on get event trigger alerts by slack team id ")
+			return alerts, err
+		}
+		alerts = append(alerts, alert)
+	}
+	return alerts, nil
+}
+
 func (store *MemSQL) GetEventTriggerAlertByID(id string) (*model.EventTriggerAlert, int) {
 	logFields := log.Fields{
 		"id": id,
@@ -1435,7 +1462,8 @@ func (store *MemSQL) GetParagonMetadataForEventTriggerAlert(projectID int64, ale
 	return *metadata, http.StatusFound, nil
 }
 
-func (store *MemSQL) FindAndCacheAlertForCurrentSegment(projectID int64, segmentID, domainID, actionPerformed string) (int, error) {
+func (store *MemSQL) FindAndCacheAlertForCurrentSegment(projectID int64, segmentID, domainID, actionPerformed string,
+	timeOfActionPerformed time.Time) (int, error) {
 	logFields := log.Fields{
 		"project_id":       projectID,
 		"segment_id":       segmentID,
@@ -1476,7 +1504,8 @@ func (store *MemSQL) FindAndCacheAlertForCurrentSegment(projectID int64, segment
 
 	// get all group and account properties
 	groupUserProps := store.GetAllGroupPropertiesForGivenDomainGroupUserID(projectID, domainsGroup.ID, domainID)
-
+	(*groupUserProps)[U.EP_TIMESTAMP] = timeOfActionPerformed
+	
 	for _, alert := range alerts {
 		// check for empty jsonb
 		if alert.EventTriggerAlert == nil {

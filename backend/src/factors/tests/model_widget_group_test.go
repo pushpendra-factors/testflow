@@ -198,10 +198,8 @@ func TestWidgetGroupExecution1(t *testing.T) {
 	assert.Equal(t, float64(0), results[1].Rows[0][0])
 
 	widgetGroup2, _, _ := store.GetStore().GetWidgetGroupByName(project.ID, memsql.AccountsWidgetGroup)
-	log.WithField("widgetGroup2", widgetGroup2.DecodedWidgets).Warn("kark244")
 
 	results2, statusCode2 := store.GetStore().ExecuteWidgetGroup(project.ID, widgetGroup2, segment.Id, uuid.New().String(), requestParamsForExecution)
-	log.WithField("results2", results2).Warn("kark2")
 	assert.Equal(t, http.StatusOK, statusCode2)
 	assert.Equal(t, 1, len(results2[0].Rows))
 	assert.Equal(t, float64(1), results2[0].Rows[0][0])
