@@ -49,7 +49,13 @@ func CreatePropertyMapping(c *gin.Context) (interface{}, int, string, string, bo
 		logCtx.Warnf("Decode failed on request to property mapping properties struct. %v", requestAsMap)
 		return nil, http.StatusBadRequest, INVALID_INPUT, "Error during decode of property mapping properties.", true
 	}
-	isValid, errMsg := request.IsValid(properties)
+	sources, statusCode := store.GetStore().GetCustomAdsSourcesByProject(projectID)
+	if statusCode != http.StatusOK {
+		logCtx.Warn("Failed to get custom ads sources by project")
+		return nil, statusCode, PROCESSING_FAILED, ErrorMessages[PROCESSING_FAILED], true
+	}
+
+	isValid, errMsg := request.IsValid(properties, len(sources))
 	if !isValid {
 		return nil, http.StatusBadRequest, INVALID_INPUT, errMsg, true
 	}

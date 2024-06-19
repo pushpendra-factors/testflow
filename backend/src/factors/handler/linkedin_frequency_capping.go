@@ -29,14 +29,14 @@ const (
 // @Success 200 [{object}] []model.LinkedinCappingConfig
 // @Router /{project_id}/v1/linkedin_capping/rules/config [get]
 func GetLinkedinCappingConfigHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
-	if projectId == 0 {
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectID == 0 {
 		return nil, http.StatusUnauthorized, INVALID_PROJECT, V1.ErrorMessages[INVALID_PROJECT], true
 	}
 
-	result, httpStatus := store.GetStore().GetLinkedinCappingConfig(projectId)
+	result, httpStatus := store.GetStore().GetLinkedinFreqCappingConfig(projectID)
 	if httpStatus != http.StatusOK {
-		return nil, http.StatusUnauthorized, INVALID_INPUT, "Invalid object type", true
+		return nil, http.StatusUnauthorized, INVALID_INPUT, "Failed to get config", true
 	}
 
 	return result, http.StatusOK, "", "", false
@@ -52,8 +52,8 @@ func GetLinkedinCappingConfigHandler(c *gin.Context) (interface{}, int, string, 
 // @Success 200 {string, CreatedLinkedinCappingRule}
 // @Router /{project_id}/v1/linkedin_capping/rules  [post]
 func CreateLinkedinCappingRulesHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	projectId := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
-	if projectId == 0 {
+	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
+	if projectID == 0 {
 		return nil, http.StatusUnauthorized, INVALID_PROJECT, V1.ErrorMessages[INVALID_PROJECT], true
 	}
 
@@ -66,14 +66,15 @@ func CreateLinkedinCappingRulesHandler(c *gin.Context) (interface{}, int, string
 		log.WithError(err).Error("Failed to decode Json request on create linkedin capping handler.")
 		return nil, http.StatusInternalServerError, V1.PROCESSING_FAILED, "Failed to decode Json request on create linkedin capping handler.", true
 	}
+	linkedinCappingRulesReqPayload.ProjectID = projectID
 
-	errCode := store.GetStore().CreateLinkedinCappingRule(projectId, &linkedinCappingRulesReqPayload)
+	linkedinCappingRule, errMsg, errCode := store.GetStore().CreateLinkedinCappingRule(projectID, &linkedinCappingRulesReqPayload)
 	if errCode != http.StatusCreated {
-		log.WithField("document", linkedinCappingRulesReqPayload).Error("Failed to insert linkedin capping on create linkedin capping handler.")
-		return nil, errCode, V1.PROCESSING_FAILED, "Failed to insert linkedin capping on create linkedin capping handler.", true
+		log.WithField("document", linkedinCappingRulesReqPayload).Error(errMsg)
+		return nil, errCode, V1.PROCESSING_FAILED, errMsg, true
 	}
 
-	return nil, http.StatusOK, "", "", false
+	return linkedinCappingRule, http.StatusOK, "", "", false
 }
 
 // UpdateLinkedinCappingRulesHandler godoc
@@ -99,24 +100,25 @@ func UpdateLinkedinCappingRulesHandler(c *gin.Context) (interface{}, int, string
 	}
 
 	r := c.Request
-	var linkedinCapping model.LinkedinCappingRule
+	var linkedinCappingRule model.LinkedinCappingRule
+	// Check if the whole object needs to be sent or only few fields.
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&linkedinCapping); err != nil {
+	if err := decoder.Decode(&linkedinCappingRule); err != nil {
 		log.WithError(err).Error("Failed to decode Json request on update linkedin capping handler.")
 		return nil, http.StatusInternalServerError, V1.PROCESSING_FAILED, "Failed to decode Json request on create linkedin capping handler.", true
 	}
+	linkedinCappingRule.ProjectID = projectID
 
-	errCode := store.GetStore().UpdateLinkedinCappingRule(projectID, ruleID)
+	errMsg, errCode := store.GetStore().UpdateLinkedinCappingRule(projectID, &linkedinCappingRule)
 	if errCode != http.StatusAccepted {
-		errMsg := "Failed to update linkedin capping rule"
 		return nil, errCode, V1.PROCESSING_FAILED, errMsg, true
 	}
-	linkedinCappingRule, errCode := store.GetStore().GetLinkedinCappingRule(projectID, ruleID)
+	updatedLinkedinCappingRule, errCode := store.GetStore().GetLinkedinCappingRule(projectID, ruleID)
 	if errCode != http.StatusFound {
 		return nil, errCode, V1.PROCESSING_FAILED, "Failed to get updated rule", true
 	}
-	return linkedinCappingRule, http.StatusOK, "", "", false
+	return updatedLinkedinCappingRule, http.StatusOK, "", "", false
 }
 
 // GetLinkedinCappingRulesHandler godoc
@@ -135,7 +137,7 @@ func GetLinkedinCappingRulesHandler(c *gin.Context) (interface{}, int, string, s
 	}
 	linkedinCappingRules, errCode := store.GetStore().GetAllLinkedinCappingRules(projectID)
 	if errCode != http.StatusFound {
-		return nil, errCode, V1.PROCESSING_FAILED, "Failed to get smart property rules", true
+		return nil, errCode, V1.PROCESSING_FAILED, "Failed to linkedin capping rules", true
 	}
 	return linkedinCappingRules, http.StatusOK, "", "", false
 }
@@ -163,10 +165,12 @@ func GetLinkedinCappingRuleByRuleIDHandler(c *gin.Context) (interface{}, int, st
 
 	linkedinCappingRule, errCode := store.GetStore().GetLinkedinCappingRule(projectID, ruleID)
 	if errCode != http.StatusFound {
-		return nil, errCode, V1.PROCESSING_FAILED, "Failed to get smart property rule", true
+		return nil, errCode, V1.PROCESSING_FAILED, "Failed to get linkedin capping rule", true
 	}
 	return linkedinCappingRule, http.StatusOK, "", "", false
 }
+
+// Check the displayName check.
 
 // DeleteLinkedinCappingRulesHandler godoc
 // @Summary To delete an existing linkedin capping rule.
@@ -192,7 +196,7 @@ func DeleteLinkedinCappingRulesHandler(c *gin.Context) (interface{}, int, string
 
 	errCode := store.GetStore().DeleteLinkedinCappingRule(projectID, ruleID)
 	if errCode != http.StatusAccepted {
-		return nil, errCode, V1.PROCESSING_FAILED, "Failed to delete smart property rule", true
+		return nil, errCode, V1.PROCESSING_FAILED, "Failed to delete linkedin capping rule", true
 	}
 	return nil, http.StatusOK, "", "", false
 }
@@ -204,7 +208,7 @@ func DeleteLinkedinCappingRulesHandler(c *gin.Context) (interface{}, int, string
 // @Produce json
 // @Param project_id path integer true "Project ID"
 // @Success 200 {array} model.LinkedinCappingExclusions
-// @Router /{project_id}/v1/linkedin_capping/exclusions/?startTimestamp=&endTimestamp [get]
+// @Router /{project_id}/v1/linkedin_capping/exclusions?startTimestamp=&endTimestamp [get]
 func GetLinkedinCappingExclusionsHandler(c *gin.Context) (interface{}, int, string, string, bool) {
 	projectID := U.GetScopeByKeyAsInt64(c, mid.SCOPE_PROJECT_ID)
 	if projectID == 0 {
@@ -257,11 +261,7 @@ func GetLinkedinCappingExclusionsByRuleIDHandler(c *gin.Context) (interface{}, i
 
 	linkedinCappingExclusions, errCode := store.GetStore().GetLinkedinCappingExclusionsForRule(projectID, ruleID)
 	if errCode != http.StatusFound {
-		return nil, errCode, V1.PROCESSING_FAILED, "Failed to get smart property rule", true
+		return nil, errCode, V1.PROCESSING_FAILED, "Failed to get linkedin capping rule", true
 	}
 	return linkedinCappingExclusions, http.StatusOK, "", "", false
-}
-
-func GetLinkedinCappingExclusionsDashboardHandler(c *gin.Context) (interface{}, int, string, string, bool) {
-	return model.SampleExclusionDashboard, http.StatusOK, "", "", false
 }

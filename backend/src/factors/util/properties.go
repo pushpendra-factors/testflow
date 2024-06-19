@@ -2030,6 +2030,10 @@ var STANDARD_EVENT_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	"$hubspot_form_submission_portal-id":      "Portal ID",
 	"Source-Medium":                           "Source Medium",
 	"page_url":                                "Page URL",
+	LI_ORGANIZATION_ID:                        "Linkedin Organization ID",
+	LI_RAW_URL:                                "Linkedin Raw Domain",
+	LI_AD_CLICK_COUNT:                         "Linkedin Ad Click Count",
+	LI_AD_VIEW_COUNT:                          "Linkedin Ad View Count",
 }
 
 var STANDARD_EVENT_PROPERTIES_CATAGORIZATION = map[string]string{
@@ -2207,6 +2211,14 @@ var STANDARD_USER_PROPERTIES_DISPLAY_NAMES = map[string]string{
 	G2_COMPANY_ID:                          "G2 Company ID",
 	ENRICHED_SALESFORCE_ACCOUNT_OBJECT_URL: "Salesforce Account URL",
 	ENRICHED_HUBSPOT_COMPANY_OBJECT_URL:    "Hubspot Company URL",
+	LI_DOMAIN:                              "Linkedin Domain",
+	LI_HEADQUARTER:                         "Linkedin Headquarter",
+	LI_LOCALIZED_NAME:                      "Linkedin Localized Name",
+	LI_VANITY_NAME:                         "Linkedin Vanity Name",
+	LI_PREFERRED_COUNTRY:                   "Linkedin Preferred Country",
+	LI_ORGANIZATION_ID:                     "Linkedin Organization ID",
+	LI_TOTAL_AD_CLICK_COUNT:                "Linkedin Total Ad Click Count",
+	LI_TOTAL_AD_VIEW_COUNT:                 "Linkedin Total Ad View Count",
 }
 
 var STANDARD_USER_PROPERTIES_CATAGORIZATION = map[string]string{

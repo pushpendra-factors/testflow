@@ -1020,5 +1020,5 @@ func TestProfilesHubspotDealsPropertyValueLabels(t *testing.T) {
 
 func TestGetMaxTimestampOfDataPresenceFromWebsiteAggreagtion(t *testing.T) {
 	v1, status := store.GetStore().GetMaxTimestampOfDataPresenceFromWebsiteAggregation(2, "Asia/Kolkata")
-	log.WithField("v1", v1).WithField("status", status).Warn("kark2")
+	log.WithField("v1", v1).WithField("status", status).Warn("max timestamp from website aggregation")
 }

@@ -3,10 +3,14 @@ package model
 import (
 	"encoding/json"
 	U "factors/util"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm/dialects/postgres"
 )
+
+var LINKEDIN_FREQUENCY_CAPPING_OBJECTS = [3]string{LINKEDIN_ACCOUNT, LINKEDIN_CAMPAIGN_GROUP, LINKEDIN_CAMPAIGN}
 
 type LinkedinCappingRule struct {
 	ID                    string          `gorm:"primary_key:true;type:varchar(255)" json:"id"`
@@ -22,15 +26,34 @@ type LinkedinCappingRule struct {
 	ClickThreshold        int64           `json:"click_threshold"`
 	IsAdvancedRuleEnabled bool            `json:"is_advanced_rule_enabled"`
 	AdvancedRuleType      string          `json:"advanced_rule_type"` //account or segment
-	AdvancedRules         *postgres.Jsonb `json:"advanced_rule"`
+	AdvancedRules         *postgres.Jsonb `json:"advanced_rules"`
 	CreatedAt             time.Time       `json:"created_at"`
 	UpdatedAt             time.Time       `json:"updated_at"`
+}
+
+type LinkedinCappingRuleWithDecodedValues struct {
+	Rule          LinkedinCappingRule
+	ObjectIDs     []string
+	AdvancedRules []AdvancedRuleFilters
 }
 
 type AdvancedRuleFilters struct {
 	Filters             []QueryProperty `json:"filters"`
 	ImpressionThreshold int64           `json:"impression_threshold"`
 	ClickThreshold      int64           `json:"click_threshold"`
+}
+
+type RuleMatchedDataSet struct {
+	CappingData       LinkedinCappingDataSet
+	PropertiesMatched map[string]interface{}
+	Rule              LinkedinCappingRule
+	Campaigns         []CampaignsIDName
+}
+
+type GroupRelatedData struct {
+	UserID       string
+	GroupUsers   []User
+	DecodedProps []map[string]interface{}
 }
 
 const (
@@ -109,4 +132,10 @@ var SampleCampaignConfig = []LinkedinCappingConfig{
 		Deleted: true,
 		Type:    "campaign",
 	},
+}
+
+func GenerateNameFromDisplayName(displayName string) string {
+	lowerName := strings.ToLower(displayName)
+
+	return regexp.MustCompile(`[^a-zA-Z0-9]+`).ReplaceAllString(lowerName, "_")
 }

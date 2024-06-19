@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import cx from 'classnames';
 import AppModal from 'Components/AppModal/AppModal';
 import { Text } from 'Components/factorsComponents';
@@ -39,6 +39,9 @@ const RenameSegmentModal = ({
     <AppModal
       okText='Save'
       visible={visible}
+      okButtonProps={{
+        disabled: segmentNewName?.trim() === segmentName?.trim()
+      }}
       onOk={onSubmit}
       onCancel={onCancel}
       isLoading={isLoading}

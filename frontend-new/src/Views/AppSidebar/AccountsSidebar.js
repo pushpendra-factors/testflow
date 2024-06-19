@@ -56,7 +56,8 @@ function AccountsSidebar({
   const activeSegment = activeAccountPayload?.segment;
 
   const segmentsList = useMemo(
-    () => reorderDefaultDomainSegmentsToTop(segments[GROUP_NAME_DOMAINS]) || [],
+    () =>
+      reorderDefaultDomainSegmentsToTop(segments?.[GROUP_NAME_DOMAINS]) || [],
     [segments]
   );
   const [modalState, setModalState] = useState({

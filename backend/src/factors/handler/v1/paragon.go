@@ -238,6 +238,7 @@ func TriggerParagonWorkflow(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"success": "Integration deleted successfully"})
 	return
+
 }
 
 func DisableParagonWorflowForUser(c *gin.Context) {

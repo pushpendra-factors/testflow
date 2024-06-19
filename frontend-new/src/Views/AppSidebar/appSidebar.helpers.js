@@ -45,6 +45,10 @@ export const isReportsMainUrl = (pathname) =>
 export const isAlertsUrl = (pathname) =>
   pathname === PathUrls.Alerts || pathname === PathUrls.Workflows;
 
+export const isCampaignsUrl = (pathname) =>
+  checkMatchPath(pathname, PathUrls.FreqCap) ||
+  checkMatchPath(pathname, PathUrls.FreqCapView);
+
 export const isAttributionsUrl = (pathname) =>
   pathname === ATTRIBUTION_ROUTES.base ||
   pathname === ATTRIBUTION_ROUTES.report ||

@@ -79,6 +79,7 @@ type EventTriggerAlertConfig struct {
 	SetAlertLimit         bool            `json:"notifications"`
 	AlertLimit            int64           `json:"alert_limit"`
 	Slack                 bool            `json:"slack"`
+	SlackTeamID           string          `json:"slack_team_id"`
 	SlackChannels         *postgres.Jsonb `json:"slack_channels"`
 	SlackMentions         *postgres.Jsonb `json:"slack_mentions"`
 	SlackFieldsTag        []string        `json:"slack_fields_tag"`
@@ -104,9 +105,10 @@ type AlertInfo struct {
 }
 
 type CachedEventTriggerAlert struct {
-	Message    EventTriggerAlertMessage
-	FieldTags  map[string]string
-	IsWorkflow bool
+	Message        EventTriggerAlertMessage
+	FieldTags      map[string]string
+	IsWorkflow     bool
+	IsLinkedInCAPI bool
 }
 
 type EventTriggerAlertMessage struct {
