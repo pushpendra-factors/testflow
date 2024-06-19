@@ -502,9 +502,9 @@ func getModifiedFiltersForInPropertiesDefaultQueryMap(filters []model.QueryPrope
 	for i, filter := range filters {
 		_logicalOp := filter.LogicalOp
 		if q, exists := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[filter.Property]; exists {
-			if filter.Value == "true" {
+			if U.EvaluateBoolPropertyValueWithOperatorForTrue(filter.Value, filter.Operator) {
 				filters[i] = q
-			} else if filter.Value == "false" || filter.Value == "$none" {
+			} else if U.EvaluateBoolPropertyValueWithOperatorForFalse(filter.Value, filter.Operator) {
 				filters[i] = q
 				filters[i].Operator = model.EqualsOpStr
 			}

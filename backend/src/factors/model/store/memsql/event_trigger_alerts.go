@@ -631,9 +631,9 @@ func (store *MemSQL) MatchEventTriggerAlertWithTrackPayload(projectId int64, eve
 		for i, filter := range config.Filter {
 			_logicalOp := filter.LogicalOp
 			if q, exists := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[filter.Property]; exists {
-				if filter.Value == "true" {
+				if U.EvaluateBoolPropertyValueWithOperatorForTrue(filter.Value, filter.Operator) {
 					config.Filter[i] = q
-				} else if filter.Value == "false" || filter.Value == "$none" {
+				} else if U.EvaluateBoolPropertyValueWithOperatorForFalse(filter.Value, filter.Operator) {
 					config.Filter[i] = q
 					config.Filter[i].Operator = model.EqualsOpStr
 				}
@@ -1505,7 +1505,7 @@ func (store *MemSQL) FindAndCacheAlertForCurrentSegment(projectID int64, segment
 	// get all group and account properties
 	groupUserProps := store.GetAllGroupPropertiesForGivenDomainGroupUserID(projectID, domainsGroup.ID, domainID)
 	(*groupUserProps)[U.EP_TIMESTAMP] = timeOfActionPerformed
-	
+
 	for _, alert := range alerts {
 		// check for empty jsonb
 		if alert.EventTriggerAlert == nil {
