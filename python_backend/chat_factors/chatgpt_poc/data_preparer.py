@@ -42,10 +42,16 @@ def get_query_templates():
                 'Count of %s filter by %s equals %s %s'
             ],
             'timeful_contains': [
-                '%s with %s containing %s in %s'
+                '%s with %s containing %s in %s',
+                '%s having %s like %s in %s',
+                '%s with %s like %s in %s',
+                '%s with %s which sounds like %s in %s'
             ],
             'timeless_contains': [
-                '%s with %s containing %s '
+                '%s with %s containing %s',
+                '%s having %s like %s',
+                '%s with %s like %s',
+                '%s with %s which sounds like %s'
             ],
             'timeless_not_equal' :['%s with %s not equal %s'],
             'timeful_not_equal': ['Number of %s having %s not equal %s in %s']
