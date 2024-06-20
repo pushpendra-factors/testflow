@@ -343,11 +343,14 @@ func TestFillLinkedInPropertiesInCacheForWorkflow(t *testing.T) {
 		assert.Nil(t, err)
 
 		allProperties := map[string]interface{}{
-			"$email":       "Parth@factors.ai",
-			U.EP_TIMESTAMP: time.Now().Unix() - 45*U.SECONDS_IN_A_DAY,
+			"$email":        "test@factors.ai",
+			U.EP_TIMESTAMP:  time.Now().Unix() - 45*U.SECONDS_IN_A_DAY,
+			U.EP_LICLID:     U.RandomString(6),
+			U.UP_FIRST_NAME: "test",
+			U.UP_LAST_NAME:  "TEST",
 		}
 
-		err = store.GetStore().FillLinkedInPropertiesInCacheForWorkflow(&msgPropMap, &allProperties, alertBody)
+		err = store.GetStore().FillLinkedInPropertiesInCacheForWorkflow(&msgPropMap, &model.Event{ID: U.RandomString(5)}, &allProperties, alertBody)
 		assert.Nil(t, err)
 
 		var linkedCAPIPayloadBatch model.BatchLinkedinCAPIRequestPayload
@@ -358,7 +361,7 @@ func TestFillLinkedInPropertiesInCacheForWorkflow(t *testing.T) {
 
 		singlePayload := linkedCAPIPayloadBatch.LinkedinCAPIRequestPayloadList[0]
 		assert.Equal(t, singlePayload.ConversionHappenedAt, allProperties[U.EP_TIMESTAMP].(int64)*1000)
-		assert.Equal(t, len(singlePayload.User.UserIds), 1)
+		assert.Equal(t, len(singlePayload.User.UserIds), 2)
 
 	})
 
