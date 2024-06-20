@@ -30,15 +30,22 @@ type SingleLinkedinCAPIRequestPayload struct {
 	Conversion           string       `json:"conversion"`
 	ConversionHappenedAt int64        `json:"conversionHappenedAt"`
 	User                 LinkedInUser `json:"user"`
+	EventId              string       `json:"eventId"`
 }
 
 type LinkedInUser struct {
-	UserIds []UserId `json:"userIds"`
+	UserIds  []UserId         `json:"userIds"`
+	UserInfo LinkedInUserInfo `json:"userInfo"`
 }
 
 type UserId struct {
 	IDType  string `json:"idType"`
 	IDValue string `json:"idValue"`
+}
+
+type LinkedInUserInfo struct {
+	FirstName string `json:"firstName"`
+	LasttName string `json:"lastName"`
 }
 
 type BatchLinkedInCAPIConversionsResponse struct {

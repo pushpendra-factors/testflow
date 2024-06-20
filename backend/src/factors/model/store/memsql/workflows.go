@@ -717,7 +717,7 @@ func (store *MemSQL) AddWorkflowToCache(workflow *model.Workflow, msgProps *U.Pr
 	return http.StatusCreated, nil
 }
 
-func (store *MemSQL) FillLinkedInPropertiesInCacheForWorkflow(msgPropMap *map[string]interface{}, properties *map[string]interface{}, workflowAlertBody model.WorkflowAlertBody) error {
+func (store *MemSQL) FillLinkedInPropertiesInCacheForWorkflow(msgPropMap *map[string]interface{}, event *model.Event, properties *map[string]interface{}, workflowAlertBody model.WorkflowAlertBody) error {
 
 	var linkedinCAPIConfig model.LinkedinCAPIConfig
 	if workflowAlertBody.AdditonalConfigurations != nil {
@@ -728,7 +728,7 @@ func (store *MemSQL) FillLinkedInPropertiesInCacheForWorkflow(msgPropMap *map[st
 		}
 	}
 
-	batchLinkedCAPIPayload, err := store.NewLinkedCapiRequestPayload(properties, linkedinCAPIConfig)
+	batchLinkedCAPIPayload, err := store.NewLinkedCapiRequestPayload(properties, event, linkedinCAPIConfig)
 	if err != nil {
 		log.WithError(err).Error("failed to get batchLinkedCAPIPayload")
 		return err
@@ -779,7 +779,7 @@ func (store *MemSQL) GetWorkflowMessageAndBreakdownPropertiesMap(projectID int64
 		return nil, nil, fmt.Errorf("no properties found")
 	}
 
-	msgPropMap := store.getWorkflowMessageProperties(projectID, messageProperties, allPropertiesCombined, workflowBody)
+	msgPropMap := store.getWorkflowMessageProperties(projectID, event, messageProperties, allPropertiesCombined, workflowBody)
 	if msgPropMap == nil {
 		logCtx.Error("Nil payload map found for the Workflow")
 		return nil, nil, fmt.Errorf("nil received for payload properties map")
@@ -833,7 +833,7 @@ func getWorkflowBreakdownProperties(workflow *model.WorkflowAlertBody, eventProp
 	return breakdownPropMap
 }
 
-func (store *MemSQL) getWorkflowMessageProperties(projectID int64,
+func (store *MemSQL) getWorkflowMessageProperties(projectID int64, event *model.Event,
 	messagePropertiesQuery model.WorkflowMessageProperties, allProperties *map[string]interface{}, workflowAlertBody *model.WorkflowAlertBody) U.PropertiesMap {
 
 	mandatoryProps := messagePropertiesQuery.MandatoryPropertiesCompany
@@ -872,7 +872,7 @@ func (store *MemSQL) getWorkflowMessageProperties(projectID int64,
 	// for  linkedin CAPI
 	if model.IsLinkedInCAPICofigByWorkflow(*workflowAlertBody) {
 
-		err := store.FillLinkedInPropertiesInCacheForWorkflow(&msgPropMap, allProperties, *workflowAlertBody)
+		err := store.FillLinkedInPropertiesInCacheForWorkflow(&msgPropMap, event, allProperties, *workflowAlertBody)
 		if err != nil {
 			log.WithError(err).Error("failed to fill linkedin property")
 			return nil
