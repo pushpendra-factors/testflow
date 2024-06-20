@@ -1,7 +1,7 @@
 import React, { memo, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import cx from 'classnames';
-import { Spin, Tooltip } from 'antd';
+import { Skeleton, Tooltip } from 'antd';
 import {
   Number as NumFormat,
   SVG as Svg,
@@ -21,6 +21,39 @@ import {
   getSegmentName
 } from './accountsInsightsHelpers';
 import styles from './index.module.scss';
+
+function InputSkeleton() {
+  return (
+    <Skeleton.Input
+      className={styles['overview-input-skeleton']}
+      size='small'
+      active
+    />
+  );
+}
+
+function ButtonSkeleton() {
+  return (
+    <Skeleton.Button className={styles['overview-button-skeleton']} active />
+  );
+}
+
+function InsightsSkeleton() {
+  return (
+    <div className='flex flex-col gap-y-2 justify-center items-center'>
+      <InputSkeleton />
+      <ButtonSkeleton />
+    </div>
+  );
+}
+
+function CompareInsightsSkeleton() {
+  return (
+    <div className='flex flex-col gap-y-2 justify-center items-center'>
+      <InputSkeleton />
+    </div>
+  );
+}
 
 function SegmentKpisOverview({ widget, dateRange }) {
   const dispatch = useDispatch();
@@ -51,6 +84,7 @@ function SegmentKpisOverview({ widget, dateRange }) {
     )
   );
 
+  // fetch insights for selected date
   useEffect(() => {
     if (
       accountPayload?.segment?.id != null &&
@@ -76,11 +110,13 @@ function SegmentKpisOverview({ widget, dateRange }) {
     dateRange
   ]);
 
+  // fetch insights for selected date for the compared segment
   useEffect(() => {
     if (
       comparedSegmentId != null &&
       comparedSegmentInsights.completed !== true &&
-      comparedSegmentInsights.loading !== true
+      comparedSegmentInsights.loading !== true &&
+      insights.completed === true
     ) {
       dispatch(
         fetchInsights({
@@ -97,23 +133,28 @@ function SegmentKpisOverview({ widget, dateRange }) {
     widget.wid_g_id,
     comparedSegmentInsights.completed,
     comparedSegmentInsights.loading,
-    comparedSegmentId
+    comparedSegmentId,
+    insights.completed
   ]);
 
   const isLoading =
     insights.loading === true ||
-    comparedSegmentInsights.loading === true ||
     (insights.completed !== true && insights.error !== true);
 
+  const isCompleted = insights.completed === true;
+
+  // const isLoading = true;
+  // const isCompleted = false;
+
+  const comparedDataLoading =
+    comparedSegmentInsights.loading === true ||
+    (comparedSegmentInsights.completed !== true &&
+      comparedSegmentInsights.error !== true);
+
   const isComparedSegmentDataLoaded =
-    comparedSegmentId != null
-      ? comparedSegmentInsights.completed === true
-      : true;
+    comparedSegmentInsights.completed === true;
 
-  const isCompleted =
-    !isLoading && insights.completed && isComparedSegmentDataLoaded;
-
-  const showComparisonData = comparedSegmentInsights.completed === true;
+  const showComparisonData = comparedSegmentId != null;
 
   const insightsDataByKey = getInsightsDataByKey(insights);
   const compareInsightsDataByKey = getInsightsDataByKey(
@@ -135,18 +176,18 @@ function SegmentKpisOverview({ widget, dateRange }) {
         }
       )}
     >
-      <ControlledComponent controller={isLoading}>
-        <Spin size='small' />
-      </ControlledComponent>
-      <ControlledComponent controller={isCompleted}>
-        <div className='flex items-center w-full'>
-          {widget.wids.map((queryMetric, index) => (
-            <div
-              key={queryMetric.id}
-              className={cx('flex flex-1 items-center flex-col gap-y-2', {
-                'border-r': index === 0
-              })}
-            >
+      <div className='flex items-center w-full'>
+        {widget.wids.map((queryMetric, index) => (
+          <div
+            key={queryMetric.id}
+            className={cx('flex flex-1 items-center flex-col gap-y-2', {
+              'border-r': index === 0
+            })}
+          >
+            <ControlledComponent controller={isLoading}>
+              <InsightsSkeleton />
+            </ControlledComponent>
+            <ControlledComponent controller={isCompleted}>
               <div className='flex gap-x-3 items-center'>
                 <Svg
                   name={index === 0 ? 'buildings' : 'fireFlameCurved'}
@@ -175,7 +216,14 @@ function SegmentKpisOverview({ widget, dateRange }) {
                   number={insightsDataByKey[queryMetric.q_me]}
                 />
               </Text>
-              <ControlledComponent controller={showComparisonData}>
+              <ControlledComponent
+                controller={showComparisonData && comparedDataLoading}
+              >
+                <CompareInsightsSkeleton />
+              </ControlledComponent>
+              <ControlledComponent
+                controller={showComparisonData && isComparedSegmentDataLoaded}
+              >
                 <>
                   <ComparePercent
                     value={
@@ -206,9 +254,11 @@ function SegmentKpisOverview({ widget, dateRange }) {
                   </Text>
                 </>
               </ControlledComponent>
-            </div>
-          ))}
-        </div>
+            </ControlledComponent>
+          </div>
+        ))}
+      </div>
+      <ControlledComponent controller={isCompleted}>
         <Text
           type='title'
           extraClass='mb-0 text-center'

@@ -30,7 +30,6 @@ import {
   setDrawerVisibleAction,
   setFiltersDirtyAction,
   setNewSegmentModeAction,
-  toggleAccountsTab
 } from 'Reducers/accountProfilesView/actions';
 import useFeatureLock from 'hooks/useFeatureLock';
 import { FEATURES } from 'Constants/plans.constants';
@@ -351,10 +350,6 @@ function AccountProfiles({
 
   useEffect(() => {
     runInit();
-
-    return () => {
-      dispatch(toggleAccountsTab('accounts'));
-    };
   }, [segmentID, segments, accountPayload]);
 
   const getAccounts = async (payload) => {
