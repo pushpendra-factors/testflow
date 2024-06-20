@@ -739,7 +739,7 @@ func buildAddJoinForFunnelAllAccountsFunnelStep(projectID int64, queryGroupByPro
 	if model.CheckIfHasDomainGroupBy(queryGroupByProperty) {
 		joinStmnt = joinStmnt + fmt.Sprintf(" LEFT JOIN users as domain_users on %s.coal_group_user_id = domain_users.id "+
 			"AND domain_users.project_id = ? AND domain_users.source = 9", refStep)
-		return joinStmnt, []interface{}{projectID, projectID}
+		return joinStmnt, []interface{}{projectID}
 	}
 
 	return joinStmnt, []interface{}{projectID}
