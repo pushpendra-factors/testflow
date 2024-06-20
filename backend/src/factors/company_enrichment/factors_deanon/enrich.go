@@ -16,6 +16,7 @@ import (
 )
 
 const FACTORS_6SIGNAL = "factors_6sense"
+const FACTORS_6SIGNAL_V3 = "factors_6sense_v3"
 const FACTORS_CLEARBIT = "factors_clearbit"
 
 var defaultFactorsDeanonConfig = model.FactorsDeanonConfig{
@@ -249,7 +250,13 @@ func FillFactorsDeanonUserProperties(projectId int64, factorsDeanonConfig model.
 		}
 		factors6SignalKey := C.GetFactorsSixSignalAPIKey()
 		domain, status = sixsignal.FillSixSignalUserProperties(projectId, factors6SignalKey, userProperties, userId, clientIP, logCtx)
-		(*userProperties)[U.ENRICHMENT_SOURCE] = FACTORS_6SIGNAL
+
+		if config.IsSixSignalV3Enabled(projectId) {
+			(*userProperties)[U.ENRICHMENT_SOURCE] = FACTORS_6SIGNAL_V3
+		} else {
+			(*userProperties)[U.ENRICHMENT_SOURCE] = FACTORS_6SIGNAL
+		}
+
 		if status == 1 {
 			(*eventProperties)[U.EP_COMPANY_ENRICHED] = FACTORS_6SIGNAL
 		}
