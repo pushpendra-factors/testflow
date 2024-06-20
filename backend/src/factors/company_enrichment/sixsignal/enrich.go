@@ -13,6 +13,7 @@ import (
 )
 
 const API_6SIGNAL = "API_6Sense"
+const API_6SIGNAL_V3 = "API_6Sense_v3"
 
 type CustomerSixSignal struct {
 }
@@ -61,7 +62,12 @@ func (ss *CustomerSixSignal) Enrich(projectSettings *model.ProjectSetting,
 
 	domain, status := FillSixSignalUserProperties(projectId, customerSixSignalAPIKey, userProperties, userId, clientIP, logCtx)
 
-	(*userProperties)[U.ENRICHMENT_SOURCE] = API_6SIGNAL
+	if config.IsSixSignalV3Enabled(projectId) {
+		(*userProperties)[U.ENRICHMENT_SOURCE] = API_6SIGNAL_V3
+	} else {
+		(*userProperties)[U.ENRICHMENT_SOURCE] = API_6SIGNAL
+	}
+
 	return domain, status
 }
 
