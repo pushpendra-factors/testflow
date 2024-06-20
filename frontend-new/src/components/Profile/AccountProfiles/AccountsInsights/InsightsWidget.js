@@ -2,7 +2,7 @@ import React, { memo, useCallback, useEffect, useMemo } from 'react';
 import { useHistory } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import cx from 'classnames';
-import { Button, Spin } from 'antd';
+import { Button } from 'antd';
 import {
   selectAccountPayload,
   selectEditInsightsMetricStatus,
@@ -89,6 +89,7 @@ function InsightsWidget({
     history.push(PathUrls.SettingsIntegration);
   }, []);
 
+  // fetch insights for selected date
   useEffect(() => {
     if (
       accountPayload?.segment?.id != null &&
@@ -115,12 +116,14 @@ function InsightsWidget({
     isIntegrationDone
   ]);
 
+  // fetch insights for selected date for the compared segment
   useEffect(() => {
     if (
       comparedSegmentId != null &&
       comparedSegmentInsights.completed !== true &&
       comparedSegmentInsights.loading !== true &&
-      isIntegrationDone === true
+      isIntegrationDone === true &&
+      insights.completed === true
     ) {
       dispatch(
         fetchInsights({
@@ -138,16 +141,19 @@ function InsightsWidget({
     comparedSegmentInsights.completed,
     comparedSegmentInsights.loading,
     comparedSegmentId,
-    isIntegrationDone
+    isIntegrationDone,
+    insights.completed
   ]);
 
+  // fetch insights for previous date
   useEffect(() => {
     if (
       accountPayload?.segment?.id != null &&
       compareInsights.completed !== true &&
       compareInsights.loading !== true &&
       Boolean(comparedSegmentId) === false &&
-      isIntegrationDone === true
+      isIntegrationDone === true &&
+      insights.completed === true
     ) {
       dispatch(
         fetchInsights({
@@ -165,9 +171,11 @@ function InsightsWidget({
     compareInsights.completed,
     compareInsights.loading,
     accountPayload?.segment?.id,
-    isIntegrationDone
+    isIntegrationDone,
+    insights.completed
   ]);
 
+  // fetch for current date and previous date (or compared segment) when metric is edited
   useEffect(() => {
     if (
       editMetricStatus.completed === true &&
@@ -221,21 +229,20 @@ function InsightsWidget({
     [segments, comparedSegmentId]
   );
 
-  const curIsLoading =
-    insights.loading === true ||
-    (insights.completed !== true && insights.error !== true);
-
   const insightsDataByKey = getInsightsDataByKey(insights);
 
   const compareData =
     comparedSegmentId == null ? compareInsights : comparedSegmentInsights;
 
-  const isLoading = compareData.loading || curIsLoading;
-  const isCompleted = !isLoading && insights.completed && compareData.completed;
+  const isLoading =
+    insights.loading === true ||
+    (insights.completed !== true && insights.error !== true);
+
+  const compareLoading =
+    compareData.loading === true ||
+    (compareData.completed !== true && compareData.error !== true);
 
   const compareInsightsDataByKey = getInsightsDataByKey(compareData);
-
-  const showComparisonData = compareData.completed === true;
 
   return (
     <div className='flex flex-col border rounded-lg'>
@@ -257,11 +264,7 @@ function InsightsWidget({
           {widget.wid_g_d_name}
         </Text>
       </div>
-      <div
-        className={cx('flex py-8', styles['min-h-48'], {
-          'items-center justify-center': isLoading
-        })}
-      >
+      <div className={cx('flex py-8', styles['min-h-48'])}>
         <ControlledComponent controller={isIntegrationDone === false}>
           <div className='flex flex-col justify-center items-center gap-y-5'>
             <img alt='no-data' src='../../../../assets/images/disconnect.svg' />
@@ -279,22 +282,18 @@ function InsightsWidget({
             </div>
           </div>
         </ControlledComponent>
-        <ControlledComponent
-          controller={Boolean(isLoading) === true && isIntegrationDone === true}
-        >
-          <Spin size='small' />
-        </ControlledComponent>
-        <ControlledComponent controller={Boolean(isCompleted) === true}>
+        <ControlledComponent controller={insights.error !== true}>
           {widget.wids.map((queryMetric, index) => (
             <QueryMetric
               key={queryMetric.id}
               index={index}
               insightsDataByKey={insightsDataByKey}
-              showComparisonData={showComparisonData}
               compareDateRange={compareDateRange}
               compareInsightsDataByKey={compareInsightsDataByKey}
               comparedSegmentId={comparedSegmentId}
               comparedSegmentName={comparedSegmentName}
+              isLoading={isLoading}
+              compareLoading={compareLoading}
               totalWidgets={4}
               queryMetric={queryMetric}
               onEditMetricClick={handleEditMetric}
