@@ -486,7 +486,7 @@ CREATE ROWSTORE TABLE IF NOT EXISTS project_settings (
     int_paragon_enabling_agent_id text,
     integration_status JSON,
     saml_configuration JSON,
-    sso_state int default 0;
+    sso_state int default 1;
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)

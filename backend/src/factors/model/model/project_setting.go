@@ -51,8 +51,9 @@ var FeatureDisplayNameMap = map[string]string{
 	"Teams":                 FEATURE_TEAMS,
 }
 
-const SSO_STATE_SAML_ENABLED = 1
-const SSO_STATE_GOOGLE_ENABLED = 2
+const SSO_STATE_DEFAULT = 1
+const SSO_STATE_SAML_ENABLED = 2
+const SSO_STATE_GOOGLE_ENABLED = 3
 
 func FeatureDisplayNameByFeatureName(value string) string {
 	for key, v := range FeatureDisplayNameMap {
