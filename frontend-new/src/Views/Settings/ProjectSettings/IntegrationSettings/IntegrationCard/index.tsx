@@ -2,8 +2,6 @@ import React, { useContext, useEffect, useRef } from 'react';
 import { Alert, Avatar, Button, Divider } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import useFeatureLock from 'hooks/useFeatureLock';
-import UpgradeButton from 'Components/GenericComponents/UpgradeButton';
-import usePlanUpgrade from 'hooks/usePlanUpgrade';
 import { useHistory } from 'react-router-dom';
 import { PathUrls } from 'Routes/pathUrls';
 import { IntegrationInfoInterface } from 'hooks/useIntegrationCheck';
@@ -17,6 +15,7 @@ import {
   getIntegrationStatus,
   showIntegrationStatus
 } from '../util';
+import LockedIntegrationCard from './LockedIntegrationCard';
 
 const IntegrationCard = ({
   integrationConfig,
@@ -30,11 +29,8 @@ const IntegrationCard = ({
 
   const { isFeatureLocked } = useFeatureLock(featureName);
 
-  const { handlePlanUpgradeClick } = usePlanUpgrade();
-
   const { integrationStatus } = useContext(IntegrationContext);
 
-  const integrationStatusState = integrationStatus?.[featureName]?.state;
   const integrationStatusValue = getIntegrationStatus(
     integrationStatus?.[featureName]
   );
@@ -51,19 +47,12 @@ const IntegrationCard = ({
   const isFeatureIntegrated = integrationInfo?.[featureName];
 
   const handleCardClick = () => {
-    if (isFeatureLocked && featureName !== 'sdk') {
-      handlePlanUpgradeClick(featureName);
-      return;
-    }
     const path = `${PathUrls.SettingsIntegration}/${integrationConfig.id}`;
 
     history.push(path);
   };
 
   const renderActionButton = () => {
-    if (isFeatureLocked && featureName !== 'sdk')
-      return <UpgradeButton featureName={integrationConfig.featureName} />;
-
     const ConnectNowButton = (
       <Button type='text' onClick={handleCardClick}>
         <div className='flex items-center gap-1'>
@@ -101,11 +90,7 @@ const IntegrationCard = ({
       );
     }
 
-    if (
-      !isFeatureIntegrated ||
-      !integrationStatus?.[featureName] ||
-      integrationStatusState === ''
-    ) {
+    if (!isFeatureIntegrated || !integrationStatus?.[featureName]) {
       return ConnectNowButton;
     }
     if (isNotConnectedState) {
@@ -142,17 +127,11 @@ const IntegrationCard = ({
   };
 
   let border;
-  let backgroundColor;
-  if (isFeatureLocked && featureName !== 'sdk') {
-    backgroundColor = '#FAFAFA';
-  }
+
   if (
-    (featureName === 'sdk' &&
-      (isErrorState || isPendingState) &&
-      showIntegrationStatusFlag) ||
-    (!isFeatureLocked &&
-      (isErrorState || isPendingState) &&
-      showIntegrationStatusFlag)
+    (isErrorState || isPendingState) &&
+    showIntegrationStatusFlag &&
+    isFeatureIntegrated
   ) {
     border = `1px solid ${isPendingState ? '#DEA069' : '#EA6262'}`;
   }
@@ -165,11 +144,22 @@ const IntegrationCard = ({
     }
   }, []);
 
+  if (isFeatureLocked && featureName !== 'sdk') {
+    return (
+      <LockedIntegrationCard
+        title={name}
+        description={desc}
+        featureName={featureName}
+        icon={icon}
+        ref={cardRef}
+      />
+    );
+  }
+
   return (
     <div
       className='fa-intergration-card'
       style={{
-        background: backgroundColor || undefined,
         border: border || undefined
       }}
       ref={cardRef}
