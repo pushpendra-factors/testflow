@@ -95,6 +95,7 @@ func main() {
 	enableTotalSessionPropertiesV2ByProjectID := flag.String("enable_total_session_properties_v2", "", "")
 	enableDomainWebsitePropertiesByProjectID := flag.String("enable_domain_website_properties_by_project_id", "", "")
 	skipContactUpdatesByProjectID := flag.String("skip_contact_updates_by_project_id", "", "")
+	hubspotEnrichBackfillLimit := flag.Int("hubspot_enrich_backfill_limit", 0, "")
 
 	flag.Parse()
 	if *env != "development" && *env != "staging" && *env != "production" {
@@ -203,6 +204,7 @@ func main() {
 	configsEnrich["record_process_limit_per_project"] = *recordProcessLimit
 	configsEnrich["enrich_pull_limit"] = *enrichPullLimit
 	configsEnrich["first_time_enrich"] = *firstTimeEnrich
+	configsEnrich["hubspot_enrich_backfill_limit"] = *hubspotEnrichBackfillLimit
 
 	configsDistributer := make(map[string]interface{})
 	configsDistributer["health_check_ping_id"] = ""

@@ -12,6 +12,7 @@ import (
 	SDK "factors/sdk"
 	"factors/task/event_user_cache"
 	"factors/task/hubspot_enrich"
+	"factors/util"
 	U "factors/util"
 	"fmt"
 	"io"
@@ -330,7 +331,8 @@ func TestHubspotEngagements(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap := GetProjectSettings(project.ID)
-	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus := enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -338,7 +340,7 @@ func TestHubspotEngagements(t *testing.T) {
 
 	docMeetingsWithoutContactId, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"49861280154"}, model.HubspotDocumentTypeEngagement, []int{model.HubspotDocumentActionCreated})
 	for _, document := range docMeetingsWithoutContactId {
-		assert.Equal(t, document.Synced, true)
+		assert.Equal(t, true, document.Synced)
 	}
 
 	docMeetings, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"54051"}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
@@ -544,7 +546,8 @@ func TestHubspotContactFormSubmission(t *testing.T) {
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap := GetProjectSettings(project.ID)
 
-	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus := enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -946,7 +949,8 @@ func TestHubspotEventUserPropertiesState(t *testing.T) {
 	//enrich job, create contact created and contact updated event
 	projectsMaxCreatedAt, hubspotProjectSettingsMap := GetProjectSettings(project.ID)
 
-	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 3, 50, 3)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 3, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus := enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -1454,10 +1458,10 @@ func TestHubspotSyncJobDocumentDeleteAndMerge(t *testing.T) {
 			"lastmodifieddate": "%s",
 			"lastname": "11"
 		},
-		"createdAt": "%s",
-		"updatedAt": "%s", 
+		"createdAt": "%d",
+		"updatedAt": "%d", 
 		"archived": true,
-		"archivedAt": "%s"
+		"archivedAt": "%d"
 	}`
 
 	jsonContact = fmt.Sprintf(jsonContactModel, deletionDocumentID, createdDate, lastmodifieddateHSLayout, createdDate, createdDate, createdDate)
@@ -1671,10 +1675,12 @@ func TestHubspotSyncJobDocumentDeleteAndMerge(t *testing.T) {
 	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 	assert.Equal(t, http.StatusCreated, status)
 
+	time.Sleep(1 * time.Second)
 	// Processing the sync job altogether for all the test cases.
 	projectsMaxCreatedAt, hubspotProjectSettingsMap := GetProjectSettings(project.ID)
 
-	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus := enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -1739,7 +1745,8 @@ func TestHubspotPropertyDetails(t *testing.T) {
 	)
 	assert.Equal(t, http.StatusAccepted, errCode)
 
-	status := IntHubspot.CreateOrGetHubspotEventName(project.ID)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	status := IntHubspot.CreateOrGetHubspotEventName(project.ID, allowedObjects)
 	assert.Equal(t, http.StatusOK, status)
 
 	createdDate := time.Now().Unix()
@@ -1861,7 +1868,8 @@ func TestHubspotPropertyDetails(t *testing.T) {
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap := GetProjectSettings(project.ID)
 
-	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 3, 50, 3)
+	allowedObjects, _ = model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 3, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus := enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -2088,7 +2096,8 @@ func TestHubspotCreateActionUpdatedOnCreate(t *testing.T) {
 	//enrich job, create contact created and contact updated event
 	projectsMaxCreatedAt, hubspotProjectSettingsMap := GetProjectSettings(project.ID)
 
-	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 3, 50, 3)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 3, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus := enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -2341,7 +2350,8 @@ func TestHubspotUseLastModifiedTimestampAsDefault(t *testing.T) {
 	//enrich job, create contact created and contact updated event
 	projectsMaxCreatedAt, hubspotProjectSettingsMap := GetProjectSettings(project.ID)
 
-	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus := enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -2425,25 +2435,36 @@ func sendUpdateHubspotSyncInfo(r *gin.Engine, updateInfo map[string]interface{},
 	return w
 }
 
+func sendSetHubspotFirstTimeSyncDone(r *gin.Engine, projectID int64) *httptest.ResponseRecorder {
+
+	url := "http://localhost:8089/data_service/hubspot/documents/synced?project_id=" + U.GetPropertyValueAsString(projectID)
+
+	rb := U.NewRequestBuilder(http.MethodPost, fmt.Sprintf(url))
+	req, err := rb.Build()
+	if err != nil {
+		log.WithError(err).Error("Error creating request")
+	}
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	return w
+}
+
 func TestHubspotFirstSyncStatus(t *testing.T) {
-	project1, agent1, err := SetupProjectWithAgentDAO()
+	project1, _, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 	r := gin.Default()
 	H.InitAppRoutes(r)
 	H.InitDataServiceRoutes(r)
 
-	project2, agent2, err := SetupProjectWithAgentDAO()
+	project2, _, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
-	w := sendUpdateProjectSettingReq(r, project1.ID, agent1, map[string]interface{}{
-		"int_hubspot_api_key": "1234", "int_hubspot": true,
-	})
-	assert.Equal(t, http.StatusOK, w.Code)
+	status := enableHubspotFeatureByProjectID(project1.ID)
+	assert.Equal(t, http.StatusAccepted, status)
 
-	w = sendUpdateProjectSettingReq(r, project2.ID, agent2, map[string]interface{}{
-		"int_hubspot_api_key": "1234", "int_hubspot": true,
-	})
-	assert.Equal(t, http.StatusOK, w.Code)
+	status = enableHubspotFeatureByProjectID(project2.ID)
+	assert.Equal(t, http.StatusAccepted, status)
 
 	project, status := store.GetStore().GetProjectSetting(project1.ID)
 	assert.Equal(t, http.StatusFound, status)
@@ -2452,7 +2473,7 @@ func TestHubspotFirstSyncStatus(t *testing.T) {
 	assert.Equal(t, http.StatusFound, status)
 	assert.Equal(t, false, project.IntHubspotFirstTimeSynced)
 
-	w = sendGetHubspotSyncInfo(r, true)
+	w := sendGetHubspotSyncInfo(r, true)
 	assert.Equal(t, http.StatusFound, w.Code)
 
 	var jsonResponseMap map[string]map[string]map[string]interface{}
@@ -2481,7 +2502,7 @@ func TestHubspotFirstSyncStatus(t *testing.T) {
 			},
 			{
 				"project_id": project1.ID,
-				"doc_type":   "deals",
+				"doc_type":   "deal",
 				"status":     "success",
 			},
 			{
@@ -2496,12 +2517,16 @@ func TestHubspotFirstSyncStatus(t *testing.T) {
 			},
 			{
 				"project_id": project2.ID,
-				"doc_type":   "deals",
+				"doc_type":   "deal",
 				"status":     "success",
 			},
 		},
 	}
 	w = sendUpdateHubspotSyncInfo(r, payload, true)
+	assert.Equal(t, http.StatusOK, w.Code)
+	w = sendSetHubspotFirstTimeSyncDone(r, project1.ID)
+	assert.Equal(t, http.StatusOK, w.Code)
+	w = sendSetHubspotFirstTimeSyncDone(r, project2.ID)
 	assert.Equal(t, http.StatusOK, w.Code)
 	project, status = store.GetStore().GetProjectSetting(project1.ID)
 	assert.Equal(t, http.StatusFound, status)
@@ -2579,6 +2604,11 @@ func TestHubspotSyncInfo(t *testing.T) {
 		assert.Nil(t, jsonResponseMap["int_hubspot_sync_info"])
 	})
 
+	status := enableHubspotFeatureByProjectID(project1.ID)
+	assert.Equal(t, http.StatusAccepted, status)
+	status = enableHubspotFeatureByProjectID(project2.ID)
+	assert.Equal(t, http.StatusAccepted, status)
+
 	t.Run("HubSyncInfoBeforeFirstRun", func(t *testing.T) {
 		w := sendGetHubspotSyncInfo(r, true)
 		assert.Equal(t, http.StatusFound, w.Code)
@@ -2587,11 +2617,11 @@ func TestHubspotSyncInfo(t *testing.T) {
 		err = json.Unmarshal(jsonResponse, &hubspotSyncInfo)
 		assert.Nil(t, err)
 		assert.Equal(t, int64(0), hubspotSyncInfo.LastSyncInfo[project1.ID]["contact"])
-		assert.Equal(t, int64(0), hubspotSyncInfo.LastSyncInfo[project1.ID]["deals"])
+		assert.Equal(t, int64(0), hubspotSyncInfo.LastSyncInfo[project1.ID]["deal"])
 		assert.Equal(t, int64(0), hubspotSyncInfo.LastSyncInfo[project1.ID]["companies"])
 
 		assert.Equal(t, int64(0), hubspotSyncInfo.LastSyncInfo[project2.ID]["contact"])
-		assert.Equal(t, int64(0), hubspotSyncInfo.LastSyncInfo[project2.ID]["deals"])
+		assert.Equal(t, int64(0), hubspotSyncInfo.LastSyncInfo[project2.ID]["deal"])
 		assert.Equal(t, int64(0), hubspotSyncInfo.LastSyncInfo[project2.ID]["companies"])
 
 		w = sendGetHubspotSyncInfo(r, false)
@@ -2623,7 +2653,31 @@ func TestHubspotSyncInfo(t *testing.T) {
 				},
 				{
 					"project_id": project1.ID,
-					"doc_type":   "deals",
+					"doc_type":   "deal",
+					"status":     "success",
+					"timestamp":  12345,
+				},
+				{
+					"project_id": project1.ID,
+					"doc_type":   "engagement",
+					"status":     "success",
+					"timestamp":  12345,
+				},
+				{
+					"project_id": project1.ID,
+					"doc_type":   "form_submission",
+					"status":     "success",
+					"timestamp":  12345,
+				},
+				{
+					"project_id": project1.ID,
+					"doc_type":   "form",
+					"status":     "success",
+					"timestamp":  12345,
+				},
+				{
+					"project_id": project1.ID,
+					"doc_type":   "owner",
 					"status":     "success",
 					"timestamp":  12345,
 				},
@@ -2641,14 +2695,42 @@ func TestHubspotSyncInfo(t *testing.T) {
 				},
 				{
 					"project_id": project2.ID,
-					"doc_type":   "deals",
+					"doc_type":   "deal",
 					"status":     "success",
 					"timestamp":  12345678,
+				},
+				{
+					"project_id": project2.ID,
+					"doc_type":   "engagement",
+					"status":     "success",
+					"timestamp":  12345,
+				},
+				{
+					"project_id": project2.ID,
+					"doc_type":   "form_submission",
+					"status":     "success",
+					"timestamp":  12345,
+				},
+				{
+					"project_id": project2.ID,
+					"doc_type":   "form",
+					"status":     "success",
+					"timestamp":  12345,
+				},
+				{
+					"project_id": project2.ID,
+					"doc_type":   "owner",
+					"status":     "success",
+					"timestamp":  12345,
 				},
 			},
 		}
 
 		w := sendUpdateHubspotSyncInfo(r, payload, true)
+		assert.Equal(t, http.StatusOK, w.Code)
+		w = sendSetHubspotFirstTimeSyncDone(r, project1.ID)
+		assert.Equal(t, http.StatusOK, w.Code)
+		w = sendSetHubspotFirstTimeSyncDone(r, project2.ID)
 		assert.Equal(t, http.StatusOK, w.Code)
 		w = sendGetProjectSettingsReq(r, project1.ID, agent1)
 		assert.Equal(t, http.StatusOK, w.Code)
@@ -2660,7 +2742,7 @@ func TestHubspotSyncInfo(t *testing.T) {
 		projectSyncInfo := jsonResponseMap["int_hubspot_sync_info"].(map[string]interface{})
 		assert.Equal(t, float64(123), projectSyncInfo["contact"])
 		assert.Equal(t, float64(1234), projectSyncInfo["company"])
-		assert.Equal(t, float64(12345), projectSyncInfo["deals"])
+		assert.Equal(t, float64(12345), projectSyncInfo["deal"])
 
 		w = sendGetProjectSettingsReq(r, project2.ID, agent2)
 		assert.Equal(t, http.StatusOK, w.Code)
@@ -2672,7 +2754,7 @@ func TestHubspotSyncInfo(t *testing.T) {
 		projectSyncInfo = jsonResponseMap["int_hubspot_sync_info"].(map[string]interface{})
 		assert.Equal(t, float64(123456), projectSyncInfo["contact"])
 		assert.Equal(t, float64(1234567), projectSyncInfo["company"])
-		assert.Equal(t, float64(12345678), projectSyncInfo["deals"])
+		assert.Equal(t, float64(12345678), projectSyncInfo["deal"])
 
 		w = sendGetHubspotSyncInfo(r, true)
 		assert.Equal(t, http.StatusFound, w.Code)
@@ -2690,17 +2772,17 @@ func TestHubspotSyncInfo(t *testing.T) {
 		hubspotSyncInfo = model.HubspotSyncInfo{}
 		err = json.Unmarshal(jsonResponse, &hubspotSyncInfo)
 		assert.Nil(t, err)
-		assert.NotNil(t, hubspotSyncInfo.LastSyncInfo[project1.ID])
+		assert.NotNil(t, hubspotSyncInfo.LastSyncInfo[project1.ID], project1.ID)
 
 		assert.NotNil(t, hubspotSyncInfo.LastSyncInfo[project2.ID])
 
 		assert.Equal(t, int64(123), hubspotSyncInfo.LastSyncInfo[project1.ID]["contact"])
 		assert.Equal(t, int64(1234), hubspotSyncInfo.LastSyncInfo[project1.ID]["company"])
-		assert.Equal(t, int64(12345), hubspotSyncInfo.LastSyncInfo[project1.ID]["deals"])
+		assert.Equal(t, int64(12345), hubspotSyncInfo.LastSyncInfo[project1.ID]["deal"])
 
 		assert.Equal(t, int64(123456), hubspotSyncInfo.LastSyncInfo[project2.ID]["contact"])
 		assert.Equal(t, int64(1234567), hubspotSyncInfo.LastSyncInfo[project2.ID]["company"])
-		assert.Equal(t, int64(12345678), hubspotSyncInfo.LastSyncInfo[project2.ID]["deals"])
+		assert.Equal(t, int64(12345678), hubspotSyncInfo.LastSyncInfo[project2.ID]["deal"], project2.ID)
 	})
 
 	t.Run("HubSyncInfoRecentRun", func(t *testing.T) {
@@ -2721,7 +2803,7 @@ func TestHubspotSyncInfo(t *testing.T) {
 				},
 				{
 					"project_id": project1.ID,
-					"doc_type":   "deals",
+					"doc_type":   "deal",
 					"status":     "success",
 					"timestamp":  12346,
 				},
@@ -2739,7 +2821,7 @@ func TestHubspotSyncInfo(t *testing.T) {
 				},
 				{
 					"project_id": project2.ID,
-					"doc_type":   "deals",
+					"doc_type":   "deal",
 					"status":     "success",
 					"timestamp":  12345678,
 				},
@@ -2757,11 +2839,11 @@ func TestHubspotSyncInfo(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, int64(1234), hubspotSyncInfo.LastSyncInfo[project1.ID]["contact"])
 		assert.Equal(t, int64(1234), hubspotSyncInfo.LastSyncInfo[project1.ID]["company"]) // same as before
-		assert.Equal(t, int64(12346), hubspotSyncInfo.LastSyncInfo[project1.ID]["deals"])
+		assert.Equal(t, int64(12346), hubspotSyncInfo.LastSyncInfo[project1.ID]["deal"])
 
 		assert.Equal(t, int64(123456), hubspotSyncInfo.LastSyncInfo[project2.ID]["contact"]) // same as before
 		assert.Equal(t, int64(1234567), hubspotSyncInfo.LastSyncInfo[project2.ID]["company"])
-		assert.Equal(t, int64(12345678), hubspotSyncInfo.LastSyncInfo[project2.ID]["deals"])
+		assert.Equal(t, int64(12345678), hubspotSyncInfo.LastSyncInfo[project2.ID]["deal"])
 	})
 
 	t.Run("HubspotSyncFallbackToDocumentTimestamp", func(t *testing.T) {
@@ -2803,7 +2885,7 @@ func TestHubspotSyncInfo(t *testing.T) {
 
 		newSyncInfoMap := map[string]int64{
 			"company": 1234,
-			"deals":   123,
+			"deal":    123,
 		}
 		enNewSyncInfoMap, err := json.Marshal(newSyncInfoMap)
 		assert.Nil(t, err)
@@ -2815,9 +2897,9 @@ func TestHubspotSyncInfo(t *testing.T) {
 		hubspotSyncInfo := model.HubspotSyncInfo{}
 		err = json.Unmarshal(jsonResponse, &hubspotSyncInfo)
 		assert.Nil(t, err)
-		assert.Equal(t, int64(112), hubspotSyncInfo.LastSyncInfo[project1.ID]["contact"])
+		assert.Equal(t, int64(0), hubspotSyncInfo.LastSyncInfo[project1.ID]["contact"])
 		assert.Equal(t, int64(1234), hubspotSyncInfo.LastSyncInfo[project1.ID]["company"]) // same as before
-		assert.Equal(t, int64(123), hubspotSyncInfo.LastSyncInfo[project1.ID]["deals"])
+		assert.Equal(t, int64(123), hubspotSyncInfo.LastSyncInfo[project1.ID]["deal"])
 	})
 }
 
@@ -2891,7 +2973,8 @@ func TestHubspotLatestUserProperties(t *testing.T) {
 	assert.Equal(t, companyCreatedDate.Unix()*1000, hubspotDocument.Timestamp)
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap := GetProjectSettings(project.ID)
-	hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 3, 50, 3)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 3, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 
 	query := model.Query{
 		From: createdAt.Unix() - 500,
@@ -2960,7 +3043,7 @@ func TestHubspotLatestUserProperties(t *testing.T) {
 	}
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap = GetProjectSettings(project.ID)
-	hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 3, 50, 3)
+	hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 3, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 
 	result, status, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
 	assert.Equal(t, http.StatusOK, status)
@@ -3104,7 +3187,8 @@ func TestHubspotCustomerUserIDChange(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap := GetProjectSettings(project.ID)
-	hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 3, 50, 3)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 3, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 
 	query := model.Query{
 		From: createdAt.Unix() - 500,
@@ -3280,7 +3364,8 @@ func TestHubspotParallelProcessingByDocumentID(t *testing.T) {
 	numParallelDocuments := 3
 	projectsMaxCreatedAt, hubspotProjectSettingsMap := GetProjectSettings(project.ID)
 
-	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, numParallelDocuments, 100, 3)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, numParallelDocuments, 100, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus := enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -3644,7 +3729,8 @@ func TestHubspotCompanyGroups(t *testing.T) {
 	}
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap := GetProjectSettings(project.ID)
-	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus := enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -3719,7 +3805,7 @@ func TestHubspotCompanyGroups(t *testing.T) {
 	}
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap = GetProjectSettings(project.ID)
-	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus = enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -3814,7 +3900,7 @@ func TestHubspotCompanyGroups(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap = GetProjectSettings(project.ID)
-	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus = enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -3871,7 +3957,7 @@ func TestHubspotCompanyGroups(t *testing.T) {
 	companyContacts, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{fmt.Sprintf("%d", company1Contact[1])}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated, model.HubspotDocumentActionUpdated})
 	assert.Equal(t, http.StatusFound, status)
 	user, _ = store.GetStore().GetUser(project.ID, companyContacts[0].UserId)
-	assert.True(t, assertUserGroupValueByColumnName(user, "group_2_user_id", deal2GroupUserID))
+	assert.True(t, assertUserGroupValueByColumnName(user, "group_2_user_id", deal2GroupUserID), companyContacts[0].UserId)
 
 	// deal3
 	groupRelationship, status = store.GetStore().GetGroupRelationshipByUserID(project.ID, deal3GroupUserID)
@@ -3936,7 +4022,7 @@ func TestHubspotCompanyGroups(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap = GetProjectSettings(project.ID)
-	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus = enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -4004,7 +4090,7 @@ func TestHubspotCompanyGroups(t *testing.T) {
 	assert.Len(t, documents, 1)
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap = GetProjectSettings(project.ID)
-	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus = enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -4314,7 +4400,8 @@ func TestHubspotUserPropertiesOverwrite(t *testing.T) {
 	// Execute sync job to process the contact created above
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap := GetProjectSettings(project.ID)
-	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 3, 50, 3)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 3, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus := enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -4383,7 +4470,7 @@ func TestHubspotUserPropertiesOverwrite(t *testing.T) {
 
 	// Execute sync job to process the contact updated above
 	projectsMaxCreatedAt, hubspotProjectSettingsMap = GetProjectSettings(project.ID)
-	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 3, 50, 3)
+	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 3, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus = enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -4454,7 +4541,7 @@ func TestHubspotUserPropertiesOverwrite(t *testing.T) {
 	// Execute sync job to process the contact created above
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap = GetProjectSettings(project.ID)
-	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 3, 50, 3)
+	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 3, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus = enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -4526,7 +4613,7 @@ func TestHubspotUserPropertiesOverwrite(t *testing.T) {
 	// Execute sync job to process the contact updated above
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap = GetProjectSettings(project.ID)
-	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 3, 50, 3)
+	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 3, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus = enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -4632,7 +4719,8 @@ func TestHubspotGroupUserFix(t *testing.T) {
 	// Execute sync job to process the contact created above
 	projectsMaxCreatedAt, hubspotProjectSettingsMap := GetProjectSettings(project.ID)
 
-	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 3, 50, 3)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 3, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus := enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -4728,7 +4816,7 @@ func TestHubspotGroupUserFix(t *testing.T) {
 
 	// Execute sync job to process the contact created above
 	projectsMaxCreatedAt, hubspotProjectSettingsMap = GetProjectSettings(project.ID)
-	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus = enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -4910,7 +4998,8 @@ func TestHubspotEmptyPropertiesUpdated(t *testing.T) {
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap := GetProjectSettings(project.ID)
 
-	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 2, 50, 3)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 2, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus := enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -4959,7 +5048,7 @@ func TestHubspotEmptyPropertiesUpdated(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap = GetProjectSettings(project.ID)
-	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 2, 50, 3)
+	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 2, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus = enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -5158,7 +5247,8 @@ func TestHubspotDateTimezone(t *testing.T) {
 		},
 	}
 
-	enrichStatus, _ := IntHubspot.Sync(project.ID, 2, time.Now().UTC().Unix(), dateProperties, "America/Vancouver", 50, 3, "123")
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	enrichStatus, _ := IntHubspot.Sync(project.ID, 2, time.Now().UTC().Unix(), dateProperties, "America/Vancouver", 50, 3, "123", 0, allowedObjects)
 	for i := range enrichStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
 	}
@@ -5249,7 +5339,8 @@ func TestHubspotLimitProcessing(t *testing.T) {
 	// limit processing to 1 contact
 	projectsMaxCreatedAt, hubspotProjectSettingsMap := GetProjectSettings(project.ID)
 
-	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 2, 2, 4)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 2, 2, 4, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus := enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -5271,7 +5362,7 @@ func TestHubspotLimitProcessing(t *testing.T) {
 
 	// process 2nd contact
 	projectsMaxCreatedAt, hubspotProjectSettingsMap = GetProjectSettings(project.ID)
-	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 2, 2, 3)
+	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 2, 2, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus = enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -5456,7 +5547,8 @@ func TestHubspotReIdentification(t *testing.T) {
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap := GetProjectSettings(project.ID)
 
-	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus := enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -5538,7 +5630,7 @@ func TestHubspotReIdentification(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap = GetProjectSettings(project.ID)
-	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus = enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -5599,7 +5691,7 @@ func TestHubspotReIdentification(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code)
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap = GetProjectSettings(project.ID)
-	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus = enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -5843,7 +5935,9 @@ func TestHubspotContactListV2(t *testing.T) {
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap := GetProjectSettings(project.ID)
 
-	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	allowedObjects[model.HubspotDocumentTypeNameContactList] = true
+	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus := enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -5915,7 +6009,7 @@ func TestHubspotContactListV2(t *testing.T) {
 	}
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap = GetProjectSettings(project.ID)
-	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus = enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -5982,7 +6076,7 @@ func TestHubspotContactListV2(t *testing.T) {
 	}
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap = GetProjectSettings(project.ID)
-	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus = enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -6302,7 +6396,8 @@ func TestHubspotCompanyV3(t *testing.T) {
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap := GetProjectSettings(project.ID)
 
-	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus := enrichStatus.Status
 	failure := enrichStatus.HasFailure
 
@@ -6399,7 +6494,7 @@ func TestHubspotCompanyV3(t *testing.T) {
 	assert.Equal(t, companyV3CreatedDate.Unix()*1000, hubspotDocument.Timestamp)
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap = GetProjectSettings(project.ID)
-	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus = enrichStatus.Status
 	failure = enrichStatus.HasFailure
 	for i := range allStatus {
@@ -6551,7 +6646,8 @@ func TestHubspotEngagementCallV3(t *testing.T) {
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap := GetProjectSettings(project.ID)
 
-	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus := enrichStatus.Status
 	failure := enrichStatus.HasFailure
 
@@ -6655,7 +6751,7 @@ func TestHubspotEngagementCallV3(t *testing.T) {
 	assert.Equal(t, engagementV3CreatedDate.Unix()*1000, hubspotDocument.Timestamp)
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap = GetProjectSettings(project.ID)
-	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus = enrichStatus.Status
 	failure = enrichStatus.HasFailure
 	for i := range allStatus {
@@ -6805,7 +6901,8 @@ func TestHubspotEngagementMeetingV3(t *testing.T) {
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap := GetProjectSettings(project.ID)
 
-	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus := enrichStatus.Status
 	failure := enrichStatus.HasFailure
 
@@ -6907,7 +7004,7 @@ func TestHubspotEngagementMeetingV3(t *testing.T) {
 	assert.Equal(t, engagementV3CreatedDate.Unix()*1000, hubspotDocument.Timestamp)
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap = GetProjectSettings(project.ID)
-	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus = enrichStatus.Status
 	failure = enrichStatus.HasFailure
 	for i := range allStatus {
@@ -7097,7 +7194,8 @@ func TestHubspotEngagementEmailV3(t *testing.T) {
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap := GetProjectSettings(project.ID)
 
-	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus := enrichStatus.Status
 	failure := enrichStatus.HasFailure
 
@@ -7211,7 +7309,7 @@ func TestHubspotEngagementEmailV3(t *testing.T) {
 	assert.Equal(t, engagementV3CreatedDate.Unix()*1000, hubspotDocument.Timestamp)
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap = GetProjectSettings(project.ID)
-	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus = enrichStatus.Status
 	failure = enrichStatus.HasFailure
 	for i := range allStatus {
@@ -7404,7 +7502,8 @@ func TestHubspotEngagementIncomingEmailV3(t *testing.T) {
 	assert.Equal(t, engagementCreatedDate.Unix()*1000, hubspotDocument.Timestamp)
 	projectsMaxCreatedAt, hubspotProjectSettingsMap := GetProjectSettings(project.ID)
 
-	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus := enrichStatus.Status
 	failure := enrichStatus.HasFailure
 
@@ -7518,7 +7617,7 @@ func TestHubspotEngagementIncomingEmailV3(t *testing.T) {
 	assert.Equal(t, engagementV3CreatedDate.Unix()*1000, hubspotDocument.Timestamp)
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap = GetProjectSettings(project.ID)
-	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus = enrichStatus.Status
 	failure = enrichStatus.HasFailure
 	for i := range allStatus {
@@ -7665,7 +7764,8 @@ func TestHubspotEngagementMeetingDatetimeProperties(t *testing.T) {
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap := GetProjectSettings(project.ID)
 
-	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project.ID: allowedObjects})
 	allStatus := enrichStatus.Status
 	failure := enrichStatus.HasFailure
 
@@ -7814,7 +7914,8 @@ func TestHubspotPropertyValueLabels(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 
 	// execute sync job
-	allStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50, 3, "123")
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	allStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50, 3, "123", 0, allowedObjects)
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 	}
@@ -7882,7 +7983,8 @@ func TestHubspotEnableEventLevelProperties(t *testing.T) {
 	r := gin.Default()
 	H.InitAppRoutes(r)
 
-	status := IntHubspot.CreateOrGetHubspotEventName(project.ID)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	status := IntHubspot.CreateOrGetHubspotEventName(project.ID, allowedObjects)
 	assert.Equal(t, http.StatusOK, status)
 
 	createdDate := time.Now().Unix()
@@ -7999,7 +8101,8 @@ func TestHubspotEnableEventLevelProperties(t *testing.T) {
 	assert.Equal(t, createdDate*1000, hubspotDocument.Timestamp)
 
 	// execute sync job
-	allStatus, _ := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3, "123")
+	allowedObjects, _ = model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	allStatus, _ := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3, "123", 0, allowedObjects)
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 	}
@@ -8039,7 +8142,8 @@ func TestHubspotEnableEventLevelProperties(t *testing.T) {
 	assert.Nil(t, err)
 	C.SetEnableEventLevelEventProperties(project.ID)
 
-	status = IntHubspot.CreateOrGetHubspotEventName(project.ID)
+	allowedObjects, _ = model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	status = IntHubspot.CreateOrGetHubspotEventName(project.ID, allowedObjects)
 	assert.Equal(t, http.StatusOK, status)
 
 	status = store.GetStore().CreatePropertyDetails(project.ID, eventNameCreated, dtEnKey1, U.PropertyTypeDateTime, false, false)
@@ -8117,7 +8221,7 @@ func TestHubspotEnableEventLevelProperties(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, status)
 
 	// execute sync job
-	allStatus, _ = IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3, "123")
+	allStatus, _ = IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3, "123", 0, allowedObjects)
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 	}
@@ -8169,7 +8273,7 @@ func getHubspotDealV3JSON(id string, companyIDS []int, contactIDs []int, created
 	return string(dealByte), err
 }
 
-func getHubspotContactJSON(id string, companyID string, createddateSec, lastModifiedDateSec int64, properties map[string]interface{}) (string, error) {
+func getHubspotContactJSON(id string, companyID string, dealIds []string, createddateSec, lastModifiedDateSec int64, properties map[string]interface{}) (string, error) {
 	contactProperties := map[string]IntHubspot.Property{}
 	for key, value := range properties {
 		contactProperties[key] = IntHubspot.Property{Value: U.GetPropertyValueAsString(value)}
@@ -8181,6 +8285,7 @@ func getHubspotContactJSON(id string, companyID string, createddateSec, lastModi
 	vid, _ := U.GetPropertyValueAsFloat64(id)
 	contact := IntHubspot.Contact{
 		Vid:        int64(vid),
+		DealIds:    dealIds,
 		Properties: contactProperties,
 		IdentityProfiles: []IntHubspot.ContactIdentityProfile{
 			{
@@ -8294,7 +8399,7 @@ func TestHubspotDealDomains(t *testing.T) {
 	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 	assert.Equal(t, status, http.StatusCreated)
 
-	contactJSON, err := getHubspotContactJSON("1", "1", companyCreatedDate.Unix(),
+	contactJSON, err := getHubspotContactJSON("1", "1", nil, companyCreatedDate.Unix(),
 		companyCreatedDate.Unix(), map[string]interface{}{"lifecyclestage": "lead"})
 	assert.Nil(t, err)
 	pJSON = postgres.Jsonb{json.RawMessage(contactJSON)}
@@ -8305,7 +8410,7 @@ func TestHubspotDealDomains(t *testing.T) {
 	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 	assert.Equal(t, status, http.StatusCreated)
 
-	contactJSON, err = getHubspotContactJSON("2", "2", companyCreatedDate.Unix(),
+	contactJSON, err = getHubspotContactJSON("2", "2", nil, companyCreatedDate.Unix(),
 		companyCreatedDate.Unix(), map[string]interface{}{"lifecyclestage": "lead"})
 	assert.Nil(t, err)
 	pJSON = postgres.Jsonb{json.RawMessage(contactJSON)}
@@ -8347,7 +8452,8 @@ func TestHubspotDealDomains(t *testing.T) {
 	assert.Equal(t, status, http.StatusCreated)
 
 	// execute sync job
-	allStatus, _ := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3, "123")
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	allStatus, _ := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3, "123", 0, allowedObjects)
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 	}
@@ -8432,7 +8538,7 @@ func TestHubspotDealDomains(t *testing.T) {
 	assert.Equal(t, status, http.StatusCreated)
 
 	// execute sync job
-	allStatus, anyFailure := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3, "123")
+	allStatus, anyFailure := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3, "123", 0, allowedObjects)
 	assert.Equal(t, false, anyFailure)
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -8510,7 +8616,8 @@ func TestHubspotUpdateGroupUserColumn(t *testing.T) {
 	assert.Equal(t, status, http.StatusCreated)
 
 	// execute sync job
-	allStatus, anyFailure := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3, "123")
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	allStatus, anyFailure := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3, "123", 0, allowedObjects)
 	assert.Equal(t, false, anyFailure)
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -8522,6 +8629,8 @@ func TestHubspotDocumentsSyncTries(t *testing.T) {
 	project, _, err := SetupProjectWithAgentDAO()
 	assert.Nil(t, err)
 
+	status := enableHubspotFeatureByProjectID(project.ID)
+	assert.Equal(t, http.StatusAccepted, status)
 	companyCreatedDate := U.TimeNowZ().AddDate(0, 0, -1)
 	companyUpdatedDate := companyCreatedDate
 
@@ -8547,11 +8656,12 @@ func TestHubspotDocumentsSyncTries(t *testing.T) {
 		TypeAlias: model.HubspotDocumentTypeNameCompany,
 		Value:     &pJSON,
 	}
-	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 	assert.Equal(t, status, http.StatusCreated)
 
 	// execute sync job
-	allStatus, anyFailure := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3, "123")
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	allStatus, anyFailure := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3, "123", 0, allowedObjects)
 	assert.Equal(t, false, anyFailure)
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -8564,7 +8674,7 @@ func TestHubspotDocumentsSyncTries(t *testing.T) {
 	}
 
 	// execute sync job second time
-	allStatus, anyFailure = IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3, "123")
+	allStatus, anyFailure = IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3, "123", 0, allowedObjects)
 	assert.Equal(t, false, anyFailure)
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -8725,7 +8835,8 @@ func TestHubspotCompanyObjectURL(t *testing.T) {
 	status = store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 	assert.Equal(t, status, http.StatusCreated)
 	// execute sync job
-	allStatus, anyFailure := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3, "123123")
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	allStatus, anyFailure := IntHubspot.Sync(project.ID, 3, time.Now().Unix(), nil, "", 50, 3, "123123", 0, allowedObjects)
 	assert.Equal(t, false, anyFailure)
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -8755,6 +8866,11 @@ func enableHubspotFeatureByProjectID(projectID int64) int {
 		return status
 	}
 
+	status, _ = store.GetStore().UpdateFeaturesForCustomPlan(projectID, 10000, 100000, []string{})
+	if status != http.StatusAccepted {
+		return status
+	}
+
 	status, _ = store.GetStore().UpdateFeaturesForCustomPlan(projectID, 10000, 100000, []string{model.FEATURE_HUBSPOT})
 	if status != http.StatusAccepted {
 		return status
@@ -8765,6 +8881,61 @@ func enableHubspotFeatureByProjectID(projectID int64) int {
 	})
 
 	return status
+}
+
+func enableHubspotBasicFeatureByProjectID(projectID int64) int {
+	status, _, _ := store.GetStore().UpdateProjectPlanMappingField(projectID, model.PLAN_CUSTOM)
+
+	if status != http.StatusAccepted {
+		return status
+	}
+
+	status, _ = store.GetStore().UpdateFeaturesForCustomPlan(projectID, 10000, 100000, []string{})
+	if status != http.StatusAccepted {
+		return status
+	}
+
+	status, _ = store.GetStore().UpdateFeaturesForCustomPlan(projectID, 10000, 100000, []string{model.FEATURE_HUBSPOT_BASIC})
+	if status != http.StatusAccepted {
+		return status
+	}
+	intHubspot := true
+	_, status = store.GetStore().UpdateProjectSettings(projectID, &model.ProjectSetting{
+		IntHubspot: &intHubspot, IntHubspotApiKey: "1234",
+	})
+
+	return status
+}
+
+func enableSalesforceFeatureByProjectID(projectID int64, agentUUID string) int {
+	status, _, _ := store.GetStore().UpdateProjectPlanMappingField(projectID, model.PLAN_CUSTOM)
+
+	if status != http.StatusAccepted {
+		return status
+	}
+
+	status, _ = store.GetStore().UpdateFeaturesForCustomPlan(projectID, 10000, 100000, []string{model.FEATURE_SALESFORCE})
+	if status != http.StatusAccepted {
+		return status
+	}
+	refreshToken := U.RandomLowerAphaNumString(5)
+	instanceURL := U.RandomLowerAphaNumString(5)
+	status = store.GetStore().UpdateAgentIntSalesforce(agentUUID,
+		refreshToken,
+		instanceURL,
+	)
+	if status != http.StatusAccepted {
+		return http.StatusInternalServerError
+	}
+
+	_, status = store.GetStore().UpdateProjectSettings(projectID, &model.ProjectSetting{
+		IntSalesforceEnabledAgentUUID: &agentUUID,
+	})
+	if status != http.StatusAccepted {
+		return http.StatusInternalServerError
+	}
+
+	return http.StatusOK
 }
 
 func TestHubspotProjectDistributerFirstTimeSync(t *testing.T) {
@@ -8825,7 +8996,7 @@ func TestHubspotProjectDistributerFirstTimeSync(t *testing.T) {
 
 	jobStatus, success := hubspot_enrich.RunHubspotProjectDistributer(config)
 	assert.Equal(t, true, success)
-	assert.NotContains(t, jobStatus["light_projects"], project1.ID) // project 1 has been marked as light
+	assert.NotContains(t, jobStatus["light_projects"], project1.ID)
 	assert.NotContains(t, jobStatus["light_projects"], project2.ID)
 	assert.NotContains(t, jobStatus["heavy_projects"], project1.ID)
 	assert.NotContains(t, jobStatus["heavy_projects"], project2.ID)
@@ -8882,7 +9053,8 @@ func TestHubspotProjectDistributerFirstTimeSync(t *testing.T) {
 	assert.Equal(t, true, crmSetting.HubspotFirstTimeEnrich)
 
 	projectsMaxCreatedAt, hubspotProjectSettingsMap := GetProjectSettings(project1.ID)
-	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 0, map[int64]map[string]bool{project1.ID: allowedObjects})
 	allStatus := enrichStatus.Status
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
@@ -8921,4 +9093,322 @@ func TestHubspotProjectDistributerFirstTimeSync(t *testing.T) {
 	assert.NotContains(t, jobStatus["heavy_projects"], project2.ID)
 	assert.NotContains(t, jobStatus["first_time_enrich"], project1.ID)
 	assert.NotContains(t, jobStatus["first_time_enrich"], project2.ID)
+}
+
+func TestHubspotCustomObjectSyncInfo(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	r := gin.Default()
+	H.InitDataServiceRoutes(r)
+
+	status := enableHubspotBasicFeatureByProjectID(project.ID)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	w := sendGetHubspotSyncInfo(r, true)
+	assert.Equal(t, http.StatusFound, w.Code)
+	jsonResponse, _ := io.ReadAll(w.Body)
+
+	syncInfo := map[string]map[string]map[string]interface{}{}
+	err = json.Unmarshal(jsonResponse, &syncInfo)
+	assert.Nil(t, err)
+	syncObjects := syncInfo["last_sync_info"][fmt.Sprintf("%d", project.ID)]
+	assert.Len(t, syncObjects, 3)
+	assert.Equal(t, float64(0), syncObjects[model.HubspotDocumentTypeNameCompany])
+	assert.Equal(t, float64(0), syncObjects[model.HubspotDocumentTypeNameDeal])
+	assert.Equal(t, float64(0), syncObjects[model.HubspotDocumentTypeNameOwner])
+	w = sendGetHubspotSyncInfo(r, false)
+	assert.Equal(t, http.StatusFound, w.Code)
+	jsonResponse, _ = io.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse, &syncInfo)
+	assert.Nil(t, err)
+
+	syncObjects = syncInfo["last_sync_info"][fmt.Sprintf("%d", project.ID)]
+	assert.Len(t, syncObjects, 0)
+
+	w = sendUpdateHubspotSyncInfo(r, map[string]interface{}{"success": []map[string]interface{}{{
+		"project_id": project.ID,
+		"doc_type":   model.HubspotDocumentTypeNameCompany,
+		"timestamp":  0,
+	}}}, true)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	w = sendSetHubspotFirstTimeSyncDone(r, project.ID)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	w = sendGetHubspotSyncInfo(r, true)
+	assert.Equal(t, http.StatusFound, w.Code)
+	jsonResponse, _ = io.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse, &syncInfo)
+	assert.Nil(t, err)
+	syncObjects = syncInfo["last_sync_info"][fmt.Sprintf("%d", project.ID)]
+	assert.Len(t, syncObjects, 2)
+	assert.Equal(t, float64(0), syncObjects[model.HubspotDocumentTypeNameDeal])
+
+	w = sendGetHubspotSyncInfo(r, false)
+	assert.Equal(t, http.StatusFound, w.Code)
+	jsonResponse, _ = io.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse, &syncInfo)
+	assert.Nil(t, err)
+	syncObjects = syncInfo["last_sync_info"][fmt.Sprintf("%d", project.ID)]
+	assert.Len(t, syncObjects, 1)
+	assert.Equal(t, float64(0), syncObjects[model.HubspotDocumentTypeNameCompany])
+
+	w = sendUpdateHubspotSyncInfo(r, map[string]interface{}{"success": []map[string]interface{}{{
+		"project_id": project.ID,
+		"doc_type":   model.HubspotDocumentTypeNameDeal,
+		"timestamp":  0,
+	}}}, true)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	w = sendGetHubspotSyncInfo(r, true)
+	assert.Equal(t, http.StatusFound, w.Code)
+	jsonResponse, _ = io.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse, &syncInfo)
+	assert.Nil(t, err)
+	syncObjects = syncInfo["last_sync_info"][fmt.Sprintf("%d", project.ID)]
+	assert.Len(t, syncObjects, 1)
+
+	w = sendGetHubspotSyncInfo(r, false)
+	assert.Equal(t, http.StatusFound, w.Code)
+	jsonResponse, _ = io.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse, &syncInfo)
+	assert.Nil(t, err)
+	syncObjects = syncInfo["last_sync_info"][fmt.Sprintf("%d", project.ID)]
+	assert.Len(t, syncObjects, 2)
+	assert.Equal(t, float64(0), syncObjects[model.HubspotDocumentTypeNameDeal])
+	assert.Equal(t, float64(0), syncObjects[model.HubspotDocumentTypeNameCompany])
+
+	// moving project to full plan should add new object to first time sync
+	status = enableHubspotFeatureByProjectID(project.ID)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	w = sendGetHubspotSyncInfo(r, true)
+	assert.Equal(t, http.StatusFound, w.Code)
+	jsonResponse, _ = io.ReadAll(w.Body)
+	err = json.Unmarshal(jsonResponse, &syncInfo)
+	assert.Nil(t, err)
+	syncObjects = syncInfo["last_sync_info"][fmt.Sprintf("%d", project.ID)]
+	assert.Len(t, syncObjects, 5)
+
+}
+
+func TestHubspotBackfilling(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	status := enableHubspotBasicFeatureByProjectID(project.ID)
+	assert.Equal(t, http.StatusAccepted, status)
+
+	companyCreatDate := util.TimeNowZ().AddDate(0, 0, -1)
+	for i := 1; i <= 3; i++ {
+		company := IntHubspot.CompanyV3{
+			CompanyId:  util.GetPropertyValueAsString(i),
+			ContactIds: []int64{2},
+			Properties: map[string]string{
+				"createdate":             companyCreatDate.Format(model.HubspotDateTimeLayout),
+				"hs_lastmodifieddate":    companyCreatDate.Format(model.HubspotDateTimeLayout),
+				"hs_object_id":           util.GetPropertyValueAsString(i),
+				"company_lifecyclestage": "lead",
+				"demo_booked_on":         companyCreatDate.Format(model.HubspotDateLayout),
+				"name":                   "testcompanyV3",
+				"website":                fmt.Sprintf("abc%d.com", i),
+				"domain":                 fmt.Sprintf("abc%d.com", i),
+			},
+		}
+
+		enJSON, err := json.Marshal(company)
+		assert.Nil(t, err)
+		companyPJson := postgres.Jsonb{json.RawMessage(enJSON)}
+		hubspotDocument := model.HubspotDocument{
+			TypeAlias: model.HubspotDocumentTypeNameCompany,
+			Value:     &companyPJson,
+		}
+		status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+		assert.Equal(t, http.StatusCreated, status)
+	}
+
+	for i := 1; i <= 5; i++ {
+		id := U.GetPropertyValueAsString(i)
+		dealJson, err := getHubspotDealV3JSON(id, []int{1}, []int{1}, companyCreatDate.Unix(), companyCreatDate.Unix(), map[string]interface{}{})
+		assert.Nil(t, err)
+		pJSON := postgres.Jsonb{json.RawMessage(dealJson)}
+		hubspotDocument := model.HubspotDocument{
+			TypeAlias: model.HubspotDocumentTypeNameDeal,
+			Value:     &pJSON,
+		}
+		status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+		assert.Equal(t, status, http.StatusCreated)
+	}
+
+	for i := 1; i <= 5; i++ {
+		id := U.GetPropertyValueAsString(i)
+		dealId := U.GetPropertyValueAsString(i)
+		contactJson, err := getHubspotContactJSON(id, U.GetPropertyValueAsString(i), []string{dealId}, companyCreatDate.Unix(), companyCreatDate.Unix(), map[string]interface{}{})
+		assert.Nil(t, err)
+		pJSON := postgres.Jsonb{json.RawMessage(contactJson)}
+		hubspotDocument := model.HubspotDocument{
+			TypeAlias: model.HubspotDocumentTypeNameContact,
+			Value:     &pJSON,
+		}
+		status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+		assert.Equal(t, http.StatusCreated, status)
+	}
+
+	projectsMaxCreatedAt, hubspotProjectSettingsMap := GetProjectSettings(project.ID)
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	enrichStatus := hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 50, 3, 5, map[int64]map[string]bool{project.ID: allowedObjects})
+	allStatus := enrichStatus.Status
+	assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[0].Status)
+	assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[1].Status)
+
+	for i := 6; i <= 10; i++ {
+		id := U.GetPropertyValueAsString(i)
+		dealJson, err := getHubspotDealV3JSON(id, []int{1}, []int{1}, companyCreatDate.Unix(), companyCreatDate.Unix(), map[string]interface{}{})
+		assert.Nil(t, err)
+		pJSON := postgres.Jsonb{json.RawMessage(dealJson)}
+		hubspotDocument := model.HubspotDocument{
+			TypeAlias: model.HubspotDocumentTypeNameDeal,
+			Value:     &pJSON,
+		}
+		status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
+		assert.Equal(t, status, http.StatusCreated)
+	}
+
+	projectsMaxCreatedAt, hubspotProjectSettingsMap = GetProjectSettings(project.ID)
+	enrichStatus = hubspot_enrich.StartEnrichment(1, projectsMaxCreatedAt, hubspotProjectSettingsMap, 1, 5, 3, 3, map[int64]map[string]bool{project.ID: allowedObjects})
+	allStatus = enrichStatus.Status
+	assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[0].Status)
+}
+
+func TestHubspotGetObjectTypesGroupByDailyAndDelayed(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	companyCreatDate := util.TimeNowZ().AddDate(0, -1, 0)
+	company := IntHubspot.CompanyV3{
+		CompanyId:  "1",
+		ContactIds: []int64{2},
+		Properties: map[string]string{
+			"createdate":          companyCreatDate.Format(model.HubspotDateTimeLayout),
+			"hs_lastmodifieddate": companyCreatDate.Format(model.HubspotDateTimeLayout),
+		},
+	}
+
+	enJSON, err := json.Marshal(company)
+	assert.Nil(t, err)
+	companyPJson := postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument := &model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameCompany,
+		Value:     &companyPJson,
+	}
+	hubspotDocument.CreatedAt = util.TimeNowZ().AddDate(0, 0, -10)
+	status := store.GetStore().CreateHubspotDocument(project.ID, hubspotDocument)
+	assert.Equal(t, status, http.StatusCreated)
+
+	dealJson, err := getHubspotDealV3JSON("1", []int{1}, []int{1}, companyCreatDate.Unix(), companyCreatDate.Unix(), map[string]interface{}{})
+	assert.Nil(t, err)
+	pJSON := postgres.Jsonb{json.RawMessage(dealJson)}
+	hubspotDocument = &model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameDeal,
+		Value:     &pJSON,
+	}
+	hubspotDocument.CreatedAt = util.TimeNowZ().AddDate(0, 0, -2)
+	status = store.GetStore().CreateHubspotDocument(project.ID, hubspotDocument)
+	assert.Equal(t, status, http.StatusCreated)
+
+	dailyObjects, delayedObjects, err := IntHubspot.GetObjectTypesGroupByDailyAndDelayed(project.ID)
+	assert.Nil(t, err)
+	assert.Len(t, dailyObjects, 1)
+	assert.True(t, dailyObjects[model.HubspotDocumentTypeNameCompany])
+	assert.Len(t, delayedObjects, 1)
+	assert.True(t, delayedObjects[model.HubspotDocumentTypeNameDeal])
+
+	document, status := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"1"}, model.HubspotDocumentTypeDeal, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, http.StatusFound, status)
+	status = store.GetStore().UpdateHubspotDocumentAsSynced(project.ID, "1", model.HubspotDocumentTypeDeal, "", document[0].Timestamp, model.HubspotDocumentActionCreated, "", "")
+	assert.Equal(t, http.StatusAccepted, status)
+
+	dailyObjects, delayedObjects, err = IntHubspot.GetObjectTypesGroupByDailyAndDelayed(project.ID)
+	assert.Nil(t, err)
+	assert.Len(t, dailyObjects, 2)
+	assert.True(t, dailyObjects[model.HubspotDocumentTypeNameCompany])
+	assert.True(t, dailyObjects[model.HubspotDocumentTypeNameDeal])
+	assert.Len(t, delayedObjects, 0)
+}
+
+func TestHubspotCustomPlan(t *testing.T) {
+	project, err := SetupProjectReturnDAO()
+	assert.Nil(t, err)
+
+	companyCreatDate := util.TimeNowZ().AddDate(0, 0, -1)
+	company := IntHubspot.CompanyV3{
+		CompanyId:  "1",
+		ContactIds: []int64{2},
+		Properties: map[string]string{
+			"createdate":          companyCreatDate.Format(model.HubspotDateTimeLayout),
+			"hs_lastmodifieddate": companyCreatDate.Format(model.HubspotDateTimeLayout),
+		},
+	}
+
+	enJSON, err := json.Marshal(company)
+	assert.Nil(t, err)
+	companyPJson := postgres.Jsonb{json.RawMessage(enJSON)}
+	hubspotDocument := &model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameCompany,
+		Value:     &companyPJson,
+	}
+	status := store.GetStore().CreateHubspotDocument(project.ID, hubspotDocument)
+	assert.Equal(t, status, http.StatusCreated)
+
+	dealJson, err := getHubspotDealV3JSON("1", []int{1}, []int{1}, companyCreatDate.Unix(), companyCreatDate.Unix(), map[string]interface{}{})
+	assert.Nil(t, err)
+	pJSON := postgres.Jsonb{json.RawMessage(dealJson)}
+	hubspotDocument = &model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameDeal,
+		Value:     &pJSON,
+	}
+	hubspotDocument.CreatedAt = util.TimeNowZ().AddDate(0, 0, -2)
+	status = store.GetStore().CreateHubspotDocument(project.ID, hubspotDocument)
+	assert.Equal(t, status, http.StatusCreated)
+
+	contactJSON, err := getHubspotContactJSON("1", "1", []string{"1"}, companyCreatDate.Unix(), companyCreatDate.Unix(), map[string]interface{}{})
+	assert.Nil(t, err)
+	pJSON = postgres.Jsonb{json.RawMessage(contactJSON)}
+	hubspotDocument = &model.HubspotDocument{
+		TypeAlias: model.HubspotDocumentTypeNameContact,
+		Value:     &pJSON,
+	}
+	hubspotDocument.CreatedAt = util.TimeNowZ().AddDate(0, 0, -2)
+	status = store.GetStore().CreateHubspotDocument(project.ID, hubspotDocument)
+	assert.Equal(t, status, http.StatusCreated)
+
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT_BASIC)
+	enrichStatus, _ := IntHubspot.Sync(project.ID, 2, time.Now().UTC().Unix(), nil, "", 50, 3, "123", 0, allowedObjects)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+
+	companyDocuments, _ := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"1"}, model.HubspotDocumentTypeCompany, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, true, companyDocuments[0].Synced)
+
+	documents, _ := store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"1"}, model.HubspotDocumentTypeDeal, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, true, documents[0].Synced)
+
+	documents, _ = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"1"}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, false, documents[0].Synced)
+	assert.Empty(t, documents[0].UserId)
+
+	allowedObjects, _ = model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
+	enrichStatus, _ = IntHubspot.Sync(project.ID, 2, time.Now().UTC().Unix(), nil, "", 50, 3, "123", 0, allowedObjects)
+	for i := range enrichStatus {
+		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, enrichStatus[i].Status)
+	}
+	documents, _ = store.GetStore().GetHubspotDocumentByTypeAndActions(project.ID, []string{"1"}, model.HubspotDocumentTypeContact, []int{model.HubspotDocumentActionCreated})
+	assert.Equal(t, true, documents[0].Synced)
+	assert.NotEmpty(t, documents[0].UserId)
+
+	user, status := store.GetStore().GetUser(project.ID, documents[0].UserId)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, companyDocuments[0].GroupUserId, (*user).Group1UserID)
 }

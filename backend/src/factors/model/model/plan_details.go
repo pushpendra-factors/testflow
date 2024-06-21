@@ -2,8 +2,9 @@ package model
 
 import (
 	"errors"
-	"github.com/jinzhu/gorm/dialects/postgres"
 	"time"
+
+	"github.com/jinzhu/gorm/dialects/postgres"
 )
 
 type PlanDetails struct {
@@ -37,10 +38,10 @@ type OverWrite map[string]FeatureDetails
 type OverWriteOld []FeatureDetailsTemp
 
 type DisplayPlanDetails struct {
-	ProjectID     string         `json:"project_id"`
+	ProjectID     string        `json:"project_id"`
 	Plan          PlanDetails   `json:"plan"`
 	DisplayName   string        `json:"display_name"`
-	AddOns        OverWriteOld     `json:"add_ons"`
+	AddOns        OverWriteOld  `json:"add_ons"`
 	LastRenewedOn time.Time     `json:"last_renewed_on"`
 	SixSignalInfo SixSignalInfo `json:"six_signal_info"`
 }

@@ -440,6 +440,7 @@ type Model interface {
 	CreateHubspotDocument(projectID int64, document *model.HubspotDocument) int
 	CreateHubspotDocumentInBatch(projectID int64, docType int, documents []*model.HubspotDocument, batchSize int) int
 	GetHubspotSyncInfo() (*model.HubspotSyncInfo, int)
+	GetHubspotEnabledProjectAllowedObjectsAndProjectSettings() (map[int64]map[string]bool, map[int64]*model.HubspotProjectSettings, int)
 	GetHubspotFirstSyncProjectsInfo() (*model.HubspotSyncInfo, int)
 	UpdateHubspotProjectSettingsBySyncStatus(success []model.HubspotProjectSyncStatus, failure []model.HubspotProjectSyncStatus, syncAll bool) int
 	GetHubspotDocumentBeginingTimestampByDocumentTypeForSync(projectID int64, docTypes []int, minCreatedAt int64) (int64, int)
@@ -459,7 +460,9 @@ type Model interface {
 		toMs int64) ([]model.HubspotDocument, int)
 	GetHubspotOwnerEmailFromOwnerId(projectID int64, ownerID string) (string, int, error)
 	GetHubspotDocumentsSyncedCount(projectIDs []int64) ([]model.HubspotDocumentCount, int)
-	GetHubspotHubspotDocumentMinCreatedAt(projectID int64) (int64, int)
+	GetHubspotHubspotDocumentOverAllMinCreatedAt(projectID int64) (int64, int)
+	UpdateHubspotFirstTimeSynced(projectID int64) int
+	GetHubspotDocumentCreatedAt(projectID int64, synced bool, unsynced bool, min, max bool) (map[string]*time.Time, *time.Time, int)
 
 	// plan
 	GetPlanByID(planID uint64) (*model.Plan, int)
@@ -618,7 +621,8 @@ type Model interface {
 	UpdateOTPRule(projectID int64, ruleID string, rule *model.OTPRule) (*model.OTPRule, int)
 
 	// salesforce_document
-	GetSalesforceSyncInfo() (model.SalesforceSyncInfo, int)
+	GetSalesforceSyncInfo() (*model.SalesforceSyncInfo, int)
+	GetSalesforceEnabledProjectAllowedObjectsAndProjectSettings() (map[int64]map[string]bool, map[int64]*model.SalesforceProjectSettings, int)
 	GetSalesforceObjectPropertiesName(ProjectID int64, objectType string) ([]string, []string)
 	GetLastSyncedSalesforceDocumentByCustomerUserIDORUserID(projectID int64, customerUserID, userID string, docType int) (*model.SalesforceDocument, int)
 	UpdateSalesforceDocumentBySyncStatus(projectID int64, document *model.SalesforceDocument, syncID, userID, groupUserID string, synced bool) int
@@ -637,6 +641,7 @@ type Model interface {
 	IsExistSalesforceDocumentByIdsWithBatch(projectID int64, ids []string, docType int, batchSize int) (map[string]bool, int)
 	GetSalesforceDocumentByTypeAndAction(projectID int64, id string, docType int, action model.SalesforceAction) (*model.SalesforceDocument, int)
 	GetSalesforceDocumentsByIDTypeAndAction(projectID int64, ids []string, docType int, action model.SalesforceAction) ([]model.SalesforceDocument, int)
+	GetSalesforceDocumentCreatedAt(projectID int64, synced, unsynced, min, max bool) (map[int]*time.Time, *time.Time, int)
 
 	// scheduled_task
 	CreateScheduledTask(task *model.ScheduledTask) int

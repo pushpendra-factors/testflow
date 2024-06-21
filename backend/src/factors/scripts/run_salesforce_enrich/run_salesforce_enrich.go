@@ -6,7 +6,6 @@ import (
 	IntSalesforce "factors/integration/salesforce"
 	"factors/model/model"
 	"factors/model/store"
-	"factors/util"
 	U "factors/util"
 	"flag"
 	"fmt"
@@ -47,7 +46,7 @@ func (es *EnrichStatus) AddEnrichStatus(status []IntSalesforce.Status, hasFailur
 }
 
 func syncWorker(projectID int64, wg *sync.WaitGroup, workerIndex, workerPerProject int, enrichStatus *EnrichStatus,
-	salesforceProjectSettings *model.SalesforceProjectSettings, enrichPullLimit int, enrichRecordProcessLimit int, documentLookbackDays int) {
+	salesforceProjectSettings *model.SalesforceProjectSettings, enrichPullLimit int, enrichRecordProcessLimit int, documentLookbackDays int, backfillLimit int, allowedObjects map[string]bool) {
 	defer wg.Done()
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID, "worder_index": workerIndex})
@@ -68,7 +67,7 @@ func syncWorker(projectID int64, wg *sync.WaitGroup, workerIndex, workerPerProje
 		return
 	}
 
-	status, hasFailure := IntSalesforce.Enrich(projectID, workerPerProject, dataPropertyByType, enrichPullLimit, enrichRecordProcessLimit, documentLookbackDays, instanceURL)
+	status, hasFailure := IntSalesforce.Enrich(projectID, workerPerProject, dataPropertyByType, enrichPullLimit, enrichRecordProcessLimit, documentLookbackDays, instanceURL, backfillLimit, allowedObjects)
 	enrichStatus.AddEnrichStatus(status, hasFailure)
 	logCtx.Info("Processing completed for given project.")
 }
@@ -175,6 +174,7 @@ func main() {
 	enableDeletedRecordProjectID := flag.String("enable_deleted_record_by_project_id", "", "")
 	skipLeadEnrichmentByProjectID := flag.String("skip_lead_processing_by_project_id", "", "")
 	enrichOnlyObjects := flag.String("enrich_only_objects", "", "")
+	backfillLimit := flag.Int("backfill_limit", 0, "")
 
 	flag.Parse()
 
@@ -292,16 +292,16 @@ func main() {
 		log.Panicf("Failed to get salesforce syncinfo: %d", status)
 	}
 
-	featureProjectIDs, err := store.GetStore().GetAllProjectsWithFeatureEnabled(model.FEATURE_SALESFORCE, false)
-	if err != nil {
-		log.WithError(err).Error("Failed to get salesforce feature enabled projects.")
-		return
-	}
-
 	allProjects, allowedProjects, disabledProjects := C.GetProjectsFromListWithAllProjectSupport(
 		*projectIDList, *disabledProjectIDList)
 	if !allProjects {
 		log.WithField("projects", allowedProjects).Info("Running only for the given list of projects.")
+	}
+
+	projectAllowedObjects, _, status := store.GetStore().GetSalesforceEnabledProjectAllowedObjectsAndProjectSettings()
+	if status != http.StatusFound {
+		C.PingHealthcheckForFailure(enrichHealthcheckPingID, "Failed to get salesforce allowed objects")
+		return
 	}
 
 	var syncStatus salesforceSyncStatus
@@ -310,9 +310,6 @@ func main() {
 
 	if !*enrichOnly {
 		for pid, projectSettings := range syncInfo.ProjectSettings {
-			if !util.ContainsInt64InArray(featureProjectIDs, pid) {
-				continue
-			}
 
 			if !allowProjectByProjectIDList(pid, allProjects, allowedProjects, disabledProjects) {
 				continue
@@ -353,7 +350,7 @@ func main() {
 				log.Info(fmt.Sprintf("Synced reference fields for project %d", pid))
 			}
 
-			failure, propertyDetailSync := IntSalesforce.SyncDatetimeAndNumericalProperties(pid, accessToken, instanceURL)
+			failure, propertyDetailSync := IntSalesforce.SyncDatetimeAndNumericalProperties(pid, accessToken, instanceURL, projectAllowedObjects[pid])
 			if failure {
 				anyFailure = true
 			}
@@ -385,14 +382,6 @@ func main() {
 			log.Panic("No projects enabled salesforce integration.")
 		}
 
-		featureEnabledProjectSettings := []model.SalesforceProjectSettings{}
-		for i := range salesforceEnabledProjects {
-			if util.ContainsInt64InArray(featureProjectIDs, salesforceEnabledProjects[i].ProjectID) {
-				featureEnabledProjectSettings = append(featureEnabledProjectSettings, salesforceEnabledProjects[i])
-			}
-		}
-		salesforceEnabledProjects = featureEnabledProjectSettings
-
 		allowedProjectIDs := make([]int64, 0)
 		allowedSalesforceProjectSettings := make(map[int64]*model.SalesforceProjectSettings)
 		for i := range salesforceEnabledProjects {
@@ -418,7 +407,7 @@ func main() {
 			var wg sync.WaitGroup
 			for pi := range batch {
 				wg.Add(1)
-				go syncWorker(batch[pi], &wg, workerIndex, *numDocRoutines, &enrichStatus, allowedSalesforceProjectSettings[batch[pi]], *enrichPullLimit, *enrichRecordProcessLimit, *documentLookbackDays)
+				go syncWorker(batch[pi], &wg, workerIndex, *numDocRoutines, &enrichStatus, allowedSalesforceProjectSettings[batch[pi]], *enrichPullLimit, *enrichRecordProcessLimit, *documentLookbackDays, *backfillLimit, projectAllowedObjects[batch[pi]])
 				workerIndex++
 			}
 			wg.Wait()

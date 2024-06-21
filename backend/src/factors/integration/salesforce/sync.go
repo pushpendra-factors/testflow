@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"factors/config"
 	C "factors/config"
 	"factors/model/model"
 	"factors/model/store"
@@ -310,6 +309,11 @@ func (s *DataClient) getRecordByObjectNameANDStartTimestamp(projectID int64, obj
 	// append all opportunity contact roles to opportunity object
 	if objectName == model.SalesforceDocumentTypeNameOpportunity {
 		fieldList = fieldList + ",(+SELECT+id,isPrimary,ContactId,OpportunityId,Role+from+" + model.SalesforceChildRelationshipNameOpportunityContactRoles + "+)"
+	}
+
+	if objectName == model.SalesforceDocumentTypeNameContact {
+		fieldList = fieldList + ",(+SELECT+id,opportunityID,isPrimary+from+" + model.SalesforceChildRelationshipNameOpportunityContactRoles + "+)"
+		fmt.Println("fieldList ", fieldList)
 	}
 
 	// append RelationId and Type to task or event object
@@ -633,7 +637,7 @@ func getLeadIDForOpportunityRecords(projectID int64, records []model.SalesforceR
 	oppToMultipleLeadID := make(map[string]map[string]bool, 0)
 	oppIDs := make([]string, 0)
 	for i := range records {
-		oppID := util.GetPropertyValueAsString(records[i]["Id"])
+		oppID := U.GetPropertyValueAsString(records[i]["Id"])
 
 		if oppID != "" {
 			oppIDs = append(oppIDs, oppID)
@@ -643,7 +647,7 @@ func getLeadIDForOpportunityRecords(projectID int64, records []model.SalesforceR
 	}
 
 	leadIDForOpportunityRecordsAPICalls := 0
-	batchedOppIDs := util.GetStringListAsBatch(oppIDs, 50)
+	batchedOppIDs := U.GetStringListAsBatch(oppIDs, 50)
 	for bi := range batchedOppIDs {
 		salesforceDataClient, err := NewSalesforceDataClient(accessToken, instanceURL, false)
 		if err != nil {
@@ -666,9 +670,9 @@ func getLeadIDForOpportunityRecords(projectID int64, records []model.SalesforceR
 			}
 
 			for i := range objectRecords {
-				leadID := util.GetPropertyValueAsString(objectRecords[i]["Id"])
+				leadID := U.GetPropertyValueAsString(objectRecords[i]["Id"])
 				if leadID != "" {
-					convertOppID := util.GetPropertyValueAsString(objectRecords[i]["ConvertedOpportunityId"])
+					convertOppID := U.GetPropertyValueAsString(objectRecords[i]["ConvertedOpportunityId"])
 					if convertOppID != "" {
 						if leadID, exist := oppToLeadID[convertOppID]; exist && leadID != "" {
 							log.WithFields(log.Fields{"lead_id": leadID}).Warn("Duplicate opportunity id on multiple leads")
@@ -717,7 +721,7 @@ func getOpportunityPrimaryContactIDs(projectID int64, oppRecords []model.Salesfo
 		for i := range opportunityContactRoleRecords {
 			contactRole := opportunityContactRoleRecords[i].(map[string]interface{})
 			if contactRole["IsPrimary"] == true {
-				contactID := util.GetPropertyValueAsString(contactRole["ContactId"])
+				contactID := U.GetPropertyValueAsString(contactRole["ContactId"])
 				if contactID != "" {
 					primaryContacts = append(primaryContacts, contactID)
 					primaryContact = true
@@ -777,7 +781,7 @@ func syncOpporunitiesUsingAssociations(projectID int64, accessToken, instanceURL
 
 		for i := range objectRecords {
 			if _, exist := allowedObject[model.SalesforceDocumentTypeNameLead]; exist {
-				oppID := util.GetPropertyValueAsString(objectRecords[i]["Id"])
+				oppID := U.GetPropertyValueAsString(objectRecords[i]["Id"])
 				leadID := (oppToLeadIDs)[oppID]
 				if leadID == "" {
 					logCtx.WithFields(log.Fields{"opportunity_id": oppID}).Warn("Missing lead id for opportunity. Skipping adding lead id to opportunity.")
@@ -795,6 +799,10 @@ func syncOpporunitiesUsingAssociations(projectID int64, accessToken, instanceURL
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to BuildAndUpsertDocument for opportunity sync .")
 			failures = append(failures, err.Error())
+		}
+
+		if !C.EnableSalesforceRelationshipPullByProjectID(projectID) {
+			continue
 		}
 
 		// only sync object if allowed by the project, will fallback to leads if not allowed
@@ -1046,6 +1054,10 @@ func syncActivities(ps *model.SalesforceProjectSettings, accessToken, objectName
 			return failures, 0, 0, 0, err
 		}
 
+		if !C.EnableSalesforceRelationshipPullByProjectID(ps.ProjectID) {
+			return failures, taskAPICalls, 0, 0, nil
+		}
+
 		leadIDTaskAPICalls := 0
 		if leadAllowed {
 			leadFailures, leadAPICalls, failure := syncMissingObjectsForSalesforceActivities(ps.ProjectID, taskLeadIDs, model.SalesforceDocumentTypeNameLead, accessToken, ps.InstanceURL)
@@ -1074,6 +1086,10 @@ func syncActivities(ps *model.SalesforceProjectSettings, accessToken, objectName
 			return failures, 0, 0, 0, err
 		}
 
+		if !C.EnableSalesforceRelationshipPullByProjectID(ps.ProjectID) {
+			return failures, eventAPICalls, 0, 0, nil
+		}
+
 		leadIDEventAPICalls := 0
 		if leadAllowed {
 			leadFailures, leadAPICalls, failure := syncMissingObjectsForSalesforceActivities(ps.ProjectID, eventLeadIDs, model.SalesforceDocumentTypeNameLead, accessToken, ps.InstanceURL)
@@ -1095,7 +1111,7 @@ func syncActivities(ps *model.SalesforceProjectSettings, accessToken, objectName
 		return failures, eventAPICalls, leadIDEventAPICalls, contactIDEventAPICalls, nil
 	}
 
-	return nil, 0, 0, 0, errors.New("Invalid docType in syncActivities.")
+	return nil, 0, 0, 0, errors.New("invalid docType in syncActivities.")
 }
 
 type PicklistValue struct {
@@ -1261,7 +1277,7 @@ func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName str
 
 	logCtx := log.WithFields(log.Fields{"project_id": ps.ProjectID, "doc_type": objectName})
 
-	if objectName == model.SalesforceDocumentTypeNameOpportunity && config.UseOpportunityAssociationByProjectID(ps.ProjectID) {
+	if objectName == model.SalesforceDocumentTypeNameOpportunity && C.UseOpportunityAssociationByProjectID(ps.ProjectID) {
 		failures, opportunityAPICalls, leadIDForOpportunityRecordsAPICall, opportunityPrimaryContact, err := syncOpporunitiesUsingAssociations(ps.ProjectID, accessToken, ps.InstanceURL, timestamp)
 		if err != nil {
 			logCtx.WithError(err).Error("Failure on sync opportunities.")
@@ -1275,7 +1291,7 @@ func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName str
 		return salesforceObjectStatus, nil
 	}
 
-	if (objectName == model.SalesforceDocumentTypeNameTask && config.IsAllowedSalesforceActivityTasksByProjectID(ps.ProjectID)) || (objectName == model.SalesforceDocumentTypeNameEvent && config.IsAllowedSalesforceActivityEventsByProjectID(ps.ProjectID)) {
+	if (objectName == model.SalesforceDocumentTypeNameTask && C.IsAllowedSalesforceActivityTasksByProjectID(ps.ProjectID)) || (objectName == model.SalesforceDocumentTypeNameEvent && C.IsAllowedSalesforceActivityEventsByProjectID(ps.ProjectID)) {
 		failures, activitiesAPICalls, leadIDForActivitiesRecordsAPICall, contactIDForActivitiesRecordsAPICall, err := syncActivities(ps, accessToken, objectName, timestamp)
 		if err != nil {
 			logCtx.WithError(err).Error("Failure on sync activities.")
@@ -1295,7 +1311,7 @@ func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName str
 		return salesforceObjectStatus, err
 	}
 
-	allCampaignMemberIDs := make([]string, 0)
+	allCampaignMemberIDs := make(map[string]bool, 0)
 	allCampaignIDs := make(map[string]bool)
 
 	paginatedObjectsByStartTimestamp, err := salesforceDataClient.getRecordByObjectNameANDStartTimestamp(ps.ProjectID, objectName, timestamp)
@@ -1314,31 +1330,28 @@ func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName str
 		}
 
 		var failures []string
+
 		for i := range objectRecords {
-			// get campaing memeber ids from the campaign to sync missing leads,contacts and campaign members associated with the campaign
+			// get campaign member ids from the campaign to sync missing leads,contacts and campaign members associated with the campaign
 			if objectName == model.SalesforceDocumentTypeNameCampaign {
 				campaignMemberIDs, err := getCampaingMemberIDsFromCampaign(&objectRecords[i])
 				if err != nil {
 					logCtx.WithError(err).Error("Failed to get campaign member ids from campaign.")
 				} else {
-					allCampaignMemberIDs = append(allCampaignMemberIDs, campaignMemberIDs...)
+					for i := range campaignMemberIDs {
+						allCampaignMemberIDs[campaignMemberIDs[i]] = true
+					}
 				}
 
 			}
 
 			if objectName == model.SalesforceDocumentTypeNameCampaignMember {
-				campaignID := util.GetPropertyValueAsString(objectRecords[i]["CampaignId"])
+				campaignID := U.GetPropertyValueAsString(objectRecords[i]["CampaignId"])
 
 				if campaignID != "" {
 					allCampaignIDs[campaignID] = true
 				} else {
 					logCtx.WithError(err).Error("Missing campaign Id from campaign member record.")
-				}
-				campaignMemberIDs := util.GetPropertyValueAsString(objectRecords[i]["Id"])
-				if campaignMemberIDs != "" {
-					allCampaignMemberIDs = append(allCampaignMemberIDs, campaignMemberIDs)
-				} else {
-					logCtx.WithError(err).Error("Missing campaign member Id from campaign member record.")
 				}
 			}
 		}
@@ -1355,9 +1368,9 @@ func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName str
 	salesforceObjectStatus.TotalAPICalls[objectName] = paginatedObjectsByStartTimestamp.APICall
 
 	// sync missing lead or contact id if not available from first date of data pull
-	if objectName == model.SalesforceDocumentTypeNameCampaign || objectName == model.SalesforceDocumentTypeNameCampaignMember {
+	if C.EnableSalesforceRelationshipPullByProjectID(ps.ProjectID) && (objectName == model.SalesforceDocumentTypeNameCampaign || objectName == model.SalesforceDocumentTypeNameCampaignMember) {
 
-		campaignMemberRecords, recordObjectType, campaingMemberAPICalls, memberObjectAPICalls, err := getAllCampaignMemberContactAndLeadRecords(ps.ProjectID, allCampaignMemberIDs, accessToken, ps.InstanceURL)
+		campaignMemberRecords, recordObjectType, campaingMemberAPICalls, memberObjectAPICalls, err := getAllCampaignMemberContactAndLeadRecords(ps.ProjectID, util.GetKeysMapAsArray(allCampaignMemberIDs), accessToken, ps.InstanceURL)
 		if err != nil {
 			logCtx.WithError(err).Error("Failed to getAllCampaignMemberContactAndLeadRecords")
 			return salesforceObjectStatus, err
@@ -1396,7 +1409,7 @@ func syncByType(ps *model.SalesforceProjectSettings, accessToken, objectName str
 		}
 		// sync missing campaignmember from campaign
 		if objectName == model.SalesforceDocumentTypeNameCampaign {
-			for _, memberID := range allCampaignMemberIDs {
+			for memberID := range allCampaignMemberIDs {
 				docIDs = append(docIDs, memberID)
 			}
 			docObjectName = model.SalesforceDocumentTypeNameCampaignMember
@@ -1561,7 +1574,7 @@ func GetAccessToken(ps *model.SalesforceProjectSettings, redirectURL string) (st
 }
 
 // CreateOrGetSalesforceEventName makes sure salesforce event name exists
-func CreateOrGetSalesforceEventName(projectID int64) int {
+func CreateOrGetSalesforceEventName(projectID int64, allowedObjects map[string]bool) int {
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
 
 	for _, doctype := range model.GetSalesforceAllowedObjects(projectID) {
@@ -1570,6 +1583,10 @@ func CreateOrGetSalesforceEventName(projectID int64) int {
 		}
 
 		typAlias := model.GetSalesforceAliasByDocType(doctype)
+		if !allowedObjects[typAlias] {
+			continue
+		}
+
 		eventName := model.GetSalesforceEventNameByAction(typAlias, model.SalesforceDocumentCreated)
 		_, status := store.GetStore().CreateOrGetEventName(&model.EventName{
 			ProjectId: projectID,
@@ -1602,19 +1619,28 @@ func CreateOrGetSalesforceEventName(projectID int64) int {
 	/*
 		Create group and its events
 	*/
-	_, status := store.GetStore().CreateGroup(projectID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
-	if status != http.StatusCreated && status != http.StatusConflict {
-		return http.StatusInternalServerError
+	if len(allowedObjects) == 0 || (len(allowedObjects) > 0 && allowedObjects[model.SalesforceDocumentTypeNameAccount]) {
+		_, status := store.GetStore().CreateGroup(projectID, model.GROUP_NAME_SALESFORCE_ACCOUNT, model.AllowedGroupNames)
+		if status != http.StatusCreated && status != http.StatusConflict {
+			return http.StatusInternalServerError
+		}
 	}
 
-	_, status = store.GetStore().CreateGroup(projectID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, model.AllowedGroupNames)
-	if status != http.StatusCreated && status != http.StatusConflict {
-		return http.StatusInternalServerError
+	if len(allowedObjects) == 0 || (len(allowedObjects) > 0 && allowedObjects[model.SalesforceDocumentTypeNameOpportunity]) {
+		_, status := store.GetStore().CreateGroup(projectID, model.GROUP_NAME_SALESFORCE_OPPORTUNITY, model.AllowedGroupNames)
+		if status != http.StatusCreated && status != http.StatusConflict {
+			return http.StatusInternalServerError
+		}
 	}
 
 	for _, eventName := range []string{U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED,
 		U.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED, U.GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED, U.GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED} {
-		_, status = store.GetStore().CreateOrGetEventName(&model.EventName{
+		docTypeAlias := model.SalesforceEventNametoDocTypeMapping[eventName]
+		if !allowedObjects[docTypeAlias] {
+			continue
+		}
+
+		_, status := store.GetStore().CreateOrGetEventName(&model.EventName{
 			ProjectId: projectID,
 			Name:      eventName,
 			Type:      model.TYPE_USER_CREATED_EVENT_NAME,
@@ -1686,13 +1712,13 @@ func skipObjectEvent(docType int) bool {
 }
 
 // SyncDatetimeAndNumericalProperties sync datetime and numerical properties to the property_details table
-func SyncDatetimeAndNumericalProperties(projectID int64, accessToken, instanceURL string) (bool, []Status) {
+func SyncDatetimeAndNumericalProperties(projectID int64, accessToken, instanceURL string, allowedObjects map[string]bool) (bool, []Status) {
 	if projectID == 0 || accessToken == "" || instanceURL == "" {
 		return false, nil
 	}
 
 	logCtx := log.WithFields(log.Fields{"project_id": projectID})
-	status := CreateOrGetSalesforceEventName(projectID)
+	status := CreateOrGetSalesforceEventName(projectID, allowedObjects)
 	if status != http.StatusOK {
 		logCtx.Errorf("Failed to CreateOrGetSalesforceEventName status %d", status)
 		return true, nil
@@ -1707,6 +1733,10 @@ func SyncDatetimeAndNumericalProperties(projectID int64, accessToken, instanceUR
 
 		var status Status
 		typAlias := model.GetSalesforceAliasByDocType(doctype)
+		if !allowedObjects[typAlias] {
+			continue
+		}
+
 		status.Type = typAlias
 		status.ProjectID = projectID
 
@@ -1917,7 +1947,7 @@ func syncAssociationsForOpportunities(ps *model.SalesforceProjectSettings, acces
 
 	for i := range objectRecords {
 		if _, exist := allowedObject[model.SalesforceDocumentTypeNameLead]; exist {
-			oppID := util.GetPropertyValueAsString(objectRecords[i]["Id"])
+			oppID := U.GetPropertyValueAsString(objectRecords[i]["Id"])
 			leadID := (oppToLeadIDs)[oppID]
 			if leadID == "" {
 				logCtx.WithFields(log.Fields{"opportunity_id": oppID}).Warn("Missing lead id for opportunity. Skipping adding lead id to opportunity.")
@@ -1949,7 +1979,7 @@ func syncAssociationsForOpportunities(ps *model.SalesforceProjectSettings, acces
 }
 
 func syncOpporunityUsingFields(ps *model.SalesforceProjectSettings, accessToken string, startTimestamp int64) ObjectStatus {
-	opportunityAssociationEnabled := config.UseOpportunityAssociationByProjectID(ps.ProjectID)
+	opportunityAssociationEnabled := C.UseOpportunityAssociationByProjectID(ps.ProjectID)
 
 	logCtx := log.WithFields(log.Fields{"project_id": ps.ProjectID, "doc_type": model.SalesforceDocumentTypeNameOpportunity, "start_timestamp": startTimestamp, "association_enabled": opportunityAssociationEnabled})
 
@@ -2379,7 +2409,7 @@ func syncCampaignMemberUsingFields(ps *model.SalesforceProjectSettings, accessTo
 			}
 
 			for i := range objectRecords {
-				campaignID := util.GetPropertyValueAsString(objectRecords[i]["CampaignId"])
+				campaignID := U.GetPropertyValueAsString(objectRecords[i]["CampaignId"])
 
 				if campaignID != "" {
 					allCampaignIDs[campaignID] = true
@@ -2387,7 +2417,7 @@ func syncCampaignMemberUsingFields(ps *model.SalesforceProjectSettings, accessTo
 					logCtx.WithError(err).Error("Missing campaign Id from campaign member record.")
 				}
 
-				campaignMemberIDs := util.GetPropertyValueAsString(objectRecords[i]["Id"])
+				campaignMemberIDs := U.GetPropertyValueAsString(objectRecords[i]["Id"])
 				if campaignMemberIDs != "" {
 					allCampaignMemberIDs = append(allCampaignMemberIDs, campaignMemberIDs)
 				} else {
@@ -2750,7 +2780,7 @@ func syncByTypeUsingFields(ps *model.SalesforceProjectSettings, accessToken, obj
 	case model.SalesforceDocumentTypeNameOpportunityContactRole:
 		return syncOpportunityContactRoleUsingFields(ps, accessToken, startTimestamp), nil
 	case model.SalesforceDocumentTypeNameTask, model.SalesforceDocumentTypeNameEvent:
-		if (objectName == model.SalesforceDocumentTypeNameTask && config.IsAllowedSalesforceActivityTasksByProjectID(ps.ProjectID)) || (objectName == model.SalesforceDocumentTypeNameEvent && config.IsAllowedSalesforceActivityEventsByProjectID(ps.ProjectID)) {
+		if (objectName == model.SalesforceDocumentTypeNameTask && C.IsAllowedSalesforceActivityTasksByProjectID(ps.ProjectID)) || (objectName == model.SalesforceDocumentTypeNameEvent && C.IsAllowedSalesforceActivityEventsByProjectID(ps.ProjectID)) {
 			return syncActivitiesUsingFields(ps, objectName, accessToken, startTimestamp), nil
 		}
 		return ObjectStatus{ProjetID: ps.ProjectID, DocType: objectName}, errors.New("activities sync not not supported for project")

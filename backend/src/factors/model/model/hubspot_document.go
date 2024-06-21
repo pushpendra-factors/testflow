@@ -100,6 +100,33 @@ var (
 	}
 )
 
+var HubspotAlowedObjectsByPlan = map[string][]string{
+	FEATURE_HUBSPOT_BASIC: {HubspotDocumentTypeNameCompany, HubspotDocumentTypeNameDeal, HubspotDocumentTypeNameOwner},
+	FEATURE_HUBSPOT: {HubspotDocumentTypeNameCompany, HubspotDocumentTypeNameDeal, HubspotDocumentTypeNameContact, HubspotDocumentTypeNameEngagement, HubspotDocumentTypeNameForm,
+		HubspotDocumentTypeNameFormSubmission, HubspotDocumentTypeNameOwner},
+}
+
+var HubspotEventNameToDocTypeMapping = map[string]string{
+	U.EVENT_NAME_HUBSPOT_CONTACT_CREATED:            HubspotDocumentTypeNameContact,
+	U.EVENT_NAME_HUBSPOT_CONTACT_UPDATED:            HubspotDocumentTypeNameContact,
+	U.EVENT_NAME_HUBSPOT_CONTACT_FORM_SUBMISSION:    HubspotDocumentTypeNameContact,
+	U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_CREATED:      HubspotDocumentTypeNameCompany,
+	U.GROUP_EVENT_NAME_HUBSPOT_COMPANY_UPDATED:      HubspotDocumentTypeNameCompany,
+	U.GROUP_EVENT_NAME_HUBSPOT_DEAL_CREATED:         HubspotDocumentTypeNameDeal,
+	U.GROUP_EVENT_NAME_HUBSPOT_DEAL_UPDATED:         HubspotDocumentTypeNameDeal,
+	U.EVENT_NAME_HUBSPOT_DEAL_STATE_CHANGED:         HubspotDocumentTypeNameDeal,
+	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_CREATED: HubspotDocumentTypeNameEngagement,
+	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_MEETING_UPDATED: HubspotDocumentTypeNameEngagement,
+	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_EMAIL:           HubspotDocumentTypeNameEngagement,
+	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_CREATED:    HubspotDocumentTypeNameEngagement,
+	U.EVENT_NAME_HUBSPOT_ENGAGEMENT_CALL_UPDATED:    HubspotDocumentTypeNameEngagement,
+}
+
+var HubspotGroupNameToDocTypeMapping = map[string]string{
+	U.GROUP_NAME_HUBSPOT_COMPANY: HubspotDocumentTypeNameCompany,
+	U.GROUP_NAME_HUBSPOT_DEAL:    HubspotDocumentTypeNameDeal,
+}
+
 // Hubspot errors
 var (
 	ErrorHubspotUsingFallbackKey                        = errors.New("using fallback key from document")
@@ -1089,4 +1116,16 @@ func CheckIfCompanyV3(document *HubspotDocument) (bool, error) {
 
 func GetCRMObjectURLKey(projectID int64, source, objectTyp string) string {
 	return GetCRMEnrichPropertyKeyByType(source, objectTyp, "$object_url")
+}
+
+func GetHubspotAllowedObjectsByPlan(plan string) (map[string]bool, error) {
+	allowedObjectsMap := make(map[string]bool)
+	if _, exist := HubspotAlowedObjectsByPlan[plan]; !exist {
+		return nil, errors.New("invalid hubspot mapped plan")
+	}
+
+	for _, obj := range HubspotAlowedObjectsByPlan[plan] {
+		allowedObjectsMap[obj] = true
+	}
+	return allowedObjectsMap, nil
 }

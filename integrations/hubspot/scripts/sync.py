@@ -288,7 +288,7 @@ def get_with_fallback_retry(project_id, get_url, request = requests.get, json_ob
                             retries += 1
                             continue
                         log.error("Retry exhausted. Failed to get data after %d retries",retries)
-                        raise Exception("Retry exhausted. Failed to get data after "+str(retries)+" retries")
+                        raise Exception("Retry exhausted. Failed to get data after "+str(retries)+" retries. " + str(r.text))
                     return r
                 res_json = r.json()
                 if res_json["errorType"] == API_ERROR_RATE_LIMIT:
@@ -669,8 +669,8 @@ def sync_engagements_v3(project_id, refresh_token, api_key, last_sync_timestamp=
     engagement_latest_timestamp = 0
     call_disposition = get_call_disposition(project_id, hubspot_request_handler)
     
-    any_failure = False
     start_time = int(time.time()) * 1000
+    any_failure = False
     for type in engagement_types:
         url = engagement_url + type + "/search"
         has_more = True
@@ -688,6 +688,7 @@ def sync_engagements_v3(project_id, refresh_token, api_key, last_sync_timestamp=
             json_payload["properties"] = engagement_properties
             r = hubspot_request_handler(project_id, get_url, request=requests.post, json=json_payload, headers=headers)
             if not r.ok:
+                any_failure = True
                 log.error("Failure response %d from hubspot on sync_engagements_v3", r.status_code)
                 latest_timestamp  = last_sync_timestamp
                 any_failure = True
@@ -781,9 +782,10 @@ def sync_contacts(project_id, refresh_token, api_key, last_sync_timestamp, sync_
     properties, ok = get_all_properties_by_doc_type(project_id,"contacts", hubspot_request_handler)
     if not ok:
         log.error("Failure loading properties for project_id %d on sync_contacts", project_id)
-        return 0, 0
+        return 0, 0,0
 
     contact_api_calls = 0
+    contact_deal_api_calls = 0
     ordered_historical_data_failure= False
     max_timestamp = 0
     err_url_too_long = False
@@ -840,6 +842,8 @@ def sync_contacts(project_id, refresh_token, api_key, last_sync_timestamp, sync_
         max_timestamp = get_batch_documents_max_timestamp(project_id, docs,"contacts",max_timestamp)
         docs = get_filtered_contacts_project_id(project_id, docs)
         count = count + len(docs)
+        docs, api_calls =  fill_deals_for_contacts(project_id, docs, hubspot_request_handler)
+        contact_deal_api_calls = contact_deal_api_calls + api_calls
         if allow_buffer_before_insert_by_project_id(project_id):
             create_all_contact_documents_with_buffer(docs,has_more)
             log.warning("Downloaded %d contacts. total %d.", len(docs), count)
@@ -848,7 +852,7 @@ def sync_contacts(project_id, refresh_token, api_key, last_sync_timestamp, sync_
             log.warning("Downloaded and created %d contacts. total %d.", len(docs), count)
     
     create_all_contact_documents_with_buffer([],False) ## flush any remainig docs in memory
-    return contact_api_calls, max_timestamp
+    return contact_api_calls, contact_deal_api_calls, max_timestamp
 
 def get_all_contact_lists_info(project_id, refresh_token, api_key):
     url = "https://api.hubapi.com/contacts/v1/lists?"
@@ -1330,7 +1334,7 @@ def sync_deals_v3(project_id, refresh_token, api_key, last_sync_timestamp = 1, s
     log.info("Using sync_deals_v3 for project_id : "+str(project_id)+".")
 
     limit = PAGE_SIZE
-    url = "https://api.hubapi.com/crm/v3/objects/deals/search"  # both created and modified.
+    url = "https://api.hubapi.com/crm/v3/objects/deals/search?"  # both created and modified.
     headers = {'Content-Type': 'application/json'}
     request = requests.post
     json_payload = get_search_v3_api_payload("hs_lastmodifieddate", last_sync_timestamp, limit)
@@ -1574,6 +1578,20 @@ def fill_contacts_for_companies_v3(project_id, companies, hubspot_request_handle
                 contact_ids.append(int(id)) ## store as integer
             companies[i]["contactIds"] = contact_ids
     return companies, api_calls
+
+def fill_deals_for_contacts(project_id, contacts, hubspot_request_handler):
+    contact_ids = []
+    for contact in contacts:
+            contact_ids.append(contact["vid"])
+    associations, api_calls = get_associations(project_id, "contact", contact_ids, "deal", hubspot_request_handler)
+    for i in range(len(contacts)):
+        contact_id = str(contacts[i]["vid"])
+        if contact_id in associations:
+            deal_ids = []
+            for id in associations[contact_id]:
+                deal_ids.append(int(id)) ## store as integer
+            contacts[i]["dealIds"] = deal_ids
+    return contacts, api_calls
 
 def get_search_v3_api_payload(sync_timestamp_property_name, last_sync_timestamp, limit=100):
     parameters = {
@@ -1831,6 +1849,26 @@ def update_sync_status(request_payload, first_sync=False):
             retries += 1
             time.sleep(2)
 
+def update_project_synced(project_id):
+    uri = "/data_service/hubspot/documents/synced?project_id="+str(project_id)
+    url = options.data_service_host + uri
+
+    retries = 0
+    while True:
+        try:
+            res = requests.post(url)
+            if not res.ok:
+                raise Exception('Failed mark project as synced: ' + str(res.status_code)+ ' : '+str(res.text))
+            return
+        except Exception as e:
+            if retries > RETRY_LIMIT:
+                raise Exception("Retry exhausted on marking project as synced "+str(e)+ " , retries "+ str(retries))
+            log.warning("Failed to send first time sync update. retrying in 2s "+str(e))
+            retries += 1
+            time.sleep(2)
+
+    
+
 def get_allowed_list_with_all_element_support(allowed_list_string, disallowed_list_string=""):
     disallowed_map = {}
     elements = [s.strip() for s in disallowed_list_string.split(",")]
@@ -1997,7 +2035,13 @@ def get_next_sync_info(project_settings, last_sync_info, first_time_sync = False
             next_sync["last_sync_timestamp"] = sync_info[doc_type]
             next_sync_info.append(next_sync)
 
-    return next_sync_info 
+    ## restructuring the response
+    next_sync_info_map = {}
+    for info in next_sync_info:
+        if info["project_id"] not in next_sync_info_map:
+            next_sync_info_map[info["project_id"]] = []
+        next_sync_info_map[info["project_id"]].append(info)
+    return next_sync_info_map 
 
 
 def sync(project_id, refresh_token, api_key, doc_type, sync_all, last_sync_timestamp):
@@ -2006,13 +2050,14 @@ def sync(project_id, refresh_token, api_key, doc_type, sync_all, last_sync_times
     response["doc_type"] = doc_type
     response["sync_all"] = sync_all
 
+    start_time = time.time()
     max_timestamp  = 0
     try:
         if project_id == None or api_key == None or doc_type == None or sync_all == None:
             raise Exception("invalid params on sync, project_id "+str(project_id)+", api_key "+str(api_key)+", doc_type "+str(doc_type)+", sync_all "+str(sync_all))            
 
         if doc_type == "contact":
-            response["contact_api_calls"],max_timestamp = sync_contacts(project_id, refresh_token, api_key, last_sync_timestamp, sync_all)
+            response["contact_api_calls"],response["contact_deal_api_calls"], max_timestamp = sync_contacts(project_id, refresh_token, api_key, last_sync_timestamp, sync_all)
         elif doc_type == "company":        
             response["companies_api_calls"], response["companies_contacts_api_calls"],max_timestamp = sync_companies(project_id, refresh_token, api_key, last_sync_timestamp, sync_all)
         elif doc_type == "deal":
@@ -2040,6 +2085,8 @@ def sync(project_id, refresh_token, api_key, doc_type, sync_all, last_sync_times
             response["message"] = "Failed with exception: " + str(e)
             return response
 
+    elapsed_time = time.time() - start_time
+    response["total_time"] = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
     response["status"] = "success"
     response["timestamp"]= max_timestamp
     return response
@@ -2152,35 +2199,36 @@ def hubspot_sync(configs):
         log.error("Last sync info missing on get sync info response")
         sys.exit(1)
 
-    next_sync_info = get_next_sync_info(project_settings, last_sync_info, first_sync)
+    next_sync_info_map = get_next_sync_info(project_settings, last_sync_info, first_sync)
 
-    log.warning("sync_info: "+str(next_sync_info))
+    log.warning("sync_info: "+str(next_sync_info_map))
     next_sync_failures = []
     next_sync_success = []
 
-    for info in next_sync_info:
-        log.warning("Current processing sync_info: "+str(info))
-        notification_payload = {}
-        try:
-            response = sync(info.get("project_id"), info.get("refresh_token"), info.get("api_key"),
-                    info.get("doc_type"), info.get("sync_all"), info.get("last_sync_timestamp"))
-            if response["status"] == "failed":
-                next_sync_failures.append(response)
-                notification_payload["status"]= "Failures on sync."
-                notification_payload["failures"] = [response]
-                notification_payload["success"] = []
-            else:
-                next_sync_success.append(response)
-                notification_payload["status"]= "Successfully synced."
-                notification_payload["failures"] = []
-                notification_payload["success"] = [response]
-            
-            update_sync_status(notification_payload, first_sync)
-        except Exception as e:
-            project_id = info.get("project_id")
-            doc_type = info.get("doc_type")
-            log.warning("Failed to process doc type %s for project_id %d. exception: %s", doc_type, project_id, str(e))
-            next_sync_failures.append(str(project_id)+":"+doc_type+" -> "+str(e))
+    for project_id in next_sync_info_map:
+        for info in next_sync_info_map[project_id]:
+            log.warning("Current processing sync_info: "+str(info))
+            notification_payload = {}
+            try:
+                response = sync(info.get("project_id"), info.get("refresh_token"), info.get("api_key"),
+                        info.get("doc_type"), info.get("sync_all"), info.get("last_sync_timestamp"))
+                if response["status"] == "failed":
+                    next_sync_failures.append(response)
+                    notification_payload["status"]= "Failures on sync."
+                    notification_payload["failures"] = [response]
+                    notification_payload["success"] = []
+                else:
+                    next_sync_success.append(response)
+                    notification_payload["status"]= "Successfully synced."
+                    notification_payload["failures"] = []
+                    notification_payload["success"] = [response]
+                    update_sync_status(notification_payload, first_sync)
+            except Exception as e:
+                project_id = info.get("project_id")
+                doc_type = info.get("doc_type")
+                log.warning("Failed to process doc type %s for project_id %d. exception: %s", doc_type, project_id, str(e))
+                next_sync_failures.append(str(project_id)+":"+doc_type+" -> "+str(e))
+        update_project_synced(project_id)
 
     success = len(next_sync_failures)<1
     status_msg = "Successfully synced." if success else "Failures on sync."
@@ -2195,7 +2243,10 @@ def hubspot_sync(configs):
 
     try:
         if first_sync == True:
-            ping_healthcheck(options.env, options.healthcheck_ping_id, notification_payload)
+            if len(next_sync_failures) > 0:
+                ping_healthcheck(options.env, HEALTHCHECK_PING_ID, notification_payload, endpoint="/fail")
+            else:
+                ping_healthcheck(options.env, options.healthcheck_ping_id, notification_payload)
         else:
             if len(next_sync_failures) > 0:
                 ping_healthcheck(options.env, HEALTHCHECK_PING_ID, notification_payload, endpoint="/fail")
@@ -2210,7 +2261,8 @@ def hubspot_sync(configs):
         else:
             ping_healthcheck(options.env, HEALTHCHECK_PING_ID, notification_payload, endpoint="/fail")
     
-    ping_healthcheck(options.env, HEALTHCHECK_RUN_PING_ID, {})
+    if first_sync!= True:
+        ping_healthcheck(options.env, HEALTHCHECK_RUN_PING_ID, {})
 
     return None, True
 

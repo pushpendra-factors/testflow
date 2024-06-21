@@ -72,6 +72,21 @@ var (
 	}
 )
 
+var SalesforceAllowedObjectsByPlan = map[string][]string{
+	FEATURE_SALESFORCE_BASIC: {SalesforceDocumentTypeNameAccount, SalesforceDocumentTypeNameOpportunity, SalesforceDocumentTypeNameUser},
+	FEATURE_SALESFORCE: {SalesforceDocumentTypeNameContact, SalesforceDocumentTypeNameLead, SalesforceDocumentTypeNameAccount,
+		SalesforceDocumentTypeNameOpportunity, SalesforceDocumentTypeNameCampaign, SalesforceDocumentTypeNameCampaignMember,
+		SalesforceDocumentTypeNameOpportunityContactRole, SalesforceDocumentTypeNameTask,
+		SalesforceDocumentTypeNameEvent, SalesforceDocumentTypeNameUser},
+}
+
+var SalesforceEventNametoDocTypeMapping = map[string]string{
+	util.GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_CREATED: SalesforceDocumentTypeNameOpportunity,
+	util.GROUP_EVENT_NAME_SALESFORCE_OPPORTUNITY_UPDATED: SalesforceDocumentTypeNameOpportunity,
+	util.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_CREATED:     SalesforceDocumentTypeNameAccount,
+	util.GROUP_EVENT_NAME_SALESFORCE_ACCOUNT_UPDATED:     SalesforceDocumentTypeNameAccount,
+}
+
 // GetSalesforceMappedDataType returns mapped factors data type
 func GetSalesforceMappedDataType(dataType string) string {
 	if dataType == "" {
@@ -443,4 +458,17 @@ func (document *SalesforceDocument) GetDocumentTimeZone() util.TimeZoneString {
 
 func (document *SalesforceDocument) GetDateProperties() *map[string]bool {
 	return document.dateProperties
+}
+
+func GetSalesforceAllowedObjectsByPlan(plan string) (map[string]bool, error) {
+	allowedObjectsMap := map[string]bool{}
+	if _, exist := SalesforceAllowedObjectsByPlan[plan]; !exist {
+		return nil, errors.New("invalid salesforce mapped plan")
+	}
+
+	for _, obj := range SalesforceAllowedObjectsByPlan[plan] {
+		allowedObjectsMap[obj] = true
+	}
+
+	return allowedObjectsMap, nil
 }

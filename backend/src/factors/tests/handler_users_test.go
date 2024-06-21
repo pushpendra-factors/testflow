@@ -202,8 +202,9 @@ func TestUserPropertyValuesHandler(t *testing.T) {
 	status := store.GetStore().CreateHubspotDocument(project.ID, &hubspotDocument)
 	assert.Equal(t, http.StatusCreated, status)
 
+	allowedObjects, _ := model.GetHubspotAllowedObjectsByPlan(model.FEATURE_HUBSPOT)
 	// execute sync job
-	allStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50, 3, "")
+	allStatus, _ := IntHubspot.Sync(project.ID, 1, time.Now().Unix(), nil, "", 50, 3, "", 0, allowedObjects)
 	for i := range allStatus {
 		assert.Equal(t, U.CRM_SYNC_STATUS_SUCCESS, allStatus[i].Status)
 	}
