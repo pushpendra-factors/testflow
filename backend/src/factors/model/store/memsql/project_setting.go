@@ -753,6 +753,7 @@ func (store *MemSQL) UpdateProjectSettings(projectId int64, settings *model.Proj
 				err).Error("Failed decoding saml config json. Aborting.")
 			return nil, http.StatusInternalServerError
 		}
+		settings.SSOState = model.SSO_STATE_SAML_ENABLED
 
 		// func call to validate saml url, certificate
 	}

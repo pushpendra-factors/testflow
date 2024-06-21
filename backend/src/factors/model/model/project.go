@@ -69,7 +69,7 @@ type ProjectInfo struct {
 	Name           string    `json:"name"`
 	ProfilePicture string    `json:"profile_picture"`
 	ProjectURI     string    `json:"project_uri"`
-	LoginMethod    string    `json:"login_method"`
+	LoginMethod    int    `json:"login_method"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 }
@@ -80,7 +80,7 @@ type ProjectInfoString struct {
 	Name           string    `json:"name"`
 	ProfilePicture string    `json:"profile_picture"`
 	ProjectURI     string    `json:"project_uri"`
-	LoginMethod    string    `json:"login_method"`
+	LoginMethod    int    `json:"login_method"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 }
