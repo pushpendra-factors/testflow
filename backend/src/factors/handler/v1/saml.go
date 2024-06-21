@@ -24,6 +24,60 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func IsValidSamlRequestHandler(c *gin.Context) {
+	email := c.Query("email")
+
+	agent, status := store.GetStore().GetAgentByEmail(email)
+
+	if status != http.StatusFound {
+		c.AbortWithStatusJSON(http.StatusBadRequest, "user does not exist.")
+		return
+	}
+	agentUUID := agent.UUID
+
+	pAM, status := store.GetStore().GetProjectAgentMappingsByAgentUUID(agentUUID)
+
+	if status != http.StatusFound {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to get Project Agent Mappings"})
+		return
+	}
+
+	var samlConfigExists bool
+	var samlConfig *postgres.Jsonb
+
+	for _, pam := range pAM {
+		setting, status := store.GetStore().GetProjectSetting(pam.ProjectID)
+		if status != http.StatusFound {
+			c.AbortWithStatus(http.StatusInternalServerError)
+		}
+
+		if setting.SSOState == model.SSO_STATE_SAML_ENABLED && setting.SamlConfiguration != nil {
+			if samlConfigExists {
+				// multiple saml configs found
+				// need to figure out handling later
+				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "Multiple SAML Configurations exist."})
+				return
+			}
+			samlConfigExists = true
+			samlConfig = setting.SamlConfiguration
+		}
+	}
+
+	if !samlConfigExists {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "SAML SSO not enabled for this user"})
+		return
+	}
+
+	var samlConfiguration model.SAMLConfiguration
+	// Generate SAML request and redirect logic
+	err := U.DecodePostgresJsonbToStructType(samlConfig, &samlConfiguration)
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to get saml configuration"})
+		return
+	}
+	c.Status(http.StatusOK)
+}
+
 func SamlLoginRequestHandler(c *gin.Context) {
 	email := c.Query("email")
 
@@ -51,7 +105,7 @@ func SamlLoginRequestHandler(c *gin.Context) {
 			c.AbortWithStatus(http.StatusInternalServerError)
 		}
 
-		if setting.SamlEnabled && setting.SamlConfiguration != nil {
+		if setting.SSOState == model.SSO_STATE_SAML_ENABLED && setting.SamlConfiguration != nil {
 			if samlConfigExists {
 				// multiple saml configs found
 				// need to figure out handling later
@@ -69,15 +123,13 @@ func SamlLoginRequestHandler(c *gin.Context) {
 		return
 	}
 
-	log.Info("hey")
-
 	var samlConfiguration model.SAMLConfiguration
 	// Generate SAML request and redirect logic
 	err := U.DecodePostgresJsonbToStructType(samlConfig, &samlConfiguration)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to get saml configuration"})
+		return
 	}
-	log.Info("before redirect url call")
 
 	redirectURL, err := GetSAMLRedirectURL(samlConfiguration)
 	if err != nil {
@@ -219,7 +271,7 @@ func SamlCallbackHandler(c *gin.Context) {
 
 func getSAMLConfigurationFromProjectSettings(setting model.ProjectSetting) (model.SAMLConfiguration, error) {
 	var samlConfig *postgres.Jsonb
-	if setting.SamlEnabled && setting.SamlConfiguration != nil {
+	if setting.SSOState == model.SSO_STATE_SAML_ENABLED && setting.SamlConfiguration != nil {
 		samlConfig = setting.SamlConfiguration
 	}
 	var samlConfiguration model.SAMLConfiguration
