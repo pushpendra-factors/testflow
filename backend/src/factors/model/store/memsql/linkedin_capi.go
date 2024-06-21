@@ -17,7 +17,7 @@ func fillUserIdentifierFromPropertiesForLinkedinCapi(properties *map[string]inte
 	if liclid, exists := (*properties)[U.EP_LICLID]; exists {
 
 		linkedinCAPIRequestPayload.User.UserIds = append(linkedinCAPIRequestPayload.User.UserIds, model.UserId{IDType: model.LINKEDIN_FIRST_PARTY_ADS_TRACKING_UUID, IDValue: U.GetPropertyValueAsString(liclid)})
-		return
+
 	}
 
 	if emailId, exists := (*properties)[U.EP_EMAIL]; exists {
@@ -30,7 +30,6 @@ func fillUserIdentifierFromPropertiesForLinkedinCapi(properties *map[string]inte
 				log.WithError(err).Error("Failed to hash email")
 			} else {
 				linkedinCAPIRequestPayload.User.UserIds = append(linkedinCAPIRequestPayload.User.UserIds, model.UserId{IDType: model.SHA256_EMAIL, IDValue: hashedEmail})
-				return
 			}
 		}
 
@@ -46,7 +45,6 @@ func fillUserIdentifierFromPropertiesForLinkedinCapi(properties *map[string]inte
 				log.WithError(err).Error("Failed to hash email")
 			} else {
 				linkedinCAPIRequestPayload.User.UserIds = append(linkedinCAPIRequestPayload.User.UserIds, model.UserId{IDType: model.SHA256_EMAIL, IDValue: hashedEmail})
-				return
 			}
 
 		}
@@ -54,7 +52,28 @@ func fillUserIdentifierFromPropertiesForLinkedinCapi(properties *map[string]inte
 	}
 
 }
-func (store *MemSQL) NewLinkedCapiRequestPayload(properties *map[string]interface{}, linkedinCAPIConfig model.LinkedinCAPIConfig) (model.BatchLinkedinCAPIRequestPayload, error) {
+
+func fillUserInfoFromPropertiesForLinkedinCapi(properties *map[string]interface{}, linkedinCAPIRequestPayload *model.SingleLinkedinCAPIRequestPayload) {
+
+	if firstName, exists := (*properties)[U.UP_FIRST_NAME]; exists {
+		firstNameString := U.GetPropertyValueAsString(firstName)
+
+		if firstNameString != "" {
+			linkedinCAPIRequestPayload.User.UserInfo.FirstName = firstNameString
+		}
+	}
+
+	if lastName, exists := (*properties)[U.UP_LAST_NAME]; exists {
+		lastNameString := U.GetPropertyValueAsString(lastName)
+
+		if lastNameString != "" {
+			linkedinCAPIRequestPayload.User.UserInfo.LasttName = lastNameString
+		}
+
+	}
+
+}
+func (store *MemSQL) NewLinkedCapiRequestPayload(properties *map[string]interface{}, event *model.Event, linkedinCAPIConfig model.LinkedinCAPIConfig) (model.BatchLinkedinCAPIRequestPayload, error) {
 
 	linkedinCAPIRequestPayloadBatch := make([]model.SingleLinkedinCAPIRequestPayload, 0)
 	_linkedinCAPIRequestPayload := model.SingleLinkedinCAPIRequestPayload{}
@@ -65,6 +84,7 @@ func (store *MemSQL) NewLinkedCapiRequestPayload(properties *map[string]interfac
 	}
 
 	fillUserIdentifierFromPropertiesForLinkedinCapi(properties, &_linkedinCAPIRequestPayload)
+	fillUserInfoFromPropertiesForLinkedinCapi(properties, &_linkedinCAPIRequestPayload)
 
 	if len(_linkedinCAPIRequestPayload.User.UserIds) == 0 {
 		log.Error("no user identifier found for linked capi")
@@ -90,6 +110,7 @@ func (store *MemSQL) NewLinkedCapiRequestPayload(properties *map[string]interfac
 		return model.BatchLinkedinCAPIRequestPayload{}, errors.New("Unable to get timestamp for linked in capi")
 	}
 
+	_linkedinCAPIRequestPayload.EventId = event.ID
 	if len(linkedinCAPIConfig.Conversions.LinkedInCAPIConversionsResponseList) == 0 {
 		log.Error("no conversions found for linked capi")
 		return model.BatchLinkedinCAPIRequestPayload{}, errors.New("no conversions found for linked capi")
@@ -106,6 +127,7 @@ func (store *MemSQL) NewLinkedCapiRequestPayload(properties *map[string]interfac
 	if len(linkedinCAPIRequestPayloadBatch) == 0 {
 		return model.BatchLinkedinCAPIRequestPayload{}, errors.New("no batch found for linkedin ad accounts")
 	}
+
 	return model.BatchLinkedinCAPIRequestPayload{LinkedinCAPIRequestPayloadList: linkedinCAPIRequestPayloadBatch}, nil
 }
 

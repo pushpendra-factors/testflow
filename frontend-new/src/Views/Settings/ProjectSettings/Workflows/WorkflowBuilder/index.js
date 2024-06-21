@@ -70,7 +70,6 @@ import {
 } from 'Reducers/workflows';
 import logger from 'Utils/logger';
 import WorkflowTrigger from './trigger';
-import { filterOptions } from '../Stub';
 import MapComponent from './MapComponent';
 import FactorsHubspotCompany from './Templates/FactorsHubspotCompany';
 import FactorsApolloHubspotContacts from './Templates/FactorsApolloHubspotContacts';
@@ -79,6 +78,7 @@ import FactorsSalesforceCompany from './Templates/FactorsSalesforceCompany';
 import FactorsApolloSalesforceContacts from './Templates/FactorsApolloSalesforceContacts';
 import WorkflowHubspotThumbnail from '../../../../../assets/images/workflow-hubspot-thumbnail.png';
 import QueryBlock from '../../Alerts/EventBasedAlert/QueryBlock';
+import { defaultPropertyList, alertsGroupPropertyList } from 'Components/QueryComposer/EventGroupBlock/utils';
 import FactorsLinkedInCAPI from './Templates/FactorsLinkedInCAPI';
 
 const host = getHostUrl();
@@ -99,7 +99,12 @@ const WorkflowBuilder = ({
   updateWorkflow,
   alertId,
   editMode,
-  setEditMode
+  setEditMode,
+  eventUserPropertiesV2,
+  eventPropertiesV2,
+  groupProperties,
+  userPropertiesV2,
+  getGroupProperties
 }) => {
   const configureRef = useRef(null);
   const [loading, setLoading] = useState(false);
@@ -119,7 +124,7 @@ const WorkflowBuilder = ({
   const [selectedSegment, setSelectedSegment] = useState('');
   const [segmentOptions, setSegmentOptions] = useState([]);
   const segments = useSelector(selectSegments);
-
+  const [filterOptions, setFilterOptions] = useState([]);
   const [propertyMapMandatory, setPropertyMapMandatory] = useState([]);
   const [propertyMapAdditional, setPropertyMapAdditional] = useState([]);
   const [propertyMapAdditional2, setPropertyMapAdditional2] = useState([]);
@@ -272,15 +277,69 @@ const WorkflowBuilder = ({
     return listGroups;
   }, [groups]);
 
-  const fetchGroups = async () => {
-    if (!groups || Object.keys(groups).length === 0) {
-      await getGroups(activeProject?.id);
+  const getGroupPropsFromAPI = useCallback(
+    async (group) => {
+      if (!groupProperties[group]) {
+        await getGroupProperties(activeProject.id, group);
+      }
+    },
+    [activeProject.id, groupProperties]
+  );
+
+  const fetchGroupProperties = async () => {
+    // separate call for $domain = All account group.
+    getGroupPropsFromAPI(GROUP_NAME_DOMAINS);
+
+    const missingGroups = Object.keys(groups?.all_groups || {}).filter(
+      (group) => !groupProperties[group]
+    );
+    if (missingGroups && missingGroups?.length > 0) {
+      await Promise.allSettled(
+        missingGroups?.map((group) =>
+          getGroupProperties(activeProject?.id, group)
+        )
+      );
     }
   };
 
   useEffect(() => {
-    fetchGroups();
-  }, [activeProject?.id, groups]);
+    fetchGroupProperties();
+  }, [activeProject?.id, groups, groupProperties]);
+
+  useEffect(() => {
+    let filterOptsObj = {};
+    let eventGroup = "";
+    let event = queries[0] || "";
+    let groupAnalysis = activeGrpBtn;
+
+    if (!groupAnalysis || groupAnalysis === 'users') {
+      filterOptsObj = defaultPropertyList(
+        eventPropertiesV2,
+        eventUserPropertiesV2,
+        groupProperties,
+        eventGroup,
+        groups?.all_groups,
+        event
+      );
+    } else {
+      filterOptsObj = alertsGroupPropertyList(
+        eventPropertiesV2,
+        userPropertiesV2,
+        groupProperties,
+        eventGroup,
+        groups?.all_groups,
+        event
+      );
+    }
+
+    setFilterOptions(Object.values(filterOptsObj));
+  }, [
+    eventPropertiesV2,
+    userPropertiesV2,
+    groupProperties,
+    eventUserPropertiesV2,
+    groups,
+  ]);
 
   const queryChange = useCallback(
     (newEvent, index, changeType = 'add', flag = null) => {
@@ -406,10 +465,10 @@ const WorkflowBuilder = ({
     if (
       selectedTemp?.id == TemplateIDs.FACTORS_APOLLO_HUBSPOT_CONTACTS ||
       selectedTemp?.template_id ==
-        TemplateIDs.FACTORS_APOLLO_HUBSPOT_CONTACTS ||
+      TemplateIDs.FACTORS_APOLLO_HUBSPOT_CONTACTS ||
       selectedTemp?.id == TemplateIDs.FACTORS_APOLLO_SALESFORCE_CONTACTS ||
       selectedTemp?.template_id ==
-        TemplateIDs.FACTORS_APOLLO_SALESFORCE_CONTACTS
+      TemplateIDs.FACTORS_APOLLO_SALESFORCE_CONTACTS
     ) {
       message_propertiesObj = {
         mandatory_properties: propertyMapMandatory,
@@ -542,7 +601,7 @@ const WorkflowBuilder = ({
     if (
       workflowItem?.id == TemplateIDs.FACTORS_APOLLO_SALESFORCE_CONTACTS ||
       workflowItem?.template_id ==
-        TemplateIDs.FACTORS_APOLLO_SALESFORCE_CONTACTS
+      TemplateIDs.FACTORS_APOLLO_SALESFORCE_CONTACTS
     ) {
       return (
         <FactorsApolloSalesforceContacts
@@ -759,6 +818,10 @@ const WorkflowBuilder = ({
 const mapStateToProps = (state) => ({
   activeProject: state.global.active_project,
   groupBy: state.coreQuery.groupBy.event,
+  userPropertiesV2: state.coreQuery.userPropertiesV2,
+  eventUserPropertiesV2: state.coreQuery.eventUserPropertiesV2,
+  eventPropertiesV2: state.coreQuery.eventPropertiesV2,
+  groupProperties: state.coreQuery.groupProperties,
   groups: state.coreQuery.groups
 });
 
@@ -768,5 +831,6 @@ export default connect(mapStateToProps, {
   getSavedSegments,
   fetchSavedWorkflows,
   saveWorkflow,
-  updateWorkflow
+  updateWorkflow,
+  getGroupProperties
 })(WorkflowBuilder);

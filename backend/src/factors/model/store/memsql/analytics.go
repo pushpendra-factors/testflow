@@ -152,9 +152,9 @@ func buildWhereFromProperties(projectID int64, properties []model.QueryProperty,
 			_logicalOp := p.LogicalOp
 			isColumn := false
 			if _, exists := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]; exists {
-				if p.Value == "true" {
+				if U.EvaluateBoolPropertyValueWithOperatorForTrue(p.Value, p.Operator) {
 					p = model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]
-				} else if p.Value == "false" || p.Value == "$none" {
+				} else if U.EvaluateBoolPropertyValueWithOperatorForFalse(p.Value, p.Operator) {
 					p = model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]
 					p.Operator = model.EqualsOpStr
 					p.Value = "$none"

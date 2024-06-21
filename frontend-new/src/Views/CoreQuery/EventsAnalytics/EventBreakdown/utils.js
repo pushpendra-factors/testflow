@@ -11,6 +11,7 @@ import {
   MAX_ALLOWED_VISIBLE_PROPERTIES,
   DISPLAY_PROP
 } from '../../../../utils/constants';
+import { labelsObj } from 'Views/CoreQuery/utils';
 
 export const getDefaultSortProp = () => [
   {
@@ -63,7 +64,8 @@ export const getTableColumns = (
   currentSorter,
   handleSorting,
   userPropNames,
-  eventPropertiesDisplayNames
+  eventPropertiesDisplayNames,
+  eventGroup
 ) => {
   const breakdownColumns = breakdown.map((e, index) => {
     const displayTitle = getBreakdownDisplayName({
@@ -87,7 +89,7 @@ export const getTableColumns = (
 
   const countCol = {
     title: getClickableTitleSorter(
-      'User Count',
+      labelsObj[eventGroup] || 'User Count',
       { key: 'User Count', type: 'numerical', subtype: null },
       currentSorter,
       handleSorting
