@@ -6,7 +6,16 @@ import React, {
   useMemo
 } from 'react';
 import { connect, useDispatch, useSelector } from 'react-redux';
-import { Dropdown, Button, Input, Tag, Collapse, Select, Form } from 'antd';
+import {
+  Dropdown,
+  Button,
+  Input,
+  Tag,
+  Collapse,
+  Select,
+  Form,
+  Tooltip
+} from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import MapComponent from '../MapComponent';
 import isEmpty from 'lodash/isEmpty';
@@ -140,8 +149,21 @@ const FactorsLinkedInCAPI = ({
                   color={'gray'}
                   extraClass={'m-0'}
                 >
-                  Select the conversion event from LinkedIn that you wish to
-                  send events to
+                  Select the Conversion from linked to which you want to push
+                  the accounts
+                  <Tooltip
+                    placement='top'
+                    title={`If you don’t find a conversion here, please create a new one with data source set as ’Direct API’ inside your LinkedIn account manager `}
+                  >
+                    <div className='inline ml-1'>
+                      <SVG
+                        name='InfoCircle'
+                        size={16}
+                        color='#8C8C8C'
+                        extraClass='inline'
+                      />
+                    </div>
+                  </Tooltip>
                 </Text>
                 {renderLinkedinLogin()}
                 {currentProjectSettings?.int_linkedin_access_token && (
