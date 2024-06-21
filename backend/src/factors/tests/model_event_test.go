@@ -66,7 +66,7 @@ func TestPullEventRowsV2(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, errCode)
 	assert.True(t, event.CreatedAt.After(start))
 	assert.True(t, time.Now().Unix() >= start.Unix())
-	rows, tx, err := store.GetStore().PullEventRowsV2(projectId, start.Unix()+19800, time.Now().Unix()+19800+2)
+	rows, tx, err := store.GetStore().PullEventRowsV2(projectId, start.Unix()+19800, time.Now().Unix()+19800+2, false)
 	assert.Nil(t, err)
 
 	numRows := 0

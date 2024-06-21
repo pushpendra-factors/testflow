@@ -39,6 +39,7 @@ func main() {
 
 	hardPull := flag.Bool("hard_pull", false, "replace the files already present")
 	pullEventsDaily := flag.Bool("pull_events_daily", false, "run PullEventsDaily as well")
+	sortOnTimestamp := flag.Bool("sort_on_timestamp", false, "whether to sort in db (for memory spike cases)")
 
 	fileTypesFlag := flag.String("file_types", "*",
 		"Optional: file type. A comma separated list of file types and supports '*' for all files. ex: 1,2,6,9") //refer to pull.FileType map
@@ -94,6 +95,9 @@ func main() {
 
 	C.InitConf(config)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
+
+	C.InitRedis(config.RedisHost, config.RedisPort)
+	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
 
 	// Initialize configs and connections and close with defer.
 	err := C.InitDB(*config)
@@ -217,6 +221,7 @@ func main() {
 	configs["eventSplitRangeProjectIds"] = eventSplitRangeProjectIds
 	configs["userSplitRangeProjectIds"] = userSplitRangeProjectIds
 	configs["noOfSplits"] = *noOfSplits
+	configs["sortOnTimestamp"] = *sortOnTimestamp
 
 	var statusEvents map[string]interface{}
 	if *pullEventsDaily {

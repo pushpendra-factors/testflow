@@ -32,7 +32,7 @@ var FileType = map[string]int64{
 }
 
 // check if add session job is completed, then pull events(with Hubspot and Salesforce) data into cloud files with proper logging
-func PullDataForEvents(projectId int64, cloudManager *filestore.FileManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone int64, splitRangeProjectIds []int64, noOfSplits int, status map[string]interface{}, logCtx *log.Entry) (error, bool) {
+func PullDataForEvents(projectId int64, cloudManager *filestore.FileManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone int64, splitRangeProjectIds []int64, noOfSplits int, sortOnTimestamp bool, status map[string]interface{}, logCtx *log.Entry) (error, bool) {
 
 	if yes, err := CheckIfAddSessionCompleted(projectId, endTimestampInProjectTimezone); !yes {
 		if err != nil {
@@ -55,7 +55,7 @@ func PullDataForEvents(projectId int64, cloudManager *filestore.FileManager, sta
 	_, cName := (*cloudManager).GetDailyEventArchiveFilePathAndName(projectId, 0, startTimestamp, endTimestamp)
 	startAt := time.Now().UnixNano()
 
-	eventsCount, err := pullEventsData(projectId, startTimestampInProjectTimezone, endTimestampInProjectTimezone, cName, cloudManager, startTimestamp, endTimestamp, splitRange, noOfSplits)
+	eventsCount, err := pullEventsData(projectId, startTimestampInProjectTimezone, endTimestampInProjectTimezone, cName, cloudManager, startTimestamp, endTimestamp, splitRange, noOfSplits, sortOnTimestamp)
 	if err != nil {
 		logCtx.WithError(err).Error("Pull events failed. Pull and write events failed.")
 		status["events-error"] = err.Error()
@@ -78,13 +78,19 @@ func PullDataForEvents(projectId int64, cloudManager *filestore.FileManager, sta
 }
 
 // pull events(rows) from db into cloud files
-func pullEventsData(projectID int64, startTimeTimezone, endTimeTimezone int64, fileName string, cloudManager *filestore.FileManager, startTimestamp, endTimestamp int64, splitRange bool, noOfSplits int) (int, error) {
+func pullEventsData(projectID int64, startTimeTimezone, endTimeTimezone int64, fileName string, cloudManager *filestore.FileManager, startTimestamp, endTimestamp int64, splitRange bool, noOfSplits int, sortOnTimestamp bool) (int, error) {
 
 	var firstEventTimestamp, lastEventTimestamp int64
 	var writerMap = make(map[int64]*io.WriteCloser)
 	rowCount := 0
 	nilUserProperties := 0
 	nilEventProperties := 0
+
+	if sortOnTimestamp && noOfSplits > 1 {
+		log.Info("sortOnTimestamp not supported with splits>1, making splits=1")
+		noOfSplits = 1
+	}
+	var filesClosed int = 0
 
 	var perQueryRange = endTimestamp - startTimestamp
 	startSplit, endSplit := getTimeStampArraysAfterSplit(splitRange, noOfSplits, startTimeTimezone, endTimeTimezone, &perQueryRange)
@@ -93,10 +99,11 @@ func pullEventsData(projectID int64, startTimeTimezone, endTimeTimezone int64, f
 		splitNum := i + 1
 		pullStartTime := startSplit[i]
 		pullEndTime := endSplit[i]
+		var oldFileTimestamp int64 = 0
 
 		//pull data from db in the form of rows
 		log.WithFields(log.Fields{"start": pullStartTime, "end": pullEndTime}).Infof("Executing split %d out of %d", splitNum, len(startSplit))
-		rows, tx, err := store.GetStore().PullEventRowsV2(projectID, pullStartTime, pullEndTime)
+		rows, tx, err := store.GetStore().PullEventRowsV2(projectID, pullStartTime, pullEndTime, sortOnTimestamp)
 		if err != nil {
 			log.WithError(err).Error("SQL Query failed.")
 			return 0, err
@@ -140,6 +147,16 @@ func pullEventsData(projectID int64, startTimeTimezone, endTimeTimezone int64, f
 			daysFromStart := int64(math.Floor(float64(eventTimestamp-startTimeTimezone) / float64(U.Per_day_epoch)))
 			fileTimestamp := startTimestamp + daysFromStart*U.Per_day_epoch
 
+			if sortOnTimestamp && (fileTimestamp > oldFileTimestamp && oldFileTimestamp != 0) {
+				prevWriter := writerMap[oldFileTimestamp]
+				err := (*prevWriter).Close()
+				if err != nil {
+					log.WithError(err).Error("Error closing writer")
+					return 0, err
+				}
+				filesClosed += 1
+				delete(writerMap, oldFileTimestamp)
+			}
 			//get apt writer w.r.t file timestamp
 			writer, err := getAptWriterFromMap(projectID, writerMap, cloudManager, fileName, fileTimestamp, U.DataTypeEvent, "")
 			if err != nil {
@@ -235,21 +252,23 @@ func pullEventsData(projectID int64, startTimeTimezone, endTimeTimezone int64, f
 			if event.EventTimestamp > lastEventTimestamp {
 				lastEventTimestamp = event.EventTimestamp
 			}
+			oldFileTimestamp = fileTimestamp
 			splitRowCount++
 		}
+
 		// Error from DB is captured eg: timeout error
 		err = rows.Err()
 		if err != nil {
 			log.WithFields(log.Fields{"err": err, "project_id": projectID}).Error("Error in executing query")
 			return 0, err
 		}
-
 		U.CloseReadQuery(rows, tx)
+
 		rowCount += splitRowCount
 		log.WithFields(log.Fields{"start": pullStartTime, "end": pullEndTime, "rowCount": splitRowCount}).Infof("Completed split %d out of %d", splitNum, len(startSplit))
 	}
-	noOfFiles := len(writerMap)
-	log.WithFields(log.Fields{"rowCount": rowCount, "writersCount": noOfFiles, "start": startTimeTimezone, "end": endTimeTimezone}).Info("Allotted rows to writers")
+	noOfOpenFiles := len(writerMap)
+	log.WithFields(log.Fields{"rowCount": rowCount, "writersOpen": noOfOpenFiles, "writersClosed": filesClosed, "start": startTimeTimezone, "end": endTimeTimezone}).Info("Allotted rows to writers")
 
 	if rowCount > M.EventsPullLimit {
 		// Todo(Dinesh): notify
@@ -257,21 +276,22 @@ func pullEventsData(projectID int64, startTimeTimezone, endTimeTimezone int64, f
 	}
 
 	//Closing writers (writing files)
-	log.WithFields(log.Fields{"writers": noOfFiles, "start": startTimeTimezone, "end": endTimeTimezone}).Info("Closing writers")
+	log.WithFields(log.Fields{"writers": noOfOpenFiles, "start": startTimeTimezone, "end": endTimeTimezone}).Info("Closing writers")
 	for _, writer := range writerMap {
 		err := (*writer).Close()
 		if err != nil {
 			log.WithError(err).Error("Error closing writer")
 			return 0, err
 		}
+		filesClosed += 1
 	}
-	log.WithFields(log.Fields{"writers": noOfFiles, "start": startTimeTimezone, "end": endTimeTimezone}).Info("All files successfully created")
+	log.WithFields(log.Fields{"writers": filesClosed, "start": startTimeTimezone, "end": endTimeTimezone}).Info("All files successfully created")
 
 	if rowCount > 0 {
 		log.WithFields(log.Fields{
 			"FirstEventTimestamp": firstEventTimestamp,
 			"LastEventTimesamp":   lastEventTimestamp,
-			"FilesCreated":        noOfFiles,
+			"FilesCreated":        filesClosed,
 			"NumberOfRows":        rowCount,
 			"NilEventProperties":  nilEventProperties,
 			"NilUserProperties":   nilUserProperties,

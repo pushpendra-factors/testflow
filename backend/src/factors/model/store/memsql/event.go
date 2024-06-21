@@ -2402,7 +2402,7 @@ func (store *MemSQL) OverwriteEventUserPropertiesByID(projectID int64, userID,
 }
 
 // PullEventRows - Function to pull events for factors model building sequentially.
-func (store *MemSQL) PullEventRowsV2(projectID int64, startTime, endTime int64) (*sql.Rows, *sql.Tx, error) {
+func (store *MemSQL) PullEventRowsV2(projectID int64, startTime, endTime int64, sortOnTimestamp bool) (*sql.Rows, *sql.Tx, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"start_time": startTime,
@@ -2410,6 +2410,10 @@ func (store *MemSQL) PullEventRowsV2(projectID int64, startTime, endTime int64) 
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 
+	var orderStr string = ""
+	if sortOnTimestamp {
+		orderStr = "ORDER BY events.timestamp "
+	}
 	rawQuery := fmt.Sprintf("SELECT COALESCE(users.customer_user_id, users.id), event_names.name, events.timestamp, events.count,"+
 		" events.properties, users.join_timestamp, events.user_properties, users.is_group_user , users.group_1_user_id, users.group_2_user_id, users.group_3_user_id, users.group_4_user_id,"+
 		" users.group_5_user_id, users.group_6_user_id, users.group_7_user_id, users.group_8_user_id,users.group_1_id, users.group_2_id, users.group_3_id, users.group_4_id,users.group_5_id,"+
@@ -2417,8 +2421,8 @@ func (store *MemSQL) PullEventRowsV2(projectID int64, startTime, endTime int64) 
 		"LEFT JOIN event_names ON events.event_name_id = event_names.id "+
 		"LEFT JOIN users ON events.user_id = users.id AND users.project_id = %d "+
 		"WHERE events.project_id = %d AND UNIX_TIMESTAMP(events.created_at) BETWEEN %d AND %d "+
-		"LIMIT %d",
-		projectID, projectID, startTime, endTime, model.EventsPullLimit+1)
+		"%sLIMIT %d",
+		projectID, projectID, startTime, endTime, orderStr, model.EventsPullLimit+1)
 
 	rows, tx, err, _ := store.ExecQueryWithContext(rawQuery, []interface{}{})
 	return rows, tx, err
