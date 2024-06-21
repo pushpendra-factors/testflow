@@ -54,6 +54,7 @@ export const FEATURES = {
   FEATURE_RUDDERSTACK: 'rudderstack',
   FEATURE_SEGMENT_KPI: 'segment_kpi',
   FEATURE_LINKEDIN_FREQUENCY_CAPPING: 'linkedin_frequency_capping',
+  FEATURE_DEMANDBASE: 'demandbase',
   CONF_CUSTOM_PROPERTIES: 'conf_custom_properties',
   CONF_CUSTOM_EVENTS: 'conf_custom_events'
 };

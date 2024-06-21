@@ -21,6 +21,7 @@ import FactorsAccountIdentification from './FactorsAccountIdentification';
 import G2 from './G2';
 import SDKSettings from '../SDKSettings';
 import { SDKDocumentation } from '../../../../features/onboarding/utils';
+import Demandbase from './Demandbase';
 
 export const INTEGRATION_ID = {
   sdk: 'sdk',
@@ -37,6 +38,7 @@ export const INTEGRATION_ID = {
   clearbit_reveal: FEATURES.FEATURE_CLEARBIT,
   six_signal_by_6_sense: FEATURES.FEATURE_SIX_SIGNAL,
   factors_website_de_anonymization: FEATURES.FEATURE_FACTORS_DEANONYMISATION,
+  demand_base: FEATURES.FEATURE_DEMANDBASE,
   slack: FEATURES.FEATURE_SLACK,
   microsoft_teams: FEATURES.FEATURE_TEAMS,
   drift: FEATURES.FEATURE_DRIFT,
@@ -356,6 +358,16 @@ export const AccountIdentificationProviderData: IntegrationConfig[] = [
       'https://help.factors.ai/en/articles/7261981-clearbit-reveal-integration',
     featureName: FEATURES.FEATURE_CLEARBIT,
     Component: Reveal,
+    showInstructionMenu: false
+  },
+  {
+    id: INTEGRATION_ID.demand_base,
+    categoryId: INTEGRATION_CATEGORY_ID.accountIdentification,
+    name: 'Demandbase',
+    desc: 'Use Demandbase to identify accounts. Your usage will be billed by Demandbase directly.',
+    icon: 'DemandBaseLogo',
+    featureName: FEATURES.FEATURE_DEMANDBASE,
+    Component: Demandbase,
     showInstructionMenu: false
   }
 ];
