@@ -625,6 +625,17 @@ func (store *MemSQL) GetProjectsInfoByIDs(ids []int64) ([]model.ProjectInfo, int
 		return projects, http.StatusNoContent
 	}
 
+	// add login method to project infos
+
+	for idx, project := range projects {
+		settings, status := store.GetProjectSetting(project.ID)
+		if status != http.StatusFound {
+			log.WithField("project_id", project.ID).Error("Failed to fetch project settings")
+			return nil, http.StatusInternalServerError
+		}
+		projects[idx].LoginMethod = settings.SSOState
+	}
+
 	return projects, http.StatusFound
 }
 
