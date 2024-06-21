@@ -43,6 +43,7 @@
     "react-resizable": "^3.0.5",
     "react-router-dom": "^5.2.0",
     "react-sortablejs": "^6.0.0",
+    "react-youtube": "^10.1.0",
     "redux": "^4.0.5",
     "redux-persist": "^6.0.0",
     "reselect": "^4.1.8",

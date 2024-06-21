@@ -4,20 +4,24 @@ import { Progress } from 'antd';
 const ProgressBar = ({
   percentage,
   showInfo = false,
-  trailColor = '#D9D9D9'
+  trailColor = '#D9D9D9',
+  strokeColor
 }: ProgressProps) => {
-  let strokeColor;
-  if (percentage < 75) {
-    strokeColor = '#1890FF';
-  } else if (percentage < 100) {
-    strokeColor = '#FAAD14';
-  } else {
-    strokeColor = '#EA6262';
+  let localStrokeColor = '';
+  if (!strokeColor) {
+    if (percentage < 75) {
+      localStrokeColor = '#597EF7';
+    } else if (percentage < 100) {
+      localStrokeColor = '#FFA940';
+    } else {
+      localStrokeColor = '##F5222D';
+    }
   }
+
   return (
     <Progress
       percent={percentage}
-      strokeColor={strokeColor}
+      strokeColor={strokeColor || localStrokeColor}
       showInfo={showInfo}
       trailColor={trailColor}
     />
@@ -28,6 +32,7 @@ type ProgressProps = {
   percentage: number;
   showInfo?: boolean;
   trailColor?: string;
+  strokeColor?: string;
 };
 
 export default ProgressBar;

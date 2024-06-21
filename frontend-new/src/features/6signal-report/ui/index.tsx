@@ -16,9 +16,7 @@ import { OptionType } from 'Components/GenericComponents/FaSelect/types';
 import { setShowAnalyticsResult } from 'Reducers/coreQuery/actions';
 import { bindActionCreators } from 'redux';
 import usePrevious from 'hooks/usePrevious';
-import RangeNudge from 'Components/GenericComponents/RangeNudge';
-import { FeatureConfigState } from 'Reducers/featureConfig/types';
-import { showUpgradeNudge } from 'Views/Settings/ProjectSettings/Pricing/utils';
+import UpgradeNudge from 'Components/GenericComponents/UpgradeNudge';
 import {
   VisitorReportActions,
   initialState,
@@ -68,9 +66,6 @@ const SixSignalReport = ({
     currentProjectSettings,
     currentProjectSettingsLoading
   } = useSelector((state: any) => state.global);
-  const { sixSignalInfo } = useSelector(
-    (state: any) => state.featureConfig
-  ) as FeatureConfigState;
 
   const routerQuery = useQuery();
   const history = useHistory();
@@ -464,19 +459,9 @@ const SixSignalReport = ({
           showShareButton={showShareButton}
         />
       )}
-      {showUpgradeNudge(
-        sixSignalInfo?.usage || 0,
-        sixSignalInfo?.limit || 0,
-        currentProjectSettings
-      ) && (
-        <div className='mb-4'>
-          <RangeNudge
-            title='Accounts Identified'
-            amountUsed={sixSignalInfo?.usage || 0}
-            totalLimit={sixSignalInfo?.limit || 0}
-          />
-        </div>
-      )}
+      <div className='mb-4'>
+        <UpgradeNudge />
+      </div>
 
       <div className={cx({ 'px-24 pt-16 mt-12': !isLoggedIn })}>
         <div className='flex justify-between align-middle'>
