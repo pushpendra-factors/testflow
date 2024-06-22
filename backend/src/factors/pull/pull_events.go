@@ -31,7 +31,7 @@ var FileType = map[string]int64{
 	M.USERS:          7,
 }
 
-// check if add session job is completed, then pull events(with Hubspot and Salesforce) data into cloud files with proper logging
+// check if add session job is completed, then pull events(with Hubspot and Salesforce) data into cloud files
 func PullDataForEvents(projectId int64, cloudManager *filestore.FileManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone int64, splitRangeProjectIds []int64, noOfSplits int, sortOnTimestamp bool, status map[string]interface{}, logCtx *log.Entry) (error, bool) {
 
 	if yes, err := CheckIfAddSessionCompleted(projectId, endTimestampInProjectTimezone); !yes {
@@ -55,7 +55,7 @@ func PullDataForEvents(projectId int64, cloudManager *filestore.FileManager, sta
 	_, cName := (*cloudManager).GetDailyEventArchiveFilePathAndName(projectId, 0, startTimestamp, endTimestamp)
 	startAt := time.Now().UnixNano()
 
-	eventsCount, err := pullEventsData(projectId, startTimestampInProjectTimezone, endTimestampInProjectTimezone, cName, cloudManager, startTimestamp, endTimestamp, splitRange, noOfSplits, sortOnTimestamp)
+	eventsCount, err := pullEventsData(projectId, startTimestampInProjectTimezone, endTimestampInProjectTimezone, cName, cloudManager, startTimestamp, splitRange, noOfSplits, sortOnTimestamp)
 	if err != nil {
 		logCtx.WithError(err).Error("Pull events failed. Pull and write events failed.")
 		status["events-error"] = err.Error()
@@ -78,214 +78,26 @@ func PullDataForEvents(projectId int64, cloudManager *filestore.FileManager, sta
 }
 
 // pull events(rows) from db into cloud files
-func pullEventsData(projectID int64, startTimeTimezone, endTimeTimezone int64, fileName string, cloudManager *filestore.FileManager, startTimestamp, endTimestamp int64, splitRange bool, noOfSplits int, sortOnTimestamp bool) (int, error) {
+func pullEventsData(projectID int64, startTimeTimezone, endTimeTimezone int64, fileName string, cloudManager *filestore.FileManager, startTimestamp int64, splitRange bool, noOfSplits int, sortOnTimestamp bool) (int, error) {
 
 	var firstEventTimestamp, lastEventTimestamp int64
-	var writerMap = make(map[int64]*io.WriteCloser)
 	rowCount := 0
-	nilUserProperties := 0
-	nilEventProperties := 0
-
-	if sortOnTimestamp && noOfSplits > 1 {
-		log.Info("sortOnTimestamp not supported with splits>1, making splits=1")
-		noOfSplits = 1
-	}
 	var filesClosed int = 0
-
-	var perQueryRange = endTimestamp - startTimestamp
-	startSplit, endSplit := getTimeStampArraysAfterSplit(splitRange, noOfSplits, startTimeTimezone, endTimeTimezone, &perQueryRange)
-	for i := range startSplit {
-		splitRowCount := 0
-		splitNum := i + 1
-		pullStartTime := startSplit[i]
-		pullEndTime := endSplit[i]
-		var oldFileTimestamp int64 = 0
-
-		//pull data from db in the form of rows
-		log.WithFields(log.Fields{"start": pullStartTime, "end": pullEndTime}).Infof("Executing split %d out of %d", splitNum, len(startSplit))
-		rows, tx, err := store.GetStore().PullEventRowsV2(projectID, pullStartTime, pullEndTime, sortOnTimestamp)
+	var err error
+	if sortOnTimestamp {
+		rowCount, filesClosed, err = pullEventsDataBySortingTimestampOnDb(projectID, startTimeTimezone, endTimeTimezone, 0, startTimeTimezone, startTimestamp, cloudManager, fileName, &firstEventTimestamp, &lastEventTimestamp)
 		if err != nil {
-			log.WithError(err).Error("SQL Query failed.")
+			log.WithFields(log.Fields{"project_id": projectID}).Error("Error pullEventsDataBySortingTimestampOnDb")
 			return 0, err
 		}
-
-		for rows.Next() {
-			var userID string
-			var eventName string
-			var eventTimestamp int64
-			var userJoinTimestamp int64
-			var eventCardinality uint
-			var eventProperties *postgres.Jsonb
-			var userProperties *postgres.Jsonb
-			var is_group_user_null sql.NullBool
-			var group_1_user_id_null sql.NullString
-			var group_2_user_id_null sql.NullString
-			var group_3_user_id_null sql.NullString
-			var group_4_user_id_null sql.NullString
-			var group_5_user_id_null sql.NullString
-			var group_6_user_id_null sql.NullString
-			var group_7_user_id_null sql.NullString
-			var group_8_user_id_null sql.NullString
-			var group_1_id_null sql.NullString
-			var group_2_id_null sql.NullString
-			var group_3_id_null sql.NullString
-			var group_4_id_null sql.NullString
-			var group_5_id_null sql.NullString
-			var group_6_id_null sql.NullString
-			var group_7_id_null sql.NullString
-			var group_8_id_null sql.NullString
-			if err = rows.Scan(&userID, &eventName, &eventTimestamp, &eventCardinality, &eventProperties, &userJoinTimestamp, &userProperties,
-				&is_group_user_null, &group_1_user_id_null, &group_2_user_id_null, &group_3_user_id_null, &group_4_user_id_null,
-				&group_5_user_id_null, &group_6_user_id_null, &group_7_user_id_null, &group_8_user_id_null,
-				&group_1_id_null, &group_2_id_null, &group_3_id_null, &group_4_id_null,
-				&group_5_id_null, &group_6_id_null, &group_7_id_null, &group_8_id_null); err != nil {
-				log.WithFields(log.Fields{"err": err}).Error("SQL Parse failed.")
-				return 0, err
-			}
-
-			//get file timestamp w.r.t event timestamp
-			daysFromStart := int64(math.Floor(float64(eventTimestamp-startTimeTimezone) / float64(U.Per_day_epoch)))
-			fileTimestamp := startTimestamp + daysFromStart*U.Per_day_epoch
-
-			if sortOnTimestamp && (fileTimestamp > oldFileTimestamp && oldFileTimestamp != 0) {
-				prevWriter := writerMap[oldFileTimestamp]
-				err := (*prevWriter).Close()
-				if err != nil {
-					log.WithError(err).Error("Error closing writer")
-					return 0, err
-				}
-				filesClosed += 1
-				delete(writerMap, oldFileTimestamp)
-			}
-			//get apt writer w.r.t file timestamp
-			writer, err := getAptWriterFromMap(projectID, writerMap, cloudManager, fileName, fileTimestamp, U.DataTypeEvent, "")
-			if err != nil {
-				log.WithError(err).Error("error getting apt writer from file")
-				return 0, err
-			}
-
-			//event props
-			eventPropertiesMap, err := getMapFromPostgresJson(eventProperties)
-			if err != nil {
-				log.WithError(err).WithFields(log.Fields{"project_id": projectID}).Error("error getting event properties")
-				return 0, err
-			}
-			if len(eventPropertiesMap) == 0 {
-				nilEventProperties++
-			}
-
-			//user props
-			userPropertiesMap, err := getMapFromPostgresJson(userProperties)
-			if err != nil {
-				log.WithError(err).WithFields(log.Fields{"project_id": projectID}).Error("error getting user properties")
-				return 0, err
-			}
-			if len(userPropertiesMap) == 0 {
-				nilUserProperties++
-			}
-
-			//group variables
-			is_group_user := U.IfThenElse(is_group_user_null.Valid, is_group_user_null.Bool, false).(bool)
-
-			group_1_user_id := U.IfThenElse(group_1_user_id_null.Valid, group_1_user_id_null.String, "").(string)
-			group_2_user_id := U.IfThenElse(group_2_user_id_null.Valid, group_2_user_id_null.String, "").(string)
-			group_3_user_id := U.IfThenElse(group_3_user_id_null.Valid, group_3_user_id_null.String, "").(string)
-			group_4_user_id := U.IfThenElse(group_4_user_id_null.Valid, group_4_user_id_null.String, "").(string)
-			group_5_user_id := U.IfThenElse(group_5_user_id_null.Valid, group_5_user_id_null.String, "").(string)
-			group_6_user_id := U.IfThenElse(group_6_user_id_null.Valid, group_6_user_id_null.String, "").(string)
-			group_7_user_id := U.IfThenElse(group_7_user_id_null.Valid, group_7_user_id_null.String, "").(string)
-			group_8_user_id := U.IfThenElse(group_8_user_id_null.Valid, group_8_user_id_null.String, "").(string)
-
-			group_1_id := U.IfThenElse(group_1_id_null.Valid, group_1_id_null.String, "").(string)
-			group_2_id := U.IfThenElse(group_2_id_null.Valid, group_2_id_null.String, "").(string)
-			group_3_id := U.IfThenElse(group_3_id_null.Valid, group_3_id_null.String, "").(string)
-			group_4_id := U.IfThenElse(group_4_id_null.Valid, group_4_id_null.String, "").(string)
-			group_5_id := U.IfThenElse(group_5_id_null.Valid, group_5_id_null.String, "").(string)
-			group_6_id := U.IfThenElse(group_6_id_null.Valid, group_6_id_null.String, "").(string)
-			group_7_id := U.IfThenElse(group_7_id_null.Valid, group_7_id_null.String, "").(string)
-			group_8_id := U.IfThenElse(group_8_id_null.Valid, group_8_id_null.String, "").(string)
-
-			//initialise event with apt values
-			event := P.CounterEventFormat{
-				UserId:            userID,
-				UserJoinTimestamp: userJoinTimestamp,
-				EventName:         eventName,
-				EventTimestamp:    eventTimestamp,
-				EventCardinality:  eventCardinality,
-				EventProperties:   eventPropertiesMap,
-				UserProperties:    userPropertiesMap,
-				IsGroupUser:       is_group_user,
-				Group1UserId:      group_1_user_id,
-				Group2UserId:      group_2_user_id,
-				Group3UserId:      group_3_user_id,
-				Group4UserId:      group_4_user_id,
-				Group5UserId:      group_5_user_id,
-				Group6UserId:      group_6_user_id,
-				Group7UserId:      group_7_user_id,
-				Group8UserId:      group_8_user_id,
-				Group1Id:          group_1_id,
-				Group2Id:          group_2_id,
-				Group3Id:          group_3_id,
-				Group4Id:          group_4_id,
-				Group5Id:          group_5_id,
-				Group6Id:          group_6_id,
-				Group7Id:          group_7_id,
-				Group8Id:          group_8_id,
-			}
-
-			//write event
-			lineBytes, err := json.Marshal(event)
-			if err != nil {
-				log.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal event.")
-				return 0, err
-			}
-			line := string(lineBytes)
-			if _, err := io.WriteString(*writer, fmt.Sprintf("%s\n", line)); err != nil {
-				log.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
-				return 0, err
-			}
-
-			//info variables
-			if event.EventTimestamp < firstEventTimestamp {
-				firstEventTimestamp = event.EventTimestamp
-			}
-			if event.EventTimestamp > lastEventTimestamp {
-				lastEventTimestamp = event.EventTimestamp
-			}
-			oldFileTimestamp = fileTimestamp
-			splitRowCount++
-		}
-
-		// Error from DB is captured eg: timeout error
-		err = rows.Err()
+	} else {
+		rowCount, filesClosed, err = pullEventsDataBySplittingPullTimestamps(projectID, splitRange, &noOfSplits, startTimeTimezone, endTimeTimezone, startTimestamp, cloudManager, fileName, &firstEventTimestamp, &lastEventTimestamp)
 		if err != nil {
-			log.WithFields(log.Fields{"err": err, "project_id": projectID}).Error("Error in executing query")
+			log.WithFields(log.Fields{"project_id": projectID}).Error("Error pullEventsDataBySortingTimestampOnDb")
 			return 0, err
 		}
-		U.CloseReadQuery(rows, tx)
-
-		rowCount += splitRowCount
-		log.WithFields(log.Fields{"start": pullStartTime, "end": pullEndTime, "rowCount": splitRowCount}).Infof("Completed split %d out of %d", splitNum, len(startSplit))
 	}
-	noOfOpenFiles := len(writerMap)
-	log.WithFields(log.Fields{"rowCount": rowCount, "writersOpen": noOfOpenFiles, "writersClosed": filesClosed, "start": startTimeTimezone, "end": endTimeTimezone}).Info("Allotted rows to writers")
-
-	if rowCount > M.EventsPullLimit {
-		// Todo(Dinesh): notify
-		return rowCount, fmt.Errorf("events count has exceeded the %d limit", M.EventsPullLimit)
-	}
-
-	//Closing writers (writing files)
-	log.WithFields(log.Fields{"writers": noOfOpenFiles, "start": startTimeTimezone, "end": endTimeTimezone}).Info("Closing writers")
-	for _, writer := range writerMap {
-		err := (*writer).Close()
-		if err != nil {
-			log.WithError(err).Error("Error closing writer")
-			return 0, err
-		}
-		filesClosed += 1
-	}
-	log.WithFields(log.Fields{"writers": filesClosed, "start": startTimeTimezone, "end": endTimeTimezone}).Info("All files successfully created")
+	log.WithFields(log.Fields{"filesClosed": filesClosed, "startTimezone": startTimeTimezone, "endTimezone": endTimeTimezone}).Info("All files successfully created")
 
 	if rowCount > 0 {
 		log.WithFields(log.Fields{
@@ -293,10 +105,16 @@ func pullEventsData(projectID int64, startTimeTimezone, endTimeTimezone int64, f
 			"LastEventTimesamp":   lastEventTimestamp,
 			"FilesCreated":        filesClosed,
 			"NumberOfRows":        rowCount,
-			"NilEventProperties":  nilEventProperties,
-			"NilUserProperties":   nilUserProperties,
+			"SortedOnDb":          sortOnTimestamp,
+			"NumberOfSplits":      noOfSplits,
 		}).Info("Events pulled information.")
 	}
+
+	if rowCount > M.EventsPullLimit {
+		// Todo(Dinesh): notify
+		return rowCount, fmt.Errorf("events count has exceeded the %d limit", M.EventsPullLimit)
+	}
+
 	return rowCount, nil
 }
 
@@ -495,12 +313,12 @@ func getStartAndEndTimestampFromFileName(fileName string) (int64, int64, error) 
 }
 
 // get 2 equal length arrays with start and end timestamps after split
-func getTimeStampArraysAfterSplit(splitRange bool, noOfSplits int, startTimestamp, endTimestamp int64, perQueryRange *int64) ([]int64, []int64) {
+func getTimeStampArraysAfterSplit(splitRange bool, noOfSplits int, startTimestamp, endTimestamp int64) ([]int64, []int64) {
 	var startSplit = make([]int64, 0)
 	var endSplit = make([]int64, 0)
 	if splitRange && noOfSplits > 1 {
 		var tmpStart, tmpEnd int64
-		*perQueryRange = (endTimestamp - startTimestamp) / int64(noOfSplits)
+		perQueryRange := (endTimestamp - startTimestamp) / int64(noOfSplits)
 		for i := 0; i < noOfSplits; i++ {
 			if i == 0 {
 				tmpStart = startTimestamp
@@ -510,7 +328,7 @@ func getTimeStampArraysAfterSplit(splitRange bool, noOfSplits int, startTimestam
 			if i == noOfSplits-1 {
 				tmpEnd = endTimestamp
 			} else {
-				tmpEnd = tmpStart + *perQueryRange - 1
+				tmpEnd = tmpStart + perQueryRange - 1
 			}
 			startSplit = append(startSplit, tmpStart)
 			endSplit = append(endSplit, tmpEnd)
@@ -573,4 +391,318 @@ func GetDailyArchiveFilePathAndName(fileManager *filestore.FileManager, dataType
 		log.Errorf("wrong dataType: %s", dataType)
 	}
 	return "", ""
+}
+
+func pullEventsDataBySortingTimestampOnDb(projectID, pullStartTime, pullEndTime, minEventTimestamp int64, startTimeTimezone, startTimestamp int64, cloudManager *filestore.FileManager, fileName string, firstEventTimestamp, lastEventTimestamp *int64) (int, int, error) {
+
+	rows, tx, err := store.GetStore().PullEventRowsV2(projectID, pullStartTime, pullEndTime, true, minEventTimestamp)
+	if err != nil {
+		log.WithError(err).Error("SQL Query failed.")
+		return 0, 0, err
+	}
+
+	var writer io.WriteCloser
+	rowCount := 0
+	var lastFileTimestamp int64 = 0
+	filesClosed := 0
+	for rows.Next() {
+		rowCount++
+
+		var userID string
+		var eventName string
+		var eventTimestamp int64
+		var userJoinTimestamp int64
+		var eventCardinality uint
+		var eventProperties *postgres.Jsonb
+		var userProperties *postgres.Jsonb
+		var is_group_user_null sql.NullBool
+		var group_1_user_id_null sql.NullString
+		var group_2_user_id_null sql.NullString
+		var group_3_user_id_null sql.NullString
+		var group_4_user_id_null sql.NullString
+		var group_5_user_id_null sql.NullString
+		var group_6_user_id_null sql.NullString
+		var group_7_user_id_null sql.NullString
+		var group_8_user_id_null sql.NullString
+		var group_1_id_null sql.NullString
+		var group_2_id_null sql.NullString
+		var group_3_id_null sql.NullString
+		var group_4_id_null sql.NullString
+		var group_5_id_null sql.NullString
+		var group_6_id_null sql.NullString
+		var group_7_id_null sql.NullString
+		var group_8_id_null sql.NullString
+		if err = rows.Scan(&userID, &eventName, &eventTimestamp, &eventCardinality, &eventProperties, &userJoinTimestamp, &userProperties,
+			&is_group_user_null, &group_1_user_id_null, &group_2_user_id_null, &group_3_user_id_null, &group_4_user_id_null,
+			&group_5_user_id_null, &group_6_user_id_null, &group_7_user_id_null, &group_8_user_id_null,
+			&group_1_id_null, &group_2_id_null, &group_3_id_null, &group_4_id_null,
+			&group_5_id_null, &group_6_id_null, &group_7_id_null, &group_8_id_null); err != nil {
+			log.WithFields(log.Fields{"err": err}).Error("SQL Parse failed.")
+			return rowCount, filesClosed, err
+		}
+
+		//get file timestamp w.r.t event timestamp
+		daysFromStart := int64(math.Floor(float64(eventTimestamp-startTimeTimezone) / float64(U.Per_day_epoch)))
+		fileTimestamp := startTimestamp + daysFromStart*U.Per_day_epoch
+
+		if fileTimestamp > lastFileTimestamp {
+			if lastFileTimestamp != 0 {
+				err := writer.Close()
+				if err != nil {
+					log.WithError(err).Error("Error closing writer")
+					return rowCount, filesClosed, err
+				}
+				filesClosed += 1
+				minEventTimestamp = fileTimestamp + startTimeTimezone - startTimestamp
+			}
+			cPath, _ := GetDailyArchiveFilePathAndName(cloudManager, U.DataTypeEvent, "", projectID, fileTimestamp, 0, 0)
+			writer, err = (*cloudManager).GetWriter(cPath, fileName)
+			if err != nil {
+				log.WithFields(log.Fields{"file": fileName, "err": err}).Error("Unable to get cloud file writer")
+				return rowCount, filesClosed, err
+			}
+		}
+
+		event, err := convertSqlValuesToEvent(projectID, userID, eventName, userJoinTimestamp, eventTimestamp, eventCardinality, eventProperties, userProperties, is_group_user_null,
+			group_1_user_id_null, group_2_user_id_null, group_3_user_id_null, group_4_user_id_null, group_5_user_id_null, group_6_user_id_null, group_7_user_id_null, group_8_user_id_null,
+			group_1_id_null, group_2_id_null, group_3_id_null, group_4_id_null, group_5_id_null, group_6_id_null, group_7_id_null, group_8_id_null)
+		if err != nil {
+			log.WithError(err).Error("error convertSqlValuesToEvent")
+			return rowCount, filesClosed, err
+		}
+
+		//write event
+		if err := writeEventToFile(*event, &writer); err != nil {
+			log.WithFields(log.Fields{"err": err}).Error("Unable to write event to file.")
+			return rowCount, filesClosed, err
+		}
+
+		//info variables
+		if *firstEventTimestamp == 0 {
+			*firstEventTimestamp = event.EventTimestamp
+		}
+		*lastEventTimestamp = event.EventTimestamp
+		lastFileTimestamp = fileTimestamp
+	}
+	err = rows.Err()
+	if err != nil {
+		log.WithFields(log.Fields{"rowCount": rowCount, "err": err, "project_id": projectID}).Error("Error in executing query")
+		if strings.HasPrefix(err.Error(), "Error 2293") { //timeout error
+			log.WithFields(log.Fields{"minEventTimestamp": minEventTimestamp, "err": err, "project_id": projectID}).Error("Executing again due to timeout")
+			rc, fc, err := pullEventsDataBySortingTimestampOnDb(projectID, pullStartTime, pullEndTime, minEventTimestamp, startTimeTimezone, startTimestamp, cloudManager, fileName, firstEventTimestamp, lastEventTimestamp)
+			return rowCount + rc, filesClosed + fc, err
+		}
+	}
+	U.CloseReadQuery(rows, tx)
+	err = writer.Close()
+	if err != nil {
+		log.WithError(err).Error("Error closing writer")
+		return rowCount, filesClosed, err
+	}
+	filesClosed += 1
+	return rowCount, filesClosed, nil
+}
+
+func pullEventsDataBySplittingPullTimestamps(projectID int64, splitRange bool, noOfSplits *int, startTimeTimezone, endTimeTimezone, startTimestamp int64, cloudManager *filestore.FileManager, fileName string, firstEventTimestamp, lastEventTimestamp *int64) (int, int, error) {
+	var writerMap = make(map[int64]*io.WriteCloser)
+	rowCount := 0
+	filesClosed := 0
+	startSplit, endSplit := getTimeStampArraysAfterSplit(splitRange, *noOfSplits, startTimeTimezone, endTimeTimezone)
+	for i := range startSplit {
+		splitRowCount := 0
+		splitNum := i + 1
+		pullStartTime := startSplit[i]
+		pullEndTime := endSplit[i]
+
+		//pull data from db in the form of rows
+		log.WithFields(log.Fields{"start": pullStartTime, "end": pullEndTime}).Infof("Executing split %d out of %d", splitNum, len(startSplit))
+		rows, tx, err := store.GetStore().PullEventRowsV2(projectID, pullStartTime, pullEndTime, false, 0)
+		if err != nil {
+			log.WithError(err).Error("SQL Query failed.")
+			return rowCount, filesClosed, err
+		}
+		for rows.Next() {
+			splitRowCount++
+
+			var userID string
+			var eventName string
+			var eventTimestamp int64
+			var userJoinTimestamp int64
+			var eventCardinality uint
+			var eventProperties *postgres.Jsonb
+			var userProperties *postgres.Jsonb
+			var is_group_user_null sql.NullBool
+			var group_1_user_id_null sql.NullString
+			var group_2_user_id_null sql.NullString
+			var group_3_user_id_null sql.NullString
+			var group_4_user_id_null sql.NullString
+			var group_5_user_id_null sql.NullString
+			var group_6_user_id_null sql.NullString
+			var group_7_user_id_null sql.NullString
+			var group_8_user_id_null sql.NullString
+			var group_1_id_null sql.NullString
+			var group_2_id_null sql.NullString
+			var group_3_id_null sql.NullString
+			var group_4_id_null sql.NullString
+			var group_5_id_null sql.NullString
+			var group_6_id_null sql.NullString
+			var group_7_id_null sql.NullString
+			var group_8_id_null sql.NullString
+			if err = rows.Scan(&userID, &eventName, &eventTimestamp, &eventCardinality, &eventProperties, &userJoinTimestamp, &userProperties,
+				&is_group_user_null, &group_1_user_id_null, &group_2_user_id_null, &group_3_user_id_null, &group_4_user_id_null,
+				&group_5_user_id_null, &group_6_user_id_null, &group_7_user_id_null, &group_8_user_id_null,
+				&group_1_id_null, &group_2_id_null, &group_3_id_null, &group_4_id_null,
+				&group_5_id_null, &group_6_id_null, &group_7_id_null, &group_8_id_null); err != nil {
+				log.WithFields(log.Fields{"err": err}).Error("SQL Parse failed.")
+				return rowCount, filesClosed, err
+			}
+
+			//get file timestamp w.r.t event timestamp
+			daysFromStart := int64(math.Floor(float64(eventTimestamp-startTimeTimezone) / float64(U.Per_day_epoch)))
+			fileTimestamp := startTimestamp + daysFromStart*U.Per_day_epoch
+
+			//get apt writer w.r.t file timestamp
+			writer, err := getAptWriterFromMap(projectID, writerMap, cloudManager, fileName, fileTimestamp, U.DataTypeEvent, "")
+			if err != nil {
+				log.WithError(err).Error("error getting apt writer from file")
+				return rowCount, filesClosed, err
+			}
+
+			event, err := convertSqlValuesToEvent(projectID, userID, eventName, userJoinTimestamp, eventTimestamp, eventCardinality, eventProperties, userProperties, is_group_user_null,
+				group_1_user_id_null, group_2_user_id_null, group_3_user_id_null, group_4_user_id_null, group_5_user_id_null, group_6_user_id_null, group_7_user_id_null, group_8_user_id_null,
+				group_1_id_null, group_2_id_null, group_3_id_null, group_4_id_null, group_5_id_null, group_6_id_null, group_7_id_null, group_8_id_null)
+			if err != nil {
+				log.WithError(err).Error("error convertSqlValuesToEvent")
+				return rowCount, filesClosed, err
+			}
+
+			//write event
+			if err := writeEventToFile(*event, writer); err != nil {
+				log.WithFields(log.Fields{"err": err}).Error("Unable to write event to file.")
+				return rowCount, filesClosed, err
+			}
+
+			//info variables
+			if event.EventTimestamp < *firstEventTimestamp {
+				*firstEventTimestamp = event.EventTimestamp
+			}
+			if event.EventTimestamp > *lastEventTimestamp {
+				*lastEventTimestamp = event.EventTimestamp
+			}
+
+		}
+
+		// Error from DB is captured eg: timeout error
+		err = rows.Err()
+		if err != nil {
+			log.WithFields(log.Fields{"start": pullStartTime, "end": pullEndTime, "rowCount": splitRowCount, "err": err, "project_id": projectID}).Error("Error in executing query")
+
+			if strings.HasPrefix(err.Error(), "Error 2293") { //timeout error {
+				log.WithFields(log.Fields{"err": err, "project_id": projectID}).Error("Executing again due to timeout")
+				*noOfSplits *= 2
+				return pullEventsDataBySplittingPullTimestamps(projectID, true, noOfSplits, startTimeTimezone, endTimeTimezone, startTimestamp, cloudManager, fileName, firstEventTimestamp, lastEventTimestamp)
+			}
+		}
+		U.CloseReadQuery(rows, tx)
+
+		rowCount += splitRowCount
+		log.WithFields(log.Fields{"start": pullStartTime, "end": pullEndTime, "rowCount": splitRowCount}).Infof("Completed split %d out of %d", splitNum, len(startSplit))
+	}
+	noOfOpenFiles := len(writerMap)
+
+	log.WithFields(log.Fields{"rowCount": rowCount, "writers": noOfOpenFiles, "start": startTimeTimezone, "end": endTimeTimezone}).Info("Allotted all rows to writers")
+
+	//Closing writers (writing files)
+	log.WithFields(log.Fields{"openWriters": noOfOpenFiles, "start": startTimeTimezone, "end": endTimeTimezone}).Info("Closing writers")
+	for _, writer := range writerMap {
+		err := (*writer).Close()
+		if err != nil {
+			log.WithError(err).Error("Error closing writer")
+			return rowCount, filesClosed, err
+		}
+		filesClosed += 1
+	}
+	return rowCount, filesClosed, nil
+}
+
+func convertSqlValuesToEvent(projectID int64, userID, eventName string, userJoinTimestamp, eventTimestamp int64, eventCardinality uint, eventProperties, userProperties *postgres.Jsonb, is_group_user_null sql.NullBool,
+	group_1_user_id_null, group_2_user_id_null, group_3_user_id_null, group_4_user_id_null, group_5_user_id_null, group_6_user_id_null, group_7_user_id_null, group_8_user_id_null,
+	group_1_id_null, group_2_id_null, group_3_id_null, group_4_id_null, group_5_id_null, group_6_id_null, group_7_id_null, group_8_id_null sql.NullString) (*P.CounterEventFormat, error) {
+	//event props
+	eventPropertiesMap, err := getMapFromPostgresJson(eventProperties)
+	if err != nil {
+		log.WithError(err).WithFields(log.Fields{"project_id": projectID}).Error("error getting event properties")
+		return nil, err
+	}
+
+	//user props
+	userPropertiesMap, err := getMapFromPostgresJson(userProperties)
+	if err != nil {
+		log.WithError(err).WithFields(log.Fields{"project_id": projectID}).Error("error getting user properties")
+		return nil, err
+	}
+	//group variables
+	is_group_user := U.IfThenElse(is_group_user_null.Valid, is_group_user_null.Bool, false).(bool)
+
+	group_1_user_id := U.IfThenElse(group_1_user_id_null.Valid, group_1_user_id_null.String, "").(string)
+	group_2_user_id := U.IfThenElse(group_2_user_id_null.Valid, group_2_user_id_null.String, "").(string)
+	group_3_user_id := U.IfThenElse(group_3_user_id_null.Valid, group_3_user_id_null.String, "").(string)
+	group_4_user_id := U.IfThenElse(group_4_user_id_null.Valid, group_4_user_id_null.String, "").(string)
+	group_5_user_id := U.IfThenElse(group_5_user_id_null.Valid, group_5_user_id_null.String, "").(string)
+	group_6_user_id := U.IfThenElse(group_6_user_id_null.Valid, group_6_user_id_null.String, "").(string)
+	group_7_user_id := U.IfThenElse(group_7_user_id_null.Valid, group_7_user_id_null.String, "").(string)
+	group_8_user_id := U.IfThenElse(group_8_user_id_null.Valid, group_8_user_id_null.String, "").(string)
+
+	group_1_id := U.IfThenElse(group_1_id_null.Valid, group_1_id_null.String, "").(string)
+	group_2_id := U.IfThenElse(group_2_id_null.Valid, group_2_id_null.String, "").(string)
+	group_3_id := U.IfThenElse(group_3_id_null.Valid, group_3_id_null.String, "").(string)
+	group_4_id := U.IfThenElse(group_4_id_null.Valid, group_4_id_null.String, "").(string)
+	group_5_id := U.IfThenElse(group_5_id_null.Valid, group_5_id_null.String, "").(string)
+	group_6_id := U.IfThenElse(group_6_id_null.Valid, group_6_id_null.String, "").(string)
+	group_7_id := U.IfThenElse(group_7_id_null.Valid, group_7_id_null.String, "").(string)
+	group_8_id := U.IfThenElse(group_8_id_null.Valid, group_8_id_null.String, "").(string)
+
+	//initialise event with apt values
+	event := P.CounterEventFormat{
+		UserId:            userID,
+		UserJoinTimestamp: userJoinTimestamp,
+		EventName:         eventName,
+		EventTimestamp:    eventTimestamp,
+		EventCardinality:  eventCardinality,
+		EventProperties:   eventPropertiesMap,
+		UserProperties:    userPropertiesMap,
+		IsGroupUser:       is_group_user,
+		Group1UserId:      group_1_user_id,
+		Group2UserId:      group_2_user_id,
+		Group3UserId:      group_3_user_id,
+		Group4UserId:      group_4_user_id,
+		Group5UserId:      group_5_user_id,
+		Group6UserId:      group_6_user_id,
+		Group7UserId:      group_7_user_id,
+		Group8UserId:      group_8_user_id,
+		Group1Id:          group_1_id,
+		Group2Id:          group_2_id,
+		Group3Id:          group_3_id,
+		Group4Id:          group_4_id,
+		Group5Id:          group_5_id,
+		Group6Id:          group_6_id,
+		Group7Id:          group_7_id,
+		Group8Id:          group_8_id,
+	}
+	return &event, nil
+}
+
+func writeEventToFile(event P.CounterEventFormat, writer *io.WriteCloser) error {
+	//write event
+	lineBytes, err := json.Marshal(event)
+	if err != nil {
+		log.WithFields(log.Fields{"err": err}).Error("Unable to unmarshal event.")
+		return err
+	}
+	line := string(lineBytes)
+	if _, err := io.WriteString(*writer, fmt.Sprintf("%s\n", line)); err != nil {
+		log.WithFields(log.Fields{"line": line, "err": err}).Error("Unable to write to file.")
+		return err
+	}
+	return nil
 }

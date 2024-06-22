@@ -147,8 +147,7 @@ func pullUsersDataFromDB(dateField string, source int, group int, projectID int6
 	rowCount := 0
 	nilProperties := 0
 
-	var perQueryRange = endTimestamp - startTimestamp
-	startSplit, endSplit := getTimeStampArraysAfterSplit(splitRange, noOfSplits, startTimeTimezone, endTimeTimezone, &perQueryRange)
+	startSplit, endSplit := getTimeStampArraysAfterSplit(splitRange, noOfSplits, startTimeTimezone, endTimeTimezone)
 	for i := range startSplit {
 		splitRowCount := 0
 		splitNum := i + 1
