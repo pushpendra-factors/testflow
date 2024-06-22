@@ -31,6 +31,7 @@ func PullAllDataV2(projectId int64, configs map[string]interface{}) (map[string]
 	eventSplitRangeProjectIds := configs["eventSplitRangeProjectIds"].([]int64)
 	userSplitRangeProjectIds := configs["userSplitRangeProjectIds"].([]int64)
 	noOfSplits := configs["noOfSplits"].(int)
+	sortOnTimestamp := configs["sortOnTimestamp"].(bool)
 
 	status := make(map[string]interface{})
 	if projectId == 0 {
@@ -77,7 +78,7 @@ func PullAllDataV2(projectId int64, configs map[string]interface{}) (map[string]
 
 	// EVENTS
 	if pullFileTypes["events"] {
-		if _, ok := pull.PullDataForEvents(projectId, cloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, eventSplitRangeProjectIds, noOfSplits, status, logCtx); !ok {
+		if _, ok := pull.PullDataForEvents(projectId, cloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, eventSplitRangeProjectIds, noOfSplits, sortOnTimestamp, status, logCtx); !ok {
 			return status, false
 		}
 	}
