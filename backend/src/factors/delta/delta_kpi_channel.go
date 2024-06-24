@@ -401,7 +401,7 @@ func checkDependentProp(propInfo ChannelPropInfo, campaignDetails pull.CounterCa
 		if docVal, ok := existsInProps(key, campaignDetails.Value, extraProps, "either"); !ok {
 			return 0, false, nil
 		} else if op != "" {
-			docVal, err := getFloatValueFromInterface(docVal)
+			docVal, err := U.GetFloatValueFromInterface(docVal)
 			if err != nil {
 				return 0, false, err
 			}
@@ -420,7 +420,7 @@ func checkDependentProp(propInfo ChannelPropInfo, campaignDetails pull.CounterCa
 // check prop exists and get float value
 func getPropValueCampaign(propInfo ChannelPropInfo, campaignDetails pull.CounterCampaignFormat, extraProps map[string]interface{}) (float64, bool, error) {
 	if val, ok := existsInProps(propInfo.Name, campaignDetails.Value, extraProps, "either"); ok {
-		if floatVal, err := getFloatValueFromInterface(val); err != nil {
+		if floatVal, err := U.GetFloatValueFromInterface(val); err != nil {
 			return 0, false, err
 		} else {
 			return floatVal, true, nil

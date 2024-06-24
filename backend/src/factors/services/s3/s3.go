@@ -302,6 +302,82 @@ func (sd *S3Driver) GetPredictProjectDir(projectId int64, model_id int64) string
 	return pb.Join(path, "predict", model_str)
 }
 
+func (sd *S3Driver) GetEventsAggregateDailyProjectDir(projectID int64) string {
+	path := fmt.Sprintf("predictive_analysis/%d/", projectID)
+	return path
+}
+
+func (sd *S3Driver) GetEventsAggregateDailyDataDir(projectID int64, dataTimestamp int64) string {
+	dateFormatted := U.GetDateOnlyFromTimestampZ(dataTimestamp)
+	path := sd.GetEventsAggregateDailyProjectDir(projectID)
+	path = fmt.Sprintf("%s%s/", path, dateFormatted)
+	return path
+}
+
+func (sd *S3Driver) GetEventsAggregateDailyDataFilePathAndName(projectID int64, dataTimestamp int64) (string, string) {
+	path := sd.GetEventsAggregateDailyDataDir(projectID, dataTimestamp)
+	fileName := "data.txt"
+	return path, fileName
+}
+
+func (sd *S3Driver) GetEventsAggregateDailyPropsFilePathAndName(projectID int64, dataTimestamp int64) (string, string) {
+	path := sd.GetEventsAggregateDailyDataDir(projectID, dataTimestamp)
+	fileName := "accountPropCounts.txt"
+	return path, fileName
+}
+
+func (sd *S3Driver) GetEventsAggregateDailyCountsFilePathAndName(projectID int64, dataTimestamp int64) (string, string) {
+	path := sd.GetEventsAggregateDailyDataDir(projectID, dataTimestamp)
+	fileName := "eventsCounts.txt"
+	return path, fileName
+}
+
+func (sd *S3Driver) GetEventsAggregateDailyTargetFilePathAndName(projectID int64, dataTimestamp int64, targetEvent string) (string, string) {
+	path := sd.GetEventsAggregateDailyDataDir(projectID, dataTimestamp)
+	fileName := fmt.Sprintf("target_%s.txt", targetEvent)
+	return path, fileName
+}
+
+func (sd *S3Driver) GetPredictiveScoringDataProjectDir(projectID int64) string {
+	path := sd.GetProjectDir(projectID)
+	path = path + "predictive_scoring/"
+	return path
+}
+
+func (sd *S3Driver) GetPredictiveScoringDataDir(projectID int64, startTimestamp, endTimestamp int64, targetEvent string, minDaysOfInput, daysOfOutput, windowStartShift, windowEndShift int) string {
+	path := sd.GetPredictiveScoringDataProjectDir(projectID)
+	startDateFormatted := U.GetDateOnlyFromTimestampZ(startTimestamp)
+	endDateFormatted := U.GetDateOnlyFromTimestampZ(endTimestamp)
+	path = fmt.Sprintf("%s%s-%s/", path, startDateFormatted, endDateFormatted)
+	path = fmt.Sprintf("%s%d_%d_%d_%d/", path, minDaysOfInput, daysOfOutput, windowStartShift, windowEndShift)
+	path = fmt.Sprintf("%s%s/", path, targetEvent)
+	return path
+}
+
+func (sd *S3Driver) GetPredictiveScoringTrainingDataFilePathAndName(projectID int64, startTimestamp, endTimestamp int64, targetEvent string, minDaysOfInput, daysOfOutput, windowStartShift, windowEndShift int) (string, string) {
+	path := sd.GetPredictiveScoringDataDir(projectID, startTimestamp, endTimestamp, targetEvent, minDaysOfInput, daysOfOutput, windowStartShift, windowEndShift)
+	fileName := "training.txt"
+	return path, fileName
+}
+
+func (sd *S3Driver) GetPredictiveScoringPredictDataFilePathAndName(projectID int64, startTimestamp, endTimestamp int64, targetEvent string, minDaysOfInput, daysOfOutput, windowStartShift, windowEndShift int) (string, string) {
+	path := sd.GetPredictiveScoringDataDir(projectID, startTimestamp, endTimestamp, targetEvent, minDaysOfInput, daysOfOutput, windowStartShift, windowEndShift)
+	fileName := "predict.txt"
+	return path, fileName
+}
+
+func (sd *S3Driver) GetPredictiveScoringEventsCountsFilePathAndName(projectID int64, startTimestamp, endTimestamp int64, targetEvent string, minDaysOfInput, daysOfOutput, windowStartShift, windowEndShift int) (string, string) {
+	path := sd.GetPredictiveScoringDataDir(projectID, startTimestamp, endTimestamp, targetEvent, minDaysOfInput, daysOfOutput, windowStartShift, windowEndShift)
+	fileName := "eventsCounts.txt"
+	return path, fileName
+}
+
+func (sd *S3Driver) GetPredictiveScoringPropCountsFilePathAndName(projectID int64, startTimestamp, endTimestamp int64, targetEvent string, minDaysOfInput, daysOfOutput, windowStartShift, windowEndShift int) (string, string) {
+	path := sd.GetPredictiveScoringDataDir(projectID, startTimestamp, endTimestamp, targetEvent, minDaysOfInput, daysOfOutput, windowStartShift, windowEndShift)
+	fileName := "propCounts.txt"
+	return path, fileName
+}
+
 func (sd *S3Driver) GetWIPropertiesPathAndName(projectId int64) (string, string) {
 	path := sd.GetWIPropertiesDir(projectId)
 	return path, "properties.txt"

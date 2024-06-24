@@ -123,7 +123,7 @@ var pageviewMetricToCalcInfo = map[string]EventMetricCalculationInfo{
 func checkEngagedPageview(eventDetails P.CounterEventFormat, pageName string) (float64, bool, error) {
 	isEngaged := false
 	if spentTime, ok := existsInProps(U.EP_PAGE_SPENT_TIME, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
-		spentTime, err := getFloatValueFromInterface(spentTime)
+		spentTime, err := U.GetFloatValueFromInterface(spentTime)
 		if err != nil {
 			return 0, false, err
 		}
@@ -132,7 +132,7 @@ func checkEngagedPageview(eventDetails P.CounterEventFormat, pageName string) (f
 		}
 	}
 	if scrollPerc, ok := existsInProps(U.EP_PAGE_SCROLL_PERCENT, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
-		scrollPerc, err := getFloatValueFromInterface(scrollPerc)
+		scrollPerc, err := U.GetFloatValueFromInterface(scrollPerc)
 		if err != nil {
 			return 0, false, err
 		}

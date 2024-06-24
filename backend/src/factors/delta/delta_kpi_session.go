@@ -154,7 +154,7 @@ var sessionMetricToCalcInfo = map[string]EventMetricCalculationInfo{
 // check if given session event quailifies as bounced session (SP_PAGE_COUNT<2)
 func checkBouncedSession(eventDetails P.CounterEventFormat, pageName string) (float64, bool, error) {
 	if cnt, ok := existsInProps(U.SP_PAGE_COUNT, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
-		cnt, err := getFloatValueFromInterface(cnt)
+		cnt, err := U.GetFloatValueFromInterface(cnt)
 		if err != nil {
 			return 0, false, err
 		}
@@ -170,7 +170,7 @@ func checkBouncedSession(eventDetails P.CounterEventFormat, pageName string) (fl
 func checkEngagedSession(eventDetails P.CounterEventFormat, pageName string) (float64, bool, error) {
 	isEngaged := false
 	if timeSpent, ok := existsInProps(U.SP_SPENT_TIME, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
-		timeSpent, err := getFloatValueFromInterface(timeSpent)
+		timeSpent, err := U.GetFloatValueFromInterface(timeSpent)
 		if err != nil {
 			return 0, false, err
 		}
@@ -179,7 +179,7 @@ func checkEngagedSession(eventDetails P.CounterEventFormat, pageName string) (fl
 		}
 	}
 	if cnt, ok := existsInProps(U.SP_PAGE_COUNT, eventDetails.EventProperties, eventDetails.UserProperties, "ep"); ok {
-		cnt, err := getFloatValueFromInterface(cnt)
+		cnt, err := U.GetFloatValueFromInterface(cnt)
 		if err != nil {
 			return 0, false, err
 		}
