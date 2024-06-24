@@ -1839,7 +1839,7 @@ func (store *MemSQL) GetEventNameIDFromEventName(eventName string, projectId int
 	}
 
 	eventNameModel, errCode := store.GetEventName(eventName, projectId)
-	if errCode != http.StatusOK {
+	if errCode != http.StatusFound {
 		log.WithFields(logFields).Error("Failed to get event_id from event_name")
 		return nil, errors.New("Failed to get event_id from event_name")
 	}
