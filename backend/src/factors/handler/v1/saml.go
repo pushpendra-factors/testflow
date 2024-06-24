@@ -231,14 +231,14 @@ func SamlCallbackHandler(c *gin.Context) {
 
 	_, err = sp.ValidateEncodedResponse(rawSAMLResponse)
 	if err != nil {
-		fmt.Println(err)
-		return
+		log.WithField("projectID ", projectIdString).Error("failed to validate saml response")
+		c.AbortWithStatus(http.StatusInternalServerError)
 	}
 
 	assertion, err := sp.RetrieveAssertionInfo(rawSAMLResponse)
 	if err != nil {
-		fmt.Println(err)
-		return
+		log.WithField("projectID ", projectIdString).Error("failed to retrireve assertion from saml response")
+		c.AbortWithStatus(http.StatusInternalServerError)
 	}
 
 	// samlResponse, err := saml2.Verify(rawSAMLResponse, "", cert, expectedDestinationID, time.Now())
