@@ -523,13 +523,16 @@ func TransformPayloadForInProperties(globalUserProperties []QueryProperty) []Que
 	for i, p := range globalUserProperties {
 		if v, exist := IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]; exist {
 			v.LogicalOp = p.LogicalOp
-			if p.Value == "true" {
+
+			if U.EvaluateBoolPropertyValueWithOperatorForTrue(p.Value, p.Operator) {
 				globalUserProperties[i] = v
-			} else if p.Value == "false" || p.Value == "$none" {
+			} else if U.EvaluateBoolPropertyValueWithOperatorForFalse(p.Value, p.Operator) {
 				v.Operator = EqualsOpStr
 				v.Value = "$none"
 				globalUserProperties[i] = v
+
 			}
+
 		}
 	}
 	return globalUserProperties

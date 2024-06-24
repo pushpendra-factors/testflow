@@ -197,9 +197,9 @@ func (store *MemSQL) RunInsightsQuery(projectId int64, query model.Query, enable
 		for i, p := range query.GlobalUserProperties {
 			if v, exist := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]; exist {
 				v.LogicalOp = p.LogicalOp
-				if p.Value == "true" {
+				if U.EvaluateBoolPropertyValueWithOperatorForTrue(p.Value, p.Operator) {
 					query.GlobalUserProperties[i] = v
-				} else if p.Value == "false" || p.Value == "$none" {
+				} else if U.EvaluateBoolPropertyValueWithOperatorForFalse(p.Value, p.Operator) {
 					v.Operator = model.EqualsOpStr
 					v.Value = "$none"
 					query.GlobalUserProperties[i] = v

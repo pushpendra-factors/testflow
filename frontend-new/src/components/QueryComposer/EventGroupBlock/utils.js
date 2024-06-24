@@ -79,7 +79,7 @@ export const alertsGroupPropertyList = (
   userPropertiesV2,
   groupProperties,
   eventGroup = '',
-  groups,
+  groups = {},
   event
 ) => {
   const filterOptsObj = {};
@@ -115,8 +115,10 @@ export const alertsGroupPropertyList = (
   }
   if (!eventGroup) {
     if (userPropertiesV2) {
+      let deleteDuplicateObj = ['Company Identification'];
+      let updatedUserPropertiesV2 = _.omit(userPropertiesV2, deleteDuplicateObj);
       convertAndAddPropertiesToGroupSelectOptions(
-        userPropertiesV2,
+        updatedUserPropertiesV2,
         filterOptsObj,
         'user'
       );

@@ -37,12 +37,11 @@ function PropertyFilter({
   const toggleFilters = useCallback(() => {
     setFiltersExpanded((curr) => !curr);
     dispatch(setNewSegmentModeAction(false));
-  }, [dispatch, setFiltersExpanded]);
+  }, []);
 
   const handleCancel = useCallback(() => {
-    // toggleFilters();
     resetSelectedFilters();
-  }, [resetSelectedFilters, toggleFilters]);
+  }, []);
 
   if (filtersExpanded === false && newSegmentMode === false) {
     if (
@@ -92,8 +91,6 @@ function PropertyFilter({
       </Button>
     );
   }
-
-  if (!selectedFilters?.account?.length) return null;
 
   return (
     <div className='flex flex-col gap-y-4 w-full'>

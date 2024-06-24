@@ -37,9 +37,9 @@ func (store *MemSQL) RunFunnelQuery(projectId int64, query model.Query, enableFi
 		for i, p := range query.GlobalUserProperties {
 			if v, exist := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]; exist {
 				v.LogicalOp = p.LogicalOp
-				if p.Value == "true" {
+				if U.EvaluateBoolPropertyValueWithOperatorForTrue(p.Value, p.Operator) {
 					query.GlobalUserProperties[i] = v
-				} else if p.Value == "false" || p.Value == "$none" {
+				} else if U.EvaluateBoolPropertyValueWithOperatorForFalse(p.Value, p.Operator) {
 					v.Operator = model.EqualsOpStr
 					v.Value = "$none"
 					query.GlobalUserProperties[i] = v
@@ -739,7 +739,7 @@ func buildAddJoinForFunnelAllAccountsFunnelStep(projectID int64, queryGroupByPro
 	if model.CheckIfHasDomainGroupBy(queryGroupByProperty) {
 		joinStmnt = joinStmnt + fmt.Sprintf(" LEFT JOIN users as domain_users on %s.coal_group_user_id = domain_users.id "+
 			"AND domain_users.project_id = ? AND domain_users.source = 9", refStep)
-		return joinStmnt, []interface{}{projectID, projectID}
+		return joinStmnt, []interface{}{projectID}
 	}
 
 	return joinStmnt, []interface{}{projectID}

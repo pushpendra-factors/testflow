@@ -49,7 +49,8 @@ function EventBreakdownTable({
     sorter,
     handleSorting,
     userPropNames,
-    eventPropertiesDisplayNames
+    eventPropertiesDisplayNames,
+    resultState?.data?.meta?.query?.grpa
   );
   const tableDataSelector = (data) =>
     getTableData(data, breakdown, searchText, sorter);

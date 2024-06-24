@@ -1,7 +1,10 @@
 package memsql
 
 import (
+	"encoding/json"
 	"errors"
+	"factors/cache"
+	cacheRedis "factors/cache/redis"
 	C "factors/config"
 	"factors/model/model"
 	U "factors/util"
@@ -10,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gomodule/redigo/redis"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -43,14 +47,93 @@ func (store *MemSQL) GetPlanDetailsForProject(projectID int64) (model.PlanDetail
 }
 
 func (store *MemSQL) GetProjectPlanMappingforProject(projectID int64) (model.ProjectPlanMapping, error) {
-	db := C.GetServices().Db
 	var projectPlanMapping model.ProjectPlanMapping
-	err := db.Where("project_id = ?", projectID).Find(&projectPlanMapping).Error
+
+	// Get the project plan mapping from cache
+	projectPlanMapping, err := GetProjectPlanMappingFromCache(projectID)
+	if err == nil {
+		return projectPlanMapping, nil
+	}
+
+	// If not in cache, query the DB
+	db := C.GetServices().Db
+	err = db.Where("project_id = ?", projectID).Find(&projectPlanMapping).Error
 	if err != nil {
 		log.WithError(err).Error("Failed to get project plan mapping for projectID ", projectID)
-		return model.ProjectPlanMapping{}, errors.New("Failed to get project plan mapping")
+		return model.ProjectPlanMapping{}, errors.New("failed to get project plan mapping")
 	}
+
+	// Cache the project plan mapping
+	SetProjectPlanMappingCache(projectID, projectPlanMapping)
+
 	return projectPlanMapping, nil
+}
+
+func SetProjectPlanMappingCache(projectID int64, projectPlanMapping model.ProjectPlanMapping) {
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectID,
+	})
+
+	cacheKey, err := GetProjectPlanMappingCacheKey(projectID)
+	if err != nil {
+		logCtx.WithError(err).Error("Error getting SetCacheProjectPlanMapping key")
+		return
+	}
+
+	projectPlanMap, err := json.Marshal(projectPlanMapping)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to marshal value on SetCacheProjectPlanMapping")
+		return
+	}
+
+	const cacheInvalidationDuration = 24 * 60 * 60 // 24 hours in seconds
+	err = cacheRedis.Set(cacheKey, string(projectPlanMap), cacheInvalidationDuration)
+	if err != nil {
+		logCtx.WithError(err).Error("Failed to set cache on SetCacheProjectPlanMapping")
+		return
+	}
+}
+
+func GetProjectPlanMappingFromCache(projectID int64) (model.ProjectPlanMapping, error) {
+	var projectPlanMapping model.ProjectPlanMapping
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectID,
+	})
+
+	cacheKey, err := GetProjectPlanMappingCacheKey(projectID)
+	if err != nil {
+		logCtx.WithError(err).Error("Error getting cachekey on GetProjectPlanMappingFromCache")
+		return model.ProjectPlanMapping{}, err
+	}
+
+	result, err := cacheRedis.Get(cacheKey)
+	if err != nil {
+		if err == redis.ErrNil {
+			return model.ProjectPlanMapping{}, err
+		}
+		logCtx.WithError(err).Error("error getting cache result on GetProjectPlanMappingFromCache")
+		return model.ProjectPlanMapping{}, err
+	}
+
+	if err := json.Unmarshal([]byte(result), &projectPlanMapping); err != nil {
+		logCtx.WithError(err).Error("error decoding cache on GetProjectPlanMappingFromCache")
+		return model.ProjectPlanMapping{}, err
+	}
+
+	return projectPlanMapping, nil
+}
+
+func DeleteProjectPlanMappingCache(projectID int64) error {
+	if cacheKey, err := GetProjectPlanMappingCacheKey(projectID); err != nil {
+		return err
+	} else if err := cacheRedis.Del(cacheKey); err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetProjectPlanMappingCacheKey(projectID int64) (*cache.Key, error) {
+	return cache.NewKey(projectID, "project_plan_mapping", "")
 }
 
 func (store *MemSQL) GetPlanDetailsFromPlanId(id int64) (model.PlanDetails, int, string, error) {
@@ -323,7 +406,12 @@ func (store *MemSQL) UpdateProjectPlanMappingField(projectID int64, planType str
 
 	return http.StatusAccepted, "", nil
 }
+
 func (store *MemSQL) UpdateProjectPlanMapping(projectID int64, planMapping *model.ProjectPlanMapping) int {
+
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectID,
+	})
 
 	updateFields := make(map[string]interface{}, 0)
 	db := C.GetServices().Db
@@ -342,14 +430,14 @@ func (store *MemSQL) UpdateProjectPlanMapping(projectID int64, planMapping *mode
 
 	ppMapping, err := store.GetProjectPlanMappingforProject(projectID)
 	if err != nil {
-		log.WithError(err).Error(
+		logCtx.WithError(err).Error(
 			"Failed to get project plan mappings ")
 		return http.StatusInternalServerError
 	}
 
 	err = db.Model(&model.ProjectPlanMapping{}).Where("project_id = ?", projectID).Update(updateFields).Error
 	if err != nil {
-		log.WithError(err).Error(
+		logCtx.WithError(err).Error(
 			"Failed to execute query of update project plan mappings ")
 		return http.StatusInternalServerError
 	}
@@ -358,15 +446,21 @@ func (store *MemSQL) UpdateProjectPlanMapping(projectID int64, planMapping *mode
 		if planMapping.PlanID == model.PLAN_ID_CUSTOM {
 			err = store.CreateAddonsForCustomPlanForProject(projectID)
 			if err != nil {
-				log.WithError(err).Error(
+				logCtx.WithError(err).Error(
 					"Failed to create default addons for custom project ")
 				return http.StatusInternalServerError
 			}
 		}
 	}
 
+	// Cache invalidation
+	if err = DeleteProjectPlanMappingCache(projectID); err != nil {
+		logCtx.WithError(err).Error("Failed to invalidate cache on UpdateProjectPlanMapping")
+	}
+
 	return http.StatusOK
 }
+
 func (store *MemSQL) UpdateFeaturesForCustomPlan(projectID int64, AccountLimit int64, MtuLimit int64, AvailableFeatures []string) (int, error) {
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -429,6 +523,11 @@ func (store *MemSQL) UpdateFeaturesForCustomPlan(projectID int64, AccountLimit i
 	err = store.OnFeatureEnableOrDisableHook(projectID, updatedFeatures)
 	if err != nil {
 		logCtx.WithError(err).Error("Failed to update configs on plan update")
+	}
+
+	// Handle cache invalidation
+	if err = DeleteProjectPlanMappingCache(projectID); err != nil {
+		logCtx.WithError(err).Error("Failed to invalidate cache on UpdateFeaturesForCustomPlan")
 	}
 
 	return http.StatusAccepted, nil

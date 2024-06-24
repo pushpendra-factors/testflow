@@ -76,9 +76,9 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 	for i, p := range payload.Query.GlobalUserProperties {
 		if v, exist := model.IN_PROPERTIES_DEFAULT_QUERY_MAP[p.Property]; exist {
 			v.LogicalOp = p.LogicalOp
-			if p.Value == "true" {
+			if U.EvaluateBoolPropertyValueWithOperatorForTrue(p.Value, p.Operator) {
 				payload.Query.GlobalUserProperties[i] = v
-			} else if p.Value == "false" || p.Value == "$none" {
+			} else if U.EvaluateBoolPropertyValueWithOperatorForFalse(p.Value, p.Operator) {
 				v.Operator = model.EqualsOpStr
 				v.Value = "$none"
 				payload.Query.GlobalUserProperties[i] = v

@@ -6,6 +6,7 @@ import (
 	IntSalesforce "factors/integration/salesforce"
 	"factors/model/model"
 	"factors/model/store"
+	"factors/util"
 	U "factors/util"
 	"flag"
 	"fmt"
@@ -85,6 +86,28 @@ func overrideLastSyncTimestampIfRequired(overrideSyncTimestamp int64, syncInfo m
 	}
 
 	return syncInfo
+}
+
+// project_id-limit,project_id-limit
+func getProjectLimitMap(projectLimitList string) map[int64]int {
+	projectLimitList = strings.TrimSpace(projectLimitList)
+
+	projectLimitMap := map[int64]int{}
+	allProjectLimit := C.GetTokensFromStringListAsString(projectLimitList)
+	for i := range allProjectLimit {
+		projectLimit := strings.Split(allProjectLimit[i], "-")
+		projectID, err := util.GetPropertyValueAsInt64(projectLimit[0])
+		if err != nil {
+			log.Panic("failed to get project id from getProjectLimitMap.")
+		}
+
+		limit, err := util.GetPropertyValueAsInt64(projectLimit[1])
+		if err != nil {
+			log.Panic("failed to get project id from getProjectLimitMap.")
+		}
+		projectLimitMap[projectID] = int(limit)
+	}
+	return projectLimitMap
 }
 
 func main() {
@@ -175,6 +198,7 @@ func main() {
 	skipLeadEnrichmentByProjectID := flag.String("skip_lead_processing_by_project_id", "", "")
 	enrichOnlyObjects := flag.String("enrich_only_objects", "", "")
 	backfillLimit := flag.Int("backfill_limit", 0, "")
+	enrichRecordProcessLimitByProject := flag.String("enrich_record_process_limit_by_project", "", "custom limit for individual projects in comma separated project_id:limit format.")
 
 	flag.Parse()
 
@@ -292,6 +316,11 @@ func main() {
 		log.Panicf("Failed to get salesforce syncinfo: %d", status)
 	}
 
+	projectLimit := getProjectLimitMap(*enrichRecordProcessLimitByProject)
+	if len(projectLimit) > 0 {
+		log.WithField("project_limit", projectLimit).Info("Running custom enrich limit for following projects.")
+	}
+
 	allProjects, allowedProjects, disabledProjects := C.GetProjectsFromListWithAllProjectSupport(
 		*projectIDList, *disabledProjectIDList)
 	if !allProjects {
@@ -406,8 +435,13 @@ func main() {
 
 			var wg sync.WaitGroup
 			for pi := range batch {
+				enrichProcessLimit := projectLimit[batch[pi]]
+				if enrichProcessLimit == 0 {
+					enrichProcessLimit = *enrichRecordProcessLimit
+				}
+
 				wg.Add(1)
-				go syncWorker(batch[pi], &wg, workerIndex, *numDocRoutines, &enrichStatus, allowedSalesforceProjectSettings[batch[pi]], *enrichPullLimit, *enrichRecordProcessLimit, *documentLookbackDays, *backfillLimit, projectAllowedObjects[batch[pi]])
+				go syncWorker(batch[pi], &wg, workerIndex, *numDocRoutines, &enrichStatus, allowedSalesforceProjectSettings[batch[pi]], *enrichPullLimit, enrichProcessLimit, *documentLookbackDays, *backfillLimit, projectAllowedObjects[batch[pi]])
 				workerIndex++
 			}
 			wg.Wait()

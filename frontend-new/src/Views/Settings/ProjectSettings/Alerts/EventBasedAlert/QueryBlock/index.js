@@ -141,7 +141,7 @@ function QueryBlock({
   }, [queries]);
 
   const filterProperties = useMemo(() => {
-    const Company_identification = 'Company identification';
+    const Company_identification = 'Company Identification';
     if (!event) return {};
     const props = {
       event: eventPropertiesV2[event.label] || []

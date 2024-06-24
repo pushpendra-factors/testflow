@@ -41,6 +41,18 @@ def get_query_templates():
                 'How many %s with %s equals %s we had %s',
                 'Count of %s filter by %s equals %s %s'
             ],
+            'timeful_contains': [
+                '%s with %s containing %s in %s',
+                '%s having %s like %s in %s',
+                '%s with %s like %s in %s',
+                '%s with %s which sounds like %s in %s'
+            ],
+            'timeless_contains': [
+                '%s with %s containing %s',
+                '%s having %s like %s',
+                '%s with %s like %s',
+                '%s with %s which sounds like %s'
+            ],
             'timeless_not_equal' :['%s with %s not equal %s'],
             'timeful_not_equal': ['Number of %s having %s not equal %s in %s']
         },
@@ -78,7 +90,9 @@ def get_json_templates():
             'not_equals': '{"query_type": "kpi", "query_entity_1": "%s", \
                          "query_filter_1":[{"na": "%s", "val": "%s", "condition":"notEqual"}], "query_breakdown_1": "none", \
                          "time_range": "%s", "start_time": "default", "end_time": "default"}',
-
+            'contains': '{"query_type": "kpi", "query_entity_1": "%s", \
+                         "query_filter_1":[{"na": "%s", "val": "%s", "condition":"contains"}], "query_breakdown_1": "none", \
+                         "time_range": "%s", "start_time": "default", "end_time": "default"}',
         },
 
         'funnel':
@@ -224,6 +238,20 @@ def prepare_data(raw_data_path='data.json', abbreviate=True):
                     _json = jts_map['filter']['not_equals'] % (vm, vd, 'val_xyz', t.replace(' ', '_'))
                     qj = (query, _json)
                     qjs.append(qj)
+            for qt in qts_map['filter']['timeless_contains']:
+                query = qt % (km, kd, 'val_xyz')
+                _json = jts_map['filter']['equals'] % (vm, vd, 'val_xyz', 'default')
+                qj = (query, _json)
+                qjs.append(qj)
+            for qt in qts_map['filter']['timeful_contains']:
+                for t in times:
+                    query = qt % (km, kd, 'val_xyz', t)
+                    _json = jts_map['filter']['equals'] % (vm, vd, 'val_xyz', t.replace(' ', '_'))
+                    qj = (query, _json)
+                    qjs.append(qj)
+
+
+
 
 
     # BI-METRIC:

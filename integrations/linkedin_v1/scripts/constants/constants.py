@@ -12,6 +12,8 @@ ACCESS_TOKEN = 'int_linkedin_access_token'
 REFRESH_TOKEN = 'int_linkedin_refresh_token'
 LINKEDIN_AD_ACCOUNT = 'int_linkedin_ad_account'
 ELEMENTS = 'elements'
+METADATA = 'metadata'
+NEXT_PAGE_TOKEN = 'nextPageToken'
 PROJECT_ID = 'project_id'
 CAMPAIGN_GROUP_ID = 'campaign_group_id'
 CAMPAIGN_ID = 'campaign_id'
@@ -20,7 +22,7 @@ MAX_LOOKBACK = 30
 API_REQUESTS = 'api_requests'
 DATA_STATE_RAW = "raw"
 DATA_STATE_TRANSFORMED = "transformed"
-META_COUNT = 100
+META_COUNT = 1000
 BACKFILL_DAY = 8
 REQUESTED_ROWS_LIMIT = 10000
 INSIGHTS_COUNT=10000
@@ -36,7 +38,8 @@ SYNC_INFO_KEY_T8 = MEMBER_COMPANY_INSIGHTS + ":1"
 SYNC_INFO_KEY_T22 = MEMBER_COMPANY_INSIGHTS + ":2"
 LINKEDIN_VERSION = '202405'
 PROTOCOL_VERSION = '2.0.0'
-META_DATA_URL = 'https://api.linkedin.com/rest/adAccounts/{}/{}?q=search&search=(status:(values:List(ACTIVE,PAUSED)))&start={}&count={}'
+META_DATA_URL = 'https://api.linkedin.com/rest/adAccounts/{}/{}?q=search&search=(status:(values:List(ACTIVE,PAUSED)))&pageSize={}'
+META_DATA_URL_PAGINATED = 'https://api.linkedin.com/rest/adAccounts/{}/{}?q=search&search=(status:(values:List(ACTIVE,PAUSED)))&pageSize={}&pageToken={}'
 INSIGHTS_REQUEST_URL_FORMAT = 'https://api.linkedin.com/rest/adAnalytics?q=analytics&pivot={}&dateRange=(start:(day:{},month:{},year:{}),end:(day:{},month:{},year:{}))&timeGranularity=DAILY&fields={}&accounts=List(urn%3Ali%3AsponsoredAccount%3A{})&start={}&count={}'
 COMPANY_CAMPAIGN_GROUP_INSIGHTS_REQUEST_URL_FORMAT = 'https://api.linkedin.com/rest/adAnalytics?q=analytics&pivot={}&dateRange=(start:(day:{},month:{},year:{}),end:(day:{},month:{},year:{}))&timeGranularity=ALL&fields={}&accounts=List(urn%3Ali%3AsponsoredAccount%3A{})&campaignGroups=List(urn%3Ali%3AsponsoredCampaignGroup%3A{})&start={}&count={}'
 COMPANY_CAMPAIGN_INSIGHTS_REQUEST_URL_FORMAT = 'https://api.linkedin.com/rest/adAnalytics?q=analytics&pivot={}&dateRange=(start:(day:{},month:{},year:{}),end:(day:{},month:{},year:{}))&timeGranularity=ALL&fields={}&accounts=List(urn%3Ali%3AsponsoredAccount%3A{})&campaigns=List(urn%3Ali%3AsponsoredCampaign%3A{})&start={}&count={}'

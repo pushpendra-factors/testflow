@@ -826,6 +826,12 @@ func Track(projectId int64, request *TrackPayload,
 		response.Error = "Failed updating user properties."
 	}
 
+	if eventName == nil {
+		logCtx.WithFields(log.Fields{"request_payload": request}).Error("Empty event name found. Skipping processing.")
+		response.Error = "Failed processing event name."
+		return http.StatusInternalServerError, &TrackResponse{Error: "Tracking failed. Failed processing event name."}
+	}
+
 	event := &model.Event{
 		ID:              request.EventId,
 		EventNameId:     eventName.ID,

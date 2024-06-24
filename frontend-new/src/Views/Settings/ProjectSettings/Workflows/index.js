@@ -29,7 +29,6 @@ import {
 } from 'Reducers/workflows';
 import MomentTz from 'Components/MomentTz';
 import TableSearchAndRefresh from 'Components/TableSearchAndRefresh';
-import { Stub, StubOld } from './Stub';
 import { getAlertTemplatesTransformation } from './utils';
 import WorkflowBuilder from './WorkflowBuilder';
 import WorkflowEmptyImg from '../../../../assets/images/workflow-empty-screen.png';
@@ -77,8 +76,6 @@ const Workflows = ({
         setAlertTemplates(res.data);
       })
       .catch((err) => logger.log('fetch templates error=>', err));
-
-    // setAlertTemplates(StubOld);
   }, [activeProject]);
 
   const confirmDeleteWorkflow = (item) => {

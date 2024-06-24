@@ -51,6 +51,10 @@ var FeatureDisplayNameMap = map[string]string{
 	"Teams":                 FEATURE_TEAMS,
 }
 
+const SSO_STATE_DEFAULT = 1
+const SSO_STATE_SAML_ENABLED = 2
+const SSO_STATE_GOOGLE_ENABLED = 3
+
 func FeatureDisplayNameByFeatureName(value string) string {
 	for key, v := range FeatureDisplayNameMap {
 		if v == value {
@@ -157,7 +161,7 @@ type ProjectSetting struct {
 	IntParagonEnablingAgentID    string          `gorm:"column int_paragon_enabling_agent_id" json:"int_paragon_enabling_agent_id"`
 	IntegrationStatus            *postgres.Jsonb `json:"integration_status"`
 	SamlConfiguration            *postgres.Jsonb `json:"saml_configuration"`
-	SamlEnabled                  bool            `json:"saml_enabled"`
+	SSOState                     int             `json:"sso_state"`
 }
 
 type SAMLConfiguration struct {
