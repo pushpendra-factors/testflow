@@ -99,8 +99,6 @@ type FileManager interface {
 	// Del(dir, filename string)error
 
 	//predictive scoring
-	GetEventsAggregateDailyProjectDir(projectID int64) string
-	GetEventsAggregateDailyDataDir(projectID int64, dataTimestamp int64) string
 	GetEventsAggregateDailyDataFilePathAndName(projectID int64, dataTimestamp int64) (string, string)
 	GetEventsAggregateDailyPropsFilePathAndName(projectID int64, dataTimestamp int64) (string, string)
 	GetEventsAggregateDailyCountsFilePathAndName(projectID int64, dataTimestamp int64) (string, string)
