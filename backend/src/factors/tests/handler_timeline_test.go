@@ -1385,7 +1385,7 @@ func TestTimelineGetProfileAccountHandler(t *testing.T) {
 					LogicalOp: "OR",
 				},
 			},
-			Source: "All",
+			Source: U.GROUP_NAME_DOMAINS,
 		},
 	}
 
@@ -1432,7 +1432,7 @@ func TestTimelineGetProfileAccountHandler(t *testing.T) {
 					LogicalOp: "AND",
 				},
 			},
-			Source: "All",
+			Source: U.GROUP_NAME_DOMAINS,
 		},
 	}
 
@@ -1448,7 +1448,7 @@ func TestTimelineGetProfileAccountHandler(t *testing.T) {
 
 	payload = model.TimelinePayload{
 		Query: model.Query{
-			Source: "All",
+			Source: U.GROUP_NAME_DOMAINS,
 			GlobalUserProperties: []model.QueryProperty{
 				{
 					Entity:    "user_g",
@@ -3934,13 +3934,13 @@ func TestTimelineAllAccountDefaultGroupProperties(t *testing.T) {
 	t.Run("TestForInHubspotProperties", func(t *testing.T) {
 		payload = model.TimelinePayload{
 			Query: model.Query{
-				Source: "All",
+				Source: U.GROUP_NAME_DOMAINS,
 				GlobalUserProperties: []model.QueryProperty{
 					{
 						Entity:    "user_g",
 						Type:      "categorical",
 						Property:  "$in_hubspot",
-						Operator:  "equals",
+						Operator:  "Equal",
 						Value:     "true",
 						LogicalOp: "AND",
 					},
@@ -3961,7 +3961,7 @@ func TestTimelineAllAccountDefaultGroupProperties(t *testing.T) {
 
 		payload = model.TimelinePayload{
 			Query: model.Query{
-				Source: "All",
+				Source: U.GROUP_NAME_DOMAINS,
 				GlobalUserProperties: []model.QueryProperty{
 					{
 						Entity:    "user_g",
@@ -3988,7 +3988,7 @@ func TestTimelineAllAccountDefaultGroupProperties(t *testing.T) {
 
 		payload = model.TimelinePayload{
 			Query: model.Query{
-				Source: "All",
+				Source: U.GROUP_NAME_DOMAINS,
 				GlobalUserProperties: []model.QueryProperty{
 					{
 						Entity:    "user_g",
@@ -4013,6 +4013,34 @@ func TestTimelineAllAccountDefaultGroupProperties(t *testing.T) {
 			assert.False(t, U.ContainsStringInArray(HsDomIds, r.Identity))
 		}
 
+		// in hubspot for notEqual
+		payload = model.TimelinePayload{
+			Query: model.Query{
+				Source: U.GROUP_NAME_DOMAINS,
+				GlobalUserProperties: []model.QueryProperty{
+					{
+						Entity:    "user_g",
+						Type:      "categorical",
+						Property:  "$in_hubspot",
+						Operator:  "notEqual",
+						Value:     "true",
+						LogicalOp: "AND",
+					},
+				},
+			},
+		}
+
+		w = sendGetProfileAccountRequest(r, project.ID, agent, payload)
+		assert.Equal(t, http.StatusOK, w.Code)
+		jsonResponse, _ = io.ReadAll(w.Body)
+		resp = make([]model.Profile, 0)
+		err = json.Unmarshal(jsonResponse, &resp)
+		assert.Nil(t, err)
+		assert.Equal(t, 4, len(resp))
+		for _, r := range resp {
+			assert.False(t, U.ContainsStringInArray(HsDomIds, r.Identity))
+		}
+
 	})
 
 	// test in salesforce properties with single filter
@@ -4020,7 +4048,7 @@ func TestTimelineAllAccountDefaultGroupProperties(t *testing.T) {
 
 		payload = model.TimelinePayload{
 			Query: model.Query{
-				Source: "All",
+				Source: U.GROUP_NAME_DOMAINS,
 				GlobalUserProperties: []model.QueryProperty{
 					{
 						Entity:    "user_g",
@@ -4047,7 +4075,7 @@ func TestTimelineAllAccountDefaultGroupProperties(t *testing.T) {
 
 		payload = model.TimelinePayload{
 			Query: model.Query{
-				Source: "All",
+				Source: U.GROUP_NAME_DOMAINS,
 				GlobalUserProperties: []model.QueryProperty{
 					{
 						Entity:    "user_g",
@@ -4074,7 +4102,7 @@ func TestTimelineAllAccountDefaultGroupProperties(t *testing.T) {
 
 		payload = model.TimelinePayload{
 			Query: model.Query{
-				Source: "All",
+				Source: U.GROUP_NAME_DOMAINS,
 				GlobalUserProperties: []model.QueryProperty{
 					{
 						Entity:    "user_g",
@@ -4105,7 +4133,7 @@ func TestTimelineAllAccountDefaultGroupProperties(t *testing.T) {
 
 		payload = model.TimelinePayload{
 			Query: model.Query{
-				Source: "All",
+				Source: U.GROUP_NAME_DOMAINS,
 				GlobalUserProperties: []model.QueryProperty{
 					{
 						Entity:    "user_g",
@@ -4132,7 +4160,7 @@ func TestTimelineAllAccountDefaultGroupProperties(t *testing.T) {
 
 		payload = model.TimelinePayload{
 			Query: model.Query{
-				Source: "All",
+				Source: U.GROUP_NAME_DOMAINS,
 				GlobalUserProperties: []model.QueryProperty{
 					{
 						Entity:    "user_g",
@@ -4159,7 +4187,7 @@ func TestTimelineAllAccountDefaultGroupProperties(t *testing.T) {
 
 		payload = model.TimelinePayload{
 			Query: model.Query{
-				Source: "All",
+				Source: U.GROUP_NAME_DOMAINS,
 				GlobalUserProperties: []model.QueryProperty{
 					{
 						Entity:    "user_g",
@@ -4190,7 +4218,7 @@ func TestTimelineAllAccountDefaultGroupProperties(t *testing.T) {
 
 		payload = model.TimelinePayload{
 			Query: model.Query{
-				Source: "All",
+				Source: U.GROUP_NAME_DOMAINS,
 				GlobalUserProperties: []model.QueryProperty{
 					{
 						Entity:    "user_g",
@@ -4231,7 +4259,7 @@ func TestTimelineAllAccountDefaultGroupProperties(t *testing.T) {
 
 		payload = model.TimelinePayload{
 			Query: model.Query{
-				Source: "All",
+				Source: U.GROUP_NAME_DOMAINS,
 				GlobalUserProperties: []model.QueryProperty{
 					{
 						Entity:    "user_g",
@@ -4271,7 +4299,7 @@ func TestTimelineAllAccountDefaultGroupProperties(t *testing.T) {
 
 		payload = model.TimelinePayload{
 			Query: model.Query{
-				Source: "All",
+				Source: U.GROUP_NAME_DOMAINS,
 				GlobalUserProperties: []model.QueryProperty{
 					{
 						Entity:    "user_g",
@@ -4310,7 +4338,7 @@ func TestTimelineAllAccountDefaultGroupProperties(t *testing.T) {
 
 		payload = model.TimelinePayload{
 			Query: model.Query{
-				Source: "All",
+				Source: U.GROUP_NAME_DOMAINS,
 				GlobalUserProperties: []model.QueryProperty{
 					{
 						Entity:    "user_g",
@@ -4350,7 +4378,7 @@ func TestTimelineAllAccountDefaultGroupProperties(t *testing.T) {
 
 		payload = model.TimelinePayload{
 			Query: model.Query{
-				Source: "All",
+				Source: U.GROUP_NAME_DOMAINS,
 				GlobalUserProperties: []model.QueryProperty{
 					{
 						Entity:    "user_group",
@@ -4377,7 +4405,7 @@ func TestTimelineAllAccountDefaultGroupProperties(t *testing.T) {
 
 		payload = model.TimelinePayload{
 			Query: model.Query{
-				Source: "All",
+				Source: U.GROUP_NAME_DOMAINS,
 				GlobalUserProperties: []model.QueryProperty{
 					{
 						Entity:    "user_group",
@@ -4414,7 +4442,7 @@ func TestTimelineAllAccountDefaultGroupProperties(t *testing.T) {
 
 		payload = model.TimelinePayload{
 			Query: model.Query{
-				Source: "All",
+				Source: U.GROUP_NAME_DOMAINS,
 				GlobalUserProperties: []model.QueryProperty{
 					{
 						Entity:    "user_g",

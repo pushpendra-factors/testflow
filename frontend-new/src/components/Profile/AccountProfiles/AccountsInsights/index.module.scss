@@ -76,3 +76,43 @@
 .metricDescriptionText {
   width: 260px;
 }
+
+.input-skeleton {
+  &:global(.ant-skeleton-element) {
+    line-height: 0;
+  }
+  &:global(.ant-skeleton-element .ant-skeleton-input) {
+    width: 112px;
+    height: 12px;
+  }
+}
+
+.button-skeleton {
+  &:global(.ant-skeleton-element) {
+    line-height: 0;
+  }
+  &:global(.ant-skeleton-element .ant-skeleton-button) {
+    width: 81px;
+    height: 24px;
+  }
+}
+
+.overview-input-skeleton {
+  &:global(.ant-skeleton-element) {
+    line-height: 0;
+  }
+  &:global(.ant-skeleton-element .ant-skeleton-input) {
+    width: 270px;
+    height: 18px;
+  }
+}
+
+.overview-button-skeleton {
+  &:global(.ant-skeleton-element) {
+    line-height: 0;
+  }
+  &:global(.ant-skeleton-element .ant-skeleton-input) {
+    width: 81px;
+    height: 26px;
+  }
+}

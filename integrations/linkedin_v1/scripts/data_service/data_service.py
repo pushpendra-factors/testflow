@@ -135,7 +135,10 @@ class DataService:
         if self.is_dry_run:
             return
         # response = requests.post(url, json=payload)
-        U.post_request_with_retries(url, payload)
+        response, errMsg = U.post_request_with_retries(url, payload)
+        if response is None or errMsg != '':
+            log.warning(errMsg)
+        return
 
 
     def get_empty_object_with_req_ids(self):

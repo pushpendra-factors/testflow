@@ -137,7 +137,10 @@ function FunnelsResultTable({
                   continue;
                 }
                 const isCurrentKeyForBreakdown = find(breakdown, (b) => {
-                  return b.property + ' - ' + b.eventIndex === key;
+                  return (
+                    b.property + ' - ' + (b.eventIndex || b.overAllIndex) ===
+                    key
+                  );
                 });
                 if (isCurrentKeyForBreakdown) {
                   result[

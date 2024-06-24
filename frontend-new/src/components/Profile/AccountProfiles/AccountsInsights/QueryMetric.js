@@ -1,6 +1,6 @@
 import React from 'react';
 import cx from 'classnames';
-import { Popover, Tooltip } from 'antd';
+import { Popover, Skeleton, Tooltip } from 'antd';
 import {
   Text,
   Number as NumFormat,
@@ -62,17 +62,46 @@ const getPopoverContent = (metricName) => {
   );
 };
 
+function InputSkeleton() {
+  return (
+    <Skeleton.Input className={styles['input-skeleton']} size='small' active />
+  );
+}
+
+function ButtonSkeleton() {
+  return <Skeleton.Button className={styles['button-skeleton']} active />;
+}
+
+function InsightsSkeleton() {
+  return (
+    <div className='flex flex-col gap-y-2 justify-center items-center'>
+      <InputSkeleton />
+      <ButtonSkeleton />
+    </div>
+  );
+}
+
+function CompareInsightsSkelton() {
+  return (
+    <div className='flex flex-col gap-y-2 justify-center items-center'>
+      <ButtonSkeleton />
+      <InputSkeleton />
+    </div>
+  );
+}
+
 function QueryMetric({
   queryMetric,
   index,
   totalWidgets = 4,
   insightsDataByKey,
-  showComparisonData,
   compareInsightsDataByKey,
   comparedSegmentId,
   comparedSegmentName,
   compareDateRange,
-  onEditMetricClick
+  onEditMetricClick,
+  isLoading,
+  compareLoading
 }) {
   const handleEditMetric = () => {
     onEditMetricClick(queryMetric);
@@ -102,156 +131,171 @@ function QueryMetric({
         }
       )}
     >
-      <div className='flex flex-col items-center w-full'>
-        <div className='flex items-center justify-between w-full'>
-          <div className='w-6' />
-          <Popover
-            trigger='hover'
-            placement='topRight'
-            title={
+      <ControlledComponent controller={isLoading}>
+        <div className='flex flex-col gap-y-8 justify-center items-center'>
+          <InsightsSkeleton />
+          <CompareInsightsSkelton />
+        </div>
+      </ControlledComponent>
+      <ControlledComponent controller={!isLoading}>
+        <div className='flex flex-col items-center w-full'>
+          <div className='flex items-center justify-between w-full'>
+            <div className='w-6' />
+            <Popover
+              trigger='hover'
+              placement='topRight'
+              title={
+                <Text
+                  weight='medium'
+                  type='title'
+                  color='character-title'
+                  extraClass='mb-0'
+                >
+                  {queryMetric.d_name}
+                </Text>
+              }
+              content={getPopoverContent(queryMetric.d_name)}
+            >
               <Text
-                weight='medium'
                 type='title'
-                color='character-title'
+                level={7}
+                weight='medium'
+                color='character-primary'
                 extraClass='mb-0'
               >
                 {queryMetric.d_name}
               </Text>
-            }
-            content={getPopoverContent(queryMetric.d_name)}
-          >
-            <Text
-              type='title'
-              level={7}
-              weight='medium'
-              color='character-primary'
-              extraClass='mb-0'
+            </Popover>
+            <div
+              onClick={handleEditMetric}
+              className={cx('invisible', styles['edit-button'])}
             >
-              {queryMetric.d_name}
-            </Text>
-          </Popover>
-          <div
-            onClick={handleEditMetric}
-            className={cx('invisible', styles['edit-button'])}
-          >
-            <Svg name='pencil' color='currentColor' />
+              <Svg name='pencil' color='currentColor' />
+            </div>
           </div>
+          <Text
+            extraClass='mb-0'
+            type='title'
+            level={2}
+            weight='bold'
+            color='character-primary'
+          >
+            <ControlledComponent
+              controller={insightsDataByKey[queryMetric.q_me] != null}
+            >
+              <ControlledComponent
+                controller={Boolean(queryMetric.q_me_ty) === true}
+              >
+                {getFormattedMetricValue(
+                  insightsDataByKey[queryMetric.q_me]?.[0],
+                  queryMetric.q_me_ty
+                )}
+              </ControlledComponent>
+              <ControlledComponent
+                controller={Boolean(queryMetric.q_me_ty) === false}
+              >
+                <NumFormat
+                  number={insightsDataByKey[queryMetric.q_me]?.[0]}
+                  shortHand
+                />
+              </ControlledComponent>
+            </ControlledComponent>
+            <ControlledComponent
+              controller={insightsDataByKey[queryMetric.q_me] == null}
+            >
+              {getFormattedMetricValue(0, queryMetric.q_me_ty)}
+            </ControlledComponent>
+          </Text>
         </div>
-        <Text
-          extraClass='mb-0'
-          type='title'
-          level={2}
-          weight='bold'
-          color='character-primary'
-        >
-          <ControlledComponent
-            controller={insightsDataByKey[queryMetric.q_me] != null}
-          >
-            <ControlledComponent
-              controller={Boolean(queryMetric.q_me_ty) === true}
-            >
-              {getFormattedMetricValue(
-                insightsDataByKey[queryMetric.q_me]?.[0],
-                queryMetric.q_me_ty
-              )}
-            </ControlledComponent>
-            <ControlledComponent
-              controller={Boolean(queryMetric.q_me_ty) === false}
-            >
-              <NumFormat
-                number={insightsDataByKey[queryMetric.q_me]?.[0]}
-                shortHand
-              />
-            </ControlledComponent>
-          </ControlledComponent>
-          <ControlledComponent
-            controller={insightsDataByKey[queryMetric.q_me] == null}
-          >
-            {getFormattedMetricValue(0, queryMetric.q_me_ty)}
-          </ControlledComponent>
-        </Text>
-      </div>
-      <ControlledComponent controller={showComparisonData}>
-        <ControlledComponent
-          controller={compareInsightsDataByKey[queryMetric.q_me] != null}
-        >
-          <div className='flex flex-col items-center w-full'>
-            <ComparePercent
-              value={
-                insightsDataByKey[queryMetric.q_me] != null &&
-                compareInsightsDataByKey[queryMetric.q_me] != null
-                  ? ((insightsDataByKey[queryMetric.q_me][0] -
-                      compareInsightsDataByKey[queryMetric.q_me][0]) /
-                      compareInsightsDataByKey[queryMetric.q_me][0]) *
-                    100 // (((new-old)/old) * 100)
-                  : 0
-              }
-            />
-            <div
-              className={cx('flex gap-x-1 items-center justify-center w-full')}
-            >
-              <Text
-                type='title'
-                level={8}
-                extraClass={cx('mb-0 truncate', {
-                  [styles['max-w-100']]: comparedSegmentId != null
-                })}
-                color='character-secondary'
-              >
-                <ControlledComponent
-                  controller={Boolean(queryMetric.q_me_ty) === true}
-                >
-                  <span className='font-bold'>
-                    {getFormattedMetricValue(
-                      compareInsightsDataByKey[queryMetric.q_me]?.[0],
-                      queryMetric.q_me_ty
-                    )}{' '}
-                  </span>
-                </ControlledComponent>
-                <ControlledComponent
-                  controller={Boolean(queryMetric.q_me_ty) === false}
-                >
-                  <span className='font-bold'>
-                    <NumFormat
-                      number={compareInsightsDataByKey[queryMetric.q_me]?.[0]}
-                      shortHand
-                    />{' '}
-                  </span>
-                </ControlledComponent>
-                {compareText}
-              </Text>
-              <ControlledComponent controller={comparedSegmentId == null}>
-                <CompareDurationTooltip title={tooltipTitle} />
-              </ControlledComponent>
-            </div>
-          </div>
+        <ControlledComponent controller={compareLoading}>
+          <CompareInsightsSkelton />
         </ControlledComponent>
-        <ControlledComponent
-          controller={compareInsightsDataByKey[queryMetric.q_me] == null}
-        >
-          <div className='flex flex-col items-center w-full'>
-            <ComparePercent value={0} />
-            <div
-              className={cx('flex gap-x-1 items-center justify-center w-full')}
-            >
-              <Text
-                type='title'
-                level={8}
-                extraClass={cx('mb-0 truncate', {
-                  [styles['max-w-100']]: comparedSegmentId != null
-                })}
-                color='character-secondary'
+        <ControlledComponent controller={!compareLoading}>
+          <ControlledComponent
+            controller={compareInsightsDataByKey[queryMetric.q_me] != null}
+          >
+            <div className='flex flex-col items-center w-full'>
+              <ComparePercent
+                value={
+                  insightsDataByKey[queryMetric.q_me] != null &&
+                  compareInsightsDataByKey[queryMetric.q_me] != null
+                    ? ((insightsDataByKey[queryMetric.q_me][0] -
+                        compareInsightsDataByKey[queryMetric.q_me][0]) /
+                        compareInsightsDataByKey[queryMetric.q_me][0]) *
+                      100 // (((new-old)/old) * 100)
+                    : 0
+                }
+              />
+              <div
+                className={cx(
+                  'flex gap-x-1 items-center justify-center w-full'
+                )}
               >
-                <span className='font-bold'>
-                  {getFormattedMetricValue(0, queryMetric.q_me_ty)}{' '}
-                </span>
-                {compareText}
-              </Text>
-              <ControlledComponent controller={comparedSegmentId == null}>
-                <CompareDurationTooltip title={tooltipTitle} />
-              </ControlledComponent>
+                <Text
+                  type='title'
+                  level={8}
+                  extraClass={cx('mb-0 truncate', {
+                    [styles['max-w-100']]: comparedSegmentId != null
+                  })}
+                  color='character-secondary'
+                >
+                  <ControlledComponent
+                    controller={Boolean(queryMetric.q_me_ty) === true}
+                  >
+                    <span className='font-bold'>
+                      {getFormattedMetricValue(
+                        compareInsightsDataByKey[queryMetric.q_me]?.[0],
+                        queryMetric.q_me_ty
+                      )}{' '}
+                    </span>
+                  </ControlledComponent>
+                  <ControlledComponent
+                    controller={Boolean(queryMetric.q_me_ty) === false}
+                  >
+                    <span className='font-bold'>
+                      <NumFormat
+                        number={compareInsightsDataByKey[queryMetric.q_me]?.[0]}
+                        shortHand
+                      />{' '}
+                    </span>
+                  </ControlledComponent>
+                  {compareText}
+                </Text>
+                <ControlledComponent controller={comparedSegmentId == null}>
+                  <CompareDurationTooltip title={tooltipTitle} />
+                </ControlledComponent>
+              </div>
             </div>
-          </div>
+          </ControlledComponent>
+          <ControlledComponent
+            controller={compareInsightsDataByKey[queryMetric.q_me] == null}
+          >
+            <div className='flex flex-col items-center w-full'>
+              <ComparePercent value={0} />
+              <div
+                className={cx(
+                  'flex gap-x-1 items-center justify-center w-full'
+                )}
+              >
+                <Text
+                  type='title'
+                  level={8}
+                  extraClass={cx('mb-0 truncate', {
+                    [styles['max-w-100']]: comparedSegmentId != null
+                  })}
+                  color='character-secondary'
+                >
+                  <span className='font-bold'>
+                    {getFormattedMetricValue(0, queryMetric.q_me_ty)}{' '}
+                  </span>
+                  {compareText}
+                </Text>
+                <ControlledComponent controller={comparedSegmentId == null}>
+                  <CompareDurationTooltip title={tooltipTitle} />
+                </ControlledComponent>
+              </div>
+            </div>
+          </ControlledComponent>
         </ControlledComponent>
       </ControlledComponent>
     </div>

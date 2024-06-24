@@ -305,11 +305,13 @@ func (store *MemSQL) transFormRequestFieldsAndFetchRequiredFieldsForBingads(proj
 	var err error
 	logCtx := log.WithFields(logFields)
 	ftMapping, err := store.GetActiveFiveTranMapping(projectID, model.BingAdsIntegration)
-	if err.Error() == "record not found" {
-		return &model.ChannelQueryV1{}, "", "", err
-	} else if err != nil {
-		log.WithError(err).Error("Failed to fetch connector id from db")
-		return &model.ChannelQueryV1{}, "", "", err
+	if err != nil {
+		if err.Error() == "record not found" {
+			return &model.ChannelQueryV1{}, "", "", err
+		} else {
+			log.WithError(err).Error("Failed to fetch connector id from db")
+			return &model.ChannelQueryV1{}, "", "", err
+		}
 	}
 	customerAccountID := ftMapping.Accounts
 	transformedQuery, err = convertFromRequestToBingAdsSpecificRepresentation(query)

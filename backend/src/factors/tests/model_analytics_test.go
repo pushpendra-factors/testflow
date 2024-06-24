@@ -10666,6 +10666,52 @@ func TestAnalyticsAllAccountsFilterBreadkdown(t *testing.T) {
 	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
 	assert.Equal(t, http.StatusOK, errCode)
 
+	query = model.Query{
+		From: U.TimeNowZ().Add(-20 * time.Minute).Unix(),
+		To:   U.TimeNowZ().Add(20 * time.Minute).Unix(),
+		EventsWithProperties: []model.QueryEventWithProperties{
+			{
+				Name:       "www.xyz.com",
+				Properties: []model.QueryProperty{},
+			},
+			{
+				Name:       "www.xyz2.com",
+				Properties: []model.QueryProperty{},
+			},
+		},
+		GlobalUserProperties: []model.QueryProperty{
+			{
+				Entity:    model.PropertyEntityUserGlobal,
+				GroupName: model.GROUP_NAME_DOMAINS,
+				Property:  U.VISITED_WEBSITE,
+				Operator:  model.EqualsOpStr,
+				Value:     "true",
+				Type:      U.PropertyTypeCategorical,
+				LogicalOp: "AND",
+			},
+		},
+
+		GroupByProperties: []model.QueryGroupByProperty{
+			{
+				Entity:    model.PropertyEntityUser,
+				GroupName: model.GROUP_NAME_DOMAINS,
+				Property:  U.DP_DOMAIN_NAME,
+				EventName: model.UserPropertyGroupByPresent,
+			},
+		},
+		GroupAnalysis:   model.GROUP_NAME_DOMAINS,
+		Class:           model.QueryClassFunnel,
+		Type:            model.QueryTypeUniqueUsers,
+		EventsCondition: model.EventCondEachGivenEvent,
+	}
+	result, errCode, _ = store.GetStore().Analyze(project.ID, query, C.EnableOptimisedFilterOnEventUserQuery(), true)
+	assert.Equal(t, http.StatusOK, errCode)
+	assert.Len(t, result.Rows, 2)
+	assert.Equal(t, float64(1), result.Rows[0][1])
+	assert.Equal(t, float64(1), result.Rows[0][2])
+	assert.Equal(t, "abc1.com", result.Rows[1][0])
+	assert.Equal(t, float64(1), result.Rows[1][1])
+	assert.Equal(t, float64(1), result.Rows[1][2])
 }
 
 func TestAnalyticsFunnelValueLabel(t *testing.T) {

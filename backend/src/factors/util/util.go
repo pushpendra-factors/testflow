@@ -2069,3 +2069,20 @@ func GetSHA256Hash(str string) (string, error) {
 	}
 	return hex.EncodeToString(hasher.Sum(nil)), nil
 }
+
+func EvaluateBoolPropertyValueWithOperatorForTrue(propVal string, operatorString string) bool {
+	if (propVal == "true" && !IsContainsAnySubString(operatorString, "not")) || ((propVal == "false" || propVal == "$none") && IsContainsAnySubString(operatorString, "not")) {
+		return true
+	}
+
+	return false
+}
+
+func EvaluateBoolPropertyValueWithOperatorForFalse(propVal string, operatorString string) bool {
+
+	if ((propVal == "false" || propVal == "$none") && !IsContainsAnySubString(operatorString, "not")) || (propVal == "true" && IsContainsAnySubString(operatorString, "not")) {
+		return true
+	}
+
+	return false
+}

@@ -60,16 +60,24 @@ class LinkedinApiService:
     def get_metadata(self, linkedin_setting, url_endpoint, doc_type):
         metadata = []
         request_counter = 0
-        is_first_fetch = True
         response = {}
         project_id, ad_account, access_token = linkedin_setting.project_id, linkedin_setting.ad_account, linkedin_setting.access_token
 
-        start = 0
-        while is_first_fetch or len(response.json()[ELEMENTS])>=META_COUNT:
-            is_first_fetch = False
-            url = META_DATA_URL.format(ad_account, url_endpoint, start, META_COUNT)
-            headers = {'Authorization': 'Bearer ' + access_token,
+        url = META_DATA_URL.format(ad_account, url_endpoint, META_COUNT)
+        headers = {'Authorization': 'Bearer ' + access_token,
                     'X-Restli-Protocol-Version': PROTOCOL_VERSION, 'LinkedIn-Version': LINKEDIN_VERSION}
+        response, req_count = U.request_with_retries_and_sleep(url, headers)
+        request_counter += req_count
+        if not response.ok:
+            errString = API_ERROR_FORMAT.format(
+                doc_type, 'metadata', response.status_code,
+                response.text, project_id, ad_account)
+            raise CustomException(errString, request_counter, doc_type)
+
+        metadata.extend(response.json()[ELEMENTS])
+        
+        while METADATA in response.json() and NEXT_PAGE_TOKEN in response.json()[METADATA]:
+            url = META_DATA_URL_PAGINATED.format(ad_account, url_endpoint, META_COUNT, response.json()[METADATA][NEXT_PAGE_TOKEN])
             response, req_count = U.request_with_retries_and_sleep(url, headers)
             request_counter += req_count
             if not response.ok:
@@ -79,7 +87,7 @@ class LinkedinApiService:
                 raise CustomException(errString, request_counter, doc_type)
 
             metadata.extend(response.json()[ELEMENTS])
-            start +=META_COUNT
+
         self.metrics_aggregator_obj.request_counter += request_counter
         return metadata
 

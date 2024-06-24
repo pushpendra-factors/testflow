@@ -147,6 +147,7 @@ func MapProjectInfoToString(project model.ProjectInfo) model.ProjectInfoString {
 		ID:             fmt.Sprintf("%v", project.ID),
 		Name:           project.Name,
 		ProfilePicture: project.ProfilePicture,
+		LoginMethod:    project.LoginMethod,
 		CreatedAt:      project.CreatedAt,
 		UpdatedAt:      project.UpdatedAt,
 		ProjectURI:     project.ProjectURI,
