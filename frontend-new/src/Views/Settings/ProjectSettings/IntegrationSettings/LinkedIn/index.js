@@ -286,7 +286,7 @@ const LinkedInIntegration = ({
             color='character-primary'
             extraClass='m-0'
           >
-            Selected linkedin Account
+            Selected LinkedIn Account
           </Text>
           <Input
             disabled
