@@ -39,9 +39,9 @@ func addValueToMapForPropsPresent(globalVal *float64, featMap map[string]map[str
 			pt = "either"
 		}
 		if val, ok := existsInProps(prop, propMap1, propMap2, pt); ok {
-			val, err := getStringValueFromInterface(val)
+			val, err := U.GetStringValueFromInterface(val)
 			if err != nil {
-				log.WithError(err).Errorf("error getStringValueFromInterface for key %s and val %s", prop, val)
+				log.WithError(err).Errorf("error U.GetStringValueFromInterface for key %s and val %s", prop, val)
 			}
 			if _, ok := featMap[propWithType]; !ok {
 				featMap[propWithType] = make(map[string]float64)
@@ -62,9 +62,9 @@ func addValueToMapForPropsPresentUnique(globalVal *float64, featMap map[string]m
 		prop := propTypeName[1]
 		propType := propTypeName[0]
 		if val, ok := existsInProps(prop, eventDetails.EventProperties, eventDetails.UserProperties, propType); ok {
-			val, err := getStringValueFromInterface(val)
+			val, err := U.GetStringValueFromInterface(val)
 			if err != nil {
-				log.WithError(err).Errorf("error getStringValueFromInterface for key %s and val %s", prop, val)
+				log.WithError(err).Errorf("error U.GetStringValueFromInterface for key %s and val %s", prop, val)
 			}
 			propWithVal := strings.Join([]string{prop, val}, ":")
 			if _, ok := uniqueUsersFeat[propWithVal]; !ok {
@@ -95,9 +95,9 @@ func addValuesToFractionForPropsPresent(globalVal *Fraction, featMap map[string]
 			pt = "either"
 		}
 		if val, ok := existsInProps(prop, firstMap, secondMap, pt); ok {
-			val, err := getStringValueFromInterface(val)
+			val, err := U.GetStringValueFromInterface(val)
 			if err != nil {
-				log.WithError(err).Errorf("error getStringValueFromInterface for key %s and val %s", prop, val)
+				log.WithError(err).Errorf("error U.GetStringValueFromInterface for key %s and val %s", prop, val)
 			}
 			if _, ok := featMap[propWithType]; !ok {
 				featMap[propWithType] = make(map[string]Fraction)
@@ -125,9 +125,9 @@ func addValuesToFractionForPropsPresentUnique(globalVal *Fraction, featMap map[s
 		prop := propTypeName[1]
 		propType := propTypeName[0]
 		if val, ok := existsInProps(prop, eventDetails.EventProperties, eventDetails.UserProperties, propType); ok {
-			val, err := getStringValueFromInterface(val)
+			val, err := U.GetStringValueFromInterface(val)
 			if err != nil {
-				log.WithError(err).Errorf("error getStringValueFromInterface for key %s and val %s", prop, val)
+				log.WithError(err).Errorf("error U.GetStringValueFromInterface for key %s and val %s", prop, val)
 			}
 			if _, ok := featMap[propWithType]; !ok {
 				featMap[propWithType] = make(map[string]Fraction)
@@ -208,7 +208,7 @@ func getFractionValueForRate(globalFrac *Fraction, featInfoMap map[string]map[st
 
 func checkValSatisfiesFilterCondition(filter M.KPIFilter, eventVal interface{}) (bool, error) {
 	if filter.PropertyDataType == U.PropertyTypeCategorical {
-		eventVal, err := getStringValueFromInterface(eventVal)
+		eventVal, err := U.GetStringValueFromInterface(eventVal)
 		if err != nil {
 			log.Error("failed getting interface value")
 			return false, err
@@ -233,7 +233,7 @@ func checkValSatisfiesFilterCondition(filter M.KPIFilter, eventVal interface{}) 
 			return false, fmt.Errorf("unknown filter condition - %s", filter.Condition)
 		}
 	} else if filter.PropertyDataType == U.PropertyTypeNumerical {
-		eventVal, err := getFloatValueFromInterface(eventVal)
+		eventVal, err := U.GetFloatValueFromInterface(eventVal)
 		if err != nil {
 			log.Error("failed getting interface value")
 			return false, err
@@ -271,7 +271,7 @@ func checkValSatisfiesFilterCondition(filter M.KPIFilter, eventVal interface{}) 
 			return false, fmt.Errorf("unknown filter condition - %s", filter.Condition)
 		}
 	} else if filter.PropertyDataType == U.PropertyTypeDateTime {
-		eventVal, err := getFloatValueFromInterface(eventVal)
+		eventVal, err := U.GetFloatValueFromInterface(eventVal)
 		if err != nil {
 			log.Error("failed getting interface value")
 			return false, err

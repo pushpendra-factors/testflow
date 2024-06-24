@@ -421,6 +421,82 @@ func (gcsd *GCSDriver) GetPredictProjectDir(projectId int64, model_id int64) str
 	return pb.Join(path, "predict", model_str)
 }
 
+func (gcsd *GCSDriver) GetEventsAggregateDailyProjectDir(projectID int64) string {
+	path := fmt.Sprintf("predictive_analysis/%d/", projectID)
+	return path
+}
+
+func (gcsd *GCSDriver) GetEventsAggregateDailyDataDir(projectID int64, dataTimestamp int64) string {
+	dateFormatted := U.GetDateOnlyFromTimestampZ(dataTimestamp)
+	path := gcsd.GetEventsAggregateDailyProjectDir(projectID)
+	path = fmt.Sprintf("%s%s/", path, dateFormatted)
+	return path
+}
+
+func (gcsd *GCSDriver) GetEventsAggregateDailyDataFilePathAndName(projectID int64, dataTimestamp int64) (string, string) {
+	path := gcsd.GetEventsAggregateDailyDataDir(projectID, dataTimestamp)
+	fileName := "data.txt"
+	return path, fileName
+}
+
+func (gcsd *GCSDriver) GetEventsAggregateDailyPropsFilePathAndName(projectID int64, dataTimestamp int64) (string, string) {
+	path := gcsd.GetEventsAggregateDailyDataDir(projectID, dataTimestamp)
+	fileName := "accountPropCounts.txt"
+	return path, fileName
+}
+
+func (gcsd *GCSDriver) GetEventsAggregateDailyCountsFilePathAndName(projectID int64, dataTimestamp int64) (string, string) {
+	path := gcsd.GetEventsAggregateDailyDataDir(projectID, dataTimestamp)
+	fileName := "eventsCounts.txt"
+	return path, fileName
+}
+
+func (gcsd *GCSDriver) GetEventsAggregateDailyTargetFilePathAndName(projectID int64, dataTimestamp int64, targetEvent string) (string, string) {
+	path := gcsd.GetEventsAggregateDailyDataDir(projectID, dataTimestamp)
+	fileName := fmt.Sprintf("target_%s.txt", targetEvent)
+	return path, fileName
+}
+
+func (gcsd *GCSDriver) GetPredictiveScoringDataProjectDir(projectID int64) string {
+	path := gcsd.GetProjectDir(projectID)
+	path = path + "predictive_scoring/"
+	return path
+}
+
+func (gcsd *GCSDriver) GetPredictiveScoringDataDir(projectID int64, startTimestamp, endTimestamp int64, targetEvent string, minDaysOfInput, daysOfOutput, windowStartShift, windowEndShift int) string {
+	path := gcsd.GetPredictiveScoringDataProjectDir(projectID)
+	startDateFormatted := U.GetDateOnlyFromTimestampZ(startTimestamp)
+	endDateFormatted := U.GetDateOnlyFromTimestampZ(endTimestamp)
+	path = fmt.Sprintf("%s%s-%s/", path, startDateFormatted, endDateFormatted)
+	path = fmt.Sprintf("%s%d_%d_%d_%d/", path, minDaysOfInput, daysOfOutput, windowStartShift, windowEndShift)
+	path = fmt.Sprintf("%s%s/", path, targetEvent)
+	return path
+}
+
+func (gcsd *GCSDriver) GetPredictiveScoringTrainingDataFilePathAndName(projectID int64, startTimestamp, endTimestamp int64, targetEvent string, minDaysOfInput, daysOfOutput, windowStartShift, windowEndShift int) (string, string) {
+	path := gcsd.GetPredictiveScoringDataDir(projectID, startTimestamp, endTimestamp, targetEvent, minDaysOfInput, daysOfOutput, windowStartShift, windowEndShift)
+	fileName := "training.txt"
+	return path, fileName
+}
+
+func (gcsd *GCSDriver) GetPredictiveScoringPredictDataFilePathAndName(projectID int64, startTimestamp, endTimestamp int64, targetEvent string, minDaysOfInput, daysOfOutput, windowStartShift, windowEndShift int) (string, string) {
+	path := gcsd.GetPredictiveScoringDataDir(projectID, startTimestamp, endTimestamp, targetEvent, minDaysOfInput, daysOfOutput, windowStartShift, windowEndShift)
+	fileName := "predict.txt"
+	return path, fileName
+}
+
+func (gcsd *GCSDriver) GetPredictiveScoringEventsCountsFilePathAndName(projectID int64, startTimestamp, endTimestamp int64, targetEvent string, minDaysOfInput, daysOfOutput, windowStartShift, windowEndShift int) (string, string) {
+	path := gcsd.GetPredictiveScoringDataDir(projectID, startTimestamp, endTimestamp, targetEvent, minDaysOfInput, daysOfOutput, windowStartShift, windowEndShift)
+	fileName := "eventsCounts.txt"
+	return path, fileName
+}
+
+func (gcsd *GCSDriver) GetPredictiveScoringPropCountsFilePathAndName(projectID int64, startTimestamp, endTimestamp int64, targetEvent string, minDaysOfInput, daysOfOutput, windowStartShift, windowEndShift int) (string, string) {
+	path := gcsd.GetPredictiveScoringDataDir(projectID, startTimestamp, endTimestamp, targetEvent, minDaysOfInput, daysOfOutput, windowStartShift, windowEndShift)
+	fileName := "propCounts.txt"
+	return path, fileName
+}
+
 func (gcsd *GCSDriver) GetEventsUnsortedFilePathAndName(projectId int64, startTimestamp int64, endTimestamp int64) (string, string) {
 	path, name := gcsd.GetEventsFilePathAndName(projectId, startTimestamp, endTimestamp)
 	fileName := "unsorted_" + name
