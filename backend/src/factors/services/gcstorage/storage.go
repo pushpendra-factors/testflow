@@ -422,7 +422,7 @@ func (gcsd *GCSDriver) GetPredictProjectDir(projectId int64, model_id int64) str
 }
 
 func (gcsd *GCSDriver) GetEventsAggregateDailyProjectDir(projectID int64) string {
-	path := fmt.Sprintf("predictive_analysis/%d/", projectID)
+	path := fmt.Sprintf("daily_aggregate_events/%d/", projectID)
 	return path
 }
 

@@ -261,7 +261,14 @@ func EventsAggregateDaily(projectId int64, configs map[string]interface{}) (map[
 	}
 	aggLog.Info("countDatapoints: ", countDatapoints)
 
-	aggLog.Info("PredictiveScoringDaily successfully completed")
+	err = cloudWriter.Close()
+	if err != nil {
+		aggLog.WithError(err).Error("unable to close writer for file")
+		status["err"] = err.Error()
+		return status, false
+	}
+
+	aggLog.Info("EventsAggregateDaily successfully completed")
 	// err := createTrainingData(projectId, archiveCloudManager, dailyFilesDir, daysOfInput, daysOfOutput, gapDaysForNextInput, startTimestamp, endTimestamp)
 	// if err != nil {
 	// 	aggLog.WithError(err).Error("error creating training data")
