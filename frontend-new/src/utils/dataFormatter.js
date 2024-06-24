@@ -99,11 +99,15 @@ export const SortDataByDuration = (arr, key, order) => {
   return result;
 };
 
-export const SortDataByDate = (arr, key, order) => {
+export const SortDataByDate = (arr, key, order, format) => {
   const result = [...arr];
   result.sort((a, b) => {
-    const val1 = moment(a[key]).utc().unix();
-    const val2 = moment(b[key]).utc().unix();
+    const parsedDateA =
+      format != null ? moment(a[key], format) : moment(a[key]);
+    const val1 = parsedDateA.utc().unix();
+    const parsedDateB =
+      format != null ? moment(b[key], format) : moment(b[key]);
+    const val2 = parsedDateB.utc().unix();
     if (order === 'ascend') {
       return val1 >= val2 ? 1 : -1;
     }
@@ -174,6 +178,35 @@ export const SortWeekFormattedData = (arr, key, order) => {
   return result;
 };
 
+export const getNumericValueFromString = (value) => {
+  if (!value) return 0;
+  let extractedNumber = Number(value?.replace(/[,$a-zA-Z+]/g, ''));
+  if (!extractedNumber || isNaN(extractedNumber)) return 0;
+  // incresing number if there is M(million) present
+  if (value?.includes('M')) {
+    extractedNumber *= 1000000;
+  }
+  // incresing number if there is B(billion) present
+  if (value?.includes('B')) {
+    extractedNumber *= 1000000000;
+  }
+  // incresing number + is present for eg. 10000+
+  if (value?.includes('+')) {
+    extractedNumber += 1;
+  }
+  return extractedNumber;
+};
+
+export const getRangeNumericValue = (val) => {
+  if (!val) return 0;
+  const values = val?.split('-');
+  // giving priorty to higher range item
+  if (values?.length === 2) {
+    return getNumericValueFromString(values[1]);
+  }
+  return getNumericValueFromString(val);
+};
+
 export const SortRangeData = (arr, key, order) => {
   const result = [...arr];
   result.sort((a, b) => {
@@ -188,35 +221,6 @@ export const SortRangeData = (arr, key, order) => {
     return 0;
   });
   return result;
-};
-
-export const getNumericValueFromString = (value) => {
-  if (!value) return 0;
-  let extractedNumber = Number(value?.replace(/[,$a-zA-Z+]/g, ''));
-  if (!extractedNumber || isNaN(extractedNumber)) return 0;
-  // incresing number if there is M(million) present
-  if (value?.includes('M')) {
-    extractedNumber = extractedNumber * 1000000;
-  }
-  // incresing number if there is B(billion) present
-  if (value?.includes('B')) {
-    extractedNumber = extractedNumber * 1000000000;
-  }
-  // incresing number + is present for eg. 10000+
-  if (value?.includes('+')) {
-    extractedNumber += 1;
-  }
-  return extractedNumber;
-};
-
-export const getRangeNumericValue = (val) => {
-  if (!val) return 0;
-  const values = val?.split('-');
-  //giving priorty to higher range item
-  if (values?.length === 2) {
-    return getNumericValueFromString(values[1]);
-  }
-  return getNumericValueFromString(val);
 };
 
 export const getClickableTitleSorter = (
@@ -751,7 +755,7 @@ export const convertAndAddPropertiesToGroupSelectOptions = (
   filterOptsObj,
   propertyType
 ) => {
-  //filterOptsObj is Passed By Reference.
+  // filterOptsObj is Passed By Reference.
   Object.keys(properties)?.forEach((groupkey) => {
     if (!filterOptsObj[groupkey]) {
       filterOptsObj[groupkey] = {
@@ -780,13 +784,13 @@ export const convertGroupedPropertiesToUngrouped = (
   });
 };
 
-//Array of Arrays.
+// Array of Arrays.
 export const groupKPIPropertiesOnCategory = (
   kpiProperties,
   propertyType,
   groupName
 ) => {
-  //For these Categories, Map groupIcon as their icon.
+  // For these Categories, Map groupIcon as their icon.
   const specialCategoryList = [
     'campaign',
     'ad group',
@@ -797,10 +801,10 @@ export const groupKPIPropertiesOnCategory = (
   ];
   return (
     kpiProperties?.reduce((result, kpiItem) => {
-      //category check for dropdown (also handles custom property mapping)
+      // category check for dropdown (also handles custom property mapping)
       const category = kpiItem[4]
         ? kpiItem[4]
-        : kpiItem[3] == 'propMap'
+        : kpiItem[3] === 'propMap'
           ? 'Properties'
           : null;
       if (!category) {
