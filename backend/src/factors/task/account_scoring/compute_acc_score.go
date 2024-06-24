@@ -472,11 +472,13 @@ func WriteUserCountsAndRangesToDB(projectId int64, startTime int64, prevcountsof
 		log.WithError(err).Errorf("error in updating ranges DB")
 	}
 
-	// update users who have activity only
-	err = store.GetStore().UpdateUserEventsCountGO(projectId, updatedUser)
-	if err != nil {
-		return nil, err
-	}
+	// not updating users due to lag in DB
+	// // update users who have activity only
+	// err = store.GetStore().UpdateUserEventsCountGO(projectId, updatedUser)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
 	maxBucket := getMaxBucket(buckets)
 
 	// groupsLastevent contains last event data on all users with and without activity
