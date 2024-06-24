@@ -216,9 +216,21 @@ func (sd *S3Driver) GetUsersArchiveFilePathAndName(projectID int64, startTime, e
 	return "", ""
 }
 
-func (sd *S3Driver) GetDailyArchiveFilesDir(projectID int64, dataTimestamp int64, dataType string) string {
+func (sd *S3Driver) GetDailyArchiveProjectDir(projectID int64) string {
+	path := fmt.Sprintf("daily_pull/%d/", projectID)
+	return path
+}
+
+func (sd *S3Driver) GetDailyArchiveDataDir(projectID int64, dataTimestamp int64) string {
+	path := sd.GetDailyArchiveProjectDir(projectID)
 	dateFormatted := U.GetDateOnlyFromTimestampZ(dataTimestamp)
-	path := fmt.Sprintf("daily_pull/%d/%s/%s/", projectID, dateFormatted, dataType)
+	path = fmt.Sprintf("%s%s/", path, dateFormatted)
+	return path
+}
+
+func (sd *S3Driver) GetDailyArchiveFilesDir(projectID int64, dataTimestamp int64, dataType string) string {
+	path := sd.GetDailyArchiveDataDir(projectID, dataTimestamp)
+	path = fmt.Sprintf("%s%s/", path, dataType)
 	return path
 }
 
@@ -302,38 +314,30 @@ func (sd *S3Driver) GetPredictProjectDir(projectId int64, model_id int64) string
 	return pb.Join(path, "predict", model_str)
 }
 
-func (sd *S3Driver) GetEventsAggregateDailyProjectDir(projectID int64) string {
-	path := fmt.Sprintf("daily_aggregate_events/%d/", projectID)
-	return path
-}
-
-func (sd *S3Driver) GetEventsAggregateDailyDataDir(projectID int64, dataTimestamp int64) string {
-	dateFormatted := U.GetDateOnlyFromTimestampZ(dataTimestamp)
-	path := sd.GetEventsAggregateDailyProjectDir(projectID)
-	path = fmt.Sprintf("%s%s/", path, dateFormatted)
-	return path
+func (sd *S3Driver) GetEventsAggregateDailyFilesDir(projectID int64, dataTimestamp int64) string {
+	return sd.GetDailyArchiveFilesDir(projectID, dataTimestamp, U.DataTypeEventsAggregate)
 }
 
 func (sd *S3Driver) GetEventsAggregateDailyDataFilePathAndName(projectID int64, dataTimestamp int64) (string, string) {
-	path := sd.GetEventsAggregateDailyDataDir(projectID, dataTimestamp)
+	path := sd.GetEventsAggregateDailyFilesDir(projectID, dataTimestamp)
 	fileName := "data.txt"
 	return path, fileName
 }
 
 func (sd *S3Driver) GetEventsAggregateDailyPropsFilePathAndName(projectID int64, dataTimestamp int64) (string, string) {
-	path := sd.GetEventsAggregateDailyDataDir(projectID, dataTimestamp)
+	path := sd.GetEventsAggregateDailyFilesDir(projectID, dataTimestamp)
 	fileName := "accountPropCounts.txt"
 	return path, fileName
 }
 
 func (sd *S3Driver) GetEventsAggregateDailyCountsFilePathAndName(projectID int64, dataTimestamp int64) (string, string) {
-	path := sd.GetEventsAggregateDailyDataDir(projectID, dataTimestamp)
+	path := sd.GetEventsAggregateDailyFilesDir(projectID, dataTimestamp)
 	fileName := "eventsCounts.txt"
 	return path, fileName
 }
 
 func (sd *S3Driver) GetEventsAggregateDailyTargetFilePathAndName(projectID int64, dataTimestamp int64, targetEvent string) (string, string) {
-	path := sd.GetEventsAggregateDailyDataDir(projectID, dataTimestamp)
+	path := sd.GetEventsAggregateDailyFilesDir(projectID, dataTimestamp)
 	fileName := fmt.Sprintf("target_%s.txt", targetEvent)
 	return path, fileName
 }

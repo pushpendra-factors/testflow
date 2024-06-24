@@ -342,9 +342,21 @@ func (dd *DiskDriver) GetUsersArchiveFilePathAndName(projectID int64, startTime,
 	return path, fileName
 }
 
-func (dd *DiskDriver) GetDailyArchiveFilesDir(projectID int64, dataTimestamp int64, dataType string) string {
+func (dd *DiskDriver) GetDailyArchiveProjectDir(projectID int64) string {
+	path := fmt.Sprintf("%s/daily_pull/%d/", dd.baseDir, projectID)
+	return path
+}
+
+func (dd *DiskDriver) GetDailyArchiveDataDir(projectID int64, dataTimestamp int64) string {
+	path := dd.GetDailyArchiveProjectDir(projectID)
 	dateFormatted := U.GetDateOnlyFromTimestampZ(dataTimestamp)
-	path := fmt.Sprintf("%s/daily_pull/%d/%s/%s/", dd.baseDir, projectID, dateFormatted, dataType)
+	path = fmt.Sprintf("%s%s/", path, dateFormatted)
+	return path
+}
+
+func (dd *DiskDriver) GetDailyArchiveFilesDir(projectID int64, dataTimestamp int64, dataType string) string {
+	path := dd.GetDailyArchiveDataDir(projectID, dataTimestamp)
+	path = fmt.Sprintf("%s%s/", path, dataType)
 	return path
 }
 
@@ -428,38 +440,30 @@ func (dd *DiskDriver) GetPredictProjectDir(projectId int64, model_id int64) stri
 	return pb.Join(path, "predict", model_str)
 }
 
-func (dd *DiskDriver) GetEventsAggregateDailyProjectDir(projectID int64) string {
-	path := fmt.Sprintf("%s/daily_aggregate_events/%d/", dd.baseDir, projectID)
-	return path
-}
-
-func (dd *DiskDriver) GetEventsAggregateDailyDataDir(projectID int64, dataTimestamp int64) string {
-	dateFormatted := U.GetDateOnlyFromTimestampZ(dataTimestamp)
-	path := dd.GetEventsAggregateDailyProjectDir(projectID)
-	path = fmt.Sprintf("%s%s/", path, dateFormatted)
-	return path
+func (dd *DiskDriver) GetEventsAggregateDailyFilesDir(projectID int64, dataTimestamp int64) string {
+	return dd.GetDailyArchiveFilesDir(projectID, dataTimestamp, U.DataTypeEventsAggregate)
 }
 
 func (dd *DiskDriver) GetEventsAggregateDailyDataFilePathAndName(projectID int64, dataTimestamp int64) (string, string) {
-	path := dd.GetEventsAggregateDailyDataDir(projectID, dataTimestamp)
+	path := dd.GetEventsAggregateDailyFilesDir(projectID, dataTimestamp)
 	fileName := "data.txt"
 	return path, fileName
 }
 
 func (dd *DiskDriver) GetEventsAggregateDailyPropsFilePathAndName(projectID int64, dataTimestamp int64) (string, string) {
-	path := dd.GetEventsAggregateDailyDataDir(projectID, dataTimestamp)
+	path := dd.GetEventsAggregateDailyFilesDir(projectID, dataTimestamp)
 	fileName := "accountPropCounts.txt"
 	return path, fileName
 }
 
 func (dd *DiskDriver) GetEventsAggregateDailyCountsFilePathAndName(projectID int64, dataTimestamp int64) (string, string) {
-	path := dd.GetEventsAggregateDailyDataDir(projectID, dataTimestamp)
+	path := dd.GetEventsAggregateDailyFilesDir(projectID, dataTimestamp)
 	fileName := "eventsCounts.txt"
 	return path, fileName
 }
 
 func (dd *DiskDriver) GetEventsAggregateDailyTargetFilePathAndName(projectID int64, dataTimestamp int64, targetEvent string) (string, string) {
-	path := dd.GetEventsAggregateDailyDataDir(projectID, dataTimestamp)
+	path := dd.GetEventsAggregateDailyFilesDir(projectID, dataTimestamp)
 	fileName := fmt.Sprintf("target_%s.txt", targetEvent)
 	return path, fileName
 }

@@ -41,9 +41,10 @@ const (
 )
 
 const (
-	DataTypeEvent    = "events"
-	DataTypeAdReport = "ad_reports"
-	DataTypeUser     = "users"
+	DataTypeEvent           = "events"
+	DataTypeAdReport        = "ad_reports"
+	DataTypeUser            = "users"
+	DataTypeEventsAggregate = "aggregated_events"
 )
 
 const Per_day_epoch int64 = DayInSecs

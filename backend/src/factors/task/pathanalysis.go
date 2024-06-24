@@ -356,7 +356,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 				}
 			}
 		}
-		log.Info("steps: ", steps)
+		// log.Info("steps: ", steps)
 		maxcount := make(map[int]map[string]int)
 		for event, count := range steps {
 			noOfEvents := strings.Split(event, ",")
@@ -366,7 +366,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 			}
 			maxcount[len(noOfEvents)][event] = count
 		}
-		log.Info("maxcount: ", maxcount)
+		// log.Info("maxcount: ", maxcount)
 		shortlistedEvents := make(map[int]map[string]int)
 		for i := 1; i <= actualQuery.NumberOfSteps+1; i++ {
 			if i == 1 {
@@ -420,7 +420,7 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 				}
 				eventsFormatted[eventNameAppend] = count
 			}
-			log.Info("eventsFormatted: ", eventsFormatted)
+			// log.Info("eventsFormatted: ", eventsFormatted)
 			// Reversing the order for ENDSWITH
 			eventsOrdered := make(map[string]int)
 			if actualQuery.EventType == M.ENDSWITH {
@@ -439,14 +439,14 @@ func PathAnalysis(projectId int64, configs map[string]interface{}) (map[string]i
 			} else {
 				eventsOrdered = eventsFormatted
 			}
-			log.Info("eventsOrdered: ", eventsOrdered)
+			// log.Info("eventsOrdered: ", eventsOrdered)
 			pwmBytes, _ := json.Marshal(eventsOrdered)
 			pString := string(pwmBytes)
 			pString = pString + "\n"
 			pBytes := []byte(pString)
 			_, err = resultFile.Write(pBytes)
 		}
-		log.Info("shortlistedEvents: ", shortlistedEvents)
+		// log.Info("shortlistedEvents: ", shortlistedEvents)
 		WriteResultsToCloud(diskManager, modelCloudManager, query.ID, projectId)
 		processedQueries = append(processedQueries, query.ID)
 		if len(processedQueries) > 0 {
