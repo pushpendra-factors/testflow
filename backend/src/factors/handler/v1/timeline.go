@@ -143,11 +143,6 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 
 	req := c.Request
 
-	getUserMarker, err := getBoolQueryParam(c.Query("user_marker"))
-	if err != nil {
-		logCtx.Error("Invalid marker flag.")
-	}
-
 	downloadLimitGiven, err := getBoolQueryParam(c.Query("download"))
 	if err != nil {
 		logCtx.Error("Invalid limit flag.")
@@ -166,16 +161,13 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 		return nil, http.StatusBadRequest, INVALID_INPUT, message, true
 	}
 
-	var profileAccountsList []model.Profile
+	var profilePayload model.AccountsProfileQueryResponsePayload
 	var errCode int
 	var errMsg string
 
 	startTime := time.Now().UnixMilli()
-	if getUserMarker && C.UseSegmentMarker(projectId) {
-		profileAccountsList, errCode, errMsg = store.GetStore().GetMarkedDomainsListByProjectId(projectId, payload, downloadLimitGiven)
-	} else {
-		profileAccountsList, errCode, errMsg = store.GetStore().GetProfilesListByProjectId(projectId, payload, model.PROFILE_TYPE_ACCOUNT, downloadLimitGiven)
-	}
+	profilePayload, errCode, errMsg = store.GetStore().GetMarkedDomainsListByProjectId(projectId, payload, downloadLimitGiven)
+
 	endTime := time.Now().UnixMilli()
 	if timeTaken := endTime - startTime; timeTaken > 2000 {
 		logCtx.Warn("Accounts time exceeded 2 seconds. Time taken is ", timeTaken)
@@ -193,6 +185,7 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 	showScore := C.IsScoringEnabledForAllUsers(projectId)
 
 	// Add account scores to the response if scoring is enabled
+	profileAccountsList := profilePayload.Profiles
 	if scoringAvailable && showScore {
 		// Retrieve scores for account IDs
 		var accountIds []string
@@ -215,7 +208,9 @@ func GetProfileAccountsHandler(c *gin.Context) (interface{}, int, string, string
 	}
 
 	profileAccountsList = store.GetStore().AddPropertyValueLabelsToProfileResults(projectId, profileAccountsList)
-	return profileAccountsList, http.StatusOK, "", "", false
+
+	profilePayload.Profiles = profileAccountsList
+	return profilePayload, http.StatusOK, "", "", false
 }
 
 func GetProfileAccountDetailsHandler(c *gin.Context) (interface{}, int, string, string, bool) {

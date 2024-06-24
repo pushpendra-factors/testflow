@@ -24,6 +24,7 @@ func (store *MemSQL) GetProfilesListByProjectId(projectID int64, payload model.T
 		"profile_type": profileType,
 	}
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
 	if projectID == 0 {
 		return []model.Profile{}, http.StatusBadRequest, "Project Id is Invalid"
 	}

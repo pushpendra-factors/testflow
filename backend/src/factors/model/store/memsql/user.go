@@ -726,6 +726,47 @@ func (store *MemSQL) GetAccountAssociatedUserCountByProjectID(projectID int64, d
 	return count, http.StatusFound
 }
 
+// accounts associated to segment count
+func (store *MemSQL) GetAccountAssociatedToSegmentCount(projectID int64, domainGroupID int, segmentID string) (int64, int) {
+
+	logFields := log.Fields{"project_id": projectID, "segment_id": segmentID}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
+	db := C.GetServices().Db
+	query := fmt.Sprintf(`SELECT COUNT(*) FROM users WHERE 
+	project_id = ? 
+	AND group_%d_id IS NOT NULL 
+	AND source = ? 
+	AND is_deleted = false
+	AND JSON_EXTRACT_STRING(associated_segments, ?) IS NOT NULL;`, domainGroupID)
+
+	queryParams := []interface{}{projectID, model.UserSourceDomains, segmentID}
+
+	rows, err := db.Raw(query, queryParams...).Rows()
+
+	if rows != nil {
+		defer rows.Close()
+	}
+
+	var count int64
+	if err != nil {
+		logCtx.WithError(err).Error("Error fetching number of accounts for segment")
+		return count, http.StatusInternalServerError
+	}
+
+	for rows.Next() {
+		err = rows.Scan(&count)
+	}
+
+	if err != nil {
+		logCtx.WithError(err).Error("Error fetching number of accounts for segment")
+		return count, http.StatusInternalServerError
+	}
+	return count, http.StatusFound
+}
+
 // get all domains to run marker for in time range
 func (store *MemSQL) GetLatestUpatedDomainsByProjectID(projectID int64, domainGroupID int, fromTime time.Time,
 	limitVal int) ([]string, int) {

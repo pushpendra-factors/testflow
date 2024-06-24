@@ -16,7 +16,7 @@ import (
 )
 
 // Duplicate code below exists. Please change in GetSQLAndParamsForSegmentsAssociatedAccounts if required.
-func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload, downloadLimitGiven bool) ([]model.Profile, int, string) {
+func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload, downloadLimitGiven bool) (model.AccountsProfileQueryResponsePayload, int, string) {
 	logFields := log.Fields{
 		"project_id": projectID,
 		"payload":    payload,
@@ -24,27 +24,29 @@ func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload mo
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
 
+	isPreview := false
+
 	if projectID == 0 {
-		return []model.Profile{}, http.StatusBadRequest, "Project Id is Invalid"
+		return model.AccountsProfileQueryResponsePayload{}, http.StatusBadRequest, "Project Id is Invalid"
 	}
 
 	// return if source is not $domains
 	if payload.Query.Source != model.GROUP_NAME_DOMAINS {
 		logCtx.Error("Query failed. invalid source")
-		return []model.Profile{}, http.StatusBadRequest, "Failed to fetch source."
+		return model.AccountsProfileQueryResponsePayload{}, http.StatusBadRequest, "Failed to fetch source."
 	}
 
 	// set Query Timezone
 	timezoneString, statusCode := store.GetTimezoneForProject(projectID)
 	if statusCode != http.StatusFound {
 		logCtx.Error("Query failed. Failed to get Timezone.")
-		return []model.Profile{}, statusCode, "Failed to fetch project timezone."
+		return model.AccountsProfileQueryResponsePayload{}, statusCode, "Failed to fetch project timezone."
 	}
 	payload.Query.Timezone = string(timezoneString)
 
 	domainGroup, errCode := store.GetGroup(projectID, model.GROUP_NAME_DOMAINS)
 	if errCode != http.StatusFound || domainGroup == nil {
-		return []model.Profile{}, http.StatusInternalServerError, "failed to get group while adding group info"
+		return model.AccountsProfileQueryResponsePayload{}, http.StatusInternalServerError, "failed to get group while adding group info"
 	}
 
 	var profiles []model.Profile
@@ -52,35 +54,26 @@ func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload mo
 
 	payload.Query.Caller = model.PROFILE_TYPE_ACCOUNT
 
-	if payload.SegmentId == "" && !C.IsMarkerPreviewEnabled(projectID) {
-		// Redirect to old flow if segment_id is empty
-		return store.GetProfilesListByProjectId(projectID, payload, model.PROFILE_TYPE_ACCOUNT, downloadLimitGiven)
-	}
 	if payload.SegmentId == "" {
 		// new preview flow
-		profiles, statusCode, errMsg = store.GetPreviewDomainsListByProjectId(projectID, payload,
+		profiles, isPreview, statusCode, errMsg = store.GetPreviewDomainsListByProjectId(projectID, payload,
 			domainGroup.ID, downloadLimitGiven)
 	} else {
 		// fetching accounts for segments
-		profiles, statusCode, errMsg = store.GetDomainsListFromMarker(projectID, payload,
+		profiles, isPreview, statusCode, errMsg = store.GetDomainsListFromMarker(projectID, payload,
 			domainGroup.ID, downloadLimitGiven)
 	}
 
 	// if status is not found or profiles are empty, redirecting to old flow
 	if statusCode == http.StatusInternalServerError {
-		return profiles, statusCode, errMsg
-	}
-
-	// Redirect to old flow if no profiles found and flag disabled (for fetching saved segments)
-	if len(profiles) == 0 && !C.IsMarkerPreviewEnabled(projectID) {
-		return store.GetProfilesListByProjectId(projectID, payload, model.PROFILE_TYPE_ACCOUNT, downloadLimitGiven)
+		return model.AccountsProfileQueryResponsePayload{}, statusCode, errMsg
 	}
 
 	// datetime conversion
 	err := payload.Query.TransformDateTypeFilters()
 	if err != nil {
 		log.WithField("project_id", projectID).Error("Failed to transform segment filters.")
-		return []model.Profile{}, statusCode, "Failed to get segment"
+		return model.AccountsProfileQueryResponsePayload{}, statusCode, "Failed to get segment"
 	}
 	groupedFilters := GroupFiltersByGroupName(payload.Query.GlobalUserProperties)
 
@@ -92,17 +85,31 @@ func (store *MemSQL) GetMarkedDomainsListByProjectId(projectID int64, payload mo
 	// Get merged properties for all accounts
 	profiles, statusCode = store.AccountPropertiesForDomainsEnabled(projectID, profiles, groupedFilters, payload.Query.TableProps)
 	if statusCode != http.StatusOK {
-		return []model.Profile{}, statusCode, "Query Transformation Failed."
+		return model.AccountsProfileQueryResponsePayload{}, statusCode, "Query Transformation Failed."
 	}
 
 	// Get Return Table Content
 	returnData, err := FormatProfilesStruct(projectID, profiles, model.PROFILE_TYPE_ACCOUNT, payload.Query.TableProps, payload.Query.Source)
 	if err != nil {
 		logCtx.WithError(err).WithField("status", err).Error("Failed to filter properties from profiles.")
-		return []model.Profile{}, http.StatusInternalServerError, "Query formatting failed."
+		return model.AccountsProfileQueryResponsePayload{}, http.StatusInternalServerError, "Query formatting failed."
 	}
 
-	return returnData, http.StatusFound, ""
+	response := model.AccountsProfileQueryResponsePayload{
+		Profiles:  returnData,
+		IsPreview: isPreview,
+	}
+
+	if !isPreview && payload.SegmentId != "" {
+
+		accountCount, statusCode := store.GetAccountAssociatedToSegmentCount(projectID, domainGroup.ID, payload.SegmentId)
+		if statusCode == http.StatusFound {
+			response.Count = accountCount
+		}
+
+	}
+
+	return response, http.StatusFound, ""
 }
 
 // Duplicated code from above. Please look for a change in GetMarkedDomainsListByProjectId.
@@ -202,7 +209,7 @@ func CompareFilters(segmentQuery model.Query, payloadQuery model.Query) bool {
 }
 
 func (store *MemSQL) GetDomainsListFromMarker(projectID int64, payload model.TimelinePayload,
-	domainGroupID int, downloadLimitGiven bool) ([]model.Profile, int, string) {
+	domainGroupID int, downloadLimitGiven bool) ([]model.Profile, bool, int, string) {
 
 	logFields := log.Fields{
 		"project_id": projectID,
@@ -211,10 +218,11 @@ func (store *MemSQL) GetDomainsListFromMarker(projectID int64, payload model.Tim
 	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
 	logCtx := log.WithFields(logFields)
 
+	isPreview := false
 	segment, statusCode := store.GetSegmentById(projectID, payload.SegmentId)
 	if statusCode != http.StatusFound {
 		logCtx.Error("Segment not found.")
-		return []model.Profile{}, statusCode, "Failed to get segment"
+		return []model.Profile{}, isPreview, statusCode, "Failed to get segment"
 	}
 
 	lastRunTime, lastRunStatusCode := store.GetMarkerLastForAllAccounts(projectID)
@@ -228,7 +236,7 @@ func (store *MemSQL) GetDomainsListFromMarker(projectID int64, payload model.Tim
 		if C.IsMarkerPreviewEnabled(projectID) {
 			return store.GetPreviewDomainsListByProjectId(projectID, payload, domainGroupID, downloadLimitGiven)
 		}
-		return []model.Profile{}, lastRunStatusCode, ""
+		return []model.Profile{}, isPreview, lastRunStatusCode, ""
 	}
 
 	// if segment.UpdatedAt
@@ -236,7 +244,7 @@ func (store *MemSQL) GetDomainsListFromMarker(projectID int64, payload model.Tim
 	err := U.DecodePostgresJsonbToStructType(segment.Query, &segmentQuery)
 	if err != nil {
 		log.WithField("project_id", projectID).Error("Unable to decode segment query")
-		return []model.Profile{}, statusCode, "Failed to get segment"
+		return []model.Profile{}, isPreview, statusCode, "Failed to get segment"
 	}
 
 	additionalFiltersExist := CompareFilters(segmentQuery, payload.Query)
@@ -245,7 +253,7 @@ func (store *MemSQL) GetDomainsListFromMarker(projectID int64, payload model.Tim
 		if C.IsMarkerPreviewEnabled(projectID) {
 			return store.GetPreviewDomainsListByProjectId(projectID, payload, domainGroupID, downloadLimitGiven)
 		}
-		return []model.Profile{}, http.StatusOK, ""
+		return []model.Profile{}, isPreview, http.StatusOK, ""
 	}
 
 	// check for search filter
@@ -315,16 +323,16 @@ func (store *MemSQL) GetDomainsListFromMarker(projectID int64, payload model.Tim
 	err = db.Raw(query, params...).Scan(&profiles).Error
 	if err != nil {
 		if gorm.IsRecordNotFoundError(err) {
-			return []model.Profile{}, http.StatusNotFound, ""
+			return []model.Profile{}, isPreview, http.StatusNotFound, ""
 		}
-		return []model.Profile{}, http.StatusInternalServerError, "Error in fetching rows for all accounts"
+		return []model.Profile{}, isPreview, http.StatusInternalServerError, "Error in fetching rows for all accounts"
 	}
 
-	return profiles, http.StatusOK, ""
+	return profiles, isPreview, http.StatusOK, ""
 }
 
 func (store *MemSQL) GetPreviewDomainsListByProjectId(projectID int64, payload model.TimelinePayload,
-	domainGroupID int, downloadLimitGiven bool) ([]model.Profile, int, string) {
+	domainGroupID int, downloadLimitGiven bool) ([]model.Profile, bool, int, string) {
 
 	runLimit := C.RunNumberToProcessDomainsForPreview()
 
@@ -335,8 +343,12 @@ func (store *MemSQL) GetPreviewDomainsListByProjectId(projectID int64, payload m
 	// calculate limit to fetch total number of domains
 	limitVal := C.DomainsToProcessForPreview() * runLimit
 
+	isPreview := true
+
 	// set listing limit to 1000 in case of all accounts listing
 	if len(payload.Query.EventsWithProperties) == 0 && len(payload.Query.GlobalUserProperties) == 0 {
+		// setting isPreview as false when no filters applied
+		isPreview = false
 		if downloadLimitGiven {
 			limitAcc, limitVal = 10000, 10000
 		} else {
@@ -347,7 +359,7 @@ func (store *MemSQL) GetPreviewDomainsListByProjectId(projectID int64, payload m
 	payload, fileValuesMap, eventNameIDsList, status, errMsg := store.transformPayload(projectID, payload)
 
 	if status != http.StatusOK || errMsg != "" {
-		return []model.Profile{}, status, errMsg
+		return []model.Profile{}, isPreview, status, errMsg
 	}
 
 	// making all filter's operator as "OR" and skip domain level filters
@@ -356,7 +368,7 @@ func (store *MemSQL) GetPreviewDomainsListByProjectId(projectID int64, payload m
 	totalUserCount, status := store.GetAccountAssociatedUserCountByProjectID(projectID, domainGroupID)
 
 	if status != http.StatusFound {
-		return []model.Profile{}, status, "Users Not Found"
+		return []model.Profile{}, isPreview, status, "Users Not Found"
 	}
 
 	if totalUserCount >= 1000000 {
@@ -378,7 +390,7 @@ func (store *MemSQL) GetPreviewDomainsListByProjectId(projectID int64, payload m
 
 	// return if no domains found
 	if status != http.StatusFound || len(domainIDs) <= 0 {
-		return []model.Profile{}, status, "Failed to get domains list"
+		return []model.Profile{}, isPreview, status, "Failed to get domains list"
 	}
 
 	// breaking total domains list in small batches and running one at a time
@@ -390,7 +402,7 @@ func (store *MemSQL) GetPreviewDomainsListByProjectId(projectID int64, payload m
 			domainGroupID, eventNameIDsList, userCount, domainIDsList[li], limitAcc, fileValuesMap)
 
 		if status != http.StatusOK || errMsg != "" {
-			return []model.Profile{}, status, errMsg
+			return []model.Profile{}, isPreview, status, errMsg
 		}
 		profilesList = append(profilesList, profiles...)
 
@@ -409,7 +421,7 @@ func (store *MemSQL) GetPreviewDomainsListByProjectId(projectID int64, payload m
 	timeTaken := endTime - startTime
 	log.WithFields(log.Fields{"project_id": projectID, "user_count": *userCount}).Info("Time taken for preview query to compute results: ", timeTaken)
 
-	return profilesList, http.StatusOK, ""
+	return profilesList, isPreview, http.StatusOK, ""
 }
 
 func (store *MemSQL) GetPreviewDomainsListByProjectIdPerRun(projectID int64, payload model.TimelinePayload,

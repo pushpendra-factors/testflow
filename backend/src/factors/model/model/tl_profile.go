@@ -21,6 +21,13 @@ type Profile struct {
 	Score        float64                `json:"score"`
 }
 
+// Account Profiles response
+type AccountsProfileQueryResponsePayload struct {
+	Profiles  []Profile `json:"profiles"`
+	IsPreview bool      `json:"is_prev"`
+	Count     int64     `json:"count"`
+}
+
 type ListingTimeWindow struct {
 	LowerBound time.Time `json:"lower_bound"`
 	UpperBound time.Time `json:"upper_bound"`
