@@ -429,7 +429,7 @@ func (dd *DiskDriver) GetPredictProjectDir(projectId int64, model_id int64) stri
 }
 
 func (dd *DiskDriver) GetEventsAggregateDailyProjectDir(projectID int64) string {
-	path := fmt.Sprintf("%s/predictive_analysis/%d/", dd.baseDir, projectID)
+	path := fmt.Sprintf("%s/daily_aggregate_events/%d/", dd.baseDir, projectID)
 	return path
 }
 

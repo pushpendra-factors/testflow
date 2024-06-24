@@ -303,7 +303,7 @@ func (sd *S3Driver) GetPredictProjectDir(projectId int64, model_id int64) string
 }
 
 func (sd *S3Driver) GetEventsAggregateDailyProjectDir(projectID int64) string {
-	path := fmt.Sprintf("predictive_analysis/%d/", projectID)
+	path := fmt.Sprintf("daily_aggregate_events/%d/", projectID)
 	return path
 }
 
