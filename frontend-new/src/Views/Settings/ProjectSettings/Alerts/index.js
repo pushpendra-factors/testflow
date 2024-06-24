@@ -589,7 +589,7 @@ const Alerts = ({
   const renderTable = () => (
     <div className='fa-container'>
       <Row gutter={[24, 24]} justify='center'>
-        <Col span={22}>
+        <Col span={24}>
           <Row>
             <Col span={12}>{renderTitle()}</Col>
             <Col span={12}>

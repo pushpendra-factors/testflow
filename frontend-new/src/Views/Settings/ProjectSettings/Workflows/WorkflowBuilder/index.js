@@ -73,7 +73,7 @@ import WorkflowTrigger from './trigger';
 import MapComponent from './MapComponent';
 import FactorsHubspotCompany from './Templates/FactorsHubspotCompany';
 import FactorsApolloHubspotContacts from './Templates/FactorsApolloHubspotContacts';
-import { TemplateIDs } from '../utils';
+import { TemplateIDs, templateThumbnailImage } from '../utils';
 import FactorsSalesforceCompany from './Templates/FactorsSalesforceCompany';
 import FactorsApolloSalesforceContacts from './Templates/FactorsApolloSalesforceContacts';
 import WorkflowHubspotThumbnail from '../../../../../assets/images/workflow-hubspot-thumbnail.png';
@@ -501,10 +501,8 @@ const WorkflowBuilder = ({
       filters: formatFiltersForQuery(queries?.[0]?.filters),
       notifications: false,
       repeat_alerts: true,
-      template_title:
-        selectedTemp?.alert?.title || selectedTemp?.template_title,
-      template_description:
-        selectedTemp?.alert?.description || selectedTemp?.template_description,
+      template_title: isTemplate ? selectedTemp?.title : selectedTemp?.template_title,
+      template_description: isTemplate ? selectedTemp?.description : selectedTemp?.template_description,
       title: workflowName || '',
       description: workflowName || '',
       template_id: selectedTemp?.id || selectedTemp?.template_id,
@@ -643,9 +641,7 @@ const WorkflowBuilder = ({
         />
       );
     }
-    return null;
-
-    return null;
+    return null; 
   };
 
   const handleConfigure = () => {
@@ -655,6 +651,7 @@ const WorkflowBuilder = ({
     }, 300);
   };
 
+console.log("selectedTemp==>",selectedTemp)
   return (
     <>
       <Row className='border-bottom--thin-2 pt-4 pb-4'>
@@ -749,7 +746,7 @@ const WorkflowBuilder = ({
 
             {/* workflow config */}
 
-            {queries?.length > 0 || selectedSegment !== '' ? (
+           
               <>
                 <VerticalDivider />
 
@@ -793,17 +790,14 @@ const WorkflowBuilder = ({
                         type='primary'
                         extraClass='mt-2'
                         onClick={() => handleConfigure()}
+                        disabled={!(queries?.length > 0 || selectedSegment !== '')}
                       >
                         Configure Action
                       </Button>
                     </div>
                     <div className='px-4 flex justify-center'>
                       <img
-                        src={
-                          activeGrpBtn !== 'users'
-                            ? WorkflowHubspotThumbnail
-                            : WorkflowCAPIThumbnail
-                        }
+                        src={`../../../../../assets/images/workflow/${templateThumbnailImage(isTemplate ?selectedTemp?.id : selectedTemp?.template_id)}`}
                         style={{ height: '175px' }}
                       />
                     </div>
@@ -815,9 +809,6 @@ const WorkflowBuilder = ({
                   </div>
                 </div>
               </>
-            ) : (
-              <></>
-            )}
           </div>
         </Col>
       </Row>
