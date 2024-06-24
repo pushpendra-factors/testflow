@@ -2416,7 +2416,7 @@ func (store *MemSQL) PullEventRowsV2(projectID int64, startTime, endTime int64, 
 	}
 	var filterEventTimestamp string = ""
 	if minTimestamp != 0 {
-		filterEventTimestamp = fmt.Sprintf("AND events.timestamp>=%d", minTimestamp)
+		filterEventTimestamp = fmt.Sprintf("AND events.timestamp>=%d ", minTimestamp)
 	}
 	rawQuery := fmt.Sprintf("SELECT COALESCE(users.customer_user_id, users.id), event_names.name, events.timestamp, events.count,"+
 		" events.properties, users.join_timestamp, events.user_properties, users.is_group_user , users.group_1_user_id, users.group_2_user_id, users.group_3_user_id, users.group_4_user_id,"+
