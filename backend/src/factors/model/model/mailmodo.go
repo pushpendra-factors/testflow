@@ -35,7 +35,7 @@ type MailmodoGetContactDetailsAPIResponse struct {
 
 func FormMailmodoTriggerCampaignRequest(campaignId string, reqPayload []byte) (*http.Request, error) {
 
-	apiKey := config.GetMailmodoTriggerCampaignAPIResponse()
+	apiKey := config.GetMailmodoTriggerCampaignAPIKey()
 	url := MAILMODO_TRIGGER_CAMPAIGN_BASE_URL + campaignId
 
 	request, err := http.NewRequest("POST", url, bytes.NewBuffer(reqPayload))
@@ -54,7 +54,7 @@ func GetMailmodoGetContactDetailsResponse(email string) (*http.Response, error) 
 
 	logCtx := log.WithField("email_id", email)
 
-	apiKey := config.GetMailmodoTriggerCampaignAPIResponse()
+	apiKey := config.GetMailmodoTriggerCampaignAPIKey()
 	url := MAILMODO_GET_CONTACT_DETAILS_URL + email
 
 	request, err := http.NewRequest("GET", url, nil)
