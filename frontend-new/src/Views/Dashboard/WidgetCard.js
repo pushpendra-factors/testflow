@@ -10,6 +10,8 @@ import { connect, useDispatch, useSelector } from 'react-redux';
 import { Button, Dropdown, Menu, Tooltip } from 'antd';
 import { RightOutlined, LeftOutlined, PlusOutlined } from '@ant-design/icons';
 import { useHistory, useLocation } from 'react-router-dom';
+import { featureLock } from 'Routes/feature';
+import useAgentInfo from 'hooks/useAgentInfo';
 import { Text, SVG } from '../../components/factorsComponents';
 import CardContent from './CardContent';
 import {
@@ -39,8 +41,6 @@ import { DashboardContext } from '../../contexts/DashboardContext';
 import { shouldDataFetch } from '../../utils/dataFormatter';
 import { fetchWeeklyIngishts as fetchWeeklyInsightsAction } from '../../reducers/insights';
 import styles from './index.module.scss';
-import { featureLock } from 'Routes/feature';
-import useAgentInfo from 'hooks/useAgentInfo';
 import NewReportButton from './NewReportButton';
 
 function WidgetCard({
@@ -463,14 +463,11 @@ function WidgetCard({
       unit?.query?.query?.query_group?.[0]?.cl === 'events' &&
       unit?.query?.id_text
     ) {
-      analyseQueryParamsPath =
-        analyseQueryParamsPath + '/events/' + unit.query.id_text;
+      analyseQueryParamsPath = `${analyseQueryParamsPath}/events/${unit.query.id_text}`;
     } else if (unit?.query?.query?.cl === 'funnel') {
-      analyseQueryParamsPath =
-        analyseQueryParamsPath + '/funnel/' + unit.query.id_text;
+      analyseQueryParamsPath = `${analyseQueryParamsPath}/funnel/${unit.query.id_text}`;
     } else if (unit?.query?.query?.cl === 'kpi' && featureLock(email)) {
-      analyseQueryParamsPath =
-        analyseQueryParamsPath + '/kpi/' + unit.query.id_text;
+      analyseQueryParamsPath = `${analyseQueryParamsPath}/kpi/${unit.query.id_text}`;
     }
 
     history.push({
