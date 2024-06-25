@@ -729,17 +729,19 @@ func buildAddJoinForFunnelAllAccountsFunnelStep(projectID int64, queryGroupByPro
 	}
 
 	joinStmnt := ""
+	params := []interface{}{}
 	if hasGlobalGroupByProperties {
 		globalGroupIDColumns, globalGroupSource := model.GetDomainsAsscocaitedGroupSourceANDColumnIDs(nil, userGroupProps)
 		joinStmnt = fmt.Sprintf(" LEFT JOIN users AS group_users on %s.coal_group_user_id = group_users.group_%d_user_id "+
 			"AND group_users.project_id = ? AND  group_users.is_group_user = true AND group_users.source IN ( %s ) AND ( %s ) AND group_users.is_deleted = false ",
 			refStep, scopeGroupID, globalGroupSource, globalGroupIDColumns)
+		params = append(params, projectID)
 	}
 
 	if model.CheckIfHasDomainGroupBy(queryGroupByProperty) {
 		joinStmnt = joinStmnt + fmt.Sprintf(" LEFT JOIN users as domain_users on %s.coal_group_user_id = domain_users.id "+
 			"AND domain_users.project_id = ? AND domain_users.source = 9", refStep)
-		return joinStmnt, []interface{}{projectID}
+		return joinStmnt, append(params, projectID)
 	}
 
 	return joinStmnt, []interface{}{projectID}
