@@ -723,6 +723,7 @@ type Model interface {
 	GetAllDomainsByProjectID(projectID int64, domainGroupID int, limitVal int) ([]string, int)
 	GetAllDomainsForPreviewByProjectID(projectID int64, domainGroupID int, limitVal int, filters []model.QueryProperty, searchFilter []string) ([]string, int)
 	GetAccountAssociatedUserCountByProjectID(projectID int64, domainGroupID int) (int64, int)
+	GetAccountAssociatedToSegmentCount(projectID int64, domainGroupID int, segmentID string) (int64, int)
 	GetLatestUpatedDomainsByProjectID(projectID int64, domainGroupID int, fromTime time.Time, limitVal int) ([]string, int)
 	UpdateAssociatedSegments(projectID int64, id string, associatedSegments map[string]model.AssociatedSegments) (int, error)
 	GetNonGroupUsersUpdatedAtGivenHour(projectID int64, fromTime time.Time) ([]model.User, int)
@@ -1006,13 +1007,13 @@ type Model interface {
 	UpdateSegmentConfigForFeatureScoring(projectID int64, segment *model.Segment, isScoringEnabled bool) error
 
 	// Timeline consuming segment_marker
-	GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload, downloadLimitGiven bool) ([]model.Profile, int, string)
+	GetMarkedDomainsListByProjectId(projectID int64, payload model.TimelinePayload, downloadLimitGiven bool) (model.AccountsProfileQueryResponsePayload, int, string)
 	GetAllPropertiesForDomain(projectID int64, domainGroupId int, domainID string, userCount *int64) ([]model.User, int)
 	GetAllGroupPropertiesForDomain(projectID int64, domainGroupId int, domainID string) ([]model.User, int)
 	GetDomainsListFromMarker(projectID int64, payload model.TimelinePayload,
-		domainGroupID int, downloadLimitGiven bool) ([]model.Profile, int, string)
+		domainGroupID int, downloadLimitGiven bool) ([]model.Profile, bool, int, string)
 	GetPreviewDomainsListByProjectId(projectID int64, payload model.TimelinePayload,
-		domainGroupID int, downloadLimitGiven bool) ([]model.Profile, int, string)
+		domainGroupID int, downloadLimitGiven bool) ([]model.Profile, bool, int, string)
 	GetPreviewDomainsListByProjectIdPerRun(projectID int64, payload model.TimelinePayload, domainGroupID int,
 		eventNameIDsMap map[string]string, userCount *int64, domainIDList []string, limitAcc int, fileValuesMap map[string]map[string]bool) ([]model.Profile, int, string)
 	// segment

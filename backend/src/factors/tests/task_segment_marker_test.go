@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -827,8 +828,11 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 	}
 	assert.True(t, nameFound5)
 
+	// Get the environment variable
+	filePath := os.Getenv("PATH_TO_FACTORS")
+
 	//uploading file
-	csvFilePath := "/Users/apple/repos/factors/backend/src/factors/tests/data"
+	csvFilePath := filePath + "/factors/backend/src/factors/tests/data"
 	csvFilename := "test_inlist.csv"
 
 	csvFile, err := ioutil.ReadFile(csvFilePath + "/" + csvFilename)
@@ -1101,6 +1105,11 @@ func SegmentMarkerTest(t *testing.T, project *model.Project, agent *model.Agent,
 			assert.NotContains(t, associatedSegmentsListNew[index], allAccountsSegmentNameIDs["Domain Level Support"])
 		}
 	}
+
+	// checking count of domains
+	count, status := store.GetStore().GetAccountAssociatedToSegmentCount(project.ID, 4, segmentID11)
+	assert.Equal(t, http.StatusFound, status)
+	assert.Equal(t, count, int64(2))
 
 }
 
