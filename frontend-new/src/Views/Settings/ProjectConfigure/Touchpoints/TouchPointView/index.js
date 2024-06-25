@@ -12,12 +12,19 @@ import {
 import FaFilterSelect from 'Components/FaFilterSelect';
 import { DEFAULT_OPERATOR_PROPS } from 'Components/FaFilterSelect/utils';
 
+import { toCapitalCase } from 'Utils/global';
+import getGroupIcon from 'Utils/getGroupIcon';
+import startCase from 'lodash/startCase';
+import {
+  convertGroupedPropertiesToUngrouped,
+  setDisplayName
+} from 'Utils/dataFormatter';
 import FaSelect from '../../../../../components/GenericComponents/FaSelect';
 
 import {
   formatFiltersForQuery,
   processFiltersFromQuery
-} from '../../../../../Views/CoreQuery/utils';
+} from '../../../../CoreQuery/utils';
 import {
   RULE_TYPE_HS_CONTACT,
   RULE_TYPE_HS_CALLS,
@@ -36,18 +43,11 @@ import {
   DEFAULT_TIMESTAMPS,
   PROPERTY_MAP_OPTIONS
 } from '../utils';
-import { toCapitalCase } from 'Utils/global';
 import { PropertySelect } from './PropertySelect';
-import getGroupIcon from 'Utils/getGroupIcon';
-import startCase from 'lodash/startCase';
-import {
-  convertGroupedPropertiesToUngrouped,
-  setDisplayName
-} from 'Utils/dataFormatter';
 
 const TouchpointView = ({
   activeProject,
-  tchType = '2',
+  tchType = 'hubspot',
   getEventPropertiesV2,
   eventPropertiesV2,
   eventUserPropertiesV2,
@@ -65,26 +65,26 @@ const TouchpointView = ({
   const [tchRuleType, setTchRuleType] = useState(
     rule
       ? rule.rule_type
-      : tchType === '2'
-      ? RULE_TYPE_HS_CONTACT
-      : RULE_TYPE_SF_CONTACT
+      : tchType === 'hubspot'
+        ? RULE_TYPE_HS_CONTACT
+        : RULE_TYPE_SF_CONTACT
   );
 
   const [timestampRef, setTimestampRefState] = useState(
-    tchType === '2'
+    tchType === 'hubspot'
       ? DEFAULT_TIMESTAMPS[RULE_TYPE_HS_CONTACT]
       : DEFAULT_TIMESTAMPS[RULE_TYPE_SF_CONTACT]
   );
-  //touch_point_time_ref
+  // touch_point_time_ref
   const [touchPointPropRef, setTouchPointPropRef] = useState(
-    tchType === '2'
+    tchType === 'hubspot'
       ? DEFAULT_TIMESTAMPS[RULE_TYPE_HS_CONTACT]
       : DEFAULT_TIMESTAMPS[RULE_TYPE_SF_CAMPAIGNS]
   );
   const [timestampPropertyRef, setTimestampPropRef] = useState(false);
   const [dateTypeDD, setDateTypeDD] = useState(false);
   const [dateTypeProps, setDateTypeProps] = useState([]);
-  //filters
+  // filters
   const [newFilterStates, setNewFilterStates] = useState([]);
 
   const [extraPropBtn, setExtraPropBtn] = useState(false);
@@ -92,7 +92,7 @@ const TouchpointView = ({
 
   const [propertyValArray, setPropertyValArray] = useState(null);
 
-  //property map
+  // property map
   const [propertyMap, setPropertyMap] = useState({
     $campaign: {
       ty: 'Property',
@@ -186,7 +186,7 @@ const TouchpointView = ({
   }, [propertyValArray]);
 
   const reversePropertyMap = (properties) => {
-    //Gets the extra Properties Filtered and return the defined properties.
+    // Gets the extra Properties Filtered and return the defined properties.
     const propMap = { ...properties };
     const extraProps = {};
     const propKeys = Object.keys(propertyMap);
@@ -220,7 +220,7 @@ const TouchpointView = ({
   };
 
   const setPropData = (propToCall, data) => {
-    const ddValues = Object.assign({}, dropDownValues);
+    const ddValues = { ...dropDownValues };
     ddValues[propToCall] = [...data, '$none'];
     setDropDownValues(ddValues);
   };
@@ -267,12 +267,12 @@ const TouchpointView = ({
   useEffect(() => {
     const eventToCall = getEventToCall();
     let tchUserProps = {};
-    const filterDD = Object.assign({}, filterDropDownOptions);
+    const filterDD = { ...filterDropDownOptions };
     const propState = [];
     let eventProps = {};
     const propsArray = [];
     const startsWith = getStartsWith();
-    if (tchType === '2') {
+    if (tchType === 'hubspot') {
       eventProps = getPropertiesFiltered(
         eventPropertiesV2[eventToCall],
         startsWith
@@ -280,7 +280,7 @@ const TouchpointView = ({
       if (tchRuleType !== RULE_TYPE_HS_FORM_SUBMISSIONS) {
         tchUserProps = getPropertiesFiltered(eventUserPropertiesV2, startsWith);
       }
-    } else if (tchType === '3') {
+    } else if (tchType === 'salesforce') {
       eventProps = getPropertiesFiltered(
         eventPropertiesV2[eventToCall],
         startsWith
@@ -364,7 +364,7 @@ const TouchpointView = ({
       newFilterStates.forEach((filter, index) => {
         filterRows.push(
           <div className={`mt-2 flex items-center relative `}>
-            <div className={`relative flex`}>
+            <div className='relative flex'>
               <FaFilterSelect
                 filter={filter}
                 propOpts={filterDropDownOptions.props}
@@ -373,15 +373,15 @@ const TouchpointView = ({
                 applyFilter={(filt) => applyFilter(filt, index)}
                 setValuesByProps={setValuesByProps}
                 valueOptsLoading={propertyValuesMap.loading}
-              ></FaFilterSelect>
+              />
             </div>
             <Button
               type='text'
-              className={`fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button`}
+              className='fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button'
               onClick={() => closeFilter(index)}
-              size={'small'}
+              size='small'
             >
-              <SVG name={'remove'} />
+              <SVG name='remove' />
             </Button>
           </div>
         );
@@ -392,7 +392,7 @@ const TouchpointView = ({
       <div className={`mt-2 flex items-center relative `}>
         {filterDD ? (
           <>
-            <div className={`relative flex`}>
+            <div className='relative flex'>
               <FaFilterSelect
                 propOpts={filterDropDownOptions.props}
                 operatorOpts={filterDropDownOptions.operator}
@@ -400,25 +400,21 @@ const TouchpointView = ({
                 applyFilter={(filt) => applyFilter(filt, -1)}
                 setValuesByProps={setValuesByProps}
                 valueOptsLoading={propertyValuesMap.loading}
-              ></FaFilterSelect>
+              />
             </div>
             <Button
               type='text'
-              className={`fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button`}
+              className='fa-btn--custom filter-buttons-margin btn-right-round filter-remove-button'
               onClick={() => setFilterDD(false)}
-              size={'small'}
+              size='small'
             >
-              <SVG name={'remove'} />
+              <SVG name='remove' />
             </Button>
           </>
         ) : (
-          <Button
-            size={'large'}
-            type={'text'}
-            onClick={() => setFilterDD(true)}
-          >
-            <SVG name={'plus'} extraClass={'mr-1'} />
-            {'Add Filter'}
+          <Button size='large' type='text' onClick={() => setFilterDD(true)}>
+            <SVG name='plus' extraClass='mr-1' />
+            Add Filter
           </Button>
         )}
       </div>
@@ -427,26 +423,22 @@ const TouchpointView = ({
     return filterRows;
   };
 
-  const renderFilterBlock = () => {
-    return (
-      <Row className={`mt-4`}>
-        <Col span={6} className={`justify-items-start`}>
-          <Text level={7} type={'title'} extraClass={'m-0'} weight={'bold'}>
-            Add a Touchpoint Rule<sup>*</sup>
-          </Text>
-        </Col>
+  const renderFilterBlock = () => (
+    <Row className='mt-4'>
+      <Col span={6} className='justify-items-start'>
+        <Text level={7} type='title' extraClass='m-0' weight='bold'>
+          Add a Touchpoint Rule<sup>*</sup>
+        </Text>
+      </Col>
 
-        <Col span={14}>{renderFilters().map((component) => component)}</Col>
-      </Row>
-    );
-  };
+      <Col span={14}>{renderFilters().map((component) => component)}</Col>
+    </Row>
+  );
 
   const setTimestampRefSF = (val) => {
     const timeStVal = val?.target?.value;
     setTimestampRefState(timeStVal);
-    setTimestampPropRef(
-      RULE_TYPE_HS_CONTACT && timeStVal === '' ? true : false
-    );
+    setTimestampPropRef(!!(RULE_TYPE_HS_CONTACT && timeStVal === ''));
     setTouchPointPropRef(timeStVal);
   };
 
@@ -459,7 +451,7 @@ const TouchpointView = ({
     let isReady = true;
     const propKeys = Object.keys(propertyMap);
     for (let i = 0; i < propKeys.length; i++) {
-      propertyMap[propKeys[i]]['va'] ? (() => {})() : (isReady = false);
+      propertyMap[propKeys[i]].va ? (() => {})() : (isReady = false);
       if (!isReady) {
         break;
       }
@@ -488,92 +480,99 @@ const TouchpointView = ({
           onChange={setTimestampRefSF}
           value={timestampRef === 'LAST_MODIFIED_TIME_REF' ? timestampRef : ''}
         >
-          <Radio value={`LAST_MODIFIED_TIME_REF`}>
+          <Radio value='LAST_MODIFIED_TIME_REF'>
             Factors Last modified time
           </Radio>
-          <Radio value={``}>Select a property</Radio>
+          <Radio value=''>Select a property</Radio>
         </Radio.Group>
       );
-    } else if (tchRuleType === RULE_TYPE_HS_EMAILS) {
+    }
+    if (tchRuleType === RULE_TYPE_HS_EMAILS) {
       return (
         <Radio.Group onChange={setTimestampRefSF} value={timestampRef}>
-          <Radio value={`$hubspot_engagement_timestamp`}>Email Timestamp</Radio>
+          <Radio value='$hubspot_engagement_timestamp'>Email Timestamp</Radio>
         </Radio.Group>
       );
-    } else if (tchRuleType === RULE_TYPE_HS_FORM_SUBMISSIONS) {
+    }
+    if (tchRuleType === RULE_TYPE_HS_FORM_SUBMISSIONS) {
       return (
         <Radio.Group onChange={setTimestampRefSF} value={timestampRef}>
-          <Radio value={`$timestamp`}>Form submission timestamp</Radio>
+          <Radio value='$timestamp'>Form submission timestamp</Radio>
         </Radio.Group>
       );
-    } else if (tchRuleType === RULE_TYPE_HS_MEETINGS) {
+    }
+    if (tchRuleType === RULE_TYPE_HS_MEETINGS) {
       return (
         <Radio.Group onChange={setTimestampRefSF} value={timestampRef}>
-          <Radio value={`$hubspot_engagement_timestamp`}>
+          <Radio value='$hubspot_engagement_timestamp'>
             Meeting Done Timestamp
           </Radio>
         </Radio.Group>
       );
-    } else if (tchRuleType === RULE_TYPE_HS_CALLS) {
+    }
+    if (tchRuleType === RULE_TYPE_HS_CALLS) {
       return (
         <Radio.Group onChange={setTimestampRefSF} value={timestampRef}>
-          <Radio value={`$hubspot_engagement_timestamp`}>Call timestamp</Radio>
+          <Radio value='$hubspot_engagement_timestamp'>Call timestamp</Radio>
         </Radio.Group>
       );
-    } else if (tchRuleType === RULE_TYPE_HS_LISTS) {
+    }
+    if (tchRuleType === RULE_TYPE_HS_LISTS) {
       return (
         <Radio.Group onChange={setTimestampRefSF} value={timestampRef}>
-          <Radio value={`$hubspot_contact_list_timestamp`}>
+          <Radio value='$hubspot_contact_list_timestamp'>
             Added to the List timestamp
           </Radio>
-          <Radio value={`$hubspot_contact_list_list_create_timestamp`}>
+          <Radio value='$hubspot_contact_list_list_create_timestamp'>
             List create timestamp
           </Radio>
         </Radio.Group>
       );
-    } else if (tchRuleType === RULE_TYPE_SF_CONTACT) {
+    }
+    if (tchRuleType === RULE_TYPE_SF_CONTACT) {
       return (
         <Radio.Group onChange={setTimestampRefSF} value={timestampRef}>
-          <Radio value={`campaign_member_created_date`}>
+          <Radio value='campaign_member_created_date'>
             Campaign Created Date
           </Radio>
-          <Radio value={`campaign_member_first_responded_date`}>
+          <Radio value='campaign_member_first_responded_date'>
             Campaign First Responded Date
           </Radio>
         </Radio.Group>
       );
-    } else if (tchRuleType === RULE_TYPE_SF_TASKS) {
+    }
+    if (tchRuleType === RULE_TYPE_SF_TASKS) {
       return (
         <Radio.Group onChange={setTimestampRefSF} value={timestampRef}>
-          <Radio value={'$salesforce_task_lastmodifieddate'}>
+          <Radio value='$salesforce_task_lastmodifieddate'>
             Task Modified Date
           </Radio>
-          <Radio value={'$salesforce_task_createddate'}>
-            Task Created Date
-          </Radio>
-          <Radio value={'$salesforce_task_completeddatetime'}>
+          <Radio value='$salesforce_task_createddate'>Task Created Date</Radio>
+          <Radio value='$salesforce_task_completeddatetime'>
             Task Completed Date
           </Radio>
         </Radio.Group>
       );
-    } else if (tchRuleType === RULE_TYPE_SF_EVENTS) {
+    }
+    if (tchRuleType === RULE_TYPE_SF_EVENTS) {
       return (
         <Radio.Group onChange={setTimestampRefSF} value={timestampRef}>
-          <Radio value={'$salesforce_event_lastmodifieddate'}>
+          <Radio value='$salesforce_event_lastmodifieddate'>
             Event Modified Date
           </Radio>
-          <Radio value={'$salesforce_event_createddate'}>
+          <Radio value='$salesforce_event_createddate'>
             Event Created Date
           </Radio>
         </Radio.Group>
       );
-    } else if (tchRuleType === RULE_TYPE_SF_CAMPAIGNS) {
+    }
+    if (tchRuleType === RULE_TYPE_SF_CAMPAIGNS) {
       return (
         <Radio.Group onChange={setTimestampRefSF} value={timestampRef}>
-          <Radio value={'$sf_campaign_member_created'}>
+          <Radio value='$sf_campaign_member_created'>
             Campaign Created Date
           </Radio>
-          <Radio value={'$sf_campaign_member_updated'}>
+          <Radio value='$sf_campaign_member_updated'>
             Campaign First Responded Date
           </Radio>
         </Radio.Group>
@@ -581,52 +580,50 @@ const TouchpointView = ({
     }
   };
 
-  const renderTimestampSelector = () => {
-    return (
-      <div className={`mt-8`}>
-        <Row className={`mt-2`}>
-          <Text level={7} type={'title'} extraClass={'m-0'} weight={'bold'}>
-            Touchpoint Timestamp<sup>*</sup>
-          </Text>
-        </Row>
-        <Row className={`mt-4`}>{renderTimestampRenderOption()}</Row>
-        <Row className={`mt-2`}>
-          {tchRuleType === RULE_TYPE_HS_CONTACT && timestampPropertyRef && (
-            <div className={`relative`}>
-              <Button type='link' onClick={() => setDateTypeDD(!dateTypeDD)}>
-                {touchPointPropRef
+  const renderTimestampSelector = () => (
+    <div className='mt-8'>
+      <Row className='mt-2'>
+        <Text level={7} type='title' extraClass='m-0' weight='bold'>
+          Touchpoint Timestamp<sup>*</sup>
+        </Text>
+      </Row>
+      <Row className='mt-4'>{renderTimestampRenderOption()}</Row>
+      <Row className='mt-2'>
+        {tchRuleType === RULE_TYPE_HS_CONTACT && timestampPropertyRef && (
+          <div className='relative'>
+            <Button type='link' onClick={() => setDateTypeDD(!dateTypeDD)}>
+              {touchPointPropRef
+                ? eventPropNames[touchPointPropRef]
                   ? eventPropNames[touchPointPropRef]
-                    ? eventPropNames[touchPointPropRef]
-                    : touchPointPropRef
-                  : 'Select Date type property'}
-              </Button>
-              {dateTypeDD && (
-                <FaSelect
-                  optionClickCallback={setTimestampProp}
-                  onClickOutside={() => setDateTypeDD(false)}
-                  options={dateTypeProps}
-                ></FaSelect>
-              )}
-            </div>
-          )}
-        </Row>
-      </div>
-    );
-  };
+                  : touchPointPropRef
+                : 'Select Date type property'}
+            </Button>
+            {dateTypeDD && (
+              <FaSelect
+                optionClickCallback={setTimestampProp}
+                onClickOutside={() => setDateTypeDD(false)}
+                options={dateTypeProps}
+              />
+            )}
+          </div>
+        )}
+      </Row>
+    </div>
+  );
 
   const setPropType = ({ value, label }) => {
-    const propMap = Object.assign({}, propertyMap);
-    propMap['$type']['va'] = value;
+    const propMap = { ...propertyMap };
+    propMap.$type.va = value;
     setPropertyMap(propMap);
     // setTypeSelectorOpen(false);
   };
 
   const setPropVal = ({ value, label }, key) => {
-    let propMap = Object.assign({}, propertyMap);
-    propMap[key]['va'] = value;
+    const propMap = { ...propertyMap };
+    propMap[key].va = value;
     if (value.length !== 0 && isSearchedValue(value))
-      propMap[key]['ty'] = 'Constant';
-    else propMap[key]['ty'] = 'Property';
+      propMap[key].ty = 'Constant';
+    else propMap[key].ty = 'Property';
     setPropertyMap(propMap);
   };
 
@@ -682,7 +679,7 @@ const TouchpointView = ({
     const propertiesMp = [];
     const startsWith = getStartsWith();
 
-    if (tchType === '2') {
+    if (tchType === 'hubspot') {
       eventPropertiesModified?.forEach((prop) => {
         if (startsWith?.length ? prop[1]?.startsWith(startsWith) : true) {
           propertiesMp.push({ value: prop[1], label: prop[0] });
@@ -694,7 +691,7 @@ const TouchpointView = ({
             propertiesMp.push({ value: prop[1], label: prop[0] });
           }
         });
-    } else if (tchType === '3') {
+    } else if (tchType === 'salesforce') {
       eventPropertiesModified?.forEach((prop) => {
         if (prop[1]?.startsWith(startsWith)) {
           propertiesMp.push({ value: prop[1], label: prop[0] });
@@ -733,7 +730,7 @@ const TouchpointView = ({
       return reversePropertyNameMap[val];
     return val;
   };
-  //To check if the value is new value entered by user. Returns True For New Value
+  // To check if the value is new value entered by user. Returns True For New Value
   const isSearchedValue = (val) => {
     const eventToCall = getEventToCall();
     return (
@@ -757,17 +754,17 @@ const TouchpointView = ({
       const propKey = property[1];
       if (propTitle === 'Type') {
         propertyMapRows.push(
-          <Row key={index} className={'mt-10'}>
+          <Row key={index} className='mt-10'>
             <Col span={7}>
-              <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>
+              <Text level={7} type='title' extraClass='m-0' weight='thin'>
                 {propTitle}
               </Text>
             </Col>
             <PropertySelect
               title={
-                propertyMap['$type']['va'] === ''
+                propertyMap.$type.va === ''
                   ? 'Select Type Property'
-                  : toCapitalCase(propertyMap['$type']['va'])
+                  : toCapitalCase(propertyMap.$type.va)
               }
               setPropValue={setPropType}
               renderOptions={renderTypePropertyOptions}
@@ -777,21 +774,21 @@ const TouchpointView = ({
         );
       } else {
         propertyMapRows.push(
-          <Row key={index} className={'mt-4'}>
+          <Row key={index} className='mt-4'>
             <Col span={7}>
-              <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>
+              <Text level={7} type='title' extraClass='m-0' weight='thin'>
                 {propTitle}
               </Text>
             </Col>
             <PropertySelect
               title={
-                !propertyMap[propKey]['va'] || propertyMap[propKey]['va'] === ''
+                !propertyMap[propKey].va || propertyMap[propKey].va === ''
                   ? `Select ${toCapitalCase(propKey?.slice(1))} Property`
-                  : setDisplayName(eventPropNames, propertyMap[propKey]['va'])
+                  : setDisplayName(eventPropNames, propertyMap[propKey].va)
               }
               setPropValue={(option) => setPropVal(option, propKey)}
               renderOptions={renderEventPropertyCampOptions}
-              allowSearch={true}
+              allowSearch
             />
           </Row>
         );
@@ -800,7 +797,7 @@ const TouchpointView = ({
     return (
       <div className={`border-top--thin pt-5 mt-8 `}>
         <Row>
-          <Text level={7} type={'title'} extraClass={'m-0'} weight={'bold'}>
+          <Text level={7} type='title' extraClass='m-0' weight='bold'>
             Map the properties<sup>*</sup>
           </Text>
         </Row>
@@ -818,152 +815,144 @@ const TouchpointView = ({
     }
 
     const touchPointObj = {
-      //parse and set filterstate
+      // parse and set filterstate
       filters: formatFiltersForQuery(newFilterStates),
       // set propMap
       properties_map: propMap,
       touch_point_time_ref: touchPointPropRef
     };
-    touchPointObj['rule_type'] = tchRuleType;
+    touchPointObj.rule_type = tchRuleType;
     onSave(touchPointObj);
   };
 
-  const renderFooterActions = () => {
-    return (
-      <div>
-        <Row className={`mt-20 relative justify-start`}>
-          <Text
-            level={7}
-            type={'title'}
-            extraClass={'m-0 italic'}
-            weight={'thin'}
+  const renderFooterActions = () => (
+    <div>
+      <Row className='mt-20 relative justify-start'>
+        <Text level={7} type='title' extraClass='m-0 italic' weight='thin'>
+          <sup>*</sup> All these fields are mandatory
+        </Text>
+      </Row>
+      <Row className='border-top--thin mt-4 relative justify-start'>
+        <Col className='mt-6' span={10}>
+          <Button size='large' onClick={() => onCancel()}>
+            Cancel
+          </Button>
+          <Button
+            disabled={!validateRuleInfo() || !validateInputs()}
+            size='large'
+            type='primary'
+            className='ml-2'
+            htmlType='submit'
+            onClick={onSaveToucPoint}
           >
-            <sup>*</sup> All these fields are mandatory
-          </Text>
-        </Row>
-        <Row className={`border-top--thin mt-4 relative justify-start`}>
-          <Col className={`mt-6`} span={10}>
-            <Button size={'large'} onClick={() => onCancel()}>
-              Cancel
-            </Button>
-            <Button
-              disabled={!validateRuleInfo() || !validateInputs()}
-              size={'large'}
-              type='primary'
-              className={'ml-2'}
-              htmlType='submit'
-              onClick={onSaveToucPoint}
-            >
-              Save
-            </Button>
-          </Col>
-        </Row>
-      </div>
-    );
-  };
+            Save
+          </Button>
+        </Col>
+      </Row>
+    </div>
+  );
 
-  //Rule Type Selection
+  // Rule Type Selection
   const ruleTypeSelect = (option) => {
     setTchRuleType(option.value);
   };
   const renderTchRuleTypeOptions = () => {
-    if (tchType === '3') {
-      return Object.entries(ruleTypesNameMappingForSF).map((option) => {
-        return { value: option[0], label: option[1] };
-      });
+    if (tchType === 'salesforce') {
+      return Object.entries(ruleTypesNameMappingForSF).map((option) => ({
+        value: option[0],
+        label: option[1]
+      }));
     }
-    return Object.entries(ruleTypesNameMappingForHS).map((option) => {
-      return { value: option[0], label: option[1] };
-    });
+    return Object.entries(ruleTypesNameMappingForHS).map((option) => ({
+      value: option[0],
+      label: option[1]
+    }));
   };
-  const renderTchRuleType = () => {
-    return (
-      <div className={`mt-8`}>
-        <Row className={`mt-2`}>
-          <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>
-            Create a touchpoint using<sup>*</sup>
-          </Text>
-        </Row>
-        <Row className={`mt-4`}>
-          <PropertySelect
-            title={
-              tchType === '2'
-                ? ruleTypesNameMappingForHS[tchRuleType]
-                : ruleTypesNameMappingForSF[tchRuleType]
-            }
-            setPropValue={ruleTypeSelect}
-            renderOptions={renderTchRuleTypeOptions}
-            allowSearch={false}
-          />
-        </Row>
-      </div>
-    );
-  };
+  const renderTchRuleType = () => (
+    <div className='mt-8'>
+      <Row className='mt-2'>
+        <Text level={7} type='title' extraClass='m-0' weight='thin'>
+          Create a touchpoint using<sup>*</sup>
+        </Text>
+      </Row>
+      <Row className='mt-4'>
+        <PropertySelect
+          title={
+            tchType === 'hubspot'
+              ? ruleTypesNameMappingForHS[tchRuleType]
+              : ruleTypesNameMappingForSF[tchRuleType]
+          }
+          setPropValue={ruleTypeSelect}
+          renderOptions={renderTchRuleTypeOptions}
+          allowSearch={false}
+        />
+      </Row>
+    </div>
+  );
 
-  //Extra Property only in Form Submission
+  // Extra Property only in Form Submission
   const setExtraMapByProp = (extraProp) => {
     const extraMap = { ...extraPropMap };
-    extraMap[`$` + extraProp] = {
+    extraMap[`$${extraProp}`] = {
       ty: 'Property',
       va: ''
     };
     setExtraPropMap(extraMap);
   };
   const setExtraPropVal = ({ value, label }, key) => {
-    let propMap = Object.assign({}, extraPropMap);
-    propMap[key]['va'] = value;
+    const propMap = { ...extraPropMap };
+    propMap[key].va = value;
     if (value.length !== 0 && isSearchedValue(value))
-      propMap[key]['ty'] = 'Constant';
-    else propMap[key]['ty'] = 'Property';
+      propMap[key].ty = 'Constant';
+    else propMap[key].ty = 'Property';
     setExtraPropMap(propMap);
   };
-  const renderAddExtraPropBtn = () => {
-    return (
-      <div className={`mr-2 items-center relative`}>
-        <Button
-          type='link'
-          icon={<SVG name={'plus'} color={'grey'} />}
-          onClick={() => setExtraPropBtn(!extraPropBtn)}
-        >
-          Add touchpoint property
-        </Button>
+  const renderAddExtraPropBtn = () => (
+    <div className='mr-2 items-center relative'>
+      <Button
+        type='link'
+        icon={<SVG name='plus' color='grey' />}
+        onClick={() => setExtraPropBtn(!extraPropBtn)}
+      >
+        Add touchpoint property
+      </Button>
 
-        {extraPropBtn && (
-          <FaSelect
-            options={Extra_PROP_SHOW_OPTIONS.map((op) => {
-              return { value: op[2], label: op[0] };
-            })}
-            optionClickCallback={(option) => {
-              setExtraMapByProp(option.value);
-              setExtraPropBtn(false);
-            }}
-            onClickOutside={() => setExtraPropBtn(false)}
-          ></FaSelect>
-        )}
-      </div>
-    );
-  };
+      {extraPropBtn && (
+        <FaSelect
+          options={Extra_PROP_SHOW_OPTIONS.map((op) => ({
+            value: op[2],
+            label: op[0]
+          }))}
+          optionClickCallback={(option) => {
+            setExtraMapByProp(option.value);
+            setExtraPropBtn(false);
+          }}
+          onClickOutside={() => setExtraPropBtn(false)}
+        />
+      )}
+    </div>
+  );
   const renderExtraPropMap = () => {
     const extraMapRows = [];
     Extra_PROP_SHOW_OPTIONS.forEach((key, index) => {
-      const propKey = '$' + key[2];
+      const propKey = `$${key[2]}`;
       if (!Object.keys(extraPropMap).includes(propKey)) return null;
       extraMapRows.push(
-        <Row key={index} className={`mt-4`}>
+        <Row key={index} className='mt-4'>
           <Col span={7}>
-            <Text level={7} type={'title'} extraClass={'m-0'} weight={'thin'}>
+            <Text level={7} type='title' extraClass='m-0' weight='thin'>
               {key[0]}
             </Text>
           </Col>
           <PropertySelect
             title={
-              !extraPropMap[propKey]['va'] || extraPropMap[propKey]['va'] === ''
+              !extraPropMap[propKey].va || extraPropMap[propKey].va === ''
                 ? 'Select Property'
-                : setDisplayName(eventPropNames, extraPropMap[propKey]['va'])
+                : setDisplayName(eventPropNames, extraPropMap[propKey].va)
             }
             setPropValue={(val) => setExtraPropVal(val, propKey)}
             renderOptions={renderEventPropertyCampOptions}
-            allowSearch={true}
+            allowSearch
           />
         </Row>
       );
