@@ -95,7 +95,7 @@ export const INITIAL_EVENT_WITH_PROPERTIES_STATE = {
   filters: [],
   group: '',
   isEventPerformed: true,
-  frequencyOperator: EVENT_FREQ_OPERATORS['greater than'],
-  frequency: 0,
-  range: 7
+  frequencyOperator: EVENT_FREQ_OPERATORS['greater than or equals'],
+  frequency: 1,
+  range: 30
 };

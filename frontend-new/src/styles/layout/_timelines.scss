@@ -418,9 +418,8 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: var(--bg-color);
-      border: 1px solid;
-      border-color: var(--border-color);
+      background-color: #f9f9f9;
+      border: 1px solid #ccc;
       border-radius: 50%;
     }
 
@@ -552,10 +551,9 @@
     left: -16px;
     height: 32px;
     width: 32px;
-    border: 1px solid;
+    border: 1px solid #ccc;
     border-radius: 50%;
-    background-color: var(--bg-color);
-    border-color: var(--border-color);
+    background-color: #f9f9f9;
   }
 
   .card {
@@ -725,32 +723,30 @@
 }
 
 .fa-table--profileslist {
-  margin-bottom: 64px;
   padding: 0;
 
+  & .ant-table-container {
+    margin: 0 0 40px 32px;
+  }
+
   & .ant-table-content {
-    height: calc(100vh - 280px);
+    border: 1px solid $fa-color-neutral-grey-4;
+    border-radius: 8px 8px 0 0;
+    max-height: calc(100vh - 208px);
     overflow: scroll !important;
-  }
-
-  & table {
-    min-width: unset !important;
-  }
-
-  & .ant-table-content thead tr {
-    top: 0;
-    position: sticky;
-    z-index: 10000;
+    background-color: $fa-color-neutral-grey-2;
   }
 
   .ant-table-thead {
+    position: sticky;
+    top: 0;
+    z-index: 10000;
     .ant-table-cell {
       font-weight: $font-weight--bold;
-      font-size: 12px;
       color: $fa-color--mono-5;
+      background-color: $fa-color-neutral-grey-2;
     }
 
-    .ant-table-cell,
     .ant-table-column-sort,
     .ant-table-column-has-sorters {
       background-color: $fa-color-neutral-grey-2;
@@ -759,6 +755,7 @@
     .ant-table-column-sorters {
       display: flex;
       justify-content: space-between;
+      padding: 8px 16px;
     }
   }
 
@@ -775,52 +772,46 @@
     }
   }
 
+  .ant-table-column-sort {
+    background-color: unset;
+  }
+
   .ant-table-pagination {
     position: fixed;
-    bottom: -16px;
+    bottom: 0;
     background: white;
-    padding: 16px 0 24px;
+    padding: 8px 16px;
+    margin: 0;
     width: 100%;
+    border-top: 1px solid $fa-color-neutral-grey-3;
   }
 
-  & th {
-    padding: 0 !important;
-    height: 48px;
+  & table {
+    min-width: unset !important;
 
-    &>div {
-      padding: 0 16px;
+    & th {
+      padding: 0 !important;
+      height: 48px !important;
     }
-  }
 
-  & tr {
-    &.active {
-      td {
-        background-color: #fafafa !important;
+    & tr {
+      height: 48px !important;
+      background-color: white;
+
+      &:first-child {
+        height: 0 !important;
       }
-    }
 
-    a {
-      color: unset;
-
-      &:hover {
-        color: #1890ff;
-        text-decoration: underline;
-        text-decoration-color: #1890ff;
+      &.active {
+        td {
+          background-color: #fafafa !important;
+        }
       }
-    }
 
-    .preview-btns {
-      display: none;
-      transition: all 0.3s;
-    }
-  }
+      a {
+        color: unset;
 
-  & tr:hover {
-    td {
-      background-color: #fafafa !important;
-
-      &:hover {
-        a {
+        &:hover {
           color: #1890ff;
           text-decoration: underline;
           text-decoration-color: #1890ff;
@@ -828,16 +819,32 @@
       }
 
       .preview-btns {
-        display: inline-flex;
+        display: none;
+        float: right;
+        gap: 4px;
         background-color: #fafafa !important;
         cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      &:hover {
+        td {
+          background-color: #fafafa !important;
+
+          &:hover {
+            a {
+              color: #1890ff;
+              text-decoration: underline;
+              text-decoration-color: #1890ff;
+            }
+          }
+
+          .preview-btns {
+            display: inline-flex;
+          }
+        }
       }
     }
-  }
-
-  & tr {
-    max-height: 64px !important;
-    height: 48px;
   }
 }
 
@@ -1062,8 +1069,8 @@
 .logo-attrib {
   position: fixed;
   text-align: right;
-  bottom: 24px;
-  right: 72px;
+  bottom: 12px;
+  right: 64px;
 }
 
 .timeline-table-container {
@@ -1188,8 +1195,8 @@
   height: var(--icon-size, 24px) !important;
   width: var(--icon-size, 24px) !important;
   border-radius: 50%;
-  border: 1px solid var(--border-color, #ccc);
-  background-color: var(--bg-color, #f9f9f9);
+  border: 1px solid #ccc;
+  background-color: #f9f9f9;
 
   img {
     width: calc(100% - 6px);
@@ -1217,6 +1224,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex-grow: 1;
 
   &--multiline {
     @extend .text-with-tooltip;
@@ -1228,7 +1236,6 @@
     -webkit-box-orient: vertical;
   }
 }
-
 
 .fa-account-drawer--right {
   &.ant-drawer {
@@ -1396,15 +1403,23 @@
     linear-gradient(to top, white, white),
     linear-gradient(to top, rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0)),
     linear-gradient(to bottom, rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0));
-  background-position: bottom center, top center, bottom center, top center;
+  background-position:
+    bottom center,
+    top center,
+    bottom center,
+    top center;
   background-color: white;
   background-repeat: no-repeat;
-  background-size: 100% 16px, 100% 16px, 100% 8px, 100% 8px;
+  background-size:
+    100% 16px,
+    100% 16px,
+    100% 8px,
+    100% 8px;
   background-attachment: local, local, scroll, scroll;
 }
 
 .bg-active-row {
-  background-color: $fa-color-neutral-grey-2
+  background-color: $fa-color-neutral-grey-2;
 }
 
 .active-link {
@@ -1419,10 +1434,71 @@
   border-color: #f5f5f5;
 }
 
+.border-neutral-grey-4 {
+  border-color: $fa-color-neutral-grey-4;
+}
+
 .accounts-loader-div {
   height: 300px;
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.vertical-separator {
+  width: 1px;
+  height: 100px;
+  background: #333;
+  margin: 0 20px;
+}
+
+.horizontal-separator {
+  width: 100%;
+  height: 1px;
+  background: #333;
+  margin: 20px 0;
+}
+
+.profiles-header {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(
+    to right,
+    transparent 0px,
+    transparent 16px,
+    white 16px,
+    white 100%
+  );
+  max-width: 100%;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 48px;
+  padding: 8px 32px;
+  border-bottom: 1px solid $fa-color-neutral-grey-4;
+  z-index: 99;
+}
+
+.button-shadow {
+  box-shadow: 0px 2px 0px 0px #0000000d;
+}
+
+.preview-info {
+  display: flex;
+  padding: 8px 16px;
+  gap: 8px;
+  background: #fffbe6;
+  border: 1px solid #ffe58f;
+  border-radius: 6px;
+  line-height: 24px;
+  min-height: 40px;
+
+  svg {
+    height: 24px;
+    width: 24px;
+    flex-grow: 0;
+    flex-shrink: 0;
+  }
 }

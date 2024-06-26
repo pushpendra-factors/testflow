@@ -1,11 +1,10 @@
 import React, { useContext, useMemo, useState } from 'react';
-import { Divider, Input, Popover, Tooltip } from 'antd';
+import { Button, Divider, Input, Popover, Tooltip } from 'antd';
 import { SVG, Text } from 'Components/factorsComponents';
 import {
   DeleteOutlined,
   EditOutlined,
   FolderOpenFilled,
-  LoadingOutlined,
   PlusOutlined,
   RightOutlined
 } from '@ant-design/icons';
@@ -48,7 +47,6 @@ const PopoverOptionWrapper = ({
       <Popover
         content={
           <div className={styles.submenu_list}>
-            {' '}
             <div className={styles.submenu_list_group}>
               {submenuList.map((eachSubMenu: any) => (
                 <div
@@ -103,7 +101,6 @@ const PopoverOptionWrapper = ({
         placement='right'
       >
         <div className={styles.submenu}>
-          {' '}
           <div>{children}</div>
           <RightOutlined />
           <AppModal
@@ -153,25 +150,32 @@ export function FolderItemOptions(props: FolderItemOptionsType) {
     data,
     folder_id,
     placement = 'right',
-    hideMoveTo = false
+    hideMoveTo = false,
+    children = (
+      <span>
+        <SVG size={16} color='#8C8C8C' name='more' />
+      </span>
+    )
   } = props;
+
   const actionsMenu = useMemo(() => {
-    let tmpActions: Array<any> = [];
-    if (hideMoveTo === false)
+    const tmpActions: Array<any> = [];
+
+    if (!hideMoveTo && folders) {
       tmpActions.push({
         id: '1',
         title: 'Move to',
         icon: <SVG name='AddFromDraft' />,
-        // {id: '11', title: }
-        submenu: folders?.map((eachFolder) => ({
+        submenu: folders.map((eachFolder) => ({
           id: eachFolder.id,
           title: eachFolder.name,
           icon: <EditOutlined />
         }))
       });
+    }
+
     if (!hideDefaultOptions) {
-      tmpActions = [
-        ...tmpActions,
+      tmpActions.push(
         {
           id: '2',
           title: `Edit ${unit} Details`,
@@ -184,19 +188,18 @@ export function FolderItemOptions(props: FolderItemOptionsType) {
           icon: <DeleteOutlined />,
           onClick: handleDeleteUnit
         }
-      ];
+      );
     }
+
     if (extraOptions && Array.isArray(extraOptions)) {
-      tmpActions = [...tmpActions, ...extraOptions];
+      tmpActions.push(...extraOptions);
     }
+
     return tmpActions;
-  }, [folders, extraOptions]);
+  }, [folders, hideMoveTo, hideDefaultOptions, extraOptions, unit]);
+
   const popoverContent = (
-    <div
-      onClick={(e) => {
-        e.stopPropagation();
-      }}
-    >
+    <div onClick={(e) => e.stopPropagation()}>
       {actionsMenu.map((eachAction) => (
         <div
           key={eachAction.id}
@@ -219,23 +222,22 @@ export function FolderItemOptions(props: FolderItemOptionsType) {
       ))}
     </div>
   );
+
   return (
     <div>
       <Popover
         content={popoverContent}
-        placement={placement || 'right'}
+        placement={placement}
         trigger='hover'
         arrowContent={<RightOutlined />}
         overlayClassName={styles.popover_list_container}
       >
-        <span>
-          {' '}
-          <SVG size={16} color='#8C8C8C' name='more' />
-        </span>{' '}
+        {children}
       </Popover>
     </div>
   );
 }
+
 function FolderItem(props: FolderItemPropType) {
   const { id, data, folder_id, folders } = props;
   const contextValue = useContext(FolderContext);

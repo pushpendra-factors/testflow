@@ -3,6 +3,7 @@
 .account_profiles {
   &__event_selector {
     position: relative;
+
     &__select {
       width: 380px;
       height: 400px;
@@ -25,12 +26,12 @@
 .filter-button {
   background: none;
   border: 1px solid $fa-color-neutral-grey-5;
-  box-shadow: none;
+  font-weight: 500;
 }
 
 .collapse-button {
-  padding: 0;
   width: max-content;
+  font-weight: 500;
 
   &:hover {
     background-color: transparent !important;
@@ -56,6 +57,7 @@
 
 .add-filter-button {
   width: fit-content;
+
   &:hover {
     background: transparent;
   }
@@ -65,6 +67,7 @@
   padding: 2px 0;
   overflow: hidden;
   text-align: center;
+
   &::before,
   &::after {
     background-color: $fa-color-neutral-grey-5;
@@ -96,7 +99,7 @@
 
 .buttons-container {
   border-top: 1px solid $fa-color-neutral-grey-3;
-  border-radius: 0 0 .5rem .5rem;
+  border-radius: 0 0 0.5rem 0.5rem;
   background-color: $fa-color-neutral-grey-2;
 }
 
@@ -122,6 +125,7 @@
 .download-csv-clear-all-button {
   background: none;
   border: 0;
+
   &:hover,
   &:active,
   &:visited,
@@ -141,6 +145,7 @@
 .download-csv-modal-checkbox {
   display: flex;
   align-items: center;
+
   :global(.ant-checkbox) {
     margin-top: 2px;
   }
@@ -160,6 +165,7 @@
   display: flex;
   flex-wrap: wrap;
 }
+
 .tag-enagagementrule {
   padding: 2px 6px;
   margin: 1px;
@@ -174,13 +180,16 @@
     font-size: 12px !important;
     color: rgba(0, 0, 0, 0.65) !important;
   }
+
   & > span {
     text-transform: lowercase;
     margin: 0 2px;
   }
+
   & > span:not(.tag-seperator) {
     margin: 0 4px;
   }
+
   & > .tag-seperator {
     color: $fa-color-neutral-grey-5;
     margin: 0 2px;
@@ -190,6 +199,7 @@
 .accountsTabs {
   :global(.ant-tabs-nav) {
     margin: 0;
+
     &::before {
       border-bottom: 0;
     }
@@ -200,17 +210,8 @@
   -ms-overflow-style: none;
   /* Internet Explorer 10+ */
   scrollbar-width: none;
+
   &::-webkit-scrollbar {
     display: none;
   }
-}
-
-.left-tab-button {
-  border-top-left-radius: 0.5rem !important;
-  border-bottom-left-radius: 0.5rem !important;
-}
-
-.right-tab-button {
-  border-top-right-radius: 0.5rem !important;
-  border-bottom-right-radius: 0.5rem !important;
 }

@@ -64,7 +64,8 @@ import moment from 'moment';
 import useAgentInfo from 'hooks/useAgentInfo';
 import { fetchAlertTemplates } from 'Reducers/alertTemplates';
 import {
-  checkMatchPath,
+  isProfileDetailsUrl,
+  isProfilesUrl,
   isSettingsUrl
 } from 'Views/AppSidebar/appSidebar.helpers';
 import { PathUrls } from '../../routes/pathUrls';
@@ -141,7 +142,7 @@ function AppLayout({
         }
       } else setDataLoading(false);
     } catch (err) {
-      console.log(err);
+      logger.log(err);
     }
   }, [fetchProjectsList, isAgentLoggedIn]);
 
@@ -309,6 +310,7 @@ function AppLayout({
     });
   });
   // 3.5rem is used because Top Navbar is 3.5rem
+
   return (
     <Layout className={styles['parent-layout']}>
       <ErrorBoundary
@@ -347,38 +349,15 @@ function AppLayout({
           >
             <Content
               style={{ minHeight: 'auto' }}
-              className={cx(
-                'bg-white',
-                {
-                  'py-6 px-10':
-                    pathname !== PathUrls.ProfileAccounts &&
-                    !checkMatchPath(
-                      pathname,
-                      PathUrls.ProfileAccountsSegmentsURL
-                    ) &&
-                    !checkMatchPath(
-                      pathname,
-                      PathUrls.ProfileAccountDetailsURL
-                    ) &&
-                    !checkMatchPath(
-                      pathname,
-                      PathUrls.ProfilePeopleDetailsURL
-                    ) &&
-                    !show_analytics_result &&
-                    !isSettingsUrl(pathname)
-                },
-                {
-                  'py-2':
-                    pathname === PathUrls.ProfileAccounts ||
-                    checkMatchPath(
-                      pathname,
-                      PathUrls.ProfileAccountsSegmentsURL
-                    )
-                },
-                {
-                  'px-8 py-4': isSettingsUrl(pathname)
-                }
-              )}
+              className={cx('bg-white', {
+                'py-6 px-10':
+                  !show_analytics_result &&
+                  !isProfilesUrl(pathname) &&
+                  !isProfileDetailsUrl(pathname) &&
+                  !isSettingsUrl(pathname),
+                'p-0': isProfilesUrl(pathname),
+                'px-8 py-4': isSettingsUrl(pathname)
+              })}
             >
               <Suspense fallback={<PageSuspenseLoader />}>
                 <AppLayoutRoutes

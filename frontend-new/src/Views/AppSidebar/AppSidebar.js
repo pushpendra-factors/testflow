@@ -16,7 +16,12 @@ import {
 } from 'Reducers/accountProfilesView/actions';
 import { selectTimelinePayload } from 'Reducers/userProfilesView/selectors';
 import { setTimelinePayloadAction } from 'Reducers/userProfilesView/actions';
-import { checkMatchPath, isSettingsUrl } from './appSidebar.helpers';
+import {
+  isProfileAccountsUrl,
+  isProfilePeopleUrl,
+  isProfilesUrl,
+  isSettingsUrl
+} from './appSidebar.helpers';
 import SidebarMenuItem from './SidebarMenuItem';
 import styles from './index.module.scss';
 import SidebarContent from './SidebarContent';
@@ -93,28 +98,20 @@ function AppSidebar() {
       <ControlledComponent controller={isSidebarCollapsed === false}>
         <div
           className={cx(
-            'flex flex-col gap-y-4 pt-6',
-            styles['sidebar-content-container']
+            'flex flex-col gap-y-4',
+            styles['sidebar-content-container'],
+            {
+              'pt-6': !isProfilesUrl(pathname)
+            }
           )}
         >
           <div
             className={cx('flex justify-between items-center', {
-              'pb-5 border-b border-gray-300':
-                checkMatchPath(pathname, PathUrls.ProfileAccounts) ||
-                checkMatchPath(pathname, PathUrls.ProfileAccountsSegmentsURL) ||
-                checkMatchPath(pathname, PathUrls.ProfilePeople)
+              'py-2 h-12 border-b border-neutral-grey-4':
+                isProfilesUrl(pathname)
             })}
           >
-            <ControlledComponent
-              controller={
-                !checkMatchPath(pathname, PathUrls.ProfileAccounts) &&
-                !checkMatchPath(
-                  pathname,
-                  PathUrls.ProfileAccountsSegmentsURL
-                ) &&
-                !checkMatchPath(pathname, PathUrls.ProfilePeople)
-              }
-            >
+            <ControlledComponent controller={!isProfilesUrl(pathname)}>
               <div
                 className={cx('flex gap-x-2 items-center px-3', {
                   'pl-6': sidebarTitleConfig.title === 'Dashboards',
@@ -134,19 +131,8 @@ function AppSidebar() {
                 </Text>
               </div>
             </ControlledComponent>
-            <ControlledComponent
-              controller={
-                checkMatchPath(pathname, PathUrls.ProfileAccounts) ||
-                checkMatchPath(pathname, PathUrls.ProfileAccountsSegmentsURL) ||
-                checkMatchPath(pathname, PathUrls.ProfilePeople)
-              }
-            >
-              <ControlledComponent
-                controller={
-                  checkMatchPath(pathname, PathUrls.ProfileAccounts) ||
-                  checkMatchPath(pathname, PathUrls.ProfileAccountsSegmentsURL)
-                }
-              >
+            <ControlledComponent controller={isProfilesUrl(pathname)}>
+              <ControlledComponent controller={isProfileAccountsUrl(pathname)}>
                 <div className='w-11/12 pl-4'>
                   <SidebarMenuItem
                     isActive={
@@ -157,12 +143,11 @@ function AppSidebar() {
                     icon='regularBuilding'
                     iconColor='#F5222D'
                     iconSize={20}
+                    extraClass='h-8'
                   />
                 </div>
               </ControlledComponent>
-              <ControlledComponent
-                controller={checkMatchPath(pathname, PathUrls.ProfilePeople)}
-              >
+              <ControlledComponent controller={isProfilePeopleUrl(pathname)}>
                 <div className='w-11/12 pl-4'>
                   <SidebarMenuItem
                     isActive={
@@ -194,7 +179,12 @@ function AppSidebar() {
         </div>
       </ControlledComponent>
       <ControlledComponent controller={isSidebarCollapsed === true}>
-        <div className='flex mt-5 justify-end'>
+        <div
+          className={cx('flex justify-end', {
+            'mt-2': isProfilesUrl(pathname),
+            'mt-5': !isProfilesUrl(pathname)
+          })}
+        >
           <div
             role='button'
             tabIndex='-2'

@@ -51,8 +51,8 @@ function UserTimelineBirdview({
       <div
         className='icon'
         style={{
-          '--border-color': `${eventIconsColorMap[eventIcon]?.borderColor}`,
-          '--bg-color': `${eventIconsColorMap[eventIcon]?.bgColor}`
+          borderColor: `${eventIconsColorMap[eventIcon]?.borderColor}`,
+          background: `${eventIconsColorMap[eventIcon]?.bgColor}`
         }}
       >
         <img

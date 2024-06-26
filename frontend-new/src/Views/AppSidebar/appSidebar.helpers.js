@@ -59,3 +59,19 @@ export const getSegmentColorCode = (str) => {
   const index = asciiSum % segmentColorCodes.length;
   return segmentColorCodes[index];
 };
+
+export const isProfilesUrl = (pathname) =>
+  checkMatchPath(pathname, PathUrls.ProfileAccounts) ||
+  checkMatchPath(pathname, PathUrls.ProfileAccountsSegmentsURL) ||
+  checkMatchPath(pathname, PathUrls.ProfilePeople);
+
+export const isProfileAccountsUrl = (pathname) =>
+  checkMatchPath(pathname, PathUrls.ProfileAccounts) ||
+  checkMatchPath(pathname, PathUrls.ProfileAccountsSegmentsURL);
+
+export const isProfilePeopleUrl = (pathname) =>
+  checkMatchPath(pathname, PathUrls.ProfilePeople);
+
+export const isProfileDetailsUrl = (pathname) =>
+  checkMatchPath(pathname, PathUrls.ProfileAccountDetailsURL) ||
+  checkMatchPath(pathname, PathUrls.ProfilePeopleDetailsURL);

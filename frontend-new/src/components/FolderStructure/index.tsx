@@ -42,6 +42,7 @@ type FolderStructureType = {
     isAllboard?: boolean;
   };
 };
+
 function FolderStructure(props: FolderStructurePropType) {
   const {
     folders,

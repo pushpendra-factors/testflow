@@ -58,7 +58,7 @@ function AccountTimelineBirdView({
     return (
       <div
         className='icon'
-        style={{ '--border-color': borderColor, '--bg-color': bgColor }}
+        style={{ borderColor: borderColor, background: bgColor }}
       >
         {iconContent}
       </div>

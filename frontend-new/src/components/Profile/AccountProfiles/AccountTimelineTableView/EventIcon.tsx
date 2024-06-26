@@ -9,9 +9,9 @@ function EventIcon({ icon, size = 16 }: EventIconProps): JSX.Element {
   // exception
   const showIcon = icon === 'globe' ? 'globepointer' : icon;
 
-  const styles: CustomStyles = {
-    '--border-color': eventIconsColorMap?.[showIcon]?.borderColor,
-    '--bg-color': eventIconsColorMap?.[showIcon]?.bgColor,
+  const styles: CustomStyles & React.CSSProperties = {
+    borderColor: eventIconsColorMap?.[showIcon]?.borderColor,
+    background: eventIconsColorMap?.[showIcon]?.bgColor,
     '--icon-size': `${size}px`
   };
 

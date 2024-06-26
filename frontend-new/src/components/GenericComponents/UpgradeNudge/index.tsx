@@ -24,21 +24,25 @@ const UpgradeNudge = ({ showCarousel = false }: UpgradeNudgeProps) => {
   );
   if (!isFreePlan && showNudge) {
     return (
-      <AccountLimitNudge
-        percentage={percentage}
-        limit={totalLimit}
-        usage={amountUsed}
-      />
+      <div className='px-8 pt-4'>
+        <AccountLimitNudge
+          percentage={percentage}
+          limit={totalLimit}
+          usage={amountUsed}
+        />
+      </div>
     );
   }
 
   if (isFreePlan && showCarousel) {
     return (
-      <CarouselNudge
-        percentage={percentage}
-        limit={totalLimit}
-        usage={amountUsed}
-      />
+      <div className='px-8 pt-4'>
+        <CarouselNudge
+          percentage={percentage}
+          limit={totalLimit}
+          usage={amountUsed}
+        />
+      </div>
     );
   }
   return null;
