@@ -487,6 +487,9 @@ CREATE ROWSTORE TABLE IF NOT EXISTS project_settings (
     integration_status JSON,
     saml_configuration JSON,
     sso_state int default 1;
+    saml_enabled boolean,
+    int_client_demandbase boolean NOT NULL DEFAULT FALSE,
+    client_demandbase_key text,
     KEY (updated_at),
     SHARD KEY (project_id),
     PRIMARY KEY (project_id)

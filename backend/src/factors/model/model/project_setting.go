@@ -162,6 +162,11 @@ type ProjectSetting struct {
 	IntegrationStatus            *postgres.Jsonb `json:"integration_status"`
 	SamlConfiguration            *postgres.Jsonb `json:"saml_configuration"`
 	SSOState                     int             `json:"sso_state"`
+	SamlEnabled                  bool            `json:"saml_enabled"`
+
+	// demandbase integration setting
+	IntClientDemandbase *bool  `gorm:"not null;default:false" json:"int_client_demandbase,omitempty"`
+	ClientDemandbaseKey string `json:"client_demandbase_key"`
 }
 
 type SAMLConfiguration struct {
