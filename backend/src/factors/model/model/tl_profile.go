@@ -186,6 +186,13 @@ var HostNameProps = []string{
 	U.G2_DOMAIN,
 }
 
+// properties required for engagement column
+var ENGAGEMENT_COLUMN_PROPERTIES = []string{
+	U.DP_ENGAGEMENT_LEVEL,
+	U.DP_ENGAGEMENT_SCORE,
+	U.DP_ENGAGEMENT_SIGNALS,
+}
+
 // Hover Events Property Map
 var TIMELINE_EVENT_PROPERTIES_CONFIG = map[string][]string{
 	U.EVENT_NAME_SESSION: {

@@ -1086,10 +1086,11 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 		}
 	}
 
+	var domainDetails []model.User
 	// only run the query when any table property belong to $domains
 	if domainPropsExists {
 		// fetch all domain properties
-		domainDetails, status := store.GetDomainPropertiesByID(projectID, domainIDs)
+		domainDetails, status = store.GetDomainPropertiesByID(projectID, domainIDs)
 
 		if status == http.StatusFound && len(domainDetails) > 0 {
 			userDetails = append(userDetails, domainDetails...)
@@ -1104,17 +1105,23 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 	}
 
 	// map of domain ids and their decoded merged properties
-	domainsIDPropsMap := make(map[string]map[string]interface{})
+	domainsIDPropsMap, status := AddEngagementFilters(domainDetails, tablePropsMap)
+
+	if status != http.StatusOK {
+		logCtx.Error("Failed to get engagement properties")
+	}
 	for _, userDetail := range userDetails {
 		propertiesDecoded, err := U.DecodePostgresJsonb(&userDetail.Properties)
 		if err != nil {
 			log.Error("Unable to decode account properties.")
 			return nil, http.StatusInternalServerError
 		}
+		// check whether the property map for user exists
 		if _, exists := domainsIDPropsMap[userDetail.ID]; !exists {
 			domainsIDPropsMap[userDetail.ID] = make(map[string]interface{})
 		}
 
+		// check if it is a group user property
 		if _, exists := model.SourceGroupUser[*userDetail.Source]; !exists {
 			continue
 		}
@@ -1128,6 +1135,12 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 		filterMap, groupFilterExists := groupedFiltersByName[groupName]
 
 		for _, tablePropName := range tablePropsMap[groupName] {
+
+			// no checking for engagemnet level filter
+			if tablePropName == U.DP_ENGAGEMENT_LEVEL {
+				continue
+			}
+
 			if _, propExists := domainsIDPropsMap[userDetail.ID][tablePropName]; propExists {
 				continue
 			}
@@ -1161,6 +1174,50 @@ func (store *MemSQL) AccountPropertiesForDomainsEnabled(projectID int64, profile
 		profiles[index].Properties = propsEncoded
 	}
 	return profiles, http.StatusOK
+}
+
+func AddEngagementFilters(domainDetails []model.User, tablePropsMap map[string][]string) (map[string]map[string]interface{}, int) {
+	domainsIDPropsMap := make(map[string]map[string]interface{})
+
+	domFilter, exists := tablePropsMap[model.GROUP_NAME_DOMAINS]
+
+	if !exists {
+		return domainsIDPropsMap, http.StatusOK
+	}
+
+	isEngagementFilter := false
+	for _, filterName := range domFilter {
+		if filterName == U.DP_ENGAGEMENT_LEVEL {
+			isEngagementFilter = true
+			break
+		}
+	}
+
+	if !isEngagementFilter {
+		return domainsIDPropsMap, http.StatusOK
+	}
+
+	for _, domDetail := range domainDetails {
+		propertiesDecoded, err := U.DecodePostgresJsonb(&domDetail.Properties)
+		if err != nil {
+			log.Error("Unable to decode domain properties.")
+			return domainsIDPropsMap, http.StatusInternalServerError
+		}
+
+		domainsIDPropsMap[domDetail.ID] = make(map[string]interface{})
+
+		domProps := make(map[string]interface{})
+
+		for _, propName := range model.ENGAGEMENT_COLUMN_PROPERTIES {
+			if val, propExists := (*propertiesDecoded)[propName]; propExists {
+				domProps[propName] = val
+			}
+		}
+
+		domainsIDPropsMap[domDetail.ID][U.DP_ENGAGEMENT_LEVEL] = domProps
+	}
+
+	return domainsIDPropsMap, http.StatusOK
 }
 
 // Fetching accounts associated to the domain
