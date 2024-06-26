@@ -98,6 +98,9 @@ func SamlLoginRequestHandler(c *gin.Context) {
 
 	var samlConfigExists bool
 	var samlConfig *postgres.Jsonb
+	var spConfig model.SAMLConfiguration
+	var err error
+	var projectID int64
 
 	for _, pam := range pAM {
 		setting, status := store.GetStore().GetProjectSetting(pam.ProjectID)
@@ -114,7 +117,15 @@ func SamlLoginRequestHandler(c *gin.Context) {
 			}
 			samlConfigExists = true
 			samlConfig = setting.SamlConfiguration
+			spConfig, err = getSAMLConfigurationFromProjectSettings(*setting)
+			if err != nil {
+				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to build SAML request"})
+			}
 		}
+	}
+
+	logCtx := log.Fields{
+		"project_id": projectID,
 	}
 
 	if !samlConfigExists {
@@ -125,18 +136,29 @@ func SamlLoginRequestHandler(c *gin.Context) {
 
 	var samlConfiguration model.SAMLConfiguration
 	// Generate SAML request and redirect logic
-	err := U.DecodePostgresJsonbToStructType(samlConfig, &samlConfiguration)
+	err = U.DecodePostgresJsonbToStructType(samlConfig, &samlConfiguration)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to get saml configuration"})
 		return
 	}
 
-	redirectURL, err := GetSAMLRedirectURL(samlConfiguration)
+	// redirectURL, err := GetSAMLRedirectURL(samlConfiguration)
+	// if err != nil {
+	// 	c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to generate SAML Request"})
+	// 	return
+	// }
+
+	expectedDestinationID := fmt.Sprintf(C.GetProtocol()+C.GetAPIDomain()+"/project/%d/saml/acs", projectID)
+	// saml authn request building
+	sp := saml.GetSamlServiceProvider(projectID, spConfig, expectedDestinationID)
+	url, err := sp.BuildAuthURL("")
 	if err != nil {
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to generate SAML Request"})
+		log.WithFields(logCtx).WithError(err).Error("Failed to build authn URL")
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "failed to build redirect url"})
 		return
 	}
-	c.Redirect(http.StatusTemporaryRedirect, redirectURL)
+
+	c.Redirect(http.StatusTemporaryRedirect, url)
 }
 
 func GetSAMLRedirectURL(samlConfig model.SAMLConfiguration) (url string, err error) {
@@ -205,17 +227,19 @@ func SamlCallbackHandler(c *gin.Context) {
 	// get the saml config of the original person done?
 	// get the user from relay state ?
 
-	sp := saml.GetSamlServiceProvider(samlConfig, expectedDestinationID)
+	sp := saml.GetSamlServiceProvider(projectID, samlConfig, expectedDestinationID)
 
 	_, err = sp.ValidateEncodedResponse(rawSAMLResponse)
 	if err != nil {
-		fmt.Println(err)
+		log.WithField("projectID ", projectIdString).WithError(err).Error("failed to validate saml response")
+		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 
 	assertion, err := sp.RetrieveAssertionInfo(rawSAMLResponse)
 	if err != nil {
-		fmt.Println(err)
+		log.WithField("projectID ", projectIdString).WithError(err).Error("failed to retrireve assertion from saml response")
+		c.AbortWithStatus(http.StatusInternalServerError)
 		return
 	}
 

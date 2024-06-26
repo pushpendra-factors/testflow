@@ -99,10 +99,12 @@ func mainRunDeltaInsights() {
 
 	startTimestamp := flag.Int64("start_timestamp", 0, "start time stamp")
 	endTimestamp := flag.Int64("end_timestamp", 0, "end time stamp")
-	inputDays := flag.Int("input_days", 15, "period in days for input data")
-	outputDays := flag.Int("output_days", 15, "period in days for output data")
-	gapDays := flag.Int("gap_days", 15, "period in days to skip for next input")
+	minInputDays := flag.Int("min_input_days", 1, "min number of days for input data")
+	outputDays := flag.Int("output_days", 7, "period in days for output data")
+	windowStartShift := flag.Int("window_start_shift", 1, "start day shift for next input")
+	windowEndShift := flag.Int("window_end_shift", 1, "end day shift for next input")
 	targetEvent := flag.String("target_event", "$form_submitted", "event to target for analysis")
+	nextInputMode := flag.String("next_input_mode", "cumulative", "distinct for distinct, anything else for cumulative")
 	mode := flag.String("mode", "delta", "delta or predict")
 
 	flag.Parse()
@@ -342,17 +344,6 @@ func mainRunDeltaInsights() {
 			"localDiskTmpDir": *localDiskTmpDirFlag,
 		}).Infoln("Initialising")
 
-		var tmpCloudManager filestore.FileManager
-		if *envFlag == "development" {
-			tmpCloudManager = serviceDisk.New(*tmpBucketNameFlag)
-		} else {
-			tmpCloudManager, err = serviceGCS.New(*tmpBucketNameFlag)
-			if err != nil {
-				log.WithError(err).Errorln("Failed to init New GCS Client")
-				panic(err)
-			}
-		}
-
 		projectIdList := *projectIdFlag
 		projectIdsArray := make([]int64, 0)
 
@@ -364,59 +355,60 @@ func mainRunDeltaInsights() {
 			}
 		} else {
 			projectIds := C.GetTokensFromStringListAsUint64(projectIdList)
-			for _, projectId := range projectIds {
-				// available := false
-				// available, err = store.GetStore().GetFeatureStatusForProjectV2(projectId, M.FEATURE_WEEKLY_INSIGHTS, false)
-				// if err != nil {
-				// 	log.WithFields(log.Fields{"projectID": projectId}).WithError(err).Error("Failed to get feature status in account scoring job for project")
-				// 	continue
-				// }
-				// if available {
-				projectIdsArray = append(projectIdsArray, projectId)
-				// }
-			}
+			projectIdsArray = append(projectIdsArray, projectIds...)
+			// for _, projectId := range projectIds {
+			// available := false
+			// available, err = store.GetStore().GetFeatureStatusForProjectV2(projectId, M.FEATURE_WEEKLY_INSIGHTS, false)
+			// if err != nil {
+			// 	log.WithFields(log.Fields{"projectID": projectId}).WithError(err).Error("Failed to get feature status in account scoring job for project")
+			// 	continue
+			// }
+			// if available {
+			// projectIdsArray = append(projectIdsArray, projectId)
+			// }
+			// }
 		}
 
-		diskManager := serviceDisk.New(*localDiskTmpDirFlag)
-
 		configs := make(map[string]interface{})
+
 		configs["env"] = *envFlag
 		configs["db"] = db
-		configs["diskManger"] = diskManager
-		configs["tmpCloudManager"] = &tmpCloudManager
-		configs["startTimestamp"] = startTimestamp
-		configs["endTimestamp"] = endTimestamp
+		configs["startTimestamp"] = *startTimestamp
+		configs["endTimestamp"] = *endTimestamp
 		configs["lookback"] = *lookback
-
-		configs["daysOfInput"] = *inputDays
-		configs["daysOfOutput"] = *outputDays
-		configs["gapDaysForNextInput"] = *gapDays
 		configs["targetEvent"] = *targetEvent
 
+		configs["minDaysOfInput"] = *minInputDays
+		configs["daysOfOutput"] = *outputDays
+		configs["windowStartShift"] = *windowStartShift
+		configs["windowEndShift"] = *windowEndShift
+		configs["nextInputMode"] = *nextInputMode
+
 		var archiveCloudManager filestore.FileManager
+		var sortedCloudManager filestore.FileManager
 		if *envFlag == "development" {
 			archiveCloudManager = serviceDisk.New(*archiveBucketNameFlag)
+			sortedCloudManager = serviceDisk.New(*sortedBucketNameFlag)
 		} else {
 			archiveCloudManager, err = serviceGCS.New(*archiveBucketNameFlag)
 			if err != nil {
 				log.WithField("error", err).Fatal("Failed to init archive cloud manager")
 			}
+			sortedCloudManager, err = serviceGCS.New(*sortedBucketNameFlag)
+			if err != nil {
+				log.WithField("error", err).Fatal("Failed to init sorted data cloud manager")
+			}
 		}
 		configs["archiveCloudManager"] = &archiveCloudManager
-
-		configs["diskManager"] = diskManager
+		configs["sortedCloudManager"] = &sortedCloudManager
 		// configs["beamConfig"] = &beamConfig
 
-		log.WithField("projects", projectIdsArray).Info("Running acc scoring for these projects")
+		log.WithField("projects", projectIdsArray).Info("Running predictive scoring for these projects")
 
 		for _, projectId := range projectIdsArray {
 
-			status, _ := T.PredictiveScoring2(projectId, configs)
+			status, _ := T.CreatePredictiveAnalysisData(projectId, configs)
 			log.Info(status)
-			if status["err"] != nil {
-				C.PingHealthcheckForFailure(healthcheckPingID, status)
-			}
-			C.PingHealthcheckForSuccess(healthcheckPingID, status)
 		}
 	}
 }

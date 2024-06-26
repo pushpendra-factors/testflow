@@ -379,7 +379,7 @@ const HubspotSalesforceTouchpoint = ({
     } else if (touchPointState.state === 'add') {
       touchPointContent = (
         <TouchpointView
-          tchType={tabNo}
+          tchType={type}
           rule={null}
           onSave={onTchSave}
           onCancel={onTchCancel}
@@ -390,7 +390,7 @@ const HubspotSalesforceTouchpoint = ({
     } else if (touchPointState.state === 'edit' && touchPointsData) {
       touchPointContent = (
         <TouchpointView
-          tchType={tabNo}
+          tchType={type}
           rule={touchPointsData.find((f) => f.id === touchPointState.index)}
           onSave={(obj) => onTchSave(obj, touchPointState.index)}
           onCancel={onTchCancel}

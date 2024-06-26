@@ -72,3 +72,20 @@ export const getAlertTemplatesTransformation = (data) => {
       };
     });
 };
+
+
+export const templateThumbnailImage = (templateID) =>{
+  switch(templateID){
+    case 4000000: //hubspot companies
+      return 'hubspot-company-thumbnail.png';
+      case 4000002: //hubspot contacts
+        return 'hubspot-company-thumbnail.png';
+        case 4000003: //salesforce accounts
+          return 'salesforce-company-thumbnail.png';
+          case 4000004: //salesforce contacts
+            return 'salesforce-company-thumbnail.png';
+            case 4000005: //Linkedin CAPI contacts
+              return 'linkedin-capi-thumbnail.png';
+              default: return 'hubspot-company-thumbnail.png';
+  }
+}
