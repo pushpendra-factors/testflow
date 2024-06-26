@@ -3322,6 +3322,8 @@ func TestTimelineAllAccounts(t *testing.T) {
 	payload = model.TimelinePayload{
 		Query: model.Query{
 			Source: "$domains",
+			TableProps: []string{"$hubspot_company_name", U.SIX_SIGNAL_NAME, "$salesforce_account_name",
+				"$domain_name", "$engagement_level", "$engagement_score", "$total_enagagement_score"},
 		},
 		SearchFilter: []string{"hey"},
 	}
@@ -3335,6 +3337,8 @@ func TestTimelineAllAccounts(t *testing.T) {
 	assert.Equal(t, result.IsPreview, false)
 	assert.Equal(t, len(resp), 1)
 	assert.Contains(t, resp[0].DomainName, "hey")
+	engagementMap := map[string]interface{}{"$engagement_level": "Hot", "$engagement_score": 125.3}
+	assert.Equal(t, engagementMap, resp[0].TableProps[U.DP_ENGAGEMENT_LEVEL])
 
 	// Search a Domain
 	payload = model.TimelinePayload{
@@ -3358,7 +3362,7 @@ func TestTimelineAllAccounts(t *testing.T) {
 	assert.Contains(t, searchNames, resp[0].DomainName)
 	assert.Contains(t, searchNames, resp[1].DomainName)
 	for i := range resp {
-		assert.Equal(t, "Hot", resp[i].TableProps["$engagement_level"])
+		assert.Equal(t, engagementMap, resp[i].TableProps["$engagement_level"])
 		assert.Equal(t, 125.3, resp[i].TableProps["$engagement_score"])
 		assert.Equal(t, float64(196), resp[i].TableProps["$total_enagagement_score"])
 	}
@@ -3535,12 +3539,13 @@ func TestTimelineAllAccounts(t *testing.T) {
 	assert.Equal(t, result.IsPreview, true)
 	assert.Equal(t, len(resp), 2)
 	assert.Equal(t, result.Count, int64(0))
+	engagementMap = map[string]interface{}{"$engagement_level": "Cold", "$engagement_score": 5.3}
 	for i := range resp {
 		assert.Greater(t, resp[i].LastActivity, U.TimeNowZ().AddDate(0, 0, -1))
 		assert.NotEmpty(t, resp[i].TableProps[U.SIX_SIGNAL_NAME])
 		assert.NotEmpty(t, resp[i].TableProps["$hubspot_company_name"])
 		assert.NotEmpty(t, resp[i].TableProps["$salesforce_account_name"])
-		assert.Equal(t, "Cold", resp[i].TableProps["$engagement_level"])
+		assert.Equal(t, engagementMap, resp[i].TableProps["$engagement_level"])
 		assert.Equal(t, 5.3, resp[i].TableProps["$engagement_score"])
 		assert.Equal(t, float64(120), resp[i].TableProps["$total_enagagement_score"])
 	}
