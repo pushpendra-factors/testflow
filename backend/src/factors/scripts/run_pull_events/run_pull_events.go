@@ -39,6 +39,7 @@ func main() {
 
 	hardPull := flag.Bool("hard_pull", false, "replace the files already present")
 	pullEventsDaily := flag.Bool("pull_events_daily", false, "run PullEventsDaily as well")
+	sortOnTimestamp := flag.Bool("sort_on_timestamp", false, "whether to sort in db (for memory spike cases)")
 
 	fileTypesFlag := flag.String("file_types", "*",
 		"Optional: file type. A comma separated list of file types and supports '*' for all files. ex: 1,2,6,9") //refer to pull.FileType map
@@ -55,6 +56,9 @@ func main() {
 	redisPort := flag.Int("redis_port", 6379, "")
 	redisHostPersistent := flag.String("redis_host_ps", "localhost", "")
 	redisPortPersistent := flag.Int("redis_port_ps", 6379, "")
+
+	targetEvent := flag.String("target_event", "$form_submitted", "event to target for analysis")
+	eventsAggregateDaily := flag.Bool("events_aggregate_daily", false, "events or predict")
 
 	flag.Parse()
 
@@ -95,6 +99,9 @@ func main() {
 	C.InitConf(config)
 	C.InitSentryLogging(config.SentryDSN, config.AppName)
 
+	C.InitRedis(config.RedisHost, config.RedisPort)
+	C.InitRedisPersistent(config.RedisHostPersistent, config.RedisPortPersistent)
+
 	// Initialize configs and connections and close with defer.
 	err := C.InitDB(*config)
 	if err != nil {
@@ -116,6 +123,7 @@ func main() {
 	}
 
 	eventsProjectIdsArray := make([]int64, 0)
+	aggregateProjectIdsArray := make([]int64, 0)
 	allDataProjectIdsArray := make([]int64, 0)
 	{
 		projectIdsToRun := make(map[int64]bool)
@@ -162,6 +170,7 @@ func main() {
 			}
 			for projectId := range projectIdsFromList {
 				projectIdsToRun[projectId] = true
+				aggregateProjectIdsArray = append(aggregateProjectIdsArray, projectId)
 			}
 		}
 		for projectId, yesData := range projectIdsToRun {
@@ -180,7 +189,6 @@ func main() {
 				splitRangeProjectIdsMap[projectID] = true
 			}
 		}
-
 		for projectId := range splitRangeProjectIdsMap {
 			eventSplitRangeProjectIds = append(eventSplitRangeProjectIds, projectId)
 		}
@@ -194,7 +202,6 @@ func main() {
 				splitRangeProjectIdsMap[projectID] = true
 			}
 		}
-
 		for projectId := range splitRangeProjectIdsMap {
 			userSplitRangeProjectIds = append(userSplitRangeProjectIds, projectId)
 		}
@@ -211,12 +218,15 @@ func main() {
 			log.WithField("error", err).Fatal("Failed to init archive cloud manager")
 		}
 	}
-	configs["cloudManager"] = &archiveCloudManager
+	configs["archiveCloudManager"] = &archiveCloudManager
 
 	configs["hardPull"] = hardPull
 	configs["eventSplitRangeProjectIds"] = eventSplitRangeProjectIds
 	configs["userSplitRangeProjectIds"] = userSplitRangeProjectIds
 	configs["noOfSplits"] = *noOfSplits
+	configs["sortOnTimestamp"] = *sortOnTimestamp
+
+	configs["targetEvent"] = *targetEvent
 
 	var statusEvents map[string]interface{}
 	if *pullEventsDaily {
@@ -229,11 +239,21 @@ func main() {
 		C.PingHealthCheckBasedOnStatus(statusEvents, healthcheckPingID)
 	}
 
+	var statusData map[string]interface{}
 	if len(fileTypesMap) != 0 {
 		configs["fileTypes"] = fileTypesMap
 		C.PingHealthcheckForStart(healthcheckPingID)
-		status := taskWrapper.TaskFuncWithProjectId("PullDataDaily", *lookback, allDataProjectIdsArray, T.PullAllDataV2, configs)
-		log.Info("PullDataDaily: ", status)
+		statusData = taskWrapper.TaskFuncWithProjectId("PullDataDaily", *lookback, allDataProjectIdsArray, T.PullAllDataV2, configs)
+		log.Info("PullDataDaily: ", statusData)
+		log.Info("PullEventsDaily: ", statusEvents)
+		C.PingHealthCheckBasedOnStatus(statusData, healthcheckPingID)
+	}
+
+	if *eventsAggregateDaily {
+		C.PingHealthcheckForStart(healthcheckPingID)
+		status := taskWrapper.TaskFuncWithProjectId("EventsAggregateDaily", *lookback, aggregateProjectIdsArray, T.EventsAggregateDaily, configs)
+		log.Info("EventsAggregateDaily: ", status)
+		log.Info("PullDataDaily: ", statusData)
 		log.Info("PullEventsDaily: ", statusEvents)
 		C.PingHealthCheckBasedOnStatus(status, healthcheckPingID)
 	}

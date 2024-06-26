@@ -25,12 +25,13 @@ func PullAllDataV2(projectId int64, configs map[string]interface{}) (map[string]
 
 	startTimestamp := configs["startTimestamp"].(int64)
 	endTimestamp := configs["endTimestamp"].(int64)
-	cloudManager := configs["cloudManager"].(*filestore.FileManager)
+	archiveCloudManager := configs["archiveCloudManager"].(*filestore.FileManager)
 	hardPull := configs["hardPull"].(*bool)
 	fileTypes := configs["fileTypes"].(map[int64]bool)
 	eventSplitRangeProjectIds := configs["eventSplitRangeProjectIds"].([]int64)
 	userSplitRangeProjectIds := configs["userSplitRangeProjectIds"].([]int64)
 	noOfSplits := configs["noOfSplits"].(int)
+	sortOnTimestamp := configs["sortOnTimestamp"].(bool)
 
 	status := make(map[string]interface{})
 	if projectId == 0 {
@@ -70,14 +71,14 @@ func PullAllDataV2(projectId int64, configs map[string]interface{}) (map[string]
 
 	var pullFileTypes map[string]bool
 	var err error
-	pullFileTypes, success, err = checkIntegrationsDataAvailabilityAndHardPull(allSupportedIntegrations, projectId, startTimestamp, endTimestamp, endTimestampInProjectTimezone, cloudManager, fileTypes, *hardPull, status, logCtx)
+	pullFileTypes, success, err = checkIntegrationsDataAvailabilityAndHardPull(allSupportedIntegrations, projectId, startTimestamp, endTimestamp, endTimestampInProjectTimezone, archiveCloudManager, fileTypes, *hardPull, status, logCtx)
 	if err != nil {
 		return status, false
 	}
 
 	// EVENTS
 	if pullFileTypes["events"] {
-		if _, ok := pull.PullDataForEvents(projectId, cloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, eventSplitRangeProjectIds, noOfSplits, status, logCtx); !ok {
+		if _, ok := pull.PullDataForEvents(projectId, archiveCloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, eventSplitRangeProjectIds, noOfSplits, sortOnTimestamp, status, logCtx); !ok {
 			return status, false
 		}
 	}
@@ -85,7 +86,7 @@ func PullAllDataV2(projectId int64, configs map[string]interface{}) (map[string]
 	// AD REPORTS
 	for _, channel := range []string{M.ADWORDS, M.BINGADS, M.FACEBOOK, M.GOOGLE_ORGANIC, M.LINKEDIN} {
 		if pullFileTypes[channel] {
-			if _, ok := pull.PullDataForChannel(channel, projectId, cloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, status, logCtx); !ok {
+			if _, ok := pull.PullDataForChannel(channel, projectId, archiveCloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, status, logCtx); !ok {
 				return status, false
 			}
 		}
@@ -93,7 +94,7 @@ func PullAllDataV2(projectId int64, configs map[string]interface{}) (map[string]
 
 	//USERS
 	if pullFileTypes[M.USERS] {
-		if _, ok := pull.PullUsersDataForCustomMetrics(projectId, cloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, userSplitRangeProjectIds, noOfSplits, hardPull, status, logCtx); !ok {
+		if _, ok := pull.PullUsersDataForCustomMetrics(projectId, archiveCloudManager, startTimestamp, endTimestamp, startTimestampInProjectTimezone, endTimestampInProjectTimezone, userSplitRangeProjectIds, noOfSplits, hardPull, status, logCtx); !ok {
 			return status, false
 		}
 	}
@@ -207,7 +208,7 @@ func MergeAndWriteSortedFileTask(projectId int64, configs map[string]interface{}
 	startTimestamp := configs["startTimestamp"].(int64)
 	endTimestamp := configs["endTimestamp"].(int64)
 	diskManager := configs["diskManager"].(*serviceDisk.DiskDriver)
-	cloudManager := configs["cloudManager"].(*filestore.FileManager)
+	sortedCloudManager := configs["sortedCloudManager"].(*filestore.FileManager)
 	archiveCloudManager := configs["archiveCloudManager"].(*filestore.FileManager)
 	tmpCloudManager := configs["tmpCloudManager"].(*filestore.FileManager)
 	hardPull := configs["hardPull"].(*bool)
@@ -231,7 +232,7 @@ func MergeAndWriteSortedFileTask(projectId int64, configs map[string]interface{}
 	success := true
 	for ftype := range fileTypes {
 		if ftype == pull.FileType["events"] {
-			_, _, err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", startTimestamp, endTimestamp, archiveCloudManager, tmpCloudManager, cloudManager, diskManager, beamConfig, *hardPull, 0, true, false, false)
+			_, _, err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeEvent, "", startTimestamp, endTimestamp, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, *hardPull, 0, true, false, false)
 			if err != nil {
 				status["events-error"] = err
 				success = false
@@ -258,7 +259,7 @@ func MergeAndWriteSortedFileTask(projectId int64, configs map[string]interface{}
 				}
 			}
 			for dateField := range uniqueDateFileds {
-				_, _, err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeUser, dateField, startTimestamp, endTimestamp, archiveCloudManager, tmpCloudManager, cloudManager, diskManager, beamConfig, *hardPull, 0, true, false, false)
+				_, _, err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeUser, dateField, startTimestamp, endTimestamp, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, *hardPull, 0, true, false, false)
 				if err != nil {
 					status["users-"+dateField+"-error"] = err
 					success = false
@@ -267,7 +268,7 @@ func MergeAndWriteSortedFileTask(projectId int64, configs map[string]interface{}
 		} else {
 			for channel, ft := range pull.FileType {
 				if ft == ftype {
-					_, _, err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeAdReport, channel, startTimestamp, endTimestamp, archiveCloudManager, tmpCloudManager, cloudManager, diskManager, beamConfig, *hardPull, 0, true, false, false)
+					_, _, err := merge.MergeAndWriteSortedFile(projectId, U.DataTypeAdReport, channel, startTimestamp, endTimestamp, archiveCloudManager, tmpCloudManager, sortedCloudManager, diskManager, beamConfig, *hardPull, 0, true, false, false)
 					if err != nil {
 						status[channel+"-error"] = err
 						success = false

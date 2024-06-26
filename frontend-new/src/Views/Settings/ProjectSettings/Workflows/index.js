@@ -29,7 +29,7 @@ import {
 } from 'Reducers/workflows';
 import MomentTz from 'Components/MomentTz';
 import TableSearchAndRefresh from 'Components/TableSearchAndRefresh';
-import { getAlertTemplatesTransformation } from './utils';
+import { getAlertTemplatesTransformation, templateThumbnailImage } from './utils';
 import WorkflowBuilder from './WorkflowBuilder';
 import WorkflowEmptyImg from '../../../../assets/images/workflow-empty-screen.png';
 import WorkflowHubspotThumbnail from '../../../../assets/images/workflow-hubspot-thumbnail.png';
@@ -175,13 +175,13 @@ const Workflows = ({
           {item?.status === 'paused' || item?.status === 'disabled' ? (
             <Badge
               className='fa-custom-badge fa-custom-badge--orange'
-              status='processing'
+              status='success'
               text='Paused'
             />
           ) : (
             <Badge
               className='fa-custom-badge fa-custom-badge--green'
-              status='success'
+              status='processing'
               text='Published'
             />
           )}
@@ -217,8 +217,9 @@ const Workflows = ({
     }
   ];
 
-  const newStep2Comp = (props) => (
-    <div>
+
+  const newStep2Comp = (props) => {
+    return (<div>
       <div className='p-6'>
         <div className='flex items-center p-4'>
           <Button
@@ -233,14 +234,14 @@ const Workflows = ({
         </div>
 
         <div className='flex items-center p-4'>
-          <div className='p-2'>
+          <div className='p-2 w-full flex justify-center items-center'>
             <img
-              src={WorkflowHubspotThumbnail}
+              src={`../../../../assets/images/workflow/${templateThumbnailImage(props?.template?.id)}`}
               style={{ 'max-height': '300px' }}
             />
           </div>
 
-          <div className='pl-6'>
+          <div className='pl-6 w-full'>
             <Text
               type='title'
               level={7}
@@ -288,11 +289,11 @@ const Workflows = ({
             setBuilderMode(true);
           }}
         >
-          Use this template
+          Use this workflow
         </Button>
       </div>
-    </div>
-  );
+    </div>)
+  };
 
   const onSearch = (e) => {
     const term = e.target.value;
@@ -329,7 +330,7 @@ const Workflows = ({
   return (
     <div className='fa-container'>
       <Row gutter={[24, 24]} justify='center'>
-        <Col span={22}>
+        <Col span={24}>
           {!builderMode ? (
             <>
               <Row>
@@ -365,7 +366,7 @@ const Workflows = ({
               <Row>
                 <Col span={24}>
                   <Text type='title' level={7} color='grey-2' extraClass='m-0'>
-                  Set up automated actions like sending data from Factors to your CRM, updating your LinkedIn audience, automating outbound and more.
+                  Automate tasks like sending data to your CRM, updating your LinkedIn audience, managing outbound activities, and more.
                     {/* <a
                       href='https://help.factors.ai/en/articles/7284705-alerts'
                       target='_blank'

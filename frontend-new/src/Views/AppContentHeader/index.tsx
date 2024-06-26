@@ -17,9 +17,7 @@ export const AppContentHeader = ({
   heading,
   actions
 }: AppContentHeaderProps) => (
-  <div
-    className={cx('flex justify-between w-full border-b bg-white py-4 mb-10')}
-  >
+  <div className={cx('flex justify-between w-full border-b bg-white mb-6 p-4')}>
     {heading}
 
     {actions}

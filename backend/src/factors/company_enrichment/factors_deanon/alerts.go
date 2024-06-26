@@ -2,8 +2,8 @@ package factors_deanon
 
 import (
 	"errors"
-	"factors/config"
 	"factors/cache"
+	"factors/config"
 	"factors/model/model"
 	"fmt"
 	"net/http"
@@ -77,6 +77,7 @@ func (p *PartialAccountLimitExceeded) Execute(projectId int64, payloadJSON []byt
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
+		logCtx.WithField("errCode", response.StatusCode).Warn("Failed sending account limit email alert.")
 		return errors.New("failed sending account limit email alert")
 	}
 
@@ -101,6 +102,7 @@ func (f *FullAccountLimitExceeded) Execute(projectId int64, payloadJSON []byte, 
 	defer response.Body.Close()
 
 	if response.StatusCode != http.StatusOK {
+		logCtx.WithField("errCode", response.StatusCode).Warn("Failed sending account limit email alert.")
 		return errors.New("failed sending account limit email alert")
 	}
 

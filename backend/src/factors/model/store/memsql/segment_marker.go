@@ -844,6 +844,11 @@ func checkDateTypeProperty(segmentRule model.QueryProperty, properties *map[stri
 func (store *MemSQL) GetAllPropertiesForDomain(projectID int64, domainGroupId int,
 	domainID string, userCount *int64) ([]model.User, int) {
 
+	logFields := log.Fields{"project_id": projectID, "domain_id": domainID}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
 	userStmnt := "AND (is_group_user IS NULL OR is_group_user=0) ORDER BY properties_updated_timestamp DESC LIMIT 100"
 	userLimit := 100
 	grpUserStmnt := "AND is_group_user=1 ORDER BY properties_updated_timestamp DESC LIMIT 50"
@@ -853,7 +858,7 @@ func (store *MemSQL) GetAllPropertiesForDomain(projectID int64, domainGroupId in
 	users, status := store.GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID, userStmnt, userLimit)
 
 	if status == http.StatusInternalServerError {
-		log.WithField("project_id", projectID).Error("Unable to find users for domain ", domainID)
+		logCtx.Error("Unable to find users for domain")
 		return []model.User{}, status
 	}
 
@@ -861,7 +866,7 @@ func (store *MemSQL) GetAllPropertiesForDomain(projectID int64, domainGroupId in
 	grpUsers, status := store.GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID, grpUserStmnt, groupUsersLimit)
 
 	if status == http.StatusInternalServerError || (len(users) == 0 && len(grpUsers) == 0) {
-		log.WithField("project_id", projectID).Error("Unable to find users for domain ", domainID)
+		logCtx.Error("Unable to find users for domain")
 		return []model.User{}, status
 	}
 
@@ -875,7 +880,7 @@ func (store *MemSQL) GetAllPropertiesForDomain(projectID int64, domainGroupId in
 	domDetails, status := store.GetDomainDetailsByID(projectID, domainID, domainGroupId)
 
 	if status != http.StatusFound {
-		log.WithField("project_id", projectID).Error("Unable to find details for domain %s", domainID)
+		logCtx.Error("Unable to find details for domain")
 	} else {
 		users = append(users, domDetails)
 	}
@@ -886,13 +891,18 @@ func (store *MemSQL) GetAllPropertiesForDomain(projectID int64, domainGroupId in
 func (store *MemSQL) GetAllGroupPropertiesForDomain(projectID int64, domainGroupId int,
 	domainID string) ([]model.User, int) {
 
+	logFields := log.Fields{"project_id": projectID, "domain_id": domainID}
+	defer model.LogOnSlowExecutionWithParams(time.Now(), &logFields)
+
+	logCtx := log.WithFields(logFields)
+
 	grpUserStmnt := "AND is_group_user=1 ORDER BY properties_updated_timestamp DESC LIMIT 50"
 	grpUserLimit := 50
 	// fetching top 50 group users
 	users, status := store.GetUsersAssociatedToDomainList(projectID, domainGroupId, domainID, grpUserStmnt, grpUserLimit)
 
 	if status == http.StatusInternalServerError || len(users) == 0 {
-		log.WithField("project_id", projectID).Error("Unable to find users for domain ", domainID)
+		logCtx.Error("Unable to find users for domain")
 		return []model.User{}, status
 	}
 
@@ -900,7 +910,7 @@ func (store *MemSQL) GetAllGroupPropertiesForDomain(projectID int64, domainGroup
 	domDetails, status := store.GetDomainDetailsByID(projectID, domainID, domainGroupId)
 
 	if status != http.StatusFound {
-		log.WithField("project_id", projectID).Errorf("Unable to find details for domain %s", domainID)
+		logCtx.Error("Unable to find details for domain")
 	} else {
 		users = append(users, domDetails)
 	}

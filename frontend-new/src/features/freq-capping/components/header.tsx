@@ -279,17 +279,10 @@ export const FreqCapHeader = ({
       if (rule_id !== 'new' && isRuleEdited) {
         return (
           <Row className='items-center'>
-            <Button
-              id='fa-at-btn--new-report mr-1'
-              onClick={() => setRuleBasedOnRuleId()}
-            >
+            <Button className='mr-1' onClick={() => setRuleBasedOnRuleId()}>
               <Space>Discard Changes</Space>
             </Button>
-            <Button
-              type='primary'
-              id='fa-at-btn--new-report ml-1'
-              onClick={() => publishChanges()}
-            >
+            <Button type='primary' onClick={() => publishChanges()}>
               <Space>Publish</Space>
             </Button>
           </Row>
