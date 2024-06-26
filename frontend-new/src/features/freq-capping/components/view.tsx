@@ -169,7 +169,7 @@ const FrequencyCappingView = ({
 
   const renderObjectSelection = () => (
     <div>
-      <Row className='mt-8'>
+      <Row className='mt-3'>
         <Text
           extraClass='mb-0'
           color='character-secondary'
@@ -187,7 +187,7 @@ const FrequencyCappingView = ({
             value='campaign'
           >
             <div className='flex gap-x-1 justify-center items-center h-full'>
-              <Svg size={16} name='eye' />
+              <SVG size={14} name='MegaPhone' />
               <Text
                 level={7}
                 color={
@@ -196,7 +196,7 @@ const FrequencyCappingView = ({
                     : 'black'
                 }
                 type='title'
-                extraClass='mb-0'
+                extraClass='mb-0 ml-1'
               >
                 Campaign
               </Text>
@@ -208,7 +208,7 @@ const FrequencyCappingView = ({
             value='campaign_group'
           >
             <div className='flex gap-x-1 justify-center items-center h-full'>
-              <Svg size={16} name='eye' />
+              <SVG size={14} name='LightBulb' />
               <Text
                 level={7}
                 color={
@@ -217,7 +217,7 @@ const FrequencyCappingView = ({
                     : 'black'
                 }
                 type='title'
-                extraClass='mb-0'
+                extraClass='mb-0 ml-1'
               >
                 Campaign Group
               </Text>
@@ -229,7 +229,7 @@ const FrequencyCappingView = ({
             value='account'
           >
             <div className='flex gap-x-1 justify-center items-center h-full'>
-              <Svg size={16} name='eye' />
+              <SVG size={16} name='user' color='#40A9FF' />
               <Text
                 level={7}
                 color={
@@ -238,7 +238,7 @@ const FrequencyCappingView = ({
                     : 'black'
                 }
                 type='title'
-                extraClass='mb-0'
+                extraClass='mb-0 ml-1'
               >
                 All Ad Accounts
               </Text>
@@ -522,7 +522,7 @@ const FrequencyCappingView = ({
 
   const renderAdvanceCapRules = useCallback(
     () => (
-      <Row className='mt-3'>
+      <Row className='mt-6'>
         <Collapse
           className={`w-full ${styles['advance-rules-cap']}`}
           expandIconPosition='right'
@@ -570,7 +570,7 @@ const FrequencyCappingView = ({
             Set capping condition
           </Text>
         </Col>
-        <div className='flex'>
+        <div className='flex items-center'>
           <Text
             color='character-secondary'
             level={7}

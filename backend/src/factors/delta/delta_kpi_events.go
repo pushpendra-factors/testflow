@@ -327,7 +327,7 @@ func checkPropInfo(eventDetails P.CounterEventFormat, propInfo EventPropInfo, pa
 // check prop exists and get float value
 func getPropValueEvents(eventDetails P.CounterEventFormat, propName string) (float64, bool, error) {
 	if val, ok := existsInProps(propName, eventDetails.EventProperties, eventDetails.UserProperties, "either"); ok {
-		if floatVal, err := getFloatValueFromInterface(val); err != nil {
+		if floatVal, err := U.GetFloatValueFromInterface(val); err != nil {
 			return 0, false, err
 		} else {
 			return floatVal, true, nil

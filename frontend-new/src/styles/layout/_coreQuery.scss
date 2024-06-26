@@ -142,7 +142,7 @@ $cq-card-transition: transform 0.2s ease-in-out;
   &.no-padding-b {
     padding-bottom: 0;
   }
-  
+
   &.bordered {
     // border-top: 1px solid $fa-color--mono-2;
     border-bottom: 1px solid $fa-color--mono-1;
@@ -497,7 +497,7 @@ $cq-card-transition: transform 0.2s ease-in-out;
 }
 
 .query_card_open {
-  height: 100%;
+  height: 100% !important;
   overflow: visible;
 
   .query_card_expand {
@@ -516,34 +516,34 @@ $cq-card-transition: transform 0.2s ease-in-out;
   overflow: hidden;
 }
 
-.btn-left-round{
+.btn-left-round {
   border-radius: 100px 0 0 100px !important;
 }
-.btn-right-round{
+.btn-right-round {
   border-radius: 0 100px 100px 0 !important;
 }
-.btn-total-round{
+.btn-total-round {
   border-radius: 100px !important;
 }
-.filter-buttons-radius{
+.filter-buttons-radius {
   border-radius: 0px !important;
 }
-.filter-buttons-margin{
+.filter-buttons-margin {
   margin-right: 2px;
 }
-.filter-remove-button{
-  background: #F5F6F8 !important;
+.filter-remove-button {
+  background: #f5f6f8 !important;
 }
-.filter-remove-button:hover{
-  background: #E7E9ED !important;
+.filter-remove-button:hover {
+  background: #e7e9ed !important;
 }
-.plus-button{
+.plus-button {
   margin-left: 8px;
   padding-top: 1px;
 }
-.date-input-number{
+.date-input-number {
   margin-left: 2px;
-  color: #1E89FF;
+  color: #1e89ff;
 }
 
 .breakdown-margin {
@@ -556,7 +556,7 @@ $cq-card-transition: transform 0.2s ease-in-out;
   border-color: transparent;
   background: $fa-color--mono-1;
   color: $fa-color--mono-5;
-  margin-right:4px;
+  margin-right: 4px;
 }
 .input-value:hover:active:focus {
   border-color: $fa-color--brand-color;

@@ -101,7 +101,7 @@ func getCustomMetricsSimple(scanner *bufio.Scanner, propFilter []M.KPIFilter, pr
 			addValueToMapForPropsPresent(&globalVal, reqMap, 1, propsToEval, userDetails.Properties, userDetails.Properties)
 		} else if metricFunc == M.SumAggregateFunction {
 			if val, ok := existsInProps(metricProp, userDetails.Properties, userDetails.Properties, "up"); ok {
-				propVal, _ := getFloatValueFromInterface(val)
+				propVal, _ := U.GetFloatValueFromInterface(val)
 				addValueToMapForPropsPresent(&globalVal, reqMap, propVal, propsToEval, userDetails.Properties, userDetails.Properties)
 			}
 		}
@@ -149,7 +149,7 @@ func getCustomMetricsComplex(scanner *bufio.Scanner, propFilter []M.KPIFilter, p
 		addToScaleUser(&globalScale, scaleMap, propsToEval, userDetails)
 
 		if val, ok := existsInProps(metricProp, userDetails.Properties, userDetails.Properties, "up"); ok {
-			propVal, _ := getFloatValueFromInterface(val)
+			propVal, _ := U.GetFloatValueFromInterface(val)
 			addValuesToFractionForPropsPresent(&globalFrac, featInfoMap, propVal, 1, propsToEval, userDetails.Properties, userDetails.Properties)
 		}
 	}

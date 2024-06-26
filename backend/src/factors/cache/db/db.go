@@ -150,20 +150,24 @@ func Set(key *cache.Key, value string, expiryInSecs float64) error {
 	cacheRecord.ProjectID = key.ProjectID
 
 	db := config.GetServices().Db
-	err = db.Table(tableNameCacheTable).Create(cacheRecord).Error
+	stmnt := "INSERT INTO cache_db (`project_id`, `k`, `v`, `expiry_in_secs`, `expires_at`, `created_at`, `updated_at`) VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE `v` = ?, updated_at = ?;"
+	err = db.Exec(stmnt, cacheRecord.ProjectID, cacheRecord.Key, cacheRecord.Value,
+		cacheRecord.ExpiryInSecs, cacheRecord.ExpiresAt, util.TimeNowZ(),
+		util.TimeNowZ(), cacheRecord.Value, util.TimeNowZ()).Error
 	if err != nil {
 		if IsDuplicateRecordError(err) {
-			k, _ := key.Key()
-			err := db.Table(tableNameCacheTable).
-				Where("project_id = ? AND k = ?", key.ProjectID, k).
-				Updates(map[string]interface{}{"v": value}).Error
+			// Update the record incase of conflict.
+			updateStmnt := "UPDATE cache_db SET v = ? WHERE project_id = ? AND k = ?;"
+			err = db.Exec(updateStmnt, cacheRecord.Value, cacheRecord.ProjectID, cacheRecord.Key).Error
 			if err != nil {
+				log.WithField("k", cacheRecord.Key).Info("Updated key on db_cache after conflict during insert.")
 				return err
 			}
 
 			// return nil after update on duplicate.
 			return nil
 		}
+
 		return err
 	}
 
@@ -174,7 +178,7 @@ func setBatchWithBatchRoutines(keyValue map[*cache.Key]string, expiryInSecs floa
 	lenM := len(keyValue)
 
 	if lenM <= setBatchBatchSize {
-		return setBatch(keyValue, expiryInSecs)
+		return setBatchWithTx(keyValue, expiryInSecs)
 	}
 
 	// Create batches before routines for simplicity.
@@ -221,15 +225,17 @@ func SetBatch(keyValue map[*cache.Key]string, expiryInSecs float64) error {
 
 func setBatchWithWg(keyValue map[*cache.Key]string, expiryInSecs float64, wg *sync.WaitGroup) error {
 	defer wg.Done()
-	return setBatch(keyValue, expiryInSecs)
+	return setBatchWithTx(keyValue, expiryInSecs)
 }
 
 func setWithWg(key *cache.Key, value string, expiryInSecs float64, wg *sync.WaitGroup) error {
 	defer wg.Done()
+
+	// Using set instead of setBatchWithTransaction after scalability issues.
 	return Set(key, value, expiryInSecs)
 }
 
-func setBatch(keyValue map[*cache.Key]string, expiryInSecs float64) error {
+func setBatchWithTx(keyValue map[*cache.Key]string, expiryInSecs float64) error {
 	db := config.GetServices().Db
 	tx, err := db.DB().Begin()
 	defer util.CloseTx(tx)
@@ -244,9 +250,10 @@ func setBatch(keyValue map[*cache.Key]string, expiryInSecs float64) error {
 			return err
 		}
 
-		stmnt := "INSERT INTO cache_db (`project_id`, `k`, `v`, `expiry_in_secs`, `expires_at`, `created_at`, `updated_at`) VALUES (?, ?, ?, ?, ?, ?, ?);"
+		stmnt := "INSERT INTO cache_db (`project_id`, `k`, `v`, `expiry_in_secs`, `expires_at`, `created_at`, `updated_at`) VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE `v` = ?, updated_at=?;"
 		_, err = tx.Exec(stmnt, cacheRecord.ProjectID, cacheRecord.Key, cacheRecord.Value,
-			cacheRecord.ExpiryInSecs, cacheRecord.ExpiresAt, util.TimeNowZ(), util.TimeNowZ())
+			cacheRecord.ExpiryInSecs, cacheRecord.ExpiresAt, util.TimeNowZ(),
+			util.TimeNowZ(), cacheRecord.Value, util.TimeNowZ())
 		if err != nil {
 			if IsDuplicateRecordError(err) {
 				// Update the record incase of conflict.

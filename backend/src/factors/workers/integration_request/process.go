@@ -97,6 +97,9 @@ func main() {
 	enableTotalSessionPropertiesV2ByProjectID := flag.String("enable_total_session_properties_v2", "", "")
 	emailUTMParameterAllowedProjects := flag.String("email_utm_parameter_allowed_projects", "", "")
 	enableDomainWebsitePropertiesByProjectID := flag.String("enable_domain_website_properties_by_project_id", "", "")
+	enableEnrichmentDebugLogsByProjectID := flag.String("enable_enrichment_debug_logs_by_project_id", "", "")
+	sixSignalV3ProjectIds := flag.String("six_signal_v3_project_ids", "", "Project Ids for which enrichment will go through 6Signal v3")
+	mailmodoTriggerCampaignAPIKey := flag.String("mailmodo_trigger_campaign_api_key", "dummy", "Mailmodo Email Alert API Key")
 
 	flag.Parse()
 
@@ -160,6 +163,9 @@ func main() {
 		EnableTotalSessionPropertiesV2ByProjectID:          *enableTotalSessionPropertiesV2ByProjectID,
 		EmailUTMParameterAllowedProjects:                   *emailUTMParameterAllowedProjects,
 		EnableDomainWebsitePropertiesByProjectID:           *enableDomainWebsitePropertiesByProjectID,
+		EnableEnrichmentDebugLogsByProjectID:               *enableEnrichmentDebugLogsByProjectID,
+		SixSignalV3ProjectIds:                              *sixSignalV3ProjectIds,
+		MailModoTriggerCampaignAPIKey:                      *mailmodoTriggerCampaignAPIKey,
 	}
 	C.InitConf(config)
 

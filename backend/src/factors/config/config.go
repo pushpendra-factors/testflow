@@ -1957,7 +1957,7 @@ func GetClearbitProvisionAccountAPIKey() string {
 	return configuration.ClearbitProvisionAccountAPIKey
 }
 
-func GetMailmodoTriggerCampaignAPIResponse() string {
+func GetMailmodoTriggerCampaignAPIKey() string {
 	return configuration.MailModoTriggerCampaignAPIKey
 }
 

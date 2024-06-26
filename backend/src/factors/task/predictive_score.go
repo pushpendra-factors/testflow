@@ -18,23 +18,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var props = map[string]string{
-	"ep#$initial_referrer_domain":                                "first",
-	"ep#$is_first_session":                                       "first",
-	"ep#$page_count":                                             "total",
-	"ep#$session_spent_time":                                     "total",
-	"ep#$initial_page_load_time":                                 "average",
-	"ep#$initial_page_spent_time":                                "average",
-	"ep#$initial_page_scroll_percent":                            "average",
-	"ep#$page_load_time":                                         "average",
-	"ep#$page_spent_time":                                        "average",
-	"ep#$page_scroll_percent":                                    "average",
-	"up#$initial_page_load_time":                                 "average",
-	"up#$initial_page_spent_time":                                "average",
-	"up#$initial_page_scroll_percent":                            "average",
-	"up#$latest_page_load_time":                                  "average",
-	"up#$latest_page_spent_time":                                 "average",
-	"up#$latest_page_scroll_percent":                             "average",
+var propsToUse = map[string]string{
+	"up#$initial_page_url":                                       "last",
+	"up#$initial_page_load_time":                                 "last",
+	"up#$initial_page_spent_time":                                "last",
+	"up#$initial_page_scroll_percent":                            "last",
+	"up#$latest_page_url":                                        "last",
+	"up#$latest_page_load_time":                                  "last",
+	"up#$latest_page_spent_time":                                 "last",
+	"up#$latest_page_scroll_percent":                             "last",
 	"up#$continent":                                              "last",
 	"up#$country":                                                "last",
 	"up#$city":                                                   "last",
@@ -159,7 +151,8 @@ var props = map[string]string{
 	"up#$hubspot_deal_hs_tcv":                                    "last",
 	"up#$hubspot_deal_hs_forecast_probability":                   "last",
 	"up#$hubspot_deal_hs_mrr":                                    "last",
-	"up#$hubspot_deal_hs_acv":                                    "last"}
+	"up#$hubspot_deal_hs_acv":                                    "last",
+}
 
 var minTimestampCol string = "minEventTimestamp"
 var maxTimestampCol string = "maxEventTimestamp"
@@ -398,7 +391,7 @@ func PredictiveScoring2(projectId int64, configs map[string]interface{}) (map[st
 						if uVal == "" || uVal == nil {
 							continue
 						}
-						if val, ok := props[uKey]; !ok {
+						if val, ok := propsToUse[uKey]; !ok {
 							continue
 						} else {
 							propCounts[uKey] += 1
@@ -434,7 +427,7 @@ func PredictiveScoring2(projectId int64, configs map[string]interface{}) (map[st
 						if eVal == "" || eVal == nil {
 							continue
 						}
-						if val, ok := props[eKey]; !ok {
+						if val, ok := propsToUse[eKey]; !ok {
 							continue
 						} else {
 							propCounts[eKey] += 1

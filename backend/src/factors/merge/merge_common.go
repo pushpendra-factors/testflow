@@ -246,7 +246,7 @@ func MergeAndWriteSortedFile(projectId int64, dataType, channelOrDatefield strin
 				log.WithError(err).Error("checkDependencyForEventsFile failed")
 				return "", "", err
 			}
-			return "", "", fmt.Errorf("%s not completed for given range", mergeDependencyTaskName)
+			return "", "", fmt.Errorf("%s not completed for %d for given range", mergeDependencyTaskName, projectId)
 		}
 	}
 

@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"reflect"
 
-	D "factors/delta"
 	M "factors/model/model"
+	T "factors/task"
 
 	"factors/filestore"
 	serviceDisk "factors/services/disk"
@@ -193,15 +193,15 @@ func main() {
 	finalStatus := make(map[int64]interface{})
 	for _, projectId := range projectIDs {
 		status := make(map[string]interface{})
-		status, result = D.PathAnalysis(projectId, configs)
+		status, result = T.PathAnalysis(projectId, configs)
 		if len(status) > 0 {
 			finalStatus[projectId] = status
 		}
-		if result == false {
+		if !result {
 			break
 		}
 	}
-	if result == false {
+	if !result {
 		C.PingHealthcheckForFailure(healthcheckPingID, finalStatus)
 	} else {
 		C.PingHealthcheckForSuccess(healthcheckPingID, finalStatus)

@@ -73,12 +73,16 @@ import WorkflowTrigger from './trigger';
 import MapComponent from './MapComponent';
 import FactorsHubspotCompany from './Templates/FactorsHubspotCompany';
 import FactorsApolloHubspotContacts from './Templates/FactorsApolloHubspotContacts';
-import { TemplateIDs } from '../utils';
+import { TemplateIDs, templateThumbnailImage } from '../utils';
 import FactorsSalesforceCompany from './Templates/FactorsSalesforceCompany';
 import FactorsApolloSalesforceContacts from './Templates/FactorsApolloSalesforceContacts';
 import WorkflowHubspotThumbnail from '../../../../../assets/images/workflow-hubspot-thumbnail.png';
+import WorkflowCAPIThumbnail from '../../../../../assets/images/workflow-capi-thumbnail.png';
 import QueryBlock from '../../Alerts/EventBasedAlert/QueryBlock';
-import { defaultPropertyList, alertsGroupPropertyList } from 'Components/QueryComposer/EventGroupBlock/utils';
+import {
+  defaultPropertyList,
+  alertsGroupPropertyList
+} from 'Components/QueryComposer/EventGroupBlock/utils';
 import FactorsLinkedInCAPI from './Templates/FactorsLinkedInCAPI';
 
 const host = getHostUrl();
@@ -308,8 +312,8 @@ const WorkflowBuilder = ({
 
   useEffect(() => {
     let filterOptsObj = {};
-    let eventGroup = "";
-    let event = queries[0] || "";
+    let eventGroup = '';
+    let event = queries[0] || '';
     let groupAnalysis = activeGrpBtn;
 
     if (!groupAnalysis || groupAnalysis === 'users') {
@@ -338,7 +342,7 @@ const WorkflowBuilder = ({
     userPropertiesV2,
     groupProperties,
     eventUserPropertiesV2,
-    groups,
+    groups
   ]);
 
   const queryChange = useCallback(
@@ -465,10 +469,10 @@ const WorkflowBuilder = ({
     if (
       selectedTemp?.id == TemplateIDs.FACTORS_APOLLO_HUBSPOT_CONTACTS ||
       selectedTemp?.template_id ==
-      TemplateIDs.FACTORS_APOLLO_HUBSPOT_CONTACTS ||
+        TemplateIDs.FACTORS_APOLLO_HUBSPOT_CONTACTS ||
       selectedTemp?.id == TemplateIDs.FACTORS_APOLLO_SALESFORCE_CONTACTS ||
       selectedTemp?.template_id ==
-      TemplateIDs.FACTORS_APOLLO_SALESFORCE_CONTACTS
+        TemplateIDs.FACTORS_APOLLO_SALESFORCE_CONTACTS
     ) {
       message_propertiesObj = {
         mandatory_properties: propertyMapMandatory,
@@ -497,11 +501,11 @@ const WorkflowBuilder = ({
       filters: formatFiltersForQuery(queries?.[0]?.filters),
       notifications: false,
       repeat_alerts: true,
-      template_title: selectedTemp?.template_title,
-      template_description: selectedTemp?.template_description,
+      template_title: isTemplate ? selectedTemp?.title : selectedTemp?.template_title,
+      template_description: isTemplate ? selectedTemp?.description : selectedTemp?.template_description,
       title: workflowName || '',
       description: workflowName || '',
-      template_id: selectedTemp?.template_id || selectedTemp?.id,
+      template_id: selectedTemp?.id || selectedTemp?.template_id,
       message_properties: message_propertiesObj
     };
 
@@ -601,7 +605,7 @@ const WorkflowBuilder = ({
     if (
       workflowItem?.id == TemplateIDs.FACTORS_APOLLO_SALESFORCE_CONTACTS ||
       workflowItem?.template_id ==
-      TemplateIDs.FACTORS_APOLLO_SALESFORCE_CONTACTS
+        TemplateIDs.FACTORS_APOLLO_SALESFORCE_CONTACTS
     ) {
       return (
         <FactorsApolloSalesforceContacts
@@ -637,9 +641,7 @@ const WorkflowBuilder = ({
         />
       );
     }
-    return null;
-
-    return null;
+    return null; 
   };
 
   const handleConfigure = () => {
@@ -649,6 +651,7 @@ const WorkflowBuilder = ({
     }, 300);
   };
 
+console.log("selectedTemp==>",selectedTemp)
   return (
     <>
       <Row className='border-bottom--thin-2 pt-4 pb-4'>
@@ -743,7 +746,7 @@ const WorkflowBuilder = ({
 
             {/* workflow config */}
 
-            {queries?.length > 0 || selectedSegment !== '' ? (
+           
               <>
                 <VerticalDivider />
 
@@ -752,7 +755,7 @@ const WorkflowBuilder = ({
                   style={{ 'margin-top': '0%', 'min-height': '250px' }}
                 >
                   <div
-                    className='flex items-center'
+                    className='flex items-center justify-between'
                     style={{ padding: '3% 3%' }}
                   >
                     <Tag
@@ -787,13 +790,14 @@ const WorkflowBuilder = ({
                         type='primary'
                         extraClass='mt-2'
                         onClick={() => handleConfigure()}
+                        disabled={!(queries?.length > 0 || selectedSegment !== '')}
                       >
                         Configure Action
                       </Button>
                     </div>
                     <div className='px-4 flex justify-center'>
                       <img
-                        src={WorkflowHubspotThumbnail}
+                        src={`../../../../../assets/images/workflow/${templateThumbnailImage(isTemplate ?selectedTemp?.id : selectedTemp?.template_id)}`}
                         style={{ height: '175px' }}
                       />
                     </div>
@@ -805,9 +809,6 @@ const WorkflowBuilder = ({
                   </div>
                 </div>
               </>
-            ) : (
-              <></>
-            )}
           </div>
         </Col>
       </Row>

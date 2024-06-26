@@ -97,4 +97,16 @@ type FileManager interface {
 
 	// Remove(path, filename string) error
 	// Del(dir, filename string)error
+
+	//predictive scoring
+	GetEventsAggregateDailyDataFilePathAndName(projectID int64, dataTimestamp int64) (string, string)
+	GetEventsAggregateDailyPropsFilePathAndName(projectID int64, dataTimestamp int64) (string, string)
+	GetEventsAggregateDailyCountsFilePathAndName(projectID int64, dataTimestamp int64) (string, string)
+	GetEventsAggregateDailyTargetFilePathAndName(projectID int64, dataTimestamp int64, targetEvent string) (string, string)
+	GetPredictiveScoringDataProjectDir(projectID int64) string
+	GetPredictiveScoringDataDir(projectID int64, startTimestamp, endTimestamp int64, targetEvent string, minDaysOfInput, daysOfOutput, windowStartShift, windowEndShift int) string
+	GetPredictiveScoringTrainingDataFilePathAndName(projectID int64, startTimestamp, endTimestamp int64, targetEvent string, minDaysOfInput, daysOfOutput, windowStartShift, windowEndShift int) (string, string)
+	GetPredictiveScoringPredictDataFilePathAndName(projectID int64, startTimestamp, endTimestamp int64, targetEvent string, minDaysOfInput, daysOfOutput, windowStartShift, windowEndShift int) (string, string)
+	GetPredictiveScoringEventsCountsFilePathAndName(projectID int64, startTimestamp, endTimestamp int64, targetEvent string, minDaysOfInput, daysOfOutput, windowStartShift, windowEndShift int) (string, string)
+	GetPredictiveScoringPropCountsFilePathAndName(projectID int64, startTimestamp, endTimestamp int64, targetEvent string, minDaysOfInput, daysOfOutput, windowStartShift, windowEndShift int) (string, string)
 }
