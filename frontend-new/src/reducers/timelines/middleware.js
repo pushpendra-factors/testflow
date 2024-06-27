@@ -25,32 +25,34 @@ import {
   SET_PEOPLES_SEGMENT_FOLDERS_FAILED
 } from './types';
 
-export const getProfileAccounts = (projectId, payload) => (dispatch) => {
-  dispatch({ type: 'FETCH_PROFILE_ACCOUNTS_LOADING' });
-  return new Promise((resolve, reject) => {
-    fetchProfileAccounts(projectId, payload)
-      .then((response) => {
-        const data = response.data?.map((account) => ({
-          ...account,
-          domain: { id: account.identity, name: account?.domain_name }
-        }));
-        resolve(
-          dispatch({
-            type: 'FETCH_PROFILE_ACCOUNTS_FULFILLED',
-            payload: data,
-            segmentID: payload.segment_id || 'default',
-            status: response.status
-          })
-        );
-      })
-      .catch((err) => {
-        dispatch({
-          type: 'FETCH_PROFILE_ACCOUNTS_FAILED',
-          segmentID: payload.segment_id || 'default'
-        });
-        reject(err);
-      });
+export const getProfileAccounts = (projectId, payload) => async (dispatch) => {
+  const segmentID = payload.segment_id || 'default';
+
+  dispatch({
+    type: 'FETCH_PROFILE_ACCOUNTS_LOADING',
+    segmentID
   });
+
+  try {
+    const response = await fetchProfileAccounts(projectId, payload);
+    const data = response.data?.profiles?.map((account) => ({
+      ...account,
+      domain: { id: account.identity, name: account?.domain_name }
+    }));
+
+    dispatch({
+      type: 'FETCH_PROFILE_ACCOUNTS_FULFILLED',
+      payload: data,
+      segmentID,
+      isPreview: response.data.is_prev,
+      status: response.status
+    });
+  } catch (err) {
+    dispatch({
+      type: 'FETCH_PROFILE_ACCOUNTS_FAILED',
+      segmentID
+    });
+  }
 };
 
 export const getProfileAccountDetails =
@@ -190,22 +192,41 @@ export const createNewSegment = (projectId, payload) => (dispatch) =>
       });
   });
 
-export const getSavedSegments = (projectId) => (dispatch) =>
-  new Promise((resolve, reject) => {
-    fetchSegments(projectId)
-      .then((response) => {
-        resolve(
-          dispatch({
-            type: 'FETCH_SEGMENTS_FULFILLED',
-            payload: response.data
-          })
-        );
-      })
-      .catch((err) => {
-        dispatch({ type: 'FETCH_SEGMENTS_REJECTED', payload: err });
-        reject(err);
+export const getSavedSegments = (projectId) => async (dispatch) => {
+  try {
+    const response = await fetchSegments(projectId);
+    const { $domains, ...otherSegments } = response.data;
+
+    const accountSegments = $domains.map(({ id, name, folder_id }) => ({
+      id,
+      name,
+      folder_id
+    }));
+
+    const userSegments = [];
+    Object.values(otherSegments || {}).forEach((segments) => {
+      segments.forEach(({ id, name, folder_id }) => {
+        userSegments.push({
+          id,
+          name,
+          folder_id
+        });
       });
-  });
+    });
+
+    dispatch({
+      type: 'FETCH_SEGMENTS_FULFILLED',
+      accountSegments,
+      userSegments
+    });
+  } catch (err) {
+    dispatch({
+      type: 'FETCH_SEGMENTS_REJECTED',
+      payload: err
+    });
+    logger.error(err);
+  }
+};
 
 export const updateSegmentForId = (projectId, id, payload) => (dispatch) =>
   new Promise((resolve, reject) => {

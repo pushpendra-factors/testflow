@@ -4,10 +4,7 @@ import { connect, useDispatch, useSelector } from 'react-redux';
 import { Button, Spin, message, notification } from 'antd';
 import { getUserOptionsForDropdown } from 'Components/Profile/UserProfiles/userProfiles.helpers';
 import { SVG, Text } from 'Components/factorsComponents';
-import {
-  selectSegmentsList,
-  selectTimelinePayload
-} from 'Reducers/userProfilesView/selectors';
+import { selectTimelinePayload } from 'Reducers/userProfilesView/selectors';
 import {
   setNewSegmentModeAction,
   setTimelinePayloadAction
@@ -21,6 +18,7 @@ import {
 } from 'Reducers/timelines/middleware';
 import {
   deleteSegmentFolders,
+  fetchSegmentById,
   moveSegmentToNewFolder,
   renameSegmentFolders,
   updateSegmentToFolder
@@ -82,7 +80,8 @@ function ProfilesSidebar({
     unit: null
   });
 
-  const userSegmentsList = useSelector((state) => selectSegmentsList(state));
+  const userSegmentsList = useSelector((state) => state.timelines.userSegments);
+
   useEffect(() => {
     getSegmentFolders(active_project?.id, 'user');
     // need to add segment folders for people too
@@ -162,12 +161,27 @@ function ProfilesSidebar({
       });
   };
 
-  const changeActiveSegment = (segment) => {
-    const opts = { ...timelinePayload };
-    opts.source = segment?.type;
-    opts.segment = segment;
-    delete opts.search_filter;
-    dispatch(setTimelinePayloadAction(opts));
+  const changeActiveSegment = async (segment) => {
+    try {
+      const response = await fetchSegmentById(active_project.id, segment.id);
+
+      if (!response.ok) {
+        return;
+      }
+
+      const { data } = response;
+      const { type: source, ...segmentData } = data;
+      const timelineOptions = {
+        ...timelinePayload,
+        source,
+        segment: segmentData
+      };
+      delete timelineOptions.search_filter;
+
+      dispatch(setTimelinePayloadAction(timelineOptions));
+    } catch (error) {
+      logger.error('Error fetching segment by ID:', error);
+    }
   };
 
   const setActiveSegment = (segment) => {

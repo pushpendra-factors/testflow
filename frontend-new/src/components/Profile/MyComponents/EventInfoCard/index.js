@@ -18,8 +18,8 @@ function EventInfoCard({ event, eventIcon, sourceIcon, propertiesType }) {
       <div
         className='event-icon'
         style={{
-          '--border-color': `${eventIconsColorMap[eventIcon]?.borderColor}`,
-          '--bg-color': `${eventIconsColorMap[eventIcon]?.bgColor}`,
+          borderColor: `${eventIconsColorMap[eventIcon]?.borderColor}`,
+          background: `${eventIconsColorMap[eventIcon]?.bgColor}`,
           '--icon-size': '32px'
         }}
       >

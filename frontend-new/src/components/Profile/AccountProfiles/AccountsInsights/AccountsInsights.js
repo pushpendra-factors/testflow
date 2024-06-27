@@ -15,7 +15,6 @@ import {
 } from 'Reducers/accountProfilesView/services';
 import { setInsightsDuration } from 'Reducers/accountProfilesView/actions';
 import { EMPTY_OBJECT } from 'Utils/global';
-import { selectSegmentBySegmentId } from 'Reducers/timelines/selectors';
 import useFeatureLock from 'hooks/useFeatureLock';
 import { SEGMENT_INSIGHTS_LEARN_MORE_LINK } from 'Utils/constants';
 import { FEATURES } from 'Constants/plans.constants';
@@ -25,27 +24,49 @@ import SegmentKpisOverview from './SegmentKpisOverview';
 import { DEFAULT_DATE_RANGE } from './accountInsightsConstants';
 import SegmentCompareDropdown from './SegmentCompareDropdown';
 import EditMetricModal from './EditMetricModal';
+import { fetchSegmentById } from 'Reducers/timelines';
 
 export default function AccountsInsights() {
   const dispatch = useDispatch();
   const { handlePlanUpgradeClick } = usePlanUpgrade();
+
   const insightsConfig = useSelector(selectInsightsConfig);
   const accountPayload = useSelector(selectAccountPayload);
-  const segment = useSelector((state) =>
-    selectSegmentBySegmentId(state, accountPayload?.segment.id)
-  );
-  const areInsightsAvailable = segment.long_run_comp === true;
-  const featureFlag = useFeatureLock(FEATURES.FEATURE_SEGMENT_KPI);
-
-  const featureLocked =
-    featureFlag.isLoading === false && featureFlag.isFeatureLocked === true;
-
   const editMetricStatus = useSelector(selectEditInsightsMetricStatus);
   const activeProject = useSelector((state) => state.global.active_project);
+
   const [isFetchDone, setIsFetchDone] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editWidget, setEditWidget] = useState(EMPTY_OBJECT);
   const [editWidgetGroupId, setEditWidgetGroupId] = useState(null);
+  const [activeSegment, setActiveSegment] = useState({});
+
+  const featureFlag = useFeatureLock(FEATURES.FEATURE_SEGMENT_KPI);
+  const featureLocked = useMemo(
+    () => !featureFlag.isLoading && featureFlag.isFeatureLocked,
+    [featureFlag]
+  );
+
+  useEffect(() => {
+    const fetchSegment = async () => {
+      const response = await fetchSegmentById(
+        activeProject.id,
+        accountPayload.segment.id
+      );
+      if (response.ok) {
+        setActiveSegment(response.data);
+      }
+    };
+
+    if (activeProject?.id && accountPayload?.segment?.id) {
+      fetchSegment();
+    }
+  }, [activeProject?.id, accountPayload?.segment?.id]);
+
+  const areInsightsAvailable = useMemo(
+    () => activeSegment.long_run_com,
+    [activeSegment]
+  );
 
   const nonAccountsWidgets = useMemo(
     () =>
@@ -63,9 +84,7 @@ export default function AccountsInsights() {
     [insightsConfig.config]
   );
 
-  const handleEditModalClose = useCallback(() => {
-    setShowEditModal(false);
-  }, []);
+  const handleEditModalClose = useCallback(() => setShowEditModal(false), []);
 
   const handleDurationChange = useCallback(
     (duration) => {
@@ -112,45 +131,45 @@ export default function AccountsInsights() {
         });
       }
     },
-    [editWidget, editWidgetGroupId, handleEditModalClose]
+    [editWidget, editWidgetGroupId, activeProject?.id]
   );
 
-  const handleLearnMoreClick = useCallback(() => {
-    window.open(SEGMENT_INSIGHTS_LEARN_MORE_LINK, '_blank');
-  }, []);
+  const handleLearnMoreClick = useCallback(
+    () => window.open(SEGMENT_INSIGHTS_LEARN_MORE_LINK, '_blank'),
+    []
+  );
 
   useEffect(() => {
     if (
       areInsightsAvailable &&
-      insightsConfig.completed !== true &&
-      insightsConfig.loading !== true &&
-      isFetchDone === false &&
-      featureLocked === false
+      !insightsConfig.completed &&
+      !insightsConfig.loading &&
+      !isFetchDone &&
+      !featureLocked
     ) {
       setIsFetchDone(true);
-      dispatch(fetchInsightsConfig(activeProject.id));
+      dispatch(fetchInsightsConfig(activeProject?.id));
     }
   }, [
     areInsightsAvailable,
     isFetchDone,
-    insightsConfig.loading,
-    insightsConfig.completed,
-    activeProject.id,
+    insightsConfig,
+    activeProject?.id,
     featureLocked
   ]);
 
   useEffect(() => {
-    if (editMetricStatus.completed === true) {
+    if (editMetricStatus.completed) {
       handleEditModalClose();
     }
-  }, [editMetricStatus.completed, handleEditModalClose]);
+  }, [editMetricStatus.completed]);
 
   const isLoading =
-    featureFlag.isLoading === true ||
-    insightsConfig.loading === true ||
-    (insightsConfig.completed !== true && insightsConfig.error !== true);
+    featureFlag.isLoading ||
+    insightsConfig.loading ||
+    (!insightsConfig.completed && !insightsConfig.error);
 
-  if (areInsightsAvailable === false && featureLocked === false) {
+  if (!areInsightsAvailable && !featureLocked) {
     return (
       <div className='flex justify-center items-center flex-col gap-y-1 flex-1'>
         <img src='../../../../assets/icons/pana.svg' alt='loader-man' />
@@ -164,7 +183,7 @@ export default function AccountsInsights() {
     );
   }
 
-  if (featureLocked === true) {
+  if (featureLocked) {
     return (
       <div className='flex justify-center items-center flex-col gap-y-4'>
         <img
@@ -213,7 +232,7 @@ export default function AccountsInsights() {
     );
   }
 
-  if (insightsConfig.completed === true) {
+  if (insightsConfig.completed) {
     return (
       <div className='flex flex-col gap-y-4'>
         <div className='flex justify-between items-center'>
@@ -224,7 +243,7 @@ export default function AccountsInsights() {
             buttonSize='default'
             className='datepicker-minWidth'
             range={
-              insightsConfig.dateRange[accountPayload?.segment?.id] ??
+              insightsConfig.dateRange[accountPayload?.segment?.id] ||
               DEFAULT_DATE_RANGE
             }
             todayPicker={false}
@@ -247,7 +266,7 @@ export default function AccountsInsights() {
         <ControlledComponent controller={accountsAnalysisWidget != null}>
           <SegmentKpisOverview
             dateRange={
-              insightsConfig.dateRange[accountPayload?.segment?.id] ??
+              insightsConfig.dateRange[accountPayload?.segment?.id] ||
               DEFAULT_DATE_RANGE
             }
             widget={accountsAnalysisWidget}
@@ -255,12 +274,12 @@ export default function AccountsInsights() {
         </ControlledComponent>
         {nonAccountsWidgets.map((widget) => (
           <InsightsWidget
-            dateRange={
-              insightsConfig.dateRange[accountPayload?.segment?.id] ??
-              DEFAULT_DATE_RANGE
-            }
             key={widget.wid_g_id}
             widget={widget}
+            dateRange={
+              insightsConfig.dateRange[accountPayload?.segment?.id] ||
+              DEFAULT_DATE_RANGE
+            }
             onEditMetricClick={handleEditMetric}
             editWidgetGroupId={editWidgetGroupId}
           />

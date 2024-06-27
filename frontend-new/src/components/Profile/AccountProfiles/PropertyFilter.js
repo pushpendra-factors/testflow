@@ -2,7 +2,7 @@ import React, { useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import cx from 'classnames';
 import { Button } from 'antd';
-import { Text, SVG } from 'Components/factorsComponents';
+import { SVG } from 'Components/factorsComponents';
 import ControlledComponent from 'Components/ControlledComponent/ControlledComponent';
 import { setNewSegmentModeAction } from 'Reducers/accountProfilesView/actions';
 import styles from './index.module.scss';
@@ -43,70 +43,60 @@ function PropertyFilter({
     resetSelectedFilters();
   }, []);
 
-  if (filtersExpanded === false && newSegmentMode === false) {
-    if (
-      appliedFilters.filters.length +
+  const renderShowFiltersButton = () => (
+    <Button
+      className={cx(
+        'flex items-center justify-center px-2 button-shadow',
+        styles['collapse-button']
+      )}
+      onClick={toggleFilters}
+    >
+      <SVG size={16} name='filterOutlined' color='#8C8C8C' />
+      {`View ${
+        appliedFilters.filters.length +
         appliedFilters.eventsList.length +
-        appliedFilters.secondaryFilters.length >
-      0
-    ) {
-      return (
-        <Button
-          className={cx(
-            'flex items-center justify-center gap-x-1',
-            styles['collapse-button']
-          )}
-          type='text'
-          onClick={toggleFilters}
-        >
-          <Text type='title' extraClass='mb-0' weight='medium' color='grey-6'>
-            {`View ${
-              appliedFilters.filters.length +
-              appliedFilters.eventsList.length +
-              appliedFilters.secondaryFilters.length
-            } filter(s)`}
-          </Text>
-          <SVG size={16} name='chevronDown' color='#8C8C8C' />
-        </Button>
-      );
-    }
+        appliedFilters.secondaryFilters.length
+      } filter(s)`}
+    </Button>
+  );
 
-    return (
-      <Button
-        className={cx(
-          'flex items-center justify-center gap-x-1',
-          styles['filter-button']
-        )}
-        onClick={toggleFilters}
-      >
-        <SVG size={16} name='filter' color='#8C8C8C' />
-        <Text
-          type='title'
-          extraClass='mb-0'
-          weight='medium'
-          color='character-primary'
-        >
-          Filter
-        </Text>
-      </Button>
-    );
+  const renderFilterButton = () => (
+    <Button
+      className={cx(
+        'flex items-center justify-center button-shadow',
+        styles['filter-button']
+      )}
+      onClick={toggleFilters}
+    >
+      <SVG size={16} name='filterOutlined' color='#8C8C8C' />
+      Filter
+    </Button>
+  );
+
+  const shouldShowFilterButtons = () =>
+    appliedFilters.filters.length +
+      appliedFilters.eventsList.length +
+      appliedFilters.secondaryFilters.length >
+    0;
+
+  if (filtersExpanded === false && newSegmentMode === false) {
+    return shouldShowFilterButtons()
+      ? renderShowFiltersButton()
+      : renderFilterButton();
   }
 
   return (
     <div className='flex flex-col gap-y-4 w-full'>
-      <ControlledComponent controller={newSegmentMode === false}>
+      <ControlledComponent controller={!newSegmentMode}>
         <Button
           className={cx(
-            'flex items-center justify-center gap-x-1',
+            'flex items-center justify-center button-shadow',
             styles['collapse-button']
           )}
-          type='text'
           onClick={toggleFilters}
         >
-          <Text type='title' extraClass='mb-0' weight='medium' color='grey-6'>
-            Hide filters
-          </Text>
-          <SVG size={16} name='chevronDown' color='#8C8C8C' />
+          <SVG size={16} name='filterOutlined' color='#8C8C8C' />
+          Hide Filters
         </Button>
       </ControlledComponent>
       <FiltersBox
@@ -125,4 +115,5 @@ function PropertyFilter({
     </div>
   );
 }
+
 export default PropertyFilter;

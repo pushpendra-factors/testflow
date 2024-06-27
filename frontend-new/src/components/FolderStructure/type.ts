@@ -1,4 +1,5 @@
 import { TooltipPlacement } from 'antd/lib/tooltip';
+import { ReactNode } from 'react';
 
 export interface FolderType {
   id: number | string;
@@ -14,7 +15,6 @@ export interface FolderPropType {
   name: string;
   items: Array<ItemType>;
   folders: Array<FolderType>;
-
   isAllBoard?: boolean;
 }
 
@@ -56,4 +56,5 @@ export type FolderItemOptionsType = {
   hideDefaultOptions?: boolean;
   hideMoveTo?: boolean;
   placement?: TooltipPlacement;
+  children?: ReactNode;
 };

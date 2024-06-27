@@ -41,6 +41,7 @@ import ResizableTitle from 'Components/Resizable';
 import logger from 'Utils/logger';
 import useAutoFocus from 'hooks/useAutoFocus';
 import {
+  fetchSegmentById,
   moveSegmentToNewFolder,
   updateSegmentToFolder,
   updateTableProperties,
@@ -116,16 +117,18 @@ function SearchBar({ handleUsersSearch, listSearchItems, onSearchClose }) {
         <Form.Item name='users'>
           <Input
             ref={searchBarRef}
-            size='large'
             defaultValue={listSearchItems ? listSearchItems.join(', ') : null}
             placeholder='Search Users'
-            style={{ width: '240px', 'border-radius': '5px' }}
+            style={{
+              width: '224px',
+              'border-radius': '5px'
+            }}
             prefix={<SVG name='search' size={24} color='#8c8c8c' />}
           />
         </Form.Item>
       </Form>
-      <Button type='text' className='search-btn' onClick={onSearchClose}>
-        <SVG name='close' size={24} color='#8c8c8c' />
+      <Button type='text' onClick={onSearchClose}>
+        <SVG name='times' size={16} color='#8c8c8c' />
       </Button>
     </div>
   );
@@ -172,7 +175,7 @@ function UserProfiles({
   const [peopleRow, setPeopleRow] = useState(null);
 
   const { contacts, segmentFolders } = useSelector((state) => state.timelines);
-  const userSegmentsList = useSelector((state) => selectSegmentsList(state));
+  const userSegmentsList = useSelector((state) => state.timelines.userSegments);
 
   const {
     bingAds,
@@ -206,21 +209,36 @@ function UserProfiles({
   }, []);
 
   useEffect(() => {
-    if (userSegmentsList) {
-      for (const eachSegment of userSegmentsList) {
-        if (eachSegment?.id === timelinePayload?.segment?.id) {
-          setTimelinePayload({
-            ...timelinePayload,
-            segment: {
-              ...timelinePayload?.segment,
-              folder_id: eachSegment?.folder_id
+    const updatePayload = async () => {
+      if (userSegmentsList && timelinePayload?.segment?.id) {
+        const currentSegment = userSegmentsList.find(
+          (segment) => segment.id === timelinePayload.segment.id
+        );
+
+        if (currentSegment) {
+          try {
+            const response = await fetchSegmentById(
+              activeProject.id,
+              currentSegment.id
+            );
+            if (response.ok) {
+              setTimelinePayload({
+                ...timelinePayload,
+                segment: {
+                  ...response.data,
+                  folder_id: currentSegment.folder_id
+                }
+              });
             }
-          });
-          break;
+          } catch (error) {
+            logger.error('Error fetching segment by ID:', error);
+          }
         }
       }
-    }
-  }, [userSegmentsList]);
+    };
+
+    updatePayload();
+  }, [userSegmentsList, timelinePayload?.segment?.id, activeProject?.id]);
 
   const displayTableProps = useMemo(() => {
     const tableProps = timelinePayload?.segment?.id
@@ -416,10 +434,11 @@ function UserProfiles({
   );
 
   const pageTitle = useMemo(() => {
-    if (newSegmentMode === true) {
+    if (newSegmentMode) {
       return 'Untitled Segment 1';
     }
-    if (Boolean(timelinePayload.segment.id) === false) {
+
+    if (!timelinePayload?.segment?.id) {
       const { source } = timelinePayload;
       const title = get(
         userOptions.find((elem) => elem[1] === source),
@@ -428,6 +447,7 @@ function UserProfiles({
       );
       return title;
     }
+
     return (
       userSegmentsList.find((e) => e.id === timelinePayload?.segment?.id)
         ?.name || timelinePayload?.segment?.name
@@ -543,12 +563,6 @@ function UserProfiles({
           message: 'Segment renamed successfully',
           duration: 5
         });
-
-        const updatedPayload = {
-          ...timelinePayload,
-          segment: { ...timelinePayload.segment, name }
-        };
-        setTimelinePayload(updatedPayload);
       } catch (error) {
         logger.error(error);
       } finally {
@@ -586,9 +600,11 @@ function UserProfiles({
     getSavedSegments,
     setFiltersDirty
   ]);
+
   useEffect(() => {
     dispatch(setNewSegmentModeAction(false));
   }, []);
+
   useEffect(() => {
     if (!timelinePayload.search_filter) {
       setListSearchItems([]);
@@ -965,8 +981,8 @@ function UserProfiles({
       </ControlledComponent>
       <ControlledComponent controller={!searchBarOpen}>
         <Tooltip title='Search'>
-          <Button type='text' className='search-btn' onClick={onSearchOpen}>
-            <SVG name='search' size={24} color='#8c8c8c' />
+          <Button type='text' onClick={onSearchOpen}>
+            <SVG name='search' size={16} color='#8c8c8c' />
           </Button>
         </Tooltip>
       </ControlledComponent>
@@ -988,8 +1004,8 @@ function UserProfiles({
       content={popoverContent}
     >
       <Tooltip title='Edit columns'>
-        <Button className='search-btn' type='text'>
-          <SVG size={24} color='#8c8c8c' name='tableColumns' />
+        <Button type='text'>
+          <SVG size={16} color='#8c8c8c' name='tableColumns' />
         </Button>
       </Tooltip>
     </Popover>
@@ -1132,7 +1148,7 @@ function UserProfiles({
           }}
           onChange={handleTableChange}
           scroll={{
-            x: (tableProperties?.length || 0) * 250
+            x: '100%'
           }}
         />
         <div className='flex flex-row-reverse mt-4' />
@@ -1140,60 +1156,75 @@ function UserProfiles({
     );
   };
 
-  if (loading) {
-    return (
-      <div className='flex justify-center items-center w-full h-64'>
-        <Spin size='large' />
+  const renderHeader = () => (
+    <div className='profiles-header'>
+      <div className='flex gap-x-2  items-center'>
+        <div className='flex items-center rounded justify-center h-10 w-10'>
+          <SVG name={titleIcon} size={32} color={titleIconColor} />
+        </div>
+        <Text
+          type='title'
+          level={3}
+          weight='bold'
+          extraClass='mb-0'
+          id='fa-at-text--page-title'
+        >
+          {pageTitle}
+        </Text>
       </div>
-    );
+    </div>
+  );
+
+  const renderRangeNudge = () => (
+    <div className='px-8 pt-4'>
+      <UpgradeNudge />
+    </div>
+  );
+
+  const renderProfileActions = () => (
+    <div className='flex justify-between items-center py-4 px-8'>
+      <div className='flex items-center gap-x-2 w-full'>
+        {renderPropertyFilter()}
+        {renderSaveSegmentButton()}
+      </div>
+      <div className='inline-flex gap-x-2 h-8'>
+        <ControlledComponent
+          controller={filtersExpanded === false && newSegmentMode === false}
+        >
+          {renderSearchSection()}
+          {renderTablePropsSelect()}
+          <ControlledComponent controller={Boolean(timelinePayload.segment.id)}>
+            {renderMoreActions()}
+          </ControlledComponent>
+        </ControlledComponent>
+      </div>
+    </div>
+  );
+
+  const renderLoaderDiv = () => (
+    <div className='accounts-loader-div'>
+      <Spin size='large' />
+    </div>
+  );
+
+  const renderNoDataComponent = () => (
+    <NoDataWithMessage message='No Profiles Found' />
+  );
+
+  if (loading) {
+    return renderLoaderDiv();
   }
 
   if (isIntegrationEnabled) {
     return (
       <ProfilesWrapper>
-        <div className='mb-4'>
-          <UpgradeNudge />
-        </div>
-
-        <div className='flex justify-between items-center'>
-          <div className='flex gap-x-2  items-center'>
-            <div className='flex items-center rounded justify-center h-10 w-10'>
-              <SVG name={titleIcon} size={32} color={titleIconColor} />
-            </div>
-            <Text
-              type='title'
-              level={3}
-              weight='bold'
-              extraClass='mb-0'
-              id='fa-at-text--page-title'
-            >
-              {pageTitle}
-            </Text>
-          </div>
-        </div>
-
-        <div className='flex justify-between items-center my-4'>
-          <div className='flex items-center gap-x-2 w-full'>
-            {renderPropertyFilter()}
-            {renderSaveSegmentButton()}
-          </div>
-          <div className='inline-flex gap-x-2'>
-            <ControlledComponent
-              controller={filtersExpanded === false && newSegmentMode === false}
-            >
-              {renderSearchSection()}
-              {renderTablePropsSelect()}
-              <ControlledComponent
-                controller={Boolean(timelinePayload.segment.id)}
-              >
-                {renderMoreActions()}
-              </ControlledComponent>
-            </ControlledComponent>
-          </div>
-        </div>
-
+        {renderHeader()}
+        <ControlledComponent controller={true}>
+          {renderRangeNudge()}
+        </ControlledComponent>
+        {renderProfileActions()}
         <ControlledComponent controller={contacts.isLoading}>
-          <Spin size='large' className='fa-page-loader' />
+          {renderLoaderDiv()}{' '}
         </ControlledComponent>
         <ControlledComponent
           controller={
@@ -1202,7 +1233,7 @@ function UserProfiles({
             (newSegmentMode === false || areFiltersDirty === true)
           }
         >
-          <>{renderTable()}</>
+          {renderTable()}
         </ControlledComponent>
         <ControlledComponent
           controller={
@@ -1211,7 +1242,7 @@ function UserProfiles({
             (newSegmentMode === false || areFiltersDirty === true)
           }
         >
-          <NoDataWithMessage message='No Profiles Found' />
+          {renderNoDataComponent()}{' '}
         </ControlledComponent>
 
         <UpgradeModal

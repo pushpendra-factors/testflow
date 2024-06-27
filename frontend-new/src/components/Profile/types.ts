@@ -43,8 +43,6 @@ export interface EventIconProps {
 }
 
 export interface CustomStyles {
-  '--bg-color'?: string;
-  '--border-color'?: string;
   '--icon-size'?: string;
   '--max-lines'?: number;
 }

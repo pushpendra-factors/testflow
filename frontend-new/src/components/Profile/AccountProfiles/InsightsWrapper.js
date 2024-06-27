@@ -5,7 +5,7 @@ import styles from './index.module.scss';
 const InsightsWrapper = ({ children }) => (
   <div
     className={cx(
-      'w-full h-full overflow-scroll px-1 flex flex-col',
+      'w-full h-full overflow-scroll flex flex-col',
       styles['insights-wrapper']
     )}
   >

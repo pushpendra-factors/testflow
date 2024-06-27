@@ -2,7 +2,6 @@ import { SET_ACTIVE_PROJECT } from 'Reducers/types';
 import { del, get, getHostUrl, post, put } from '../../utils/request';
 import {
   LOADING_SEGMENT_FOLDER,
-  SEGMENT_DELETED,
   SET_ACCOUNTS_SEGMENT_FOLDERS_FAILED,
   SET_ACCOUNT_SEGMENT_FOLDERS,
   SET_PEOPLES_SEGMENT_FOLDERS_FAILED,
@@ -15,12 +14,11 @@ host = host[host.length - 1] === '/' ? host : `${host}/`;
 const initialState = {
   contacts: { isLoading: false, data: [] },
   contactDetails: { isLoading: false, data: {} },
-  accounts: { isLoading: true, data: {} },
+  accounts: {},
   accountDetails: { isLoading: false, data: {} },
   accountOverview: { isLoading: false, data: {} },
   segmentCreateStatus: '',
   segmentUpdateStatus: '',
-  segments: {},
   segmentFolders: {
     isLoading: true,
     isSuccess: false,
@@ -31,8 +29,21 @@ const initialState = {
   accountPreview: {},
   userConfigProperties: {},
   eventConfigProperties: {},
-  eventPropertiesType: {}
+  eventPropertiesType: {},
+  accountSegments: [],
+  userSegments: []
 };
+
+const updateAccountState = (state, segmentID, updates) => ({
+  ...state,
+  accounts: {
+    ...state.accounts,
+    [segmentID]: {
+      ...state.accounts[segmentID],
+      ...updates
+    }
+  }
+});
 
 export default function (state = initialState, action) {
   switch (action.type) {
@@ -56,32 +67,21 @@ export default function (state = initialState, action) {
       };
     case 'FETCH_PROFILE_USER_DETAILS_FAILED':
       return { ...state, contactDetails: { isLoading: false, data: {} } };
+
     case 'FETCH_PROFILE_ACCOUNTS_LOADING':
-      return { ...state, accounts: { ...state.accounts, isLoading: true } };
-    case 'FETCH_PROFILE_ACCOUNTS_FULFILLED': {
-      return {
-        ...state,
-        accounts: {
-          isLoading: false,
-          data: {
-            ...state.accounts.data,
-            [action.segmentID]: action.payload
-          }
-        }
-      };
-    }
-    case 'FETCH_PROFILE_ACCOUNTS_FAILED': {
-      return {
-        ...state,
-        accounts: {
-          isLoading: false,
-          data: {
-            ...state.accounts.data,
-            [action.segmentID]: []
-          }
-        }
-      };
-    }
+      return updateAccountState(state, action.segmentID, { isLoading: true });
+    case 'FETCH_PROFILE_ACCOUNTS_FULFILLED':
+      return updateAccountState(state, action.segmentID, {
+        isLoading: false,
+        profiles: action.payload,
+        isPreview: action.isPreview
+      });
+    case 'FETCH_PROFILE_ACCOUNTS_FAILED':
+      return updateAccountState(state, action.segmentID, {
+        isLoading: false,
+        profiles: [],
+        isPreview: false
+      });
 
     case 'FETCH_PROFILE_ACCOUNT_DETAILS_LOADING':
       return { ...state, accountDetails: { isLoading: true, data: {} } };
@@ -106,9 +106,13 @@ export default function (state = initialState, action) {
     case 'SEGMENT_CREATION_REJECTED':
       return { ...state, segmentCreateStatus: action.payload };
     case 'FETCH_SEGMENTS_FULFILLED':
-      return { ...state, segments: action.payload };
+      return {
+        ...state,
+        accountSegments: action.accountSegments,
+        userSegments: action.userSegments
+      };
     case 'FETCH_SEGMENTS_REJECTED':
-      return { ...state, segments: {} };
+      return { ...state, accountSegments: [], userSegments: [] };
     case 'UPDATE_SEGMENT_FULFILLED':
       return { ...state, segmentUpdateStatus: action.payload };
     case 'UPDATE_SEGMENT_REJECTED':
@@ -180,14 +184,6 @@ export default function (state = initialState, action) {
     case SET_ACTIVE_PROJECT:
       return {
         ...initialState
-      };
-    case SEGMENT_DELETED:
-      return {
-        ...state,
-        segments: getUpdatedSegmentsAfterDeleting({
-          segments: state.segments,
-          segmentId: action.payload
-        })
       };
     case SET_ACCOUNT_SEGMENT_FOLDERS:
       return {
@@ -309,15 +305,6 @@ export const deleteSegmentByID = ({ projectId, segmentId }) => {
   const url = `${host}projects/${projectId}/segments/${segmentId}`;
   return del(null, url);
 };
-
-function getUpdatedSegmentsAfterDeleting({ segments, segmentId }) {
-  return Object.fromEntries(
-    Object.entries(segments).map(([key, list]) => [
-      key,
-      list.filter((segment) => segment.id !== segmentId)
-    ])
-  );
-}
 
 export const fetchAccountOverview = (projectID, groupName, accID) => {
   const url = `${host}projects/${projectID}/v1/profiles/accounts/overview/${groupName}/${accID}`;

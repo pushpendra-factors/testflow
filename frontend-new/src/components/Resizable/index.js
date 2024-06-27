@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect } from 'react';
-import { Resizable } from 'react-resizable';
 import styles from './index.module.scss';
-var currentColumn = null;
-var currentIndex = -1;
+
+let currentColumn = null;
+let currentIndex = -1;
 const tableParentId = 'resizing-table-container-div';
-var colHead = null;
+let colHead = null;
 /*
 
 Use this component only when columns are sticky 
@@ -32,37 +32,40 @@ const ResizableTitle = (props) => {
       currentIndex = -1;
     }
   };
-  const defaultResize = useCallback(()=>{
-
-      const TableParentWidth = document.querySelector('.fa-table--profileslist').querySelector('.ant-table-content').getBoundingClientRect().width - 5 // -5 is added to remove the scrolling for default screen
-      const allCols = document.querySelector('.fa-table--profileslist').querySelector('table').querySelector('colgroup').childNodes
-      if(TableParentWidth && allCols && allCols.length <= 5){
-        allCols.forEach((each)=>{
-         
-          each.style.width = `${TableParentWidth/allCols.length}px`
-        })
-      }
-  
-  },[])
-  useEffect(()=>{
+  const defaultResize = useCallback(() => {
+    const TableParentWidth =
+      document
+        .querySelector('.fa-table--profileslist')
+        .querySelector('.ant-table-content')
+        .getBoundingClientRect().width - 5; // -5 is added to remove the scrolling for default screen
+    const allCols = document
+      .querySelector('.fa-table--profileslist')
+      .querySelector('table')
+      .querySelector('colgroup').childNodes;
+    if (TableParentWidth && allCols && allCols.length <= 5) {
+      allCols.forEach((each) => {
+        each.style.width = `${TableParentWidth / allCols.length}px`;
+      });
+    }
+  }, []);
+  useEffect(() => {
     defaultResize();
-    window.onresize = defaultResize
+    window.onresize = defaultResize;
     document.onmousemove = (e) => {
       if (currentColumn) {
-        let minwidth = Math.max(
-          e.clientX -
-            currentColumn.parentElement.getBoundingClientRect().left,
+        const minwidth = Math.max(
+          e.clientX - currentColumn.parentElement.getBoundingClientRect().left,
           152
         );
-        colHead.style.width = minwidth + 'px';
+        colHead.style.width = `${minwidth}px`;
       }
-    }
-  },[])
+    };
+  }, []);
   return (
     <th
       {...restProps}
       className={`${className} ${styles['table-custom-th']}`}
-      onMouseUp={(e) => {
+      onMouseUp={() => {
         if (currentColumn) {
           currentColumn = null;
           colHead = null;
@@ -85,8 +88,8 @@ const ResizableTitle = (props) => {
         }}
         onMouseDown={(e) => {
           e.stopPropagation();
-          let th = e.currentTarget.parentElement;
-          let trs = e.currentTarget.parentElement.parentElement.childNodes;
+          const th = e.currentTarget.parentElement;
+          const trs = e.currentTarget.parentElement.parentElement.childNodes;
           let i = 0;
           for (let j = 0; j < trs.length; j++) {
             if (trs[j] === th) {
@@ -96,13 +99,12 @@ const ResizableTitle = (props) => {
           }
           currentIndex = i;
 
-          let colGroups = document
+          const colGroups = document
             .getElementById(tableParentId)
             .querySelectorAll('colgroup');
 
           if (colGroups) {
             colHead = colGroups[0].childNodes[currentIndex];
-            
           }
           if (!currentColumn) currentColumn = e.currentTarget;
         }}

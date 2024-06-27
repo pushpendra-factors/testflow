@@ -10,13 +10,11 @@ import {
   toggleAccountsTab
 } from 'Reducers/accountProfilesView/actions';
 import { selectAccountPayload } from 'Reducers/accountProfilesView/selectors';
-import { selectSegments } from 'Reducers/timelines/selectors';
 import { useHistory } from 'react-router-dom';
 import {
   defaultSegmentsList,
   reorderDefaultDomainSegmentsToTop
 } from 'Components/Profile/AccountProfiles/accountProfiles.helpers';
-import { GROUP_NAME_DOMAINS } from 'Components/GlobalFilter/FilterWrapper/utils';
 import { PathUrls } from 'Routes/pathUrls';
 import FolderStructure from 'Components/FolderStructure';
 import RenameSegmentModal from 'Components/Profile/AccountProfiles/RenameSegmentModal';
@@ -35,6 +33,7 @@ import {
   updateSegmentToFolder
 } from 'Reducers/timelines';
 import { bindActionCreators } from 'redux';
+import logger from 'Utils/logger';
 import { defaultSegmentIconsMapping } from './appSidebar.constants';
 import styles from './index.module.scss';
 
@@ -49,16 +48,17 @@ function AccountsSidebar({
 }) {
   const history = useHistory();
   const dispatch = useDispatch();
-  const segments = useSelector(selectSegments);
+  const accountSegments = useSelector(
+    (state) => state.timelines.accountSegments
+  );
   const { segmentFolders } = useSelector((state) => state.timelines);
   const { active_project } = useSelector((state) => state.global);
   const activeAccountPayload = useSelector(selectAccountPayload);
   const activeSegment = activeAccountPayload?.segment;
 
   const segmentsList = useMemo(
-    () =>
-      reorderDefaultDomainSegmentsToTop(segments?.[GROUP_NAME_DOMAINS]) || [],
-    [segments]
+    () => reorderDefaultDomainSegmentsToTop(accountSegments),
+    [accountSegments]
   );
   const [modalState, setModalState] = useState({
     rename: false,
@@ -145,7 +145,7 @@ function AccountsSidebar({
       await getSavedSegments(active_project.id);
       message.success('Segment Moved');
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       message.error('Segment failed to move');
     } finally {
       loadingMessageHandle();
@@ -170,7 +170,7 @@ function AccountsSidebar({
       await getSavedSegments(active_project.id);
       message.success('Segment Moved to New Folder');
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       getSegmentFolders(active_project.id, 'account');
       message.error('Failed to move segment');
     } finally {
@@ -189,7 +189,7 @@ function AccountsSidebar({
       getSegmentFolders(active_project?.id, 'account');
       message.success('Folder Renamed');
     } catch (error) {
-      console.error(error);
+      logger.error(error);
       message.error(
         error?.data?.err?.code || 'Failed to Rename Segment Folders'
       );
@@ -215,7 +215,6 @@ function AccountsSidebar({
   const changeActiveSegment = (segment) => {
     dispatch(setDrawerVisibleAction(false));
     dispatch(setNewSegmentModeAction(false));
-    dispatch(setAccountPayloadAction({ source: GROUP_NAME_DOMAINS, segment }));
     history.replace({ pathname: `/accounts/segments/${segment.id}` });
   };
 

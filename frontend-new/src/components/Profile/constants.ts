@@ -104,25 +104,31 @@ export const iconColors: string[] = [
 
 export const ALPHANUMSTR = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-export const EngagementTag: Record<string, { bgColor: string; icon: string }> =
-  {
-    Hot: {
-      bgColor: '#FFF1F0',
-      icon: 'fire'
-    },
-    Warm: {
-      bgColor: '#FFF7E6',
-      icon: 'sun'
-    },
-    Cool: {
-      bgColor: '#F0F5FF',
-      icon: 'snowflake'
-    },
-    Ice: {
-      bgColor: '#E6F7FF',
-      icon: 'icecube'
-    }
-  };
+export const EngagementTag: Record<
+  string,
+  { bgColor: string; icon: string; textColor: string }
+> = {
+  Hot: {
+    bgColor: '#FFF1F0',
+    icon: 'fire',
+    textColor: '#FF4D4F'
+  },
+  Warm: {
+    bgColor: '#FFF7E6',
+    icon: 'sun',
+    textColor: '#FFA940'
+  },
+  Cool: {
+    bgColor: '#F0F5FF',
+    icon: 'snowflake',
+    textColor: '#597EF7'
+  },
+  Ice: {
+    bgColor: '#E6F7FF',
+    icon: 'icecube',
+    textColor: '#40A9FF'
+  }
+};
 
 export const placeholderIcon = '/assets/avatar/company-placeholder.png';
 

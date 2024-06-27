@@ -97,9 +97,6 @@ function AccountOverview({
   top_engagement_signals
 }: AccountOverviewProps): JSX.Element {
   const { eventNames } = useSelector((state: any) => state.coreQuery);
-  const styles: CustomStyles = {
-    '--bg-color': EngagementTag[overview?.engagement]?.bgColor || '#FFF1F0'
-  };
 
   function renderEngagementTag(eventName: string, score: string) {
     return (
@@ -171,7 +168,10 @@ function AccountOverview({
             {overview?.engagement ? (
               <div
                 className='engagement-tag'
-                style={styles as React.CSSProperties}
+                style={{
+                  background:
+                    EngagementTag[overview?.engagement]?.bgColor || '#FFF1F0'
+                }}
               >
                 <img
                   src={`../../../assets/icons/${

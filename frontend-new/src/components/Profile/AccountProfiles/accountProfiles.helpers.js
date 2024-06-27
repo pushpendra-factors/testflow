@@ -46,15 +46,10 @@ export const getGroupList = (groupOptions) => {
 };
 
 const getTitleText = ({ title, extraClass = '' }) => (
-  <Text
-    type='title'
-    level={7}
-    color='grey-2'
-    weight='bold'
-    extraClass={`m-0 truncate ${extraClass}`}
-  >
-    {title}
-  </Text>
+  <TextWithOverflowTooltip
+    text={title}
+    extraClass={`font-bold ${extraClass}`}
+  />
 );
 
 export const renderValue = (
@@ -68,34 +63,23 @@ export const renderValue = (
   const urlTruncatedValue = truncateURL(formattedValue, domainsList);
   if (isText) return `"${formattedValue}"`;
   return (
-    <Text
-      type='title'
-      level={7}
-      extraClass='m-0'
-      truncate
-      toolTipTitle={formattedValue}
-    >
-      {urlTruncatedValue}
-    </Text>
+    <TextWithOverflowTooltip
+      alwaysShowTooltip
+      text={urlTruncatedValue}
+      tooltipText={formattedValue}
+    />
   );
 };
 
 const EngagementSignalTag = ({ eventName, score, displayNames }) => (
-  <Tag color='default' className={styles['tag-enagagementrule']}>
-    <Text
-      type='title'
-      level={7}
-      color='grey-2'
-      extraClass='m-0 truncate'
-      truncate
-      size='h2'
-      charLimit={20}
-    >
-      {displayNames[eventName] || PropTextFormat(eventName)}
-    </Text>
-    <span className={styles['tag-seperator']}>|</span>
-    {parseInt(score)}
-  </Tag>
+  <div className='inline-flex gap-x-1 h-6'>
+    <SVG name='event' size={16} />
+    <TextWithOverflowTooltip
+      text={displayNames[eventName] || PropTextFormat(eventName)}
+      extraClass='font-normal'
+    />
+    <span className='font-normal'> {`(${parseInt(score)})`}</span>
+  </div>
 );
 
 const getTablePropColumn = ({
@@ -122,70 +106,112 @@ const getTablePropColumn = ({
       showSorterTooltip: null,
       defaultSortOrder: 'descend',
       sorter: (a, b) => sortNumericalColumn(a.score, b.score),
-      render: (status) =>
-        status ? (
-          <div
-            className='engagement-tag'
-            style={{ '--bg-color': EngagementTag[status]?.bgColor }}
-          >
-            <img
-              src={`../../../assets/icons/${EngagementTag[status]?.icon}.svg`}
-              alt=''
+      render: (engagement) => {
+        if (!engagement) return '-';
+        const engagementLevel = engagement.$engagement_level;
+        const engagementScore = engagement.$engagement_score;
+        const signalsArr = engagement.$top_enagagement_signals.split(' , ');
+
+        const renderTag = (item) => {
+          const [eventName, score] = item.trim().split(/ (.+)$/);
+
+          return (
+            <EngagementSignalTag
+              displayNames={eventNames}
+              eventName={eventName}
+              score={score}
             />
-            <Text type='title' level={7} extraClass='m-0'>
-              {status}
-            </Text>
+          );
+        };
+
+        const popoverContent = (
+          <div className='flex flex-col gap-y-2'>
+            <div className='text-xs font-medium'>Engagement Score</div>
+            <div className='flex items-center gap-x-2'>
+              <img
+                src={`../../../assets/icons/${EngagementTag[engagementLevel]?.icon}.svg`}
+                alt=''
+                className='w-7 h-7'
+              />
+              <span className='font-semibold text-base'>{engagementScore}</span>
+            </div>
+            <div className='text-xs font-medium'>Engagement Signals</div>
+            <div className='flex flex-col'>{signalsArr.map(renderTag)}</div>
           </div>
-        ) : (
-          '-'
-        )
+        );
+
+        return (
+          <Popover content={popoverContent} placement='bottom'>
+            <div
+              className='engagement-tag'
+              style={{
+                background: EngagementTag[engagementLevel]?.bgColor,
+                color: EngagementTag[engagementLevel]?.textColor
+              }}
+            >
+              <img
+                src={`../../../assets/icons/${EngagementTag[engagementLevel]?.icon}.svg`}
+                alt=''
+              />
+              {engagementLevel}
+            </div>
+          </Popover>
+        );
+      }
     };
   }
 
   if (prop === '$top_enagagement_signals') {
     return {
-      title: getTitleText({ title: propDisplayName, extraClass: 'p-4' }),
+      title: getTitleText({ title: propDisplayName, extraClass: 'px-4' }),
       width: COLUMN_TYPE_PROPS.string.max,
       type: 'actions',
       dataIndex: prop,
       key: prop,
       render: (value) => {
-        const eventsArr = value?.split(' , ');
-        const renderTags = (events) =>
-          events.map((item) => {
-            const splitItem = item.trim().split(' ');
-            const eventName = splitItem.slice(0, -1).join(' ');
-            const score = splitItem.slice(-1);
-            return (
-              <EngagementSignalTag
-                displayNames={eventNames}
-                eventName={eventName}
-                score={score}
-              />
-            );
-          });
+        if (!value) return '';
+
+        const eventsArr = value.split(' , ');
+        const topEvent = eventsArr[0];
+        const otherEvents = eventsArr.slice(1);
+
+        const renderTag = (item) => {
+          const splitItem = item.trim().split(' ');
+          const eventName = splitItem.slice(0, -1).join(' ');
+          const score = splitItem.slice(-1)[0];
+
+          return (
+            <EngagementSignalTag
+              displayNames={eventNames}
+              eventName={eventName}
+              score={score}
+            />
+          );
+        };
+
+        const renderPopoverContent = (events) => (
+          <div className='flex flex-col'>
+            <Text type='title' level={8} color='grey'>
+              Engagement Signals
+            </Text>
+            {events.map(renderTag)}
+          </div>
+        );
 
         return (
-          <div className={styles.top_eng_names}>
-            {value && renderTags(eventsArr.slice(0, 2))}
-            {value && eventsArr.length > 2 && (
+          <div className={`${styles.top_eng_names} flex items-center gap-x-2`}>
+            {renderTag(topEvent)}
+            {otherEvents.length > 0 && (
               <Popover
-                content={
-                  <div
-                    className='flex flex-col'
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
-                  >
-                    <Text type='title' level={7} color='grey'>
-                      Engagement Signals
-                    </Text>
-                    {renderTags(eventsArr.slice(2))}
-                  </div>
-                }
+                content={renderPopoverContent(otherEvents)}
+                placement='bottom'
               >
-                <Tag color='default' className={styles['tag-enagagementrule']}>
-                  <span>and </span> +{eventsArr.length - 2}
+                <Tag
+                  onClick={(e) => e.stopPropagation()}
+                  color='default'
+                  className={styles['tag-enagagementrule']}
+                >
+                  +{otherEvents.length}
                 </Tag>
               </Popover>
             )}
@@ -234,36 +260,32 @@ export const getColumns = ({
     sorter: (a, b) => sortStringColumn(a.domain.name, b.domain.name),
     render: (domain) =>
       (
-        <div className='flex items-center justify-between'>
-          <div className='inline-flex gap--8' id={domain.id}>
-            <img
-              src={`https://logo.clearbit.com/${getHost(domain.name)}`}
-              onError={(e) => {
-                if (e.target.src !== placeholderIcon) {
-                  e.target.src = placeholderIcon;
-                }
-              }}
-              alt=''
-              width='24'
-              height='24'
-              loading='lazy'
-            />
-            <TextWithOverflowTooltip
-              alwaysShowTooltip
-              text={domain.name}
-              hasLink
-              linkTo={`/profiles/accounts/${btoa(
-                domain.identity || domain.id
-              )}`}
-              onClick={(e) => e.preventDefault() && e.stopPropagation()}
-              active={
-                previewState?.drawerVisible &&
-                previewState?.domain?.name === domain.name
+        <div className='flex items-center gap-x-2'>
+          <img
+            src={`https://logo.clearbit.com/${getHost(domain.name)}`}
+            onError={(e) => {
+              if (e.target.src !== placeholderIcon) {
+                e.target.src = placeholderIcon;
               }
-              activeClass='active-link'
-            />
-          </div>
-          <div className='inline-flex gap--4 preview-btns'>
+            }}
+            alt=''
+            width='24'
+            height='24'
+            loading='lazy'
+          />
+          <TextWithOverflowTooltip
+            alwaysShowTooltip
+            text={domain.name}
+            hasLink
+            linkTo={`/profiles/accounts/${btoa(domain.identity || domain.id)}`}
+            onClick={(e) => e.preventDefault() && e.stopPropagation()}
+            active={
+              previewState?.drawerVisible &&
+              previewState?.domain?.name === domain.name
+            }
+            activeClass='active-link'
+          />
+          <div className='preview-btns'>
             <Tooltip title='Open'>
               <Button
                 size='small'
