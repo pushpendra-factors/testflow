@@ -3,10 +3,11 @@ package tests
 import (
 	"factors/cache"
 	cacheRedis "factors/cache/redis"
+	"factors/company_enrichment/demandbase"
 	"factors/company_enrichment/factors_deanon"
 	"factors/model/model"
 	"factors/model/store"
-	"factors/util"
+	U "factors/util"
 	"fmt"
 	"net/http"
 	"testing"
@@ -60,7 +61,7 @@ func TestFactorsDeanonAccountLimitAlerts(t *testing.T) {
 		assert.Equal(t, http.StatusOK, errCode)
 
 		// testing if key is set or not if the execute is done.
-		alertKey, _ := factors_deanon.GetAccountLimitEmailAlertCacheKey(project.ID, 10, factors_deanon.ACCOUNT_LIMIT_PARTIAL_EXCEEDED, util.TimeZoneStringIST, logCtx)
+		alertKey, _ := factors_deanon.GetAccountLimitEmailAlertCacheKey(project.ID, 10, factors_deanon.ACCOUNT_LIMIT_PARTIAL_EXCEEDED, U.TimeZoneStringIST, logCtx)
 		exists, _ := cacheRedis.ExistsPersistent(alertKey)
 		assert.Equal(t, true, exists)
 
@@ -92,7 +93,7 @@ func TestFactorsDeanonAccountLimitAlerts(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, errCode)
 
 		// testing if key is set or not if the execute failed
-		alertKey, _ := factors_deanon.GetAccountLimitEmailAlertCacheKey(project.ID, 10, factors_deanon.ACCOUNT_LIMIT_PARTIAL_EXCEEDED, util.TimeZoneStringIST, logCtx)
+		alertKey, _ := factors_deanon.GetAccountLimitEmailAlertCacheKey(project.ID, 10, factors_deanon.ACCOUNT_LIMIT_PARTIAL_EXCEEDED, U.TimeZoneStringIST, logCtx)
 		exists, _ := cacheRedis.ExistsPersistent(alertKey)
 		assert.Equal(t, false, exists)
 
@@ -144,7 +145,7 @@ func TestFactorsDeanonAccountLimitAlerts(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, errCode)
 
 		// testing if key is set or not if the execute failed
-		alertKey, _ := factors_deanon.GetAccountLimitEmailAlertCacheKey(project.ID, 10, factors_deanon.ACCOUNT_LIMIT_FULLY_EXCEEDED, util.TimeZoneStringIST, logCtx)
+		alertKey, _ := factors_deanon.GetAccountLimitEmailAlertCacheKey(project.ID, 10, factors_deanon.ACCOUNT_LIMIT_FULLY_EXCEEDED, U.TimeZoneStringIST, logCtx)
 		exists, _ := cacheRedis.ExistsPersistent(alertKey)
 		assert.Equal(t, false, exists)
 
@@ -182,8 +183,8 @@ func AccountLimitCountIncrementForTesting(projectId int64, count int) {
 
 	i := 0
 	for i <= count {
-		val := util.RandomString(i + 5)
-		err := model.SetFactorsDeanonMonthlyUniqueEnrichmentCount(projectId, val, util.TimeZoneStringIST)
+		val := U.RandomString(i + 5)
+		err := model.SetFactorsDeanonMonthlyUniqueEnrichmentCount(projectId, val, U.TimeZoneStringIST)
 		if err != nil {
 			fmt.Println("Error in adding domain to redis key")
 		}
@@ -192,10 +193,32 @@ func AccountLimitCountIncrementForTesting(projectId int64, count int) {
 }
 
 func DeleteAlertAndAccLimitRedisKeyAfterTesting(projectId int64, exhaustType string, logCtx *log.Entry) {
-	alertKey, _ := factors_deanon.GetAccountLimitEmailAlertCacheKey(projectId, 10, exhaustType, util.TimeZoneStringIST, logCtx)
-	limitKey, _ := model.GetFactorsDeanonMonthlyUniqueEnrichmentKey(projectId, util.GetCurrentMonthYear(util.TimeZoneStringIST))
+	alertKey, _ := factors_deanon.GetAccountLimitEmailAlertCacheKey(projectId, 10, exhaustType, U.TimeZoneStringIST, logCtx)
+	limitKey, _ := model.GetFactorsDeanonMonthlyUniqueEnrichmentKey(projectId, U.GetCurrentMonthYear(U.TimeZoneStringIST))
 	var keys []*cache.Key
 	keys = append(keys, alertKey, limitKey)
 
 	cacheRedis.DelPersistent(keys...)
+}
+
+func TestDemandbaseEnrich(t *testing.T) {
+
+	var customerDemandbase demandbase.CustomerDemandbase
+	var projectSettings model.ProjectSetting
+
+	projectSettings.ProjectId = U.RandomInt64()
+	projectSettings.ClientDemandbaseKey = "0lgoepFUdfbSyIIKdnJSpr2oFeT2nw4TEQFPdaVF"
+
+	userPropertiesMap := make(U.PropertiesMap, 0)
+	userId := U.RandomLowerAphaNumString(10)
+	clientIP := "89.76.236.199"
+
+	logCtx := log.WithFields(log.Fields{
+		"project_id": projectSettings.ProjectId,
+		"logId":      fmt.Sprintf("%v+%v", projectSettings.ProjectId, clientIP)})
+
+	_, status := customerDemandbase.Enrich(&projectSettings, &userPropertiesMap, userId, clientIP, logCtx)
+
+	assert.Equal(t, 1, status)
+
 }

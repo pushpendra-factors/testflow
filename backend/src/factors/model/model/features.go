@@ -63,6 +63,7 @@ const (
 	FEATURE_LINKEDIN_FREQ_CAPPING   = "linkedin_frequency_capping"
 	FEATURE_HUBSPOT_BASIC           = "hubspot_basic"
 	FEATURE_SALESFORCE_BASIC        = "salesforce_basic"
+	FEATURE_DEMANDBASE              = "demandbase"
 )
 
 func GetAllAvailableFeatures() []string {

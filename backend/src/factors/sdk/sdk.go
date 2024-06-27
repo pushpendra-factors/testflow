@@ -7,6 +7,7 @@ import (
 	pCache "factors/cache/persistent"
 	cacheRedis "factors/cache/redis"
 	"factors/company_enrichment/clearbit"
+	"factors/company_enrichment/demandbase"
 	"factors/company_enrichment/factors_deanon"
 	"factors/company_enrichment/sixsignal"
 	"factors/model/model"
@@ -906,11 +907,20 @@ func FillCompanyIdentificationUserProperties(projectId int64, clientIP string, p
 		"project_id": projectId,
 		"logId":      fmt.Sprintf("%v+%v", projectId, clientIP)})
 
+	var customerDemandbase demandbase.CustomerDemandbase
 	var customerClearbit clearbit.CustomerClearbit
 	var customerSixSignal sixsignal.CustomerSixSignal
 	var factorsDeanon factors_deanon.FactorsDeanon
 
-	if enrichByCustomerClearbit, _ := customerClearbit.IsEligible(projectSettings, logCtx); enrichByCustomerClearbit {
+	if enrichByCustomerDemandbase, _ := customerDemandbase.IsEligible(projectSettings, logCtx); enrichByCustomerDemandbase {
+		if _, ok := customerDemandbase.Enrich(projectSettings, userProperties, userId, clientIP, logCtx); ok == 1 {
+			status := store.GetStore().UpdateProjectSettingsIntegrationStatus(projectId, model.FEATURE_DEMANDBASE, model.SUCCESS)
+			if status != http.StatusAccepted {
+				log.WithFields(log.Fields{"project_id": projectId}).Warn("Failed to update integration status")
+
+			}
+		}
+	} else if enrichByCustomerClearbit, _ := customerClearbit.IsEligible(projectSettings, logCtx); enrichByCustomerClearbit {
 		if _, ok := customerClearbit.Enrich(projectSettings, userProperties, userId, clientIP, logCtx); ok == 1 {
 			status := store.GetStore().UpdateProjectSettingsIntegrationStatus(projectId, model.FEATURE_CLEARBIT, model.SUCCESS)
 			if status != http.StatusAccepted {
