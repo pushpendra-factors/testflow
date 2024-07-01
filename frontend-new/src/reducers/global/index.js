@@ -1,7 +1,7 @@
 import toArray from 'lodash/toArray';
 import logger from 'Utils/logger';
 import { getCookieValue } from 'Utils/global';
-import { TOGGLE_SIDEBAR_COLLAPSED_STATE } from './types';
+import { TOGGLE_FA_HEADER, TOGGLE_SIDEBAR_COLLAPSED_STATE } from './types';
 import {
   SET_PROJECTS,
   SET_ACTIVE_PROJECT,
@@ -28,7 +28,8 @@ const defaultState = {
   contentGroup: [],
   bingAds: {},
   marketo: {},
-  sidebarCollapsed: false
+  sidebarCollapsed: false,
+  showHeader: true
 };
 
 export default function (state = defaultState, action) {
@@ -272,6 +273,12 @@ export default function (state = defaultState, action) {
       return {
         ...state,
         sidebarCollapsed: action.payload
+      };
+    }
+    case TOGGLE_FA_HEADER: {
+      return {
+        ...state,
+        showHeader: action.payload
       };
     }
     default:

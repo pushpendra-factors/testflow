@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { connect } from 'react-redux';
+import { connect, useSelector } from 'react-redux';
 import { Row, Col, Button, Input, Form, message, Divider } from 'antd';
 import { Text, SVG } from 'factorsComponents';
 import { Link, useHistory } from 'react-router-dom';
@@ -7,12 +7,51 @@ import { EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
 import factorsai from 'factorsai';
 import LoggedOutScreenHeader from 'Components/GenericComponents/LoggedOutScreenHeader';
 import useScript from 'hooks/useScript';
-import { login } from '../../reducers/agentActions';
+import { PathUrls } from 'Routes/pathUrls';
+import { fetchProjectsList } from 'Reducers/global';
+import { login, updateAgentLoginMethod } from '../../reducers/agentActions';
 import styles from './index.module.scss';
 import { SSO_LOGIN_URL } from '../../utils/sso';
 import LoginIllustration from '../../assets/images/login_Illustration.png';
+import logger from 'Utils/logger';
+
+export function LoggedOutFooter() {
+  return (
+    <>
+      <div className={`${styles.hide} select-none`}>
+        <img
+          src={LoginIllustration}
+          className={styles.loginIllustration}
+          alt='illustration'
+        />
+      </div>
+      <div className='text-center mt-10'>
+        <Text type='title' level={8} color='grey' extraClass='text-center'>
+          By logging in, I accept the Factors.ai{' '}
+          <a
+            href='https://www.factors.ai/terms-of-use'
+            target='_blank'
+            rel='noreferrer'
+          >
+            Terms of Use
+          </a>{' '}
+          and acknowledge having read through the{' '}
+          <a
+            href='https://www.factors.ai/privacy-policy'
+            target='_blank'
+            rel='noreferrer'
+          >
+            Privacy policy
+          </a>
+        </Text>
+      </div>
+    </>
+  );
+}
 
 function Login(props) {
+  const { login, fetchProjects, updateAgentLoginMethod } = props;
+  const { projects } = useSelector((state) => state.global);
   const [form] = Form.useForm();
   const [dataLoading, setDataLoading] = useState(false);
   const [errorInfo, seterrorInfo] = useState(null);
@@ -43,17 +82,46 @@ function Login(props) {
   };
 
   useEffect(() => {
-    checkError();
-  }, []);
-
-  useEffect(() => {
     if (props.isAgentLoggedIn) {
       history.push({
         pathname: '/',
         state: { navigatedFromLoginPage: true }
       });
     }
-  }, [props.isAgentLoggedIn]);
+    checkError();
+  }, []);
+  const checkSSOProjectsFlow = () => {
+    if (projects.length === 0) return;
+    if (!props.isAgentLoggedIn) return;
+
+    const isAnyEmail =
+      projects &&
+      projects.filter((e) => e.login_method === 1 || e.login_method === 0)
+        .length > 0;
+
+    if (isAnyEmail) {
+      // Should Redirect to any of the project
+      const firstEmailProject = projects.find((e) => e.login_method === 1);
+      if (firstEmailProject) {
+        localStorage.setItem('activeProject', firstEmailProject?.id);
+      }
+      history.push({
+        pathname: '/',
+        state: { navigatedFromLoginPage: true }
+      });
+    } else {
+      // show project_change
+      history.push({
+        pathname: PathUrls.ProjectChangeAuthentication,
+        state: {
+          showProjects: true
+        }
+      });
+    }
+  };
+  useEffect(() => {
+    checkSSOProjectsFlow();
+  }, [projects]);
 
   const CheckLogin = () => {
     setDataLoading(true);
@@ -66,25 +134,25 @@ function Login(props) {
         factorsai.track('LOGIN', { username: value?.form_username });
 
         setTimeout(() => {
-          props
-            .login(value.form_username, value.form_password)
-            .then(() => {
+          login(value.form_username, value.form_password)
+            .then(async () => {
+              await fetchProjects();
+              // checkSSOProjectsFlow();
+              updateAgentLoginMethod(1);
               setDataLoading(false);
-              history.push({
-                pathname: '/'
-              });
             })
             .catch((err) => {
               setDataLoading(false);
               form.resetFields();
               seterrorInfo(err);
+              logger.error(err);
             });
         }, 200);
       })
       .catch((info) => {
         setDataLoading(false);
         form.resetFields();
-        seterrorInfo(info);
+        logger.error(info);
       });
   };
 
@@ -205,6 +273,16 @@ function Login(props) {
                       </Text>
                     </div>
                   )}
+                  <div className='font-medium flex items-center justify-center mt-4'>
+                    <Link
+                      disabled={dataLoading}
+                      to={{
+                        pathname: '/forgotpassword'
+                      }}
+                    >
+                      Forgot Password ?
+                    </Link>
+                  </div>
                   <Divider className='my-6'>
                     <Text type='title' level={7} extraClass='m-0' color='grey'>
                       OR
@@ -218,7 +296,7 @@ function Login(props) {
                         size='large'
                         style={{
                           background: '#fff',
-                          boxShadow: '0px 0px 2px rgba(0, 0, 0, 0.3)'
+                          boxShadow: '0px 2px 0px 0px #0000000D'
                         }}
                         className='w-full'
                       >
@@ -227,14 +305,14 @@ function Login(props) {
                       </Button>
                     </a>
                   </Form.Item>
-                  <div className='flex items-center justify-center mt-10'>
+                  <div className='font-medium flex items-center justify-center mt-4'>
                     <Link
                       disabled={dataLoading}
                       to={{
-                        pathname: '/forgotpassword'
+                        pathname: '/sso'
                       }}
                     >
-                      Forgot Password ?
+                      Login with single sign-on
                     </Link>
                   </div>
                 </Form>
@@ -268,33 +346,8 @@ function Login(props) {
             </div>
           </Col>
         </Row>
-        <div className={`${styles.hide}`}>
-          <img
-            src={LoginIllustration}
-            className={styles.loginIllustration}
-            alt='illustration'
-          />
-        </div>
-        <div className='text-center mt-10'>
-          <Text type='title' level={8} color='grey' extraClass='text-center'>
-            By logging in, I accept the Factors.ai{' '}
-            <a
-              href='https://www.factors.ai/terms-of-use'
-              target='_blank'
-              rel='noreferrer'
-            >
-              Terms of Use
-            </a>{' '}
-            and acknowledge having read through the{' '}
-            <a
-              href='https://www.factors.ai/privacy-policy'
-              target='_blank'
-              rel='noreferrer'
-            >
-              Privacy policy
-            </a>
-          </Text>
-        </div>
+
+        <LoggedOutFooter />
       </div>
 
       {/* <MoreAuthOptions showModal={showModal} setShowModal={setShowModal}/> */}
@@ -306,4 +359,8 @@ const mapStateToProps = (state) => ({
   isAgentLoggedIn: state.agent.isLoggedIn
 });
 
-export default connect(mapStateToProps, { login })(Login);
+export default connect(mapStateToProps, {
+  login,
+  fetchProjects: fetchProjectsList,
+  updateAgentLoginMethod
+})(Login);

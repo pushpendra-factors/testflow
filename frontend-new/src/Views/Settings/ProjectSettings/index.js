@@ -26,6 +26,7 @@ const MenuTabs = {
   Alerts: 'Alerts',
   Workflows: 'Workflows',
   Sharing: 'Sharing',
+  LoginAndSecurity: 'Login and Security'
 };
 
 function ProjectSettings({ activeProject, fetchSmartEvents, setKey }) {
@@ -118,12 +119,8 @@ function ProjectSettings({ activeProject, fetchSmartEvents, setKey }) {
                 <Menu.Item key={MenuTabs.ExplainDP}>
                   {MenuTabs.ExplainDP}
                 </Menu.Item>
-                <Menu.Item key={MenuTabs.Alerts}>
-                  {MenuTabs.Alerts}
-                </Menu.Item>
-                <Menu.Item key={MenuTabs.Sharing}>
-                  {MenuTabs.Sharing}
-                </Menu.Item>
+                <Menu.Item key={MenuTabs.Alerts}>{MenuTabs.Alerts}</Menu.Item>
+                <Menu.Item key={MenuTabs.Sharing}>{MenuTabs.Sharing}</Menu.Item>
               </Menu>
             </Col>
             <Col span={15}>
@@ -151,7 +148,7 @@ function ProjectSettings({ activeProject, fetchSmartEvents, setKey }) {
 }
 
 const mapStateToProps = (state) => ({
-  activeProject: state.global.active_project,
+  activeProject: state.global.active_project
 });
 
 export default connect(mapStateToProps, { fetchSmartEvents })(ProjectSettings);

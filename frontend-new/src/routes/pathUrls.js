@@ -28,6 +28,8 @@ export const PathUrls = {
   SettingsMembers: '/settings/members',
   SettingsPricing: '/settings/pricing',
   SettingsSharing: '/settings/project/sharing',
+  SettingsLoginAndSecurity: '/settings/loginsecurity',
+  ProjectChangeAuthentication: '/project_change_authentication',
 
   // personal settings
   SettingsPersonalUser: '/settings/user',

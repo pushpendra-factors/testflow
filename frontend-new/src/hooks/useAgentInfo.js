@@ -1,7 +1,7 @@
 import { useSelector } from 'react-redux';
 
 const useAgentInfo = () => {
-  const { isLoggedIn, agent_details, agents } = useSelector(
+  const { isLoggedIn, agent_details, agents, loginMethod } = useSelector(
     (state) => state.agent
   );
   let isAdmin = false;
@@ -20,6 +20,7 @@ const useAgentInfo = () => {
   }
   return {
     isLoggedIn,
+    loginMethod,
     email: agent_details?.email,
     isAdmin,
     firstName: agent_details?.first_name,

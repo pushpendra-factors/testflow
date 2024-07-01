@@ -7,6 +7,9 @@ import { renderRoutes } from './utils';
 const Login = lazyWithRetry(
   () => import(/* webpackChunkName: "login" */ '../Views/Pages/Login')
 );
+const SingleSignOn = lazyWithRetry(
+  () => import(/* webpackChunkName: "login" */ '../Views/Pages/SingleSignOn')
+);
 const ForgotPassword = lazyWithRetry(
   () =>
     import(
@@ -63,6 +66,13 @@ export const APP_ROUTES = {
     Component: Login,
     exact: true
   },
+  SingleSignOn: {
+    title: 'Single Sign-On',
+    path: '/sso',
+    Component: SingleSignOn,
+    exact: true
+  },
+
   Templates: {
     path: '/templates',
     Component: Templates,

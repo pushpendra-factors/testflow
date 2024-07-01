@@ -20,6 +20,7 @@ export const routesWithSidebar = [
   PathUrls.SettingsAttribution,
   PathUrls.SettingsPersonalProjects,
   PathUrls.SettingsPersonalUser,
+  PathUrls.SettingsLoginAndSecurity,
   PathUrls.SettingsCustomDefinition,
   PathUrls.FreqCap,
   PathUrls.FreqCapView,

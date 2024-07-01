@@ -1,5 +1,5 @@
 import React, { useEffect, Suspense, useState } from 'react';
-import { connect, useDispatch } from 'react-redux';
+import { connect } from 'react-redux';
 import * as Sentry from '@sentry/react';
 import LogRocket from 'logrocket';
 import { FaErrorComp, FaErrorLog } from 'factorsComponents';
@@ -18,8 +18,8 @@ import { INTEGRATION_ID } from 'Views/Settings/ProjectSettings/IntegrationSettin
 import { useHistory } from 'react-router-dom';
 import AdBlockerDetector from './components/AdBlockerDetector';
 import { sendSlackNotification } from './utils/slack';
-import { SSO_LOGIN_FULFILLED } from './reducers/types';
 import PageSuspenseLoader from './components/SuspenseLoaders/PageSuspenseLoader';
+import logger from 'Utils/logger';
 
 function App({
   agent_details,
@@ -28,24 +28,8 @@ function App({
   enableMarketoIntegration,
   plan
 }) {
-  const dispatch = useDispatch();
   const [userInfo, setUserInfo] = useState(null);
   const history = useHistory();
-
-  const ssoLogin = () => {
-    if (window.location.href.indexOf('?error=') > -1) {
-      const searchParams = new URLSearchParams(window.location.search);
-      if (searchParams) {
-        const mode = searchParams.get('mode');
-        const err = searchParams.get('error');
-        if (mode == 'auth0' && err == '') {
-          dispatch({ type: SSO_LOGIN_FULFILLED });
-        }
-      }
-    }
-  };
-
-  ssoLogin();
 
   useEffect(() => {
     if (window.location.origin.startsWith('https://tufte-prod.factors.ai')) {
@@ -80,7 +64,7 @@ function App({
             );
           })
           .catch((err) => {
-            console.log('bing ads enable error', err);
+            logger.log('bing ads enable error', err);
           });
       }
     }
@@ -99,7 +83,7 @@ function App({
             );
           })
           .catch((err) => {
-            console.log('Marketo enable error', err);
+            logger.log('Marketo enable error', err);
           });
       }
     }
@@ -224,10 +208,6 @@ function App({
       localStorage.setItem('project_timeZone', 'Asia/Kolkata');
     }
   });
-
-  useEffect(() => {
-    ssoLogin();
-  }, [agent_details]);
 
   useEffect(() => {
     if (agent_details && plan) {

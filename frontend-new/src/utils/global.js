@@ -1,3 +1,5 @@
+import { PathUrls } from 'Routes/pathUrls';
+import { message } from 'antd';
 import _ from 'lodash';
 
 export const EMPTY_FUNCTION = () => {};
@@ -141,3 +143,87 @@ export async function delay(ms) {
     setTimeout(resolve, ms);
   });
 }
+
+export async function CopyTextToClipboard(text = '') {
+  try {
+    await navigator.clipboard.writeText(text);
+    message.success('Successfully copied');
+  } catch (err) {
+    message.error('Failed to copy!');
+  }
+}
+
+// This Selects Project which one to give Access
+export function getAccessBasedOnLoginMethod(login_method = 0, projects = []) {
+  switch (login_method) {
+    case 1: {
+      // Email CASE
+      return projects.filter((e) => e.login_state === 1).length > 0;
+    }
+    case 3:
+      // GOOGLE Case
+      return (
+        projects.filter((e) => e.login_state === 1 || e.login_state === 3)
+          .length > 0
+      );
+    case 2: {
+      return true;
+    }
+    default:
+      return false;
+  }
+}
+
+export function checkAccessBasedForCurrentProject(login_method, activeProject) {
+  switch (login_method) {
+    case 1:
+      return activeProject?.login_method === 1;
+    case 2:
+      return activeProject?.login_method === 2;
+    case 3:
+      return (
+        activeProject?.login_method === 1 || activeProject?.login_method === 3
+      );
+    case false:
+      return false;
+
+    default:
+      return undefined;
+  }
+}
+
+// THis checks if we have access to either of the prjects
+// IF we don't this locks us to ProjectAuthChange Page
+// And not Allows user to move to any other page
+export function accessAuthCheck(login_method, projects) {
+  switch (login_method) {
+    case 1:
+      return projects.find((e) => e.login_method === 1);
+    case 2:
+      return projects.find((e) => e.login_method === 2);
+    case 3:
+      return projects.find((e) => e.login_method === 1 || e.login_method === 3);
+    case 0:
+      return false;
+    default:
+      return undefined;
+  }
+}
+export function haveRestrictionForSelectedProject(
+  currentMethod,
+  selectedMethod
+) {
+  switch (currentMethod) {
+    case 1:
+      return selectedMethod === 1;
+    case 2:
+      return false;
+    case 3:
+      return selectedMethod === 1 || selectedMethod === 3;
+    default:
+      return undefined;
+  }
+}
+export const WHITELIST_INTERMEDIATE_STATES = new Set();
+WHITELIST_INTERMEDIATE_STATES.add(PathUrls.ProjectChangeAuthentication);
+WHITELIST_INTERMEDIATE_STATES.add(PathUrls.Onboarding);
