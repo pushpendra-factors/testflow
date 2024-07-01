@@ -7,7 +7,7 @@ import React, {
   useMemo
 } from 'react';
 import cx from 'classnames';
-import { Layout, Spin } from 'antd';
+import { Layout, Spin, message } from 'antd';
 
 import { connect, useSelector, useDispatch } from 'react-redux';
 import { bindActionCreators } from 'redux';
@@ -45,13 +45,22 @@ import FaHeader from '../../components/FaHeader';
 
 import { fetchTemplates } from '../../reducers/dashboard_templates/services';
 import { AppLayoutRoutes } from 'Routes/AppLayoutRoutes';
-import { TOGGLE_GLOBAL_SEARCH } from 'Reducers/types';
+import {
+  SSO_LOGIN_FULFILLED,
+  TOGGLE_GLOBAL_SEARCH,
+  USER_LOGOUT
+} from 'Reducers/types';
 import './index.css';
 import _, { isEmpty } from 'lodash';
 import logger from 'Utils/logger';
-import { matchPath, useLocation } from 'react-router-dom';
+import { matchPath, useHistory, useLocation } from 'react-router-dom';
 import { selectSidebarCollapsedState } from 'Reducers/global/selectors';
-import { fetchProjectAgents, fetchAgentInfo } from 'Reducers/agentActions';
+import {
+  fetchProjectAgents,
+  fetchAgentInfo,
+  updateAgentLoginMethod,
+  signout
+} from 'Reducers/agentActions';
 import { fetchFeatureConfig } from 'Reducers/featureConfig/middleware';
 import {
   fetchCurrentSubscriptionDetail,
@@ -81,6 +90,13 @@ import {
   SIGNUP_HS_PORTAL_ID,
   routesWithSidebar
 } from './appLayout.constants';
+import { toggleFaHeader } from 'Reducers/global/actions';
+import { RESET_GROUPBY } from 'Reducers/coreQuery/actions';
+import {
+  WHITELIST_INTERMEDIATE_STATES,
+  accessAuthCheck,
+  checkAccessBasedForCurrentProject
+} from 'Utils/global';
 
 // customizing highcharts for project requirements
 customizeHighCharts(Highcharts);
@@ -95,12 +111,15 @@ function AppLayout({
   getActiveProjectDetails,
   fetchProjectSettings,
   fetchProjectSettingsV1,
-  fetchAgentInfo
+  fetchAgentInfo,
+  updateAgentLoginMethod,
+  signout
 }) {
   const [dataLoading, setDataLoading] = useState(true);
   const { Content } = Layout;
   const agentState = useSelector((state) => state.agent);
   const isAgentLoggedIn = agentState.isLoggedIn;
+  const agentLoginMethod = agentState?.loginMethod;
   const {
     projects,
     active_project,
@@ -110,6 +129,8 @@ function AppLayout({
   const isSidebarCollapsed = useSelector((state) =>
     selectSidebarCollapsedState(state)
   );
+  const { showHeader } = useSelector((state) => state.global);
+
   const { show_analytics_result } = useSelector((state) => state.coreQuery);
   const areDraftsSelected = useSelector((state) =>
     selectAreDraftsSelected(state)
@@ -118,7 +139,7 @@ function AppLayout({
   const location = useLocation();
   const agentInfo = useAgentInfo();
   const agentInfoRef = useRef(agentInfo);
-
+  const history = useHistory();
   const { pathname } = location;
 
   const activeAgent = agentState?.agent_details?.email;
@@ -162,24 +183,157 @@ function AppLayout({
 
   useEffect(() => {
     fetchProjectsOnLoad();
-  }, [fetchProjectsOnLoad]);
+  }, [fetchProjectsOnLoad, isAgentLoggedIn]);
 
-  useEffect(() => {
-    if (projects.length > 0 && _.isEmpty(active_project)) {
+  const switchProject = async (id) => {
+    localStorage.setItem('activeProject', id);
+    await getActiveProjectDetails(id);
+    await fetchProjectSettings(id);
+    dispatch({ type: RESET_GROUPBY });
+    message.success(`Project Changed`);
+  };
+
+  const setActiveProject = async () => {
+    try {
+      if (agentLoginMethod === 0) return;
+      if (projects.length <= 0) return;
       const storedActiveProjectId = localStorage.getItem('activeProject');
-      const activeItem = projects.find(
-        (item) => item.id === storedActiveProjectId
-      );
+      let activeItem;
+      if (storedActiveProjectId) {
+        activeItem = projects.find((item) => item.id === storedActiveProjectId);
+      } else {
+        activeItem = accessAuthCheck(agentLoginMethod, projects);
+      }
 
       const projectID = _.isEmpty(activeItem)
         ? projects[0]?.id
         : activeItem?.id;
+      await getActiveProjectDetails(projectID);
 
       localStorage.setItem('activeProject', projectID);
-      getActiveProjectDetails(projectID);
+    } catch (error) {
+      if (!error?.ok) {
+        const availableProjects = projects.find(
+          (e) => e.login_method === agentLoginMethod
+        );
+        if (availableProjects) {
+          switchProject(availableProjects?.id);
+          localStorage.setItem('activeProject', availableProjects?.id);
+          message.error(
+            `You Don't have access to this Project, Redirecting to ${availableProjects?.id}`
+          );
+        } else {
+          // Should Redirect to PROJECT CHANGE AUTH PAGE
+          try {
+            history.replace(PathUrls.ProjectChangeAuthentication, {
+              showProjects: true
+            });
+          } catch (err) {
+            message.error('Failed to Logout');
+          }
+        }
+      }
+      logger.error(error);
+    }
+  };
+
+  useEffect(() => {
+    if (projects.length > 0 && _.isEmpty(active_project)) {
+      setActiveProject();
     }
   }, [projects, active_project]);
 
+  const haveAccess = useMemo(() => {
+    const getProject = projects.find((e) => e.id == active_project?.id);
+    if (getProject) {
+      return checkAccessBasedForCurrentProject(agentLoginMethod, getProject);
+    }
+  }, [agentLoginMethod, projects, active_project]);
+
+  const logout = async () => {
+    await signout();
+  };
+  useEffect(() => {
+    if (haveAccess === false) {
+      const moveToProject = accessAuthCheck(agentLoginMethod, projects);
+      if (moveToProject) {
+        switchProject(moveToProject?.id);
+      } else logout();
+    }
+  }, [haveAccess]);
+
+  const ssoLogin = () => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.size > 0) {
+      var error = url.searchParams.get('error');
+      var mode = url.searchParams.get('mode');
+
+      if (!projects?.length) {
+        return;
+      }
+      if (error) {
+        message.error(error);
+        return;
+      }
+      if (mode == 'auth0') {
+        const allowedProjects = projects.filter(
+          (e) => e.login_method === 1 || e.login_method === 3
+        );
+        localStorage.setItem('login_method', 3);
+        updateAgentLoginMethod(3);
+        const sid = localStorage.getItem('selectedProjectID');
+        if (sid) {
+          // This SID Came while Switching Project
+          // Ideally we should get this directly from Cookie :(
+          switchProject(sid);
+        } else if (allowedProjects.length > 0) {
+          switchProject(allowedProjects[0]?.id);
+        } else {
+          logger.warn('Onboarding flow detected using Google Login');
+        }
+      } else if (mode === 'saml') {
+        if (projects.length > 0) {
+          updateAgentLoginMethod(2);
+          localStorage.setItem('login_method', 2);
+          const samlProjects =
+            projects && projects.filter((e) => e.login_method === 2);
+          const nonSAMLProjects =
+            projects && projects.filter((e) => e.login_method !== 2);
+          if (samlProjects?.length) switchProject(samlProjects[0]?.id);
+          else if (nonSAMLProjects.length > 0) {
+            history.push({
+              pathname: PathUrls.ProjectChangeAuthentication,
+              state: { showProjects: true }
+            });
+          }
+        } else {
+          logger.error('NO PROJECTS IN SAML CASE FOUND');
+        }
+      }
+    } else {
+      const lm = localStorage.getItem('login_method');
+      if (lm === '1' || lm === '2' || lm === '3') {
+        updateAgentLoginMethod(Number(lm));
+      } else {
+        logger.error('Unknown lm found');
+      }
+    }
+  };
+  useEffect(() => {
+    ssoLogin();
+  }, [projects]);
+  useEffect(() => {
+    if (!projects?.length) return;
+    const access = accessAuthCheck(agentLoginMethod, projects);
+
+    if (isAgentLoggedIn) {
+      if (!access && !WHITELIST_INTERMEDIATE_STATES.has(location.pathname)) {
+        history.replace(PathUrls.ProjectChangeAuthentication, {
+          showProjects: true
+        });
+      }
+    } else if (location.pathname !== '/login') history.replace('/login');
+  }, [location.key]);
   const handleRedirection = async () => {
     try {
       if (active_project && active_project?.id && isAgentLoggedIn) {
@@ -200,7 +354,12 @@ function AppLayout({
   };
 
   useEffect(() => {
-    if (active_project && active_project?.id && isAgentLoggedIn) {
+    if (
+      active_project &&
+      active_project?.id &&
+      isAgentLoggedIn &&
+      agentLoginMethod
+    ) {
       dispatch(fetchDashboards(active_project?.id));
       dispatch(fetchQueries(active_project?.id));
       dispatch(fetchKPIConfig(active_project?.id));
@@ -229,7 +388,7 @@ function AppLayout({
         dispatch(fetchDifferentialPricing(active_project?.id));
       }
     }
-  }, [dispatch, active_project]);
+  }, [dispatch, active_project, agentLoginMethod]);
 
   // fetching agent info -> not dependent on active project
   useEffect(() => {
@@ -323,10 +482,12 @@ function AppLayout({
         }
         onError={FaErrorLog}
       >
-        {!show_analytics_result && isAgentLoggedIn ? <FaHeader /> : null}
+        {showHeader && !show_analytics_result && isAgentLoggedIn ? (
+          <FaHeader />
+        ) : null}
         <Layout
           className={cx(styles['content-layout'], {
-            [styles['no-header']]: show_analytics_result === true
+            [styles['no-header']]: !showHeader || show_analytics_result
           })}
         >
           {hasSidebar && <AppSidebar />}
@@ -389,7 +550,10 @@ const mapDispatchToProps = (dispatch) =>
       getActiveProjectDetails,
       fetchProjectSettings,
       fetchProjectSettingsV1,
-      fetchAgentInfo
+      fetchAgentInfo,
+      toggleFaHeader,
+      updateAgentLoginMethod,
+      signout
     },
     dispatch
   );

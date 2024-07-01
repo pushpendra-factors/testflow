@@ -7,7 +7,8 @@ import {
   Row,
   Col,
   notification,
-  Tooltip
+  Tooltip,
+  message
 } from 'antd';
 import {
   updateAgentInfo,
@@ -34,17 +35,22 @@ import { Text, SVG } from '../factorsComponents';
 import { LeftOutlined, PlusOutlined, RightOutlined } from '@ant-design/icons';
 import useKeyboardNavigation from 'hooks/useKeyboardNavigation';
 import ProjectsListsPopoverContent from './ProjectsListsPopoverContent';
+import { haveRestrictionForSelectedProject } from 'Utils/global';
 
 function ProjectModal(props) {
+  const { getActiveProjectDetails, fetchProjectSettings } = props;
   const [ShowPopOver, setShowPopOver] = useState(false);
-  const [searchProjectName, setsearchProjectName] = useState('');
   const [ShowUserSettings, setShowUserSettings] = useState(false);
   const [changeProjectModal, setchangeProjectModal] = useState(false);
   const [selectedProject, setselectedProject] = useState(null);
   const history = useHistory();
+
   const variant = props?.variant === 'onboarding' ? 'onboarding' : 'app';
   const [showProjectsList, setShowProjectsList] = useState(false);
   const { plan } = useSelector((state) => state.featureConfig);
+  const { projects } = useSelector((state) => state.global);
+  const { loginMethod } = useSelector((state) => state.agent);
+  const { currentProjectSettings } = useSelector((state) => state.global);
 
   let isFreePlan = true;
   if (plan) {
@@ -53,9 +59,6 @@ function ProjectModal(props) {
   }
   const dispatch = useDispatch();
 
-  const searchProject = (e) => {
-    setsearchProjectName(e.target.value);
-  };
   const showUserSettingsModal = () => {
     setShowUserSettings(true);
   };
@@ -63,17 +66,27 @@ function ProjectModal(props) {
     setShowUserSettings(false);
   };
 
-  const switchProject = () => {
-    localStorage.setItem('activeProject', selectedProject?.id);
-    localStorage.setItem('prevActiveProject', props?.active_project?.id || '');
-    props.getActiveProjectDetails(selectedProject?.id);
-    props.fetchProjectSettings(selectedProject?.id);
-    history.push('/');
-    notification.success({
-      message: 'Project Changed!',
-      description: `You are currently viewing data from ${selectedProject?.name}`
-    });
-    dispatch({ type: RESET_GROUPBY });
+  const switchProject = async () => {
+    const can = haveRestrictionForSelectedProject(
+      loginMethod,
+      selectedProject?.login_method
+    );
+
+    if (can) {
+      localStorage.setItem('activeProject', selectedProject?.id);
+      await getActiveProjectDetails(selectedProject?.id);
+      await fetchProjectSettings(selectedProject?.id);
+      history.push('/');
+      dispatch({ type: RESET_GROUPBY });
+    } else {
+      history.push(PathUrls.ProjectChangeAuthentication, {
+        selectedProject: selectedProject,
+        currentActiveProject: props?.active_project,
+        currentAgent: props.currentAgent,
+        projects: projects,
+        login_method: currentProjectSettings?.sso_state
+      });
+    }
   };
 
   // const UpdateOnboardingSeen = () => {
@@ -100,13 +113,10 @@ function ProjectModal(props) {
       factorsai.identify(props?.currentAgent?.email, userAndProjectDetails);
     }
   }, [props?.currentAgent, props?.active_project]);
-  useEffect(() => {
-    if (showProjectsList || ShowPopOver === false) setsearchProjectName('');
-  }, [showProjectsList, ShowPopOver]);
+
   const userLogout = async () => {
     try {
       await props.signout();
-      dispatch({ type: USER_LOGOUT });
     } catch (error) {
       logger.error('Error in logging out', error);
     }
@@ -123,8 +133,6 @@ function ProjectModal(props) {
       showUserSettingsModal={showUserSettingsModal}
       userLogout={userLogout}
       setShowProjectsList={setShowProjectsList}
-      searchProject={searchProject}
-      searchProjectName={searchProjectName}
       setchangeProjectModal={setchangeProjectModal}
       setselectedProject={setselectedProject}
     />
@@ -141,7 +149,6 @@ function ProjectModal(props) {
           setShowPopOver(visible);
         }}
         onClick={() => {
-          setsearchProjectName('');
           setShowPopOver(true);
         }}
         trigger='click'

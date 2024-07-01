@@ -2,7 +2,7 @@ import { LeftOutlined, PlusOutlined, RightOutlined } from '@ant-design/icons';
 import { SVG, Text } from 'Components/factorsComponents';
 import { PathUrls } from 'Routes/pathUrls';
 import { Avatar, Button, Input } from 'antd';
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Link, useHistory } from 'react-router-dom';
 import VirtualList from 'rc-virtual-list';
 import useKeyboardNavigation from 'hooks/useKeyboardNavigation';
@@ -17,6 +17,7 @@ import styles from '../index.module.scss';
 const renderProjectImage = (project: any) =>
   project.profile_picture ? (
     <img
+      alt='profile_picture'
       src={project.profile_picture}
       style={{
         borderRadius: '4px',
@@ -37,6 +38,89 @@ const renderProjectImage = (project: any) =>
       }}
     >{`${project?.name?.charAt(0)}`}</Avatar>
   );
+
+export function SearchProjectsList(props: {
+  projects: Array<any>;
+  active_project: any;
+  handleProjectListItemClick: any;
+}) {
+  const {
+    projects,
+    active_project,
+    handleProjectListItemClick = () => {}
+  } = props;
+  const inputComponentRef = useAutoFocus(true);
+  const [searchProjectName, setsearchProjectName] = useState('');
+  const searchProject = (e) => {
+    setsearchProjectName(e.target.value);
+  };
+  const projectsList = useMemo(
+    () =>
+      projects
+        .filter(
+          (project) =>
+            project?.name
+              .toLowerCase()
+              .includes(searchProjectName.toLowerCase())
+        )
+        .sort((a, b) =>
+          active_project?.id === a?.id
+            ? -1
+            : active_project?.id === b?.id
+              ? 1
+              : 0
+        ),
+    [projects, searchProjectName, active_project]
+  );
+  return (
+    <>
+      {projects?.length > 0 ? (
+        <Input
+          onChange={(e) => searchProject(e)}
+          value={searchProjectName}
+          placeholder='Search Project'
+          className='fa-project-list--search border-black w-full fa-input'
+          ref={inputComponentRef}
+          tabIndex={0}
+        />
+      ) : null}
+      <div className='flex flex-col items-start fa-project-list--wrapper w-full'>
+        <VirtualList
+          data={projectsList}
+          height={240}
+          style={{ width: '100%', padding: '5px' }}
+          itemHeight={44}
+          itemKey='id'
+          fullHeight
+        >
+          {(project, index) => (
+            <div
+              tabIndex={0}
+              key={index}
+              className={`flex justify-between items-center mx-2 ${
+                active_project?.id === project?.id ? 'active' : ''
+              } ${styles.project_item}`}
+              style={{ margin: 0 }}
+              onClick={() => handleProjectListItemClick(project)}
+              onKeyUp={(e) =>
+                e.key === 'Enter' ? handleProjectListItemClick(project) : ''
+              }
+            >
+              <div className='flex items-center flex-nowrap'>
+                {renderProjectImage(project)}
+
+                <span className='font-bold ml-3'>{project?.name}</span>
+              </div>
+              {active_project?.id === project?.id ? (
+                <SVG name='check_circle' color='#1890FF' />
+              ) : null}
+            </div>
+          )}
+        </VirtualList>
+      </div>
+    </>
+  );
+}
 function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
   const {
     variant,
@@ -46,8 +130,6 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
     showUserSettingsModal,
     userLogout,
     setShowProjectsList,
-    searchProject,
-    searchProjectName,
     setchangeProjectModal,
     setselectedProject,
     active_project,
@@ -66,7 +148,6 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
   const onKeydownEvent = (e: any) => useKeyboardNavigation(containerListRef, e);
   const handleClosePopover = () => setShowPopOver(false);
 
-  const inputComponentRef = useAutoFocus(showProjectsList);
   const [openRaiseIssue, setOpenRaiseIssue] = useState(false);
   const handleProjectListItemClick = (project: any) => {
     if (active_project?.id !== project?.id) {
@@ -119,65 +200,11 @@ function ProjectsListsPopoverContent(props: ProjectListsPopoverContentType) {
                 </Text>
               </div>
             </div>
-            {projects?.length > 5 ? (
-              <Input
-                onChange={(e) => searchProject(e)}
-                value={searchProjectName}
-                placeholder='Search Project'
-                className='fa-project-list--search border-black'
-                ref={inputComponentRef}
-                tabIndex={0}
-              />
-            ) : null}
-            <div className='flex flex-col items-start fa-project-list--wrapper'>
-              <VirtualList
-                data={projects
-                  .filter(
-                    (project) =>
-                      project?.name
-                        .toLowerCase()
-                        .includes(searchProjectName.toLowerCase())
-                  )
-                  .sort((a, b) =>
-                    active_project?.id === a?.id
-                      ? -1
-                      : active_project?.id === b?.id
-                        ? 1
-                        : 0
-                  )}
-                height={250}
-                style={{ width: '100%', padding: '5px' }}
-                itemHeight={44}
-                itemKey='id'
-                fullHeight
-              >
-                {(project, index) => (
-                  <div
-                    tabIndex={0}
-                    key={index}
-                    className={`flex justify-between items-center project-item mx-2 ${
-                      active_project?.id === project?.id ? 'active' : ''
-                    }`}
-                    style={{ margin: 0 }}
-                    onClick={() => handleProjectListItemClick(project)}
-                    onKeyUp={(e) =>
-                      e.key === 'Enter'
-                        ? handleProjectListItemClick(project)
-                        : ''
-                    }
-                  >
-                    <div className='flex items-center flex-nowrap'>
-                      {renderProjectImage(project)}
-
-                      <span className='font-bold ml-3'>{project?.name}</span>
-                    </div>
-                    {active_project?.id === project?.id ? (
-                      <SVG name='check_circle' color='#1890FF' />
-                    ) : null}
-                  </div>
-                )}
-              </VirtualList>
-            </div>
+            <SearchProjectsList
+              handleProjectListItemClick={handleProjectListItemClick}
+              active_project={active_project}
+              projects={projects}
+            />
           </div>
         )}
       </div>

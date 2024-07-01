@@ -145,7 +145,18 @@ const UserSettings = lazyWithRetry(
       /* webpackChunkName: "settings" */ '../Views/Settings/ProjectSettings/UserSettings'
     )
 );
-
+const LoginAndSecuritySettings = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "settings" */ '../Views/Settings/ProjectSettings/LoginAndSecuritySettings'
+    )
+);
+const ProjectChangeAuthentication = lazyWithRetry(
+  () =>
+    import(
+      /* webpackChunkName: "project_change" */ '../Views/Settings/ProjectSettings/ProjectChangeAuthentication'
+    )
+);
 const Sharing = lazyWithRetry(
   () =>
     import(
@@ -512,6 +523,12 @@ export const APP_LAYOUT_ROUTES = {
     Component: FeatureLockedReportSharing,
     Private: true
   },
+  SettingsLoginAndSecurity: {
+    exact: true,
+    path: PathUrls.SettingsLoginAndSecurity,
+    Component: LoginAndSecuritySettings,
+    Private: true
+  },
   SettingsPricing: {
     exact: true,
     path: PathUrls.SettingsPricing,
@@ -675,6 +692,11 @@ export function AppLayoutRoutes({
   }, []);
   return (
     <Switch>
+      <PrivateRoute
+        path={PathUrls.ProjectChangeAuthentication}
+        component={ProjectChangeAuthentication}
+        name='Project Change Authentication'
+      />
       {renderRoutes(APP_LAYOUT_ROUTES)}
       {/* Additional Conditional routes  */}
 

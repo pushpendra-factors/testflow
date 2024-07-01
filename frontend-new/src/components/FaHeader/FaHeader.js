@@ -65,6 +65,11 @@ const ProjectSettingsSubItems = [
     lineBreak: false
   },
   {
+    label: 'Login and Security',
+    url: PathUrls.SettingsLoginAndSecurity,
+    lineBreak: false
+  },
+  {
     label: 'Plans & Billing',
     url: PathUrls.SettingsPricing,
     lineBreak: false
@@ -95,7 +100,6 @@ const DataManagementSubItems = [
     lineBreak: false
   }
 ];
-
 export const settingsCategorisedMap = (email) => [
   {
     label: 'Project Settings',

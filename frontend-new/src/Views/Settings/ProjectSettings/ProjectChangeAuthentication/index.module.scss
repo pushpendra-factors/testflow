@@ -1,0 +1,15 @@
+.projectsList {
+  padding: 4px 0px;
+  display: flex;
+  gap: 8px;
+  flex-direction: column;
+  width: 100%;
+  align-items: center;
+  & > button {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    align-items: center;
+    height: 40px;
+  }
+}

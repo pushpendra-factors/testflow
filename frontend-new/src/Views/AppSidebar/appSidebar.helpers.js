@@ -19,6 +19,7 @@ export const isSettingsUrl = (pathname) =>
   pathname === PathUrls.SettingsPricing ||
   pathname === PathUrls.SettingsPersonalProjects ||
   pathname === PathUrls.SettingsPersonalUser ||
+  pathname === PathUrls.SettingsLoginAndSecurity ||
   pathname === PathUrls.SettingsTouchpointDefinition ||
   pathname === PathUrls.SettingsCustomDefinition ||
   pathname === PathUrls.ConfigurePlans ||

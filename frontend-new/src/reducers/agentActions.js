@@ -1,5 +1,10 @@
 import _ from 'lodash';
-import { SET_ACTIVE_PROJECT, SSO_LOGIN_FULFILLED } from './types';
+import {
+  SET_ACTIVE_PROJECT,
+  SSO_LOGIN_FULFILLED,
+  UPDATE_AGENT_LOGIN_METHOD,
+  USER_LOGOUT
+} from './types';
 import { get, post, put, getHostUrl } from '../utils/request';
 
 var host = getHostUrl();
@@ -9,6 +14,7 @@ const initialState = {
   agent: {},
   agentError: null,
   isLoggedIn: true,
+  loginMethod: 0,
   billing: {},
   agents: []
 };
@@ -97,11 +103,32 @@ export default function reducer(state = initialState, action) {
         agents: initialState.agents
       };
     }
+    case UPDATE_AGENT_LOGIN_METHOD: {
+      return {
+        ...state,
+        loginMethod: action.payload
+      };
+    }
     default:
       return state;
   }
 }
-
+export function updateAgentLoginMethod(method_type) {
+  return function (dispatch) {
+    return new Promise((resolve, reject) => {
+      try {
+        localStorage.setItem('login_method', method_type);
+        dispatch({
+          type: UPDATE_AGENT_LOGIN_METHOD,
+          payload: method_type
+        });
+        resolve(true);
+      } catch (error) {
+        reject();
+      }
+    });
+  };
+}
 export function login(email, password) {
   return function (dispatch) {
     return new Promise((resolve, reject) => {
@@ -145,9 +172,13 @@ export function login(email, password) {
 
 export function signout() {
   return function (dispatch) {
+    // localStorage.removeItem('login_method');
     return new Promise((resolve, reject) => {
-      get(dispatch, host + 'agents/signout')
+      get(dispatch, `${host}agents/signout`)
         .then(() => {
+          dispatch({
+            type: USER_LOGOUT
+          });
           resolve(
             dispatch({
               type: 'AGENT_LOGOUT_FULFILLED'
@@ -177,7 +208,7 @@ export function signup(data) {
             resolve(r);
           } else {
             dispatch({ type: 'AGENT_SIGNUP_REJECTED', payload: null });
-            reject('EMAIL_ALREADY_EXIST')
+            reject('EMAIL_ALREADY_EXIST');
           }
         })
         .catch(() => {

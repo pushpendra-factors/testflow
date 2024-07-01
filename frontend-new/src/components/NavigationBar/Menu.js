@@ -4,7 +4,7 @@ import { useLocation, NavLink } from 'react-router-dom';
 import { fetchSmartEvents } from 'Reducers/events';
 import { connect } from 'react-redux';
 import { fetchProjectAgents, fetchAgentInfo } from 'Reducers/agentActions';
-import { fetchProjects } from 'Reducers/global';
+import { fetchProjectsList } from 'Reducers/global';
 import { ATTRIBUTION_ROUTES } from 'Attribution/utils/constants';
 import { PathUrls } from 'Routes/pathUrls';
 import styles from './index.module.scss';
@@ -449,5 +449,5 @@ export default connect(mapStateToProps, {
   fetchSmartEvents,
   fetchProjectAgents,
   fetchAgentInfo,
-  fetchProjects
+  fetchProjects: fetchProjectsList
 })(SiderMenu);

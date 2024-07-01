@@ -40,7 +40,7 @@ if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
 const persistConfig = {
   key: 'root',
   storage,
-  whitelist: ['agent', 'timelines']
+  whitelist: ['timelines']
 };
 const persistedReducer = persistReducer(persistConfig, reducers);
 
