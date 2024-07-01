@@ -55,6 +55,8 @@ export const FEATURES = {
   FEATURE_SEGMENT_KPI: 'segment_kpi',
   FEATURE_LINKEDIN_FREQUENCY_CAPPING: 'linkedin_frequency_capping',
   FEATURE_DEMANDBASE: 'demandbase',
+  FEATURE_HUBSPOT_BASIC: 'hubspot_basic',
+  FEATURE_SALESFORCE_BASIC: 'salesforce_basic',
   CONF_CUSTOM_PROPERTIES: 'conf_custom_properties',
   CONF_CUSTOM_EVENTS: 'conf_custom_events'
 };
