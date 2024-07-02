@@ -15,6 +15,7 @@ git config --global advice.commitBeforeMerge false
 # check out current branch
 git config --global user.name "Github Actions"
 git config --global user.email "actions@github.com"
+echo Hello
 git fetch --unshallow -q
 git checkout -q $curbranch
 
